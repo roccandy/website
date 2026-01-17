@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 type SearchParams = { toast?: string; message?: string };
+type ToastTone = "success" | "error";
 
 export default async function OrdersPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
@@ -28,10 +29,8 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const toastTone = resolvedSearchParams?.toast;
   const toastMessage = resolvedSearchParams?.message;
-  const toast =
-    (toastTone === "success" || toastTone === "error") && toastMessage
-      ? { tone: toastTone, message: toastMessage }
-      : null;
+  const tone: ToastTone | null = toastTone === "success" || toastTone === "error" ? toastTone : null;
+  const toast = tone && toastMessage ? { tone, message: toastMessage } : null;
 
   const [orders, slots, assignments, blocks, pricingContext, flavors, palette, categories, quoteBlocks] =
     await Promise.all([
