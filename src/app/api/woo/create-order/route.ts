@@ -167,40 +167,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Custom item pricing failed." }, { status: 400 });
       }
 
-      const lineMeta = {
-        title: item.title ?? null,
-        description: item.description ?? null,
-        categoryId: item.categoryId,
-        packagingOptionId: item.packagingOptionId,
-        quantity: item.quantity,
-        jarLidColor: item.jarLidColor ?? null,
-        labelsCount: item.labelsCount ?? null,
-        labelImageUrl: item.labelImageUrl ?? null,
-        labelTypeId: item.labelTypeId ?? null,
-        ingredientLabelsOptIn: Boolean(item.ingredientLabelsOptIn),
-        jacket: item.jacket ?? null,
-        jacketType: item.jacketType ?? null,
-        jacketColorOne: item.jacketColorOne ?? null,
-        jacketColorTwo: item.jacketColorTwo ?? null,
-        textColor: item.textColor ?? null,
-        heartColor: item.heartColor ?? null,
-        flavor: item.flavor ?? null,
-        logoUrl: item.logoUrl ?? null,
-        designType: item.designType ?? null,
-        designText: item.designText ?? null,
-        totalWeightKg,
-        totalPrice,
-      };
-
       lineItems.push({
         product_id: customProductId!,
         name: item.title?.trim() ? `Custom order: ${item.title.trim()}` : "Custom order",
         quantity: 1,
         total: totalPrice.toFixed(2),
-        meta_data: [
-          { key: "rc_type", value: "custom" },
-          { key: "rc_payload", value: JSON.stringify(lineMeta) },
-        ],
       });
 
       orderPayloads.push({
@@ -263,16 +234,6 @@ export async function POST(request: Request) {
         product_id: Number(premade.woo_product_id),
         quantity: item.quantity,
         total: totalPrice.toFixed(2),
-        meta_data: [
-          { key: "rc_type", value: "premade" },
-          { key: "rc_payload", value: JSON.stringify({
-            premadeId: premade.id,
-            name: premade.name,
-            quantity: item.quantity,
-            totalWeightKg: weightKg,
-            totalPrice,
-          }) },
-        ],
       });
 
       orderPayloads.push({
