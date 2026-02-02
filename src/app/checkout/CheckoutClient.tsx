@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { useCart, type CartItem, type CustomCartItem, type PremadeCartItem } from "@/components/CartProvider";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { ColorPaletteRow, LabelType, QuoteBlock } from "@/lib/data";
+import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PremadeSuggestion = {
   id: string;
@@ -51,7 +52,27 @@ const AU_STATES = [
   { value: "WA", label: "WA" },
 ];
 
-const PAYMENT_METHODS = ["PayPal", "Apple Pay", "Credit card"];
+type SquarePayments = {
+  card: () => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
+  applePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
+  googlePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
+  paymentRequest: (request: unknown) => unknown;
+};
+
+declare global {
+  interface Window {
+    Square?: { payments: (appId: string, locationId: string) => SquarePayments };
+    paypal?: {
+      Buttons: (options: Record<string, unknown>) => { render: (selector: string) => void };
+    };
+  }
+}
+
+const SQUARE_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID || "";
+const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || "";
+const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
+const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
+const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`;
@@ -84,6 +105,312 @@ function formatLabelTypeLabel(labelType?: LabelType | null) {
   const shape = LABEL_SHAPE_LABELS[labelType.shape] ?? labelType.shape;
   const dimension = (labelType.dimensions || "").trim();
   return dimension ? `${shape} ${dimension}` : shape;
+}
+
+function SquarePayment({
+  amount,
+  canPay,
+  getOrderPayload,
+  onSuccess,
+  onError,
+}: {
+  amount: number;
+  canPay: boolean;
+  getOrderPayload: () => CheckoutOrderPayload;
+  onSuccess: () => void;
+  onError: (stage: string, message: string) => void;
+}) {
+  const [ready, setReady] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
+  const appleRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
+  const googleRef = useRef<Awaited<ReturnType<SquarePayments["googlePay"]>> | null>(null);
+  const appleHandlerRef = useRef<(() => void) | null>(null);
+  const googleHandlerRef = useRef<(() => void) | null>(null);
+  const initializedRef = useRef(false);
+  const payloadRef = useRef(getOrderPayload);
+  const canPayRef = useRef(canPay);
+
+  useEffect(() => {
+    payloadRef.current = getOrderPayload;
+    canPayRef.current = canPay;
+  }, [getOrderPayload, canPay]);
+
+  const handleTokenize = async (
+    tokenize: () => Promise<{ status: string; token?: string }>,
+    methodTitle: string
+  ) => {
+    setSetupError(null);
+    if (!canPayRef.current) {
+      onError("validation", "Please complete all required fields before paying.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const tokenResult = await tokenize();
+      if (tokenResult.status !== "OK" || !tokenResult.token) {
+        throw new Error("Payment token failed.");
+      }
+      const response = await fetch("/api/payments/square", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order: payloadRef.current(),
+          sourceId: tokenResult.token,
+          paymentMethodTitle: methodTitle,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Payment failed.");
+      }
+      onSuccess();
+    } catch (error) {
+      onError("charge", error instanceof Error ? error.message : "Payment failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
+      setSetupError("Square is not configured.");
+      return;
+    }
+    const scriptUrl =
+      SQUARE_ENV === "sandbox" ? "https://sandbox.web.squarecdn.com/v1/square.js" : "https://web.squarecdn.com/v1/square.js";
+
+    void (async () => {
+      try {
+        await loadScript(scriptUrl);
+        if (!window.Square) throw new Error("Square SDK not available.");
+        const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
+        const paymentRequest = payments.paymentRequest({
+          countryCode: "AU",
+          currencyCode: "AUD",
+          total: { amount: amount.toFixed(2), label: "Total" },
+        });
+
+        const card = await payments.card();
+        await card.attach("#square-card-container");
+        cardRef.current = card;
+
+        try {
+          const applePay = await payments.applePay(paymentRequest);
+          await applePay.attach("#square-apple-pay");
+          appleRef.current = applePay;
+          setAppleAvailable(true);
+          const appleNode = document.getElementById("square-apple-pay");
+          if (appleNode) {
+            const handler = () => void handleTokenize(() => applePay.tokenize(), "Square - Apple Pay");
+            appleHandlerRef.current = handler;
+            appleNode.addEventListener("click", handler);
+          }
+        } catch {
+          appleRef.current = null;
+          setAppleAvailable(false);
+        }
+
+        try {
+          const googlePay = await payments.googlePay(paymentRequest);
+          await googlePay.attach("#square-google-pay");
+          googleRef.current = googlePay;
+          setGoogleAvailable(true);
+          const googleNode = document.getElementById("square-google-pay");
+          if (googleNode) {
+            const handler = () => void handleTokenize(() => googlePay.tokenize(), "Square - Google Pay");
+            googleHandlerRef.current = handler;
+            googleNode.addEventListener("click", handler);
+          }
+        } catch {
+          googleRef.current = null;
+          setGoogleAvailable(false);
+        }
+
+        initializedRef.current = true;
+        setReady(true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Square setup failed.";
+        setSetupError(message);
+        onError("setup", message);
+      }
+    })();
+
+    return () => {
+      const appleNode = document.getElementById("square-apple-pay");
+      if (appleNode && appleHandlerRef.current) {
+        appleNode.removeEventListener("click", appleHandlerRef.current);
+      }
+      const googleNode = document.getElementById("square-google-pay");
+      if (googleNode && googleHandlerRef.current) {
+        googleNode.removeEventListener("click", googleHandlerRef.current);
+      }
+    };
+  }, [amount, canPay]);
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <h3 className="text-lg font-semibold text-zinc-900">Pay by card or Apple Pay</h3>
+      {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+        <span
+          className={`rounded-full border px-2 py-1 ${
+            appleAvailable ? "border-emerald-200 text-emerald-700" : "border-zinc-200 text-zinc-500"
+          }`}
+        >
+          Apple Pay {appleAvailable ? "available" : "not available"}
+        </span>
+        <span
+          className={`rounded-full border px-2 py-1 ${
+            googleAvailable ? "border-emerald-200 text-emerald-700" : "border-zinc-200 text-zinc-500"
+          }`}
+        >
+          Google Pay {googleAvailable ? "available" : "not available"}
+        </span>
+      </div>
+      <div className="mt-4 space-y-4">
+        <div className="flex flex-col items-center gap-3">
+          <div id="square-apple-pay" className="w-full max-w-md" />
+          <div id="square-google-pay" className="w-full max-w-md" />
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+          <div id="square-card-container" />
+        </div>
+        <button
+          type="button"
+          data-primary-button
+          disabled={!ready || loading}
+          onClick={() => {
+            if (!cardRef.current) return;
+            void handleTokenize(() => cardRef.current!.tokenize(), "Square - Card");
+          }}
+          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? "Processing..." : "Pay with card"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PayPalPayment({
+  canPay,
+  getOrderPayload,
+  onSuccess,
+  onError,
+}: {
+  canPay: boolean;
+  getOrderPayload: () => CheckoutOrderPayload;
+  onSuccess: () => void;
+  onError: (stage: string, message: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const renderedRef = useRef(false);
+  const payloadRef = useRef(getOrderPayload);
+  const canPayRef = useRef(canPay);
+  const [setupError, setSetupError] = useState<string | null>(null);
+
+  useEffect(() => {
+    payloadRef.current = getOrderPayload;
+    canPayRef.current = canPay;
+  }, [getOrderPayload, canPay]);
+
+  useEffect(() => {
+    if (renderedRef.current) return;
+    if (!PAYPAL_CLIENT_ID) {
+      setSetupError("PayPal is not configured.");
+      return;
+    }
+    const sdkBase = PAYPAL_ENV === "sandbox" ? "https://www.sandbox.paypal.com" : "https://www.paypal.com";
+    const scriptUrl = `${sdkBase}/sdk/js?client-id=${encodeURIComponent(
+      PAYPAL_CLIENT_ID
+    )}&currency=AUD&intent=capture&components=buttons`;
+
+    void (async () => {
+      try {
+        await loadScript(scriptUrl);
+        if (!window.paypal || !containerRef.current) return;
+        window.paypal
+          .Buttons({
+            onClick: () => {
+              if (!canPayRef.current) {
+                onError("validation", "Please complete all required fields before paying.");
+                return false;
+              }
+              return true;
+            },
+            createOrder: async () => {
+              const response = await fetch("/api/payments/paypal/create-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ order: payloadRef.current() }),
+              });
+              const data = (await response.json().catch(() => ({}))) as { orderId?: string; error?: string };
+              if (!response.ok || !data.orderId) {
+                throw new Error(data.error || "Unable to start PayPal.");
+              }
+              return data.orderId;
+            },
+            onApprove: async (data: { orderID?: string }) => {
+              if (!data.orderID) throw new Error("PayPal order missing.");
+              const response = await fetch("/api/payments/paypal/capture-order", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: data.orderID, order: payloadRef.current() }),
+              });
+              const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+              if (!response.ok || !payload.ok) {
+                throw new Error(payload.error || "PayPal capture failed.");
+              }
+              onSuccess();
+            },
+            onError: (err: unknown) => {
+              onError("flow", err instanceof Error ? err.message : "PayPal failed.");
+            },
+          })
+          .render(containerRef.current);
+        renderedRef.current = true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "PayPal setup failed.";
+        setSetupError(message);
+        onError("setup", message);
+      }
+    })();
+  }, [canPay, getOrderPayload, onError, onSuccess]);
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <h3 className="text-lg font-semibold text-zinc-900">Pay with PayPal</h3>
+      {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
+      <div ref={containerRef} className="mt-4" />
+    </div>
+  );
+}
+
+function loadScript(src: string) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null;
+    if (existing) {
+      if (existing.dataset.loaded === "true") return resolve();
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.dataset.loaded = "false";
+    script.onload = () => {
+      script.dataset.loaded = "true";
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.body.appendChild(script);
+  });
 }
 
 
@@ -596,7 +923,6 @@ export function CheckoutClient({
   const labelTypeMap = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
   const [dueDate, setDueDate] = useState("");
   const [pickup, setPickup] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -631,9 +957,8 @@ export function CheckoutClient({
     const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diffDays <= urgencyPeriodDays;
   }, [dueDate, hasCustomItems, urgencyPeriodDays]);
-  const [placing, setPlacing] = useState(false);
-  const [placeError, setPlaceError] = useState<string | null>(null);
-  const [placeSuccess, setPlaceSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [orderConfirmationVisible, setOrderConfirmationVisible] = useState(false);
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, PricingBreakdown>>({});
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -720,13 +1045,13 @@ export function CheckoutClient({
   }, [customItems, dueDate]);
 
   useEffect(() => {
-    if (!placeSuccess) return;
+    if (!paymentSuccess) return;
     setOrderConfirmationVisible(true);
     const timeout = setTimeout(() => {
       setOrderConfirmationVisible(false);
     }, 6000);
     return () => clearTimeout(timeout);
-  }, [placeSuccess]);
+  }, [paymentSuccess]);
 
   const cartPricing = useMemo(() => {
     let baseSubtotal = 0;
@@ -792,7 +1117,6 @@ export function CheckoutClient({
     }
     if (hasCustomItems && !dueDate) missing.push("date required");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
-    // Payment is selected in Woo checkout; this is only a preference.
     if (!firstName.trim()) missing.push("first name");
     if (!lastName.trim()) missing.push("surname");
     if (!email.trim()) missing.push("email address");
@@ -808,81 +1132,77 @@ export function CheckoutClient({
 
   const canPlace = hasItems && getMissingFields().length === 0;
 
-  const handlePlaceOrder = async () => {
-    setPlaceError(null);
-    setPlaceSuccess(false);
-    setOrderConfirmationVisible(false);
-    const missing = getMissingFields();
-    if (missing.length) {
-      setPlaceError(`Please complete: ${missing.join(", ")}.`);
-      return;
-    }
+  const buildOrderPayload = (): CheckoutOrderPayload => ({
+    dueDate: dueDate || undefined,
+    pickup,
+    paymentPreference: null,
+    customer: {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      organizationName: organizationName.trim() || undefined,
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim(),
+      suburb: suburb.trim(),
+      postcode: postcode.trim(),
+      state: stateValue,
+    },
+    customItems: customItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      categoryId: item.categoryId,
+      packagingOptionId: item.packagingOptionId,
+      quantity: item.quantity,
+      packagingLabel: item.packagingLabel,
+      jarLidColor: item.jarLidColor,
+      labelsCount: item.labelsCount ?? null,
+      labelImageUrl: item.labelImageUrl ?? null,
+      labelTypeId: item.labelTypeId ?? null,
+      ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
+      jacket: item.jacket ?? null,
+      jacketType: item.jacketType ?? null,
+      jacketColorOne: item.jacketColorOne ?? null,
+      jacketColorTwo: item.jacketColorTwo ?? null,
+      textColor: item.textColor ?? null,
+      heartColor: item.heartColor ?? null,
+      flavor: item.flavor ?? null,
+      logoUrl: item.logoUrl ?? null,
+      designType: item.designType ?? null,
+      designText: item.designText ?? null,
+      jacketExtras: item.jacketExtras ?? [],
+    })),
+    premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
+  });
 
-    setPlacing(true);
+  const handlePaymentSuccess = () => {
+    setPaymentSuccess(true);
+    setPaymentError(null);
+    clearCart();
+  };
+
+  const logPaymentFailure = async (provider: "square" | "paypal", stage: string, message: string) => {
     try {
-      const payload = {
-        dueDate: dueDate || undefined,
-        pickup,
-        paymentPreference: paymentMethod || null,
-        customer: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          email: email.trim(),
-          phone: phone.trim(),
-          organizationName: organizationName.trim() || undefined,
-          addressLine1: addressLine1.trim(),
-          addressLine2: addressLine2.trim(),
-          suburb: suburb.trim(),
-          postcode: postcode.trim(),
-          state: stateValue,
-        },
-        customItems: customItems.map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          categoryId: item.categoryId,
-          packagingOptionId: item.packagingOptionId,
-          quantity: item.quantity,
-          packagingLabel: item.packagingLabel,
-          jarLidColor: item.jarLidColor,
-          labelsCount: item.labelsCount ?? null,
-          labelImageUrl: item.labelImageUrl ?? null,
-          labelTypeId: item.labelTypeId ?? null,
-          ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
-          jacket: item.jacket ?? null,
-          jacketType: item.jacketType ?? null,
-          jacketColorOne: item.jacketColorOne ?? null,
-          jacketColorTwo: item.jacketColorTwo ?? null,
-          textColor: item.textColor ?? null,
-          heartColor: item.heartColor ?? null,
-          flavor: item.flavor ?? null,
-          logoUrl: item.logoUrl ?? null,
-          designType: item.designType ?? null,
-          designText: item.designText ?? null,
-          jacketExtras: item.jacketExtras ?? [],
-        })),
-        premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
-      };
-
-      const response = await fetch("/api/woo/create-order", {
+      await fetch("/api/payments/log-failure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          provider,
+          stage,
+          message,
+          customerEmail: email.trim() || undefined,
+          orderTotal: cartPricing.total,
+        }),
       });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Unable to start payment");
-      }
-      const data = (await response.json().catch(() => ({}))) as { paymentUrl?: string };
-      if (!data.paymentUrl) {
-        throw new Error("Payment link is missing.");
-      }
-      window.location.href = data.paymentUrl;
-    } catch (error) {
-      setPlaceError(error instanceof Error ? error.message : "Unable to start payment");
-    } finally {
-      setPlacing(false);
+    } catch {
+      // no-op for UI
     }
+  };
+
+  const handlePaymentError = (provider: "square" | "paypal", stage: string, message: string) => {
+    setPaymentError(message);
+    void logPaymentFailure(provider, stage, message);
   };
 
   return (
@@ -900,6 +1220,11 @@ export function CheckoutClient({
               OK
             </button>
           </div>
+        </div>
+      ) : null}
+      {paymentSuccess ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-700">
+          Payment received. Your order is confirmed.
         </div>
       ) : null}
       <section className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
@@ -997,32 +1322,6 @@ export function CheckoutClient({
                     Pickup
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900">Payment</h3>
-            <div className="mt-3">
-              <p className="mb-3 text-xs text-zinc-500">
-                You will choose the final payment method on the secure WooCommerce checkout.
-              </p>
-              <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#e91e63] bg-[#fedae1] divide-y divide-[#e91e63]/30">
-                {PAYMENT_METHODS.map((method) => {
-                  const isActive = paymentMethod === method;
-                  return (
-                    <button
-                      key={method}
-                      type="button"
-                      data-segmented
-                      data-active={isActive ? "true" : "false"}
-                      onClick={() => setPaymentMethod(method)}
-                      className="w-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
-                    >
-                      {method}
-                    </button>
-                  );
-                })}
               </div>
             </div>
           </div>
@@ -1132,6 +1431,24 @@ export function CheckoutClient({
               </div>
             </div>
           </div>
+
+          {!paymentSuccess ? (
+            <>
+              <SquarePayment
+                amount={cartPricing.total}
+                canPay={canPlace}
+                getOrderPayload={buildOrderPayload}
+                onSuccess={handlePaymentSuccess}
+                onError={(stage, message) => handlePaymentError("square", stage, message)}
+              />
+              <PayPalPayment
+                canPay={canPlace}
+                getOrderPayload={buildOrderPayload}
+                onSuccess={handlePaymentSuccess}
+                onError={(stage, message) => handlePaymentError("paypal", stage, message)}
+              />
+            </>
+          ) : null}
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -1192,24 +1509,10 @@ export function CheckoutClient({
             </div>
           )}
           {pricingError ? <p className="mt-2 text-xs text-red-600">{pricingError}</p> : null}
-          {placeError ? <p className="mt-2 text-xs text-red-600">{placeError}</p> : null}
-          {placeSuccess ? (
-            <p className="mt-2 text-xs font-semibold text-emerald-600">Order placed.</p>
+          {paymentError ? <p className="mt-2 text-xs text-red-600">{paymentError}</p> : null}
+          {paymentSuccess ? (
+            <p className="mt-2 text-xs font-semibold text-emerald-600">Payment confirmed.</p>
           ) : null}
-          <button
-            type="button"
-            disabled={placing}
-            onClick={handlePlaceOrder}
-            className={`mt-4 w-full rounded-md px-4 py-2 text-sm font-semibold ${
-              placing
-                ? "cursor-not-allowed border border-zinc-200 bg-zinc-100 text-zinc-500"
-                : canPlace
-                  ? "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
-                  : "border border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-zinc-300"
-            }`}
-          >
-            {placing ? "Redirecting..." : "Proceed to payment"}
-          </button>
         </div>
       </section>
     </div>

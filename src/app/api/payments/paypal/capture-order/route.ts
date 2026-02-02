@@ -1,0 +1,72 @@
+import { NextResponse } from "next/server";
+import { buildWooOrderContext } from "@/lib/checkoutOrder";
+import { capturePayPalOrder } from "@/lib/paypal";
+import { createWooOrder } from "@/lib/woo";
+import { supabaseServerClient } from "@/lib/supabase/server";
+import { logPaymentFailure } from "@/lib/paymentFailures";
+import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
+
+type PayPalCaptureRequest = {
+  orderId: string;
+  order: CheckoutOrderPayload;
+};
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as PayPalCaptureRequest;
+    if (!body?.order || !body.orderId) {
+      return NextResponse.json({ error: "Order payload and PayPal order ID are required." }, { status: 400 });
+    }
+
+    const capture = await capturePayPalOrder(body.orderId);
+    const transactionId = capture.captureId || capture.id;
+
+    const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount } = await buildWooOrderContext(body.order);
+    const customerEmail = body.order.customer?.email ?? null;
+
+    const wooOrder = await createWooOrder({
+      status: "processing",
+      set_paid: true,
+      payment_method: "paypal",
+      payment_method_title: "PayPal",
+      transaction_id: transactionId,
+      billing,
+      shipping: pickup ? billing : billing,
+      customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
+      line_items: lineItems,
+      meta_data: [
+        { key: "rc_source", value: "roccandy-next" },
+        { key: "rc_due_date", value: dueDate ?? "" },
+        { key: "rc_pickup", value: pickup ? "true" : "false" },
+        { key: "rc_payment_provider", value: "paypal" },
+      ],
+    });
+
+    const paidAt = new Date().toISOString();
+    const enrichedPayloads = orderPayloads.map((payload) => ({
+      ...payload,
+      woo_order_id: String(wooOrder.id),
+      woo_order_status: wooOrder.status ?? null,
+      woo_order_key: wooOrder.order_key ?? null,
+      woo_payment_url: null,
+      payment_method: "PayPal",
+      status: "pending",
+      paid_at: paidAt,
+    }));
+
+    const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);
+    if (insertError) {
+      console.error("Supabase order insert failed:", insertError);
+    }
+
+    return NextResponse.json({ ok: true, wooOrderId: wooOrder.id });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to capture PayPal order.";
+    await logPaymentFailure({
+      provider: "paypal",
+      stage: "capture",
+      message,
+    });
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}

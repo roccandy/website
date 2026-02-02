@@ -218,6 +218,9 @@ type WooOrderAddress = {
 export type WooOrderCreateInput = {
   status?: string;
   set_paid?: boolean;
+  payment_method?: string;
+  payment_method_title?: string;
+  transaction_id?: string;
   billing?: WooOrderAddress;
   shipping?: WooOrderAddress;
   customer_note?: string;
