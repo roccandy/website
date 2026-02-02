@@ -211,10 +211,11 @@ function SquarePayment({
             appleHandlerRef.current = handler;
             appleNode.addEventListener("click", handler);
           }
-        } catch {
+        } catch (error) {
+          const message = error instanceof Error ? error.message : JSON.stringify(error);
           appleRef.current = null;
           setAppleAvailable(false);
-          setDebugNote("Square Apple Pay unavailable: applePay() init failed.");
+          setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
         }
 
         try {
@@ -228,10 +229,11 @@ function SquarePayment({
             googleHandlerRef.current = handler;
             googleNode.addEventListener("click", handler);
           }
-        } catch {
+        } catch (error) {
+          const message = error instanceof Error ? error.message : JSON.stringify(error);
           googleRef.current = null;
           setGoogleAvailable(false);
-          setDebugNote("Square Google Pay unavailable: googlePay() init failed.");
+          setDebugNote(`Square Google Pay unavailable: ${message || "googlePay() init failed."}`);
         }
 
         initializedRef.current = true;
