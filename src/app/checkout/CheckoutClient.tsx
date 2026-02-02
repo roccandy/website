@@ -202,6 +202,9 @@ function SquarePayment({
 
         try {
           const applePay = await payments.applePay(paymentRequest);
+          if (!applePay || typeof (applePay as { attach?: unknown }).attach !== "function") {
+            throw new Error("Apple Pay not available (attach missing).");
+          }
           await applePay.attach("#square-apple-pay");
           appleRef.current = applePay;
           setAppleAvailable(true);
@@ -220,6 +223,9 @@ function SquarePayment({
 
         try {
           const googlePay = await payments.googlePay(paymentRequest);
+          if (!googlePay || typeof (googlePay as { attach?: unknown }).attach !== "function") {
+            throw new Error("Google Pay not available (attach missing).");
+          }
           await googlePay.attach("#square-google-pay");
           googleRef.current = googlePay;
           setGoogleAvailable(true);
