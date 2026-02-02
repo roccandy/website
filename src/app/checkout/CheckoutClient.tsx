@@ -63,7 +63,7 @@ declare global {
   interface Window {
     Square?: { payments: (appId: string, locationId: string) => SquarePayments };
     paypal?: {
-      Buttons: (options: Record<string, unknown>) => { render: (selector: string) => void };
+      Buttons: (options: Record<string, unknown>) => { render: (selector: string | HTMLElement) => void };
     };
   }
 }
