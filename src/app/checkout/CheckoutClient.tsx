@@ -123,6 +123,7 @@ function SquarePayment({
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [debugNote, setDebugNote] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [googleAvailable, setGoogleAvailable] = useState(false);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
@@ -213,6 +214,7 @@ function SquarePayment({
         } catch {
           appleRef.current = null;
           setAppleAvailable(false);
+          setDebugNote("Square Apple Pay unavailable: applePay() init failed.");
         }
 
         try {
@@ -229,6 +231,7 @@ function SquarePayment({
         } catch {
           googleRef.current = null;
           setGoogleAvailable(false);
+          setDebugNote("Square Google Pay unavailable: googlePay() init failed.");
         }
 
         initializedRef.current = true;
@@ -237,6 +240,7 @@ function SquarePayment({
         const message = error instanceof Error ? error.message : "Square setup failed.";
         setSetupError(message);
         onError("setup", message);
+        setDebugNote(`Square setup error: ${message}`);
       }
     })();
 
@@ -256,6 +260,7 @@ function SquarePayment({
     <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <h3 className="text-lg font-semibold text-zinc-900">Pay by card or Apple Pay</h3>
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
+      {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
         <span
           className={`rounded-full border px-2 py-1 ${

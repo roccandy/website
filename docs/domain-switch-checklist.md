@@ -18,6 +18,11 @@ This file tracks all manual URLs and settings that must be updated when switchin
 - Google Merchant Center: set site URL to `https://roccandy.com.au`
 - Google Search Console: add + verify property for `https://roccandy.com.au`
 
+## Apple Pay (Square)
+- Re-verify domain with Square using the live domain file:
+  - `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association`
+- Ensure the file exists in `public/.well-known/` and is deployed.
+
 ## Supabase (if auth/email links are used)
 - Supabase Auth Site URL -> `https://roccandy.com.au`
 - Supabase Auth Redirect URLs -> add `https://roccandy.com.au/**`
