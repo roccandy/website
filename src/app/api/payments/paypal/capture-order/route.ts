@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const transactionId = capture.captureId || capture.id;
 
     const { billing, dueDate, pickup, lineItems, orderPayloads, orderNumbers } = await buildWooOrderContext(body.order);
-    const customerEmail = body.order.customer?.email ?? null;
+    const customerEmail = body.order.customer?.email?.trim() || null;
 
     const wooOrder = await createWooOrder({
       status: "processing",
@@ -71,7 +71,6 @@ export async function POST(request: Request) {
       console.error("Supabase order insert failed:", insertError);
     }
 
-    const customerEmail = body.order.customer?.email?.trim();
     if (customerEmail) {
       await sendCustomerOrderEmail([customerEmail], {
         orderNumber: orderNumbers.baseOrderNumber,

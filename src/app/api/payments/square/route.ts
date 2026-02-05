@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
-    const customerEmail = body.order.customer?.email ?? null;
+    const customerEmail = body.order.customer?.email?.trim() || null;
     const amountCents = Math.round(totalAmount * 100);
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
       await logPaymentFailure({
@@ -129,7 +129,6 @@ export async function POST(request: Request) {
       console.error("Supabase order insert failed:", insertError);
     }
 
-    const customerEmail = body.order.customer?.email?.trim();
     if (customerEmail) {
       await sendCustomerOrderEmail([customerEmail], {
         orderNumber: orderNumbers.baseOrderNumber,
