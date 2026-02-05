@@ -6,7 +6,7 @@ type SquareRefundResult = {
   status: string;
 };
 
-export async function refundSquarePayment(paymentId: string, amountCents: number) {
+export async function refundSquarePayment(paymentId: string, amountCents: number, reason?: string | null) {
   const accessToken = process.env.SQUARE_ACCESS_TOKEN?.trim();
   const locationId = process.env.SQUARE_LOCATION_ID?.trim();
   const apiBase = process.env.SQUARE_API_BASE?.trim() || "https://connect.squareup.com";
@@ -23,7 +23,7 @@ export async function refundSquarePayment(paymentId: string, amountCents: number
       idempotency_key: randomUUID(),
       payment_id: paymentId,
       amount_money: { amount: amountCents, currency: "AUD" },
-      reason: "Customer refund",
+      reason: reason?.trim() || "Customer refund",
     }),
   });
   const data = (await response.json().catch(() => ({}))) as { refund?: SquareRefundResult; errors?: Array<{ detail?: string }> };
@@ -33,7 +33,7 @@ export async function refundSquarePayment(paymentId: string, amountCents: number
   return data.refund;
 }
 
-export async function refundPayPalCapture(captureId: string, amount: string) {
+export async function refundPayPalCapture(captureId: string, amount: string, reason?: string | null) {
   const token = await getPayPalAccessToken();
   const apiBase = process.env.PAYPAL_API_BASE?.trim() || "https://api-m.paypal.com";
   const response = await fetch(`${apiBase}/v2/payments/captures/${captureId}/refund`, {
@@ -47,6 +47,7 @@ export async function refundPayPalCapture(captureId: string, amount: string) {
         value: amount,
         currency_code: "AUD",
       },
+      note_to_payer: reason?.trim() || undefined,
     }),
   });
   const data = (await response.json().catch(() => ({}))) as { id?: string; status?: string; message?: string };

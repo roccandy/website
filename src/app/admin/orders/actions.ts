@@ -330,6 +330,7 @@ export async function upsertOrder(formData: FormData) {
 
 export async function refundOrder(formData: FormData) {
   const id = formData.get("id")?.toString() || null;
+  const refundReason = formData.get("refund_reason")?.toString() || null;
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
   const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ORDERS_PATH;
   if (!id) {
@@ -354,9 +355,9 @@ export async function refundOrder(formData: FormData) {
 
   try {
     if (provider === "square") {
-      await refundSquarePayment(String(transactionId), Math.round(amount * 100));
+      await refundSquarePayment(String(transactionId), Math.round(amount * 100), refundReason);
     } else if (provider === "paypal") {
-      await refundPayPalCapture(String(transactionId), amount.toFixed(2));
+      await refundPayPalCapture(String(transactionId), amount.toFixed(2), refundReason);
     } else {
       redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
     }

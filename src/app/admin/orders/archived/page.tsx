@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { refundOrder, unarchiveOrder } from "../actions";
+import { RefundForm } from "../RefundForm";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -270,16 +271,13 @@ export default async function AllOrdersPage() {
                           {groupOrders
                             .filter((order) => order.paid_at && order.payment_transaction_id && !order.refunded_at)
                             .map((order) => (
-                              <form key={`refund-${order.id}`} action={refundOrder}>
-                                <input type="hidden" name="id" value={order.id} />
-                                <input type="hidden" name="redirect_to" value="/admin/orders/archived" />
-                                <button
-                                  type="submit"
-                                  className="rounded border border-red-600 bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
-                                >
-                                  Refund {order.order_number ? `#${order.order_number}` : "payment"}
-                                </button>
-                              </form>
+                              <RefundForm
+                                key={`refund-${order.id}`}
+                                orderId={order.id}
+                                orderNumber={order.order_number}
+                                action={refundOrder}
+                                redirectTo="/admin/orders/archived"
+                              />
                             ))}
                           {groupOrders.every(
                             (order) =>
