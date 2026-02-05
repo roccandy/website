@@ -330,24 +330,26 @@ export async function upsertOrder(formData: FormData) {
 
 export async function refundOrder(formData: FormData) {
   const id = formData.get("id")?.toString() || null;
+  const redirectCandidate = formData.get("redirect_to")?.toString() || "";
+  const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ORDERS_PATH;
   if (!id) {
-    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
   }
   const client = supabaseServerClient;
   const { data: order, error } = await client.from("orders").select("*").eq("id", id).maybeSingle();
   if (error || !order) {
-    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
   }
 
   const provider = order.payment_provider;
   const transactionId = order.payment_transaction_id;
   if (!provider || !transactionId) {
-    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Missing%20payment%20details`);
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20payment%20details`);
   }
 
   const amount = Number(order.total_price ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) {
-    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
   }
 
   try {
@@ -356,7 +358,7 @@ export async function refundOrder(formData: FormData) {
     } else if (provider === "paypal") {
       await refundPayPalCapture(String(transactionId), amount.toFixed(2));
     } else {
-      redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
+      redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
     }
 
     const refundedAt = new Date().toISOString();
@@ -381,10 +383,10 @@ export async function refundOrder(formData: FormData) {
       });
     }
 
-    redirect(`${ORDERS_PATH}?toast_success=Refund%20processed`);
+    redirect(`${redirectBase}?toast_success=Refund%20processed`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Refund failed.";
-    redirect(`${ORDERS_PATH}?toast_error=${encodeURIComponent(message)}`);
+    redirect(`${redirectBase}?toast_error=${encodeURIComponent(message)}`);
   }
 }
 

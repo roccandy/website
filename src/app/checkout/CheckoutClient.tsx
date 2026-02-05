@@ -117,7 +117,7 @@ function SquarePayment({
   amount: number;
   canPay: boolean;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: () => void;
+  onSuccess: (adminEmailWarning?: string | null) => void;
   onError: (stage: string, message: string) => void;
 }) {
   const [ready, setReady] = useState(false);
@@ -169,7 +169,8 @@ function SquarePayment({
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Payment failed.");
       }
-      onSuccess();
+      const payload = (await response.json().catch(() => ({}))) as { adminEmailWarning?: string | null };
+      onSuccess(payload.adminEmailWarning ?? null);
     } catch (error) {
       onError("charge", error instanceof Error ? error.message : "Payment failed.");
     } finally {
@@ -359,7 +360,7 @@ function PayPalPayment({
 }: {
   canPay: boolean;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: () => void;
+  onSuccess: (adminEmailWarning?: string | null) => void;
   onError: (stage: string, message: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -420,11 +421,15 @@ function PayPalPayment({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ orderId: data.orderID, order: payloadRef.current() }),
               });
-              const payload = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+              const payload = (await response.json().catch(() => ({}))) as {
+                ok?: boolean;
+                error?: string;
+                adminEmailWarning?: string | null;
+              };
               if (!response.ok || !payload.ok) {
                 throw new Error(payload.error || "PayPal capture failed.");
               }
-              onSuccess();
+              onSuccess(payload.adminEmailWarning ?? null);
             },
             onError: (err: unknown) => {
               onError("flow", err instanceof Error ? err.message : "PayPal failed.");
@@ -1017,6 +1022,7 @@ export function CheckoutClient({
   }, [dueDate, hasCustomItems, urgencyPeriodDays]);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
   const [orderConfirmationVisible, setOrderConfirmationVisible] = useState(false);
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, PricingBreakdown>>({});
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -1234,9 +1240,10 @@ export function CheckoutClient({
     premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
   });
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = (warning?: string | null) => {
     setPaymentSuccess(true);
     setPaymentError(null);
+    setAdminEmailWarning(warning ?? null);
     clearCart();
   };
 
@@ -1260,6 +1267,7 @@ export function CheckoutClient({
 
   const handlePaymentError = (provider: "square" | "paypal", stage: string, message: string) => {
     setPaymentError(message);
+    setAdminEmailWarning(null);
     void logPaymentFailure(provider, stage, message);
   };
 
@@ -1269,6 +1277,9 @@ export function CheckoutClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
             <p className="text-lg font-semibold text-zinc-900">Check your email for order confirmation.</p>
+            {adminEmailWarning ? (
+              <p className="mt-2 text-sm text-rose-600">Admin email not wired up.</p>
+            ) : null}
             <button
               type="button"
               data-neutral-button
@@ -1283,6 +1294,11 @@ export function CheckoutClient({
       {paymentSuccess ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-700">
           Payment received. Your order is confirmed.
+        </div>
+      ) : null}
+      {paymentSuccess && adminEmailWarning ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center text-sm font-semibold text-rose-700">
+          Admin email not wired up. Please contact us if you need help.
         </div>
       ) : null}
       <section className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">

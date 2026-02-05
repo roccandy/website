@@ -47,6 +47,11 @@ type CustomerRefundEmailPayload = {
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
+export function isEmailConfigured() {
+  if (process.env.SMTP_ENABLED?.toLowerCase() === "false") return false;
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 function getSmtpTransporter() {
   if (cachedTransporter) return cachedTransporter;
   const host = process.env.SMTP_HOST;

@@ -4,7 +4,7 @@ import { capturePayPalOrder } from "@/lib/paypal";
 import { createWooOrder } from "@/lib/woo";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { logPaymentFailure } from "@/lib/paymentFailures";
-import { getOrdersRecipients, sendCustomerOrderEmail, sendOrderEmail } from "@/lib/email";
+import { getOrdersRecipients, isEmailConfigured, sendCustomerOrderEmail, sendOrderEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -91,7 +91,10 @@ export async function POST(request: Request) {
     }
 
     const recipients = getOrdersRecipients();
-    if (recipients.length > 0) {
+    let adminEmailWarning: string | null = null;
+    if (!isEmailConfigured() || recipients.length === 0) {
+      adminEmailWarning = "Admin email not wired up.";
+    } else {
       for (const payload of orderPayloads) {
         try {
           await sendOrderEmail(recipients, {
@@ -108,11 +111,12 @@ export async function POST(request: Request) {
           });
         } catch (error) {
           console.error("Admin order email failed:", error);
+          adminEmailWarning = "Admin email failed to send.";
         }
       }
     }
 
-    return NextResponse.json({ ok: true, wooOrderId: wooOrder.id });
+    return NextResponse.json({ ok: true, wooOrderId: wooOrder.id, adminEmailWarning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to capture PayPal order.";
     await logPaymentFailure({

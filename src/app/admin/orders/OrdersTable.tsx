@@ -1402,17 +1402,6 @@ export function OrdersTable({
                                         Edit
                                       </button>
                                     )}
-                                    {order.paid_at && order.payment_transaction_id && !order.refunded_at ? (
-                                      <form action={refundOrder}>
-                                        <input type="hidden" name="id" value={order.id} />
-                                        <button
-                                          type="submit"
-                                          className="inline-flex items-center rounded-lg border border-red-600 bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700"
-                                        >
-                                          Refund payment
-                                        </button>
-                                      </form>
-                                    ) : null}
                                     {printTarget ? (
                                       <a
                                         href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
@@ -1781,7 +1770,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 

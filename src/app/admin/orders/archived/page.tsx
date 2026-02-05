@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { unarchiveOrder } from "../actions";
+import { refundOrder, unarchiveOrder } from "../actions";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -126,7 +126,7 @@ export default async function AllOrdersPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-        <h2 className="text-3xl font-semibold">All orders</h2>
+        <h2 className="text-3xl font-semibold">All Orders / Refunds</h2>
         <p className="text-sm text-zinc-600">Every order across custom and premade entries.</p>
       </div>
 
@@ -184,11 +184,11 @@ export default async function AllOrdersPage() {
                 const rank = (suffix: string | null) => (suffix === "a" ? 0 : suffix === "b" ? 1 : 2);
                 return rank(a.suffix) - rank(b.suffix);
               });
-              const subgroupSummaries = subgroupList.map((subgroup) => {
-                const isPremadeGroup = subgroup.orders.every((order) => order.design_type === "premade");
-                const statusList = subgroup.orders.map((order) =>
-                  isPremadeGroup
-                    ? resolvePremadeStatus(order.status)
+                const subgroupSummaries = subgroupList.map((subgroup) => {
+                  const isPremadeGroup = subgroup.orders.every((order) => order.design_type === "premade");
+                  const statusList = subgroup.orders.map((order) =>
+                    isPremadeGroup
+                      ? resolvePremadeStatus(order.status)
                     : scheduleStatusById.get(order.id) ?? order.status ?? "pending"
                 );
                 const status = isPremadeGroup
@@ -197,14 +197,15 @@ export default async function AllOrdersPage() {
                     : "pending"
                   : resolveScheduleGroupStatus(statusList);
                 const label = subgroup.suffix ? `-${subgroup.suffix}` : "order";
-                return {
-                  ...subgroup,
-                  isPremadeGroup,
-                  status,
-                  statusLabel: formatStatusLabel(status),
-                  label,
-                };
-              });
+                  return {
+                    ...subgroup,
+                    isPremadeGroup,
+                    status,
+                    statusLabel: formatStatusLabel(status),
+                    hasRefunded: subgroup.orders.some((order) => Boolean(order.refunded_at)),
+                    label,
+                  };
+                });
               return subgroupSummaries.map((subgroup, subgroupIndex) => {
                 const rowBorderClass =
                   groupIndex > 0 && subgroupIndex === 0
@@ -244,31 +245,55 @@ export default async function AllOrdersPage() {
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? weight : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? customer : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
-                        {subgroup.statusLabel}
-                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
+                          {subgroup.statusLabel}
+                        </span>
+                        {subgroup.hasRefunded ? (
+                          <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                            Refunded
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       {showGroupCells ? (
-                        groupOrders.some((order) => order.status === "archived") ? (
-                          <div className="space-y-2">
-                            {groupOrders
-                              .filter((order) => order.status === "archived")
-                              .map((order) => (
-                                <form key={`unarchive-${order.id}`} action={unarchiveOrder}>
-                                  <input type="hidden" name="order_id" value={order.id} />
-                                  <button
-                                    type="submit"
-                                    className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                  >
-                                    Unarchive {order.order_number ? `#${order.order_number}` : ""}
-                                  </button>
-                                </form>
-                              ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-zinc-400">-</span>
-                        )
+                        <div className="space-y-2">
+                          {groupOrders
+                            .filter((order) => order.status === "archived")
+                            .map((order) => (
+                              <form key={`unarchive-${order.id}`} action={unarchiveOrder}>
+                                <input type="hidden" name="order_id" value={order.id} />
+                                <button
+                                  type="submit"
+                                  className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                >
+                                  Unarchive {order.order_number ? `#${order.order_number}` : ""}
+                                </button>
+                              </form>
+                            ))}
+                          {groupOrders
+                            .filter((order) => order.paid_at && order.payment_transaction_id && !order.refunded_at)
+                            .map((order) => (
+                              <form key={`refund-${order.id}`} action={refundOrder}>
+                                <input type="hidden" name="id" value={order.id} />
+                                <input type="hidden" name="redirect_to" value="/admin/orders/archived" />
+                                <button
+                                  type="submit"
+                                  className="rounded border border-red-600 bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                                >
+                                  Refund {order.order_number ? `#${order.order_number}` : "payment"}
+                                </button>
+                              </form>
+                            ))}
+                          {groupOrders.every(
+                            (order) =>
+                              order.status !== "archived" &&
+                              !(order.paid_at && order.payment_transaction_id && !order.refunded_at)
+                          ) ? (
+                            <span className="text-xs text-zinc-400">-</span>
+                          ) : null}
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -288,5 +313,4 @@ export default async function AllOrdersPage() {
     </section>
   );
 }
-
 
