@@ -302,26 +302,34 @@ function SquarePayment({
         </span>
       </div>
       <div className="mt-4 space-y-4">
-        {(appleAvailable || googleAvailable) && (
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            Wallets
-          </div>
-        )}
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+          Wallets
+        </div>
         <div className="flex w-full flex-col items-center gap-3">
-          {appleAvailable ? (
+          <div className="w-full max-w-md">
             <div
               id="square-apple-pay"
-              className="w-full max-w-md"
-              style={{ display: "flex", justifyContent: "center" }}
+              className="w-full"
+              style={{ display: appleAvailable ? "flex" : "none", justifyContent: "center" }}
             />
-          ) : null}
-          {googleAvailable ? (
+            {!appleAvailable ? (
+              <div className="flex h-12 w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Apple Pay Unavailable
+              </div>
+            ) : null}
+          </div>
+          <div className="w-full max-w-md">
             <div
               id="square-google-pay"
-              className="w-full max-w-md"
-              style={{ display: "flex", justifyContent: "center" }}
+              className="w-full"
+              style={{ display: googleAvailable ? "flex" : "none", justifyContent: "center" }}
             />
-          ) : null}
+            {!googleAvailable ? (
+              <div className="flex h-12 w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                Google Pay Unavailable
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-3">
           <div id="square-card-container" />
