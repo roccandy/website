@@ -132,6 +132,7 @@ function SquarePayment({
   const appleHandlerRef = useRef<(() => void) | null>(null);
   const googleHandlerRef = useRef<(() => void) | null>(null);
   const initializedRef = useRef(false);
+  const initializingRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
   const canPayRef = useRef(canPay);
 
@@ -177,11 +178,12 @@ function SquarePayment({
   };
 
   useEffect(() => {
-    if (initializedRef.current) return;
+    if (initializedRef.current || initializingRef.current) return;
     if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
       setSetupError("Square is not configured.");
       return;
     }
+    initializingRef.current = true;
     const scriptUrl =
       SQUARE_ENV === "sandbox" ? "https://sandbox.web.squarecdn.com/v1/square.js" : "https://web.squarecdn.com/v1/square.js";
 
@@ -196,19 +198,29 @@ function SquarePayment({
           total: { amount: amount.toFixed(2), label: "Total" },
         });
 
-        const card = await payments.card();
-        await card.attach("#square-card-container");
-        cardRef.current = card;
+        const cardContainer = document.getElementById("square-card-container");
+        const appleContainer = document.getElementById("square-apple-pay");
+        const googleContainer = document.getElementById("square-google-pay");
+        if (cardContainer) cardContainer.innerHTML = "";
+        if (appleContainer) appleContainer.innerHTML = "";
+        if (googleContainer) googleContainer.innerHTML = "";
+        if (cardContainer && cardContainer.childNodes.length === 0) {
+          const card = await payments.card();
+          await card.attach("#square-card-container");
+          cardRef.current = card;
+        }
 
         try {
           const applePay = await payments.applePay(paymentRequest);
           if (!applePay || typeof (applePay as { attach?: unknown }).attach !== "function") {
             throw new Error("Apple Pay not available (attach missing).");
           }
-          await applePay.attach("#square-apple-pay");
+          const appleNode = document.getElementById("square-apple-pay");
+          if (appleNode && appleNode.childNodes.length === 0) {
+            await applePay.attach("#square-apple-pay");
+          }
           appleRef.current = applePay;
           setAppleAvailable(true);
-          const appleNode = document.getElementById("square-apple-pay");
           if (appleNode) {
             const handler = () => void handleTokenize(() => applePay.tokenize(), "Square - Apple Pay");
             appleHandlerRef.current = handler;
@@ -226,10 +238,12 @@ function SquarePayment({
           if (!googlePay || typeof (googlePay as { attach?: unknown }).attach !== "function") {
             throw new Error("Google Pay not available (attach missing).");
           }
-          await googlePay.attach("#square-google-pay");
+          const googleNode = document.getElementById("square-google-pay");
+          if (googleNode && googleNode.childNodes.length === 0) {
+            await googlePay.attach("#square-google-pay");
+          }
           googleRef.current = googlePay;
           setGoogleAvailable(true);
-          const googleNode = document.getElementById("square-google-pay");
           if (googleNode) {
             const handler = () => void handleTokenize(() => googlePay.tokenize(), "Square - Google Pay");
             googleHandlerRef.current = handler;
@@ -243,12 +257,14 @@ function SquarePayment({
         }
 
         initializedRef.current = true;
+        initializingRef.current = false;
         setReady(true);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Square setup failed.";
         setSetupError(message);
         onError("setup", message);
         setDebugNote(`Square setup error: ${message}`);
+        initializingRef.current = false;
       }
     })();
 
@@ -286,6 +302,11 @@ function SquarePayment({
         </span>
       </div>
       <div className="mt-4 space-y-4">
+        {(appleAvailable || googleAvailable) && (
+          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            Wallets
+          </div>
+        )}
         <div className="flex flex-col items-center gap-3">
           <div id="square-apple-pay" className={`w-full max-w-md ${appleAvailable ? "" : "hidden"}`} />
           <div id="square-google-pay" className={`w-full max-w-md ${googleAvailable ? "" : "hidden"}`} />
