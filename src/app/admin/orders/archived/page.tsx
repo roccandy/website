@@ -215,9 +215,11 @@ export default async function AllOrdersPage() {
                       : "";
                 const showGroupCells = subgroupIndex === 0;
                 const rowKey = `${orderNumber || firstOrder?.id || groupIndex}-${subgroup.label}`;
-                const badge = subgroup.isPremadeGroup
-                  ? premadeStatusBadge(subgroup.status)
-                  : scheduleStatusBadge(subgroup.status);
+                const badge = subgroup.hasRefunded
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : subgroup.isPremadeGroup
+                    ? premadeStatusBadge(subgroup.status)
+                    : scheduleStatusBadge(subgroup.status);
                 return (
                   <tr key={rowKey} className="bg-white">
                     <td className={`px-3 py-2 font-semibold text-zinc-900 ${rowBorderClass}`}>
@@ -245,16 +247,9 @@ export default async function AllOrdersPage() {
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? weight : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? customer : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
-                      <div className="flex flex-wrap gap-2">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
-                          {subgroup.statusLabel}
-                        </span>
-                        {subgroup.hasRefunded ? (
-                          <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                            Refunded
-                          </span>
-                        ) : null}
-                      </div>
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
+                        {subgroup.hasRefunded ? "Refunded" : subgroup.statusLabel}
+                      </span>
                     </td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       {showGroupCells ? (
@@ -313,4 +308,3 @@ export default async function AllOrdersPage() {
     </section>
   );
 }
-
