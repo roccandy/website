@@ -2,7 +2,7 @@
 
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
-import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
+import { getOrdersRecipients, sendCustomerRefundEmail, sendOrderEmail } from "@/lib/email";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
@@ -371,6 +371,14 @@ export async function refundOrder(formData: FormData) {
 
     if (order.woo_order_id) {
       await updateWooOrder(String(order.woo_order_id), { status: "refunded" });
+    }
+
+    if (order.customer_email) {
+      await sendCustomerRefundEmail([order.customer_email], {
+        orderNumber: order.order_number ?? null,
+        amount: Number(order.total_price ?? 0),
+        paymentMethod: order.payment_method ?? order.payment_provider ?? null,
+      });
     }
 
     redirect(`${ORDERS_PATH}?toast_success=Refund%20processed`);

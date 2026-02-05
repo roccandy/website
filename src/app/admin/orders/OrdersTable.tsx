@@ -829,6 +829,11 @@ export function OrdersTable({
                           >
                             {getScheduleStatus(order)}
                           </span>
+                          {order.refunded_at ? (
+                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                              Refunded
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-zinc-800">{order.title ?? "Untitled"}</td>
@@ -1776,7 +1781,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 

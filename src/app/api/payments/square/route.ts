@@ -4,6 +4,7 @@ import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { createWooOrder } from "@/lib/woo";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { getOrdersRecipients, sendCustomerOrderEmail, sendOrderEmail } from "@/lib/email";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -126,6 +127,48 @@ export async function POST(request: Request) {
     const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);
     if (insertError) {
       console.error("Supabase order insert failed:", insertError);
+    }
+
+    const customerEmail = body.order.customer?.email?.trim();
+    if (customerEmail) {
+      await sendCustomerOrderEmail([customerEmail], {
+        orderNumber: orderNumbers.baseOrderNumber,
+        items: orderPayloads.map((item) => ({
+          title: String(item.title ?? "Order item"),
+          quantity: Number(item.quantity ?? 1),
+        })),
+        dueDate: dueDate ?? null,
+        paymentMethod: paymentMethodTitle,
+        pickup,
+        addressLine1: billing.address_1 || null,
+        addressLine2: billing.address_2 || null,
+        suburb: billing.city || null,
+        state: billing.state || null,
+        postcode: billing.postcode || null,
+        totalPrice: totalAmount,
+      });
+    }
+
+    const recipients = getOrdersRecipients();
+    if (recipients.length > 0) {
+      for (const payload of orderPayloads) {
+        try {
+          await sendOrderEmail(recipients, {
+            orderNumber: orderNumbers.baseOrderNumber,
+            title: payload.title as string | null,
+            designType: payload.design_type as string | null,
+            quantity: payload.quantity as number | null,
+            dueDate: payload.due_date as string | null,
+            customerName: payload.customer_name as string | null,
+            customerEmail: customerEmail ?? null,
+            totalWeightKg: payload.total_weight_kg as number | null,
+            totalPrice: payload.total_price as number | null,
+            notes: payload.notes as string | null,
+          });
+        } catch (error) {
+          console.error("Admin order email failed:", error);
+        }
+      }
     }
 
     return NextResponse.json({ ok: true, wooOrderId: wooOrder.id });
