@@ -307,9 +307,21 @@ function SquarePayment({
             Wallets
           </div>
         )}
-        <div className="flex flex-col items-center gap-3">
-          <div id="square-apple-pay" className={`w-full max-w-md ${appleAvailable ? "" : "hidden"}`} />
-          <div id="square-google-pay" className={`w-full max-w-md ${googleAvailable ? "" : "hidden"}`} />
+        <div className="flex w-full flex-col items-center gap-3">
+          {appleAvailable ? (
+            <div
+              id="square-apple-pay"
+              className="w-full max-w-md"
+              style={{ display: "flex", justifyContent: "center" }}
+            />
+          ) : null}
+          {googleAvailable ? (
+            <div
+              id="square-google-pay"
+              className="w-full max-w-md"
+              style={{ display: "flex", justifyContent: "center" }}
+            />
+          ) : null}
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-3">
           <div id="square-card-container" />
