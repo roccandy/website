@@ -19,6 +19,15 @@ const formatDate = (iso: string | null) => {
   }
 };
 
+const formatDateTime = (iso: string | null) => {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+};
+
 const resolvePremadeStatus = (status: string | null | undefined) => (status === "shipped" ? "shipped" : "pending");
 const formatStatusLabel = (status: string) => status.replace(/_/g, " ");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
@@ -216,6 +225,11 @@ export default async function AllOrdersPage() {
                       : "";
                 const showGroupCells = subgroupIndex === 0;
                 const rowKey = `${orderNumber || firstOrder?.id || groupIndex}-${subgroup.label}`;
+                const shippedAt = subgroup.orders
+                  .map((order) => order.shipped_at)
+                  .filter(Boolean)
+                  .sort()
+                  .pop() ?? null;
                 const badge = subgroup.hasRefunded
                   ? "border-rose-200 bg-rose-50 text-rose-700"
                   : subgroup.isPremadeGroup
@@ -248,9 +262,12 @@ export default async function AllOrdersPage() {
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? weight : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? customer : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
-                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
-                        {subgroup.hasRefunded ? "Refunded" : subgroup.statusLabel}
-                      </span>
+                      <div className="space-y-1">
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
+                          {subgroup.hasRefunded ? "Refunded" : subgroup.statusLabel}
+                        </span>
+                        {shippedAt ? <div className="text-xs text-zinc-500">Shipped on {formatDateTime(shippedAt)}</div> : null}
+                      </div>
                     </td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       {showGroupCells ? (

@@ -56,24 +56,17 @@ const renderCountdown = (shippedAt: Date | null) => {
   if (!shippedAt) return null;
   const elapsed = Math.max(0, Date.now() - shippedAt.getTime());
   const remaining = Math.max(0, ONE_DAY_MS - elapsed);
-  const progress = Math.min(1, remaining / ONE_DAY_MS);
-  const percent = Math.round(progress * 100);
-  const angle = Math.round(progress * 360);
   const remainingHours = Math.floor(remaining / (60 * 60 * 1000));
   const remainingMinutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
   const remainingLabel = `${remainingHours}h ${remainingMinutes}m`;
   return (
-    <div className="flex items-center gap-2 text-xs text-zinc-500">
-      <span
-        className="relative inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-white"
-        style={{ background: `conic-gradient(#10b981 ${angle}deg, #e4e4e7 0deg)` }}
-        title={`${percent}% of 24h remaining`}
-      >
-        <span className="h-3 w-3 rounded-full bg-white" />
-      </span>
-      <span className="text-[11px] uppercase tracking-[0.2em]">Hides in {remainingLabel}</span>
-    </div>
+    <div className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">Hides in {remainingLabel}</div>
   );
+};
+
+const shippedOnLabel = (shippedAt: Date | null) => {
+  if (!shippedAt) return null;
+  return `Shipped on ${formatDate(shippedAt.toISOString())}`;
 };
 
 export default async function AdditionalItemsPage() {
@@ -213,7 +206,12 @@ export default async function AdditionalItemsPage() {
                   <td className="px-3 py-2 text-zinc-700">{totalPriceLabel}</td>
                   <td className="px-3 py-2 text-zinc-700">
                     {isShipped ? (
-                      renderCountdown(shippedAt)
+                      <div className="space-y-1">
+                        {renderCountdown(shippedAt)}
+                        {shippedOnLabel(shippedAt) ? (
+                          <div className="text-xs text-zinc-500">{shippedOnLabel(shippedAt)}</div>
+                        ) : null}
+                      </div>
                     ) : (
                       <span
                         className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(status)}`}
