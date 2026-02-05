@@ -287,8 +287,8 @@ function SquarePayment({
       </div>
       <div className="mt-4 space-y-4">
         <div className="flex flex-col items-center gap-3">
-          <div id="square-apple-pay" className="w-full max-w-md" />
-          <div id="square-google-pay" className="w-full max-w-md" />
+          <div id="square-apple-pay" className={`w-full max-w-md ${appleAvailable ? "" : "hidden"}`} />
+          <div id="square-google-pay" className={`w-full max-w-md ${googleAvailable ? "" : "hidden"}`} />
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-3">
           <div id="square-card-container" />
@@ -347,6 +347,10 @@ function PayPalPayment({
       try {
         await loadScript(scriptUrl);
         if (!window.paypal || !containerRef.current) return;
+        if (containerRef.current.childNodes.length > 0) {
+          renderedRef.current = true;
+          return;
+        }
         window.paypal
           .Buttons({
             onClick: () => {
