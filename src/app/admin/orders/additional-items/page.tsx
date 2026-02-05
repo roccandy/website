@@ -159,11 +159,13 @@ export default async function AdditionalItemsPage() {
               const statuses = groupOrders.map((order) => (order.status ?? "pending").toString());
               const isShipped = statuses.length > 0 && statuses.every((status) => status === "shipped");
               const isRefunded = groupOrders.some((order) => Boolean(order.refunded_at));
-              const status = isShipped
-                ? "shipped"
-                : statuses.includes("pending")
-                  ? "pending"
-                  : statuses[0] ?? "pending";
+              const status = isRefunded
+                ? "refunded"
+                : isShipped
+                  ? "shipped"
+                  : statuses.includes("pending")
+                    ? "pending"
+                    : statuses[0] ?? "pending";
               const statusLabel = status.replace(/_/g, " ");
               const quoteOrders = groupOrders.map((order) => order.notes?.trim()).filter(Boolean);
               const quoteOrder = quoteOrders.length > 0 ? Array.from(new Set(quoteOrders)).join(" | ") : "-";
@@ -206,7 +208,7 @@ export default async function AdditionalItemsPage() {
                   <td className="px-3 py-2 text-zinc-700">{orderedDate}</td>
                   <td className="px-3 py-2 text-zinc-700">{totalPriceLabel}</td>
                   <td className="px-3 py-2 text-zinc-700">
-                    {isShipped ? (
+                    {status === "shipped" ? (
                       <div className="space-y-1">
                         {renderCountdown(shippedAt)}
                         {shippedOnLabel(shippedAt) ? (
@@ -215,14 +217,15 @@ export default async function AdditionalItemsPage() {
                       </div>
                     ) : (
                       <span
-                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(status)}`}
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                          status === "refunded"
+                            ? "border-rose-200 bg-rose-50 text-rose-700"
+                            : statusBadge(status)
+                        }`}
                       >
                         {statusLabel}
                       </span>
                     )}
-                    {isRefunded ? (
-                      <div className="mt-1 text-xs font-semibold text-rose-600">Refunded</div>
-                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-zinc-700">
                     {isRefunded ? (
