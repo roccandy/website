@@ -7,6 +7,7 @@ import { sendCustomerRefundEmail } from "@/lib/email";
 type RefundRequest = {
   orderId: string;
   amount?: number;
+  reason?: string;
 };
 
 export async function POST(request: Request) {
@@ -33,11 +34,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid refund amount." }, { status: 400 });
     }
 
+    const reason = body.reason?.toString().trim() || null;
+
     if (provider === "square") {
       const cents = Math.round(amount * 100);
-      await refundSquarePayment(transactionId, cents);
+      await refundSquarePayment(transactionId, cents, reason);
     } else if (provider === "paypal") {
-      await refundPayPalCapture(transactionId, amount.toFixed(2));
+      await refundPayPalCapture(transactionId, amount.toFixed(2), reason);
     } else {
       return NextResponse.json({ error: "Unsupported payment provider." }, { status: 400 });
     }
@@ -48,6 +51,7 @@ export async function POST(request: Request) {
       .update({
         status: "refunded",
         refunded_at: refundedAt,
+        refund_reason: reason,
         woo_order_status: "refunded",
       })
       .eq("id", order.id);

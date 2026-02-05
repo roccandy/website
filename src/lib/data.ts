@@ -156,6 +156,7 @@ export type OrderRow = {
   payment_provider: string | null;
   payment_transaction_id: string | null;
   refunded_at: string | null;
+  refund_reason: string | null;
   created_at: string;
 };
 

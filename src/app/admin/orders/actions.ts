@@ -330,7 +330,8 @@ export async function upsertOrder(formData: FormData) {
 
 export async function refundOrder(formData: FormData) {
   const id = formData.get("id")?.toString() || null;
-  const refundReason = formData.get("refund_reason")?.toString() || null;
+  const refundReasonRaw = formData.get("refund_reason")?.toString() || null;
+  const refundReason = refundReasonRaw ? refundReasonRaw.trim().slice(0, 255) : null;
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
   const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ORDERS_PATH;
   if (!id) {
@@ -368,6 +369,7 @@ export async function refundOrder(formData: FormData) {
       .update({
         status: "refunded",
         refunded_at: refundedAt,
+        refund_reason: refundReason,
         woo_order_status: "refunded",
       })
       .eq("id", order.id);
