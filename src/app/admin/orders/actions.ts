@@ -604,6 +604,13 @@ export async function markAdditionalItemShipped(formData: FormData) {
   if (!orderId) throw new Error("Missing order id");
 
   const client = supabaseServerClient;
+  const { data: existing, error: existingError } = await client
+    .from("orders")
+    .select("refunded_at")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (existingError) throw new Error(existingError.message);
+  if (existing?.refunded_at) throw new Error("Refunded orders cannot be shipped.");
   const { error } = await client
     .from("orders")
     .update({ status: "shipped", shipped_at: new Date().toISOString() })
@@ -622,6 +629,14 @@ export async function markAdditionalItemsShipped(formData: FormData) {
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
   const client = supabaseServerClient;
+  const { count: refundedCount, error: refundedError } = await client
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .in("id", orderIds)
+    .eq("design_type", "premade")
+    .not("refunded_at", "is", null);
+  if (refundedError) throw new Error(refundedError.message);
+  if (refundedCount && refundedCount > 0) throw new Error("Refunded orders cannot be shipped.");
   const { error } = await client
     .from("orders")
     .update({ status: "shipped", shipped_at: new Date().toISOString() })
@@ -641,6 +656,14 @@ export async function markAdditionalItemsPending(formData: FormData) {
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
   const client = supabaseServerClient;
+  const { count: refundedCount, error: refundedError } = await client
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .in("id", orderIds)
+    .eq("design_type", "premade")
+    .not("refunded_at", "is", null);
+  if (refundedError) throw new Error(refundedError.message);
+  if (refundedCount && refundedCount > 0) throw new Error("Refunded orders cannot be unshipped.");
   const { error } = await client
     .from("orders")
     .update({ status: "pending", shipped_at: null })

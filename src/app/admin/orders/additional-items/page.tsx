@@ -158,6 +158,7 @@ export default async function AdditionalItemsPage() {
               const customer = customerName || "-";
               const statuses = groupOrders.map((order) => (order.status ?? "pending").toString());
               const isShipped = statuses.length > 0 && statuses.every((status) => status === "shipped");
+              const isRefunded = groupOrders.some((order) => Boolean(order.refunded_at));
               const status = isShipped
                 ? "shipped"
                 : statuses.includes("pending")
@@ -219,9 +220,14 @@ export default async function AdditionalItemsPage() {
                         {statusLabel}
                       </span>
                     )}
+                    {isRefunded ? (
+                      <div className="mt-1 text-xs font-semibold text-rose-600">Refunded</div>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2 text-zinc-700">
-                    {isShipped ? (
+                    {isRefunded ? (
+                      <span className="text-xs text-zinc-400">Refunded</span>
+                    ) : isShipped ? (
                       <form action={markAdditionalItemsPending}>
                         <input type="hidden" name="order_ids" value={orderIds} />
                         <button
