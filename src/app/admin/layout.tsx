@@ -7,11 +7,11 @@ import { AdminNav } from "@/app/admin/AdminNav";
 
 const navSections = [
   {
-    label: "Production schedule",
+    label: "Orders",
     items: [
-      { label: "Custom Orders & Schedule", href: "/admin/orders" },
+      { label: "Production Schedule", href: "/admin/orders" },
       { label: "Pre-made Orders", href: "/admin/orders/additional-items" },
-      { label: "All Orders", href: "/admin/orders/archived" },
+      { label: "All Orders / Refunds", href: "/admin/orders/archived" },
     ],
   },
   {

@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 
 const sections = [
   {
-    title: "Production Schedule",
+    title: "Orders",
     description: "Track active orders and archive history.",
     links: [
       {
         href: "/admin/orders",
-        label: "Custom Orders & Schedule",
+        label: "Production Schedule",
         description: "Current production pipeline.",
       },
       {
@@ -20,7 +20,7 @@ const sections = [
       },
       {
         href: "/admin/orders/archived",
-        label: "All Orders",
+        label: "All Orders / Refunds",
         description: "All orders across custom and premade.",
       },
     ],
