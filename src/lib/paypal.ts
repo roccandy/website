@@ -49,7 +49,11 @@ export async function getPayPalAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-export async function createPayPalOrder(totalAmount: number, currency = "AUD") {
+export async function createPayPalOrder(
+  totalAmount: number,
+  currency = "AUD",
+  meta?: { customId?: string; description?: string }
+) {
   const token = await getPayPalAccessToken();
   const response = await fetch(`${getPayPalApiBase()}/v2/checkout/orders`, {
     method: "POST",
@@ -65,6 +69,8 @@ export async function createPayPalOrder(totalAmount: number, currency = "AUD") {
             currency_code: currency,
             value: totalAmount.toFixed(2),
           },
+          custom_id: meta?.customId,
+          description: meta?.description,
         },
       ],
     }),

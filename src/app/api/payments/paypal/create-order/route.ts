@@ -23,8 +23,11 @@ export async function POST(request: Request) {
     if (!body?.order) {
       return NextResponse.json({ error: "Order payload is required." }, { status: 400 });
     }
-    const { totalAmount } = await buildWooOrderContext(body.order);
-    const created = await createPayPalOrder(totalAmount, "AUD");
+    const { totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
+    const created = await createPayPalOrder(totalAmount, "AUD", {
+      customId: orderNumbers.baseOrderNumber,
+      description: `Roc Candy order ${orderNumbers.baseOrderNumber}`,
+    });
     return NextResponse.json({ orderId: created.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create PayPal order.";

@@ -61,6 +61,8 @@ export async function POST(request: Request) {
       payment_method: paymentMethodTitle,
       status: "pending",
       paid_at: paidAt,
+      payment_provider: body.paymentMethod,
+      payment_transaction_id: body.transactionId,
     }));
 
     const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);

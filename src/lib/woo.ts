@@ -243,3 +243,11 @@ export async function createWooOrder(input: WooOrderCreateInput): Promise<{
   );
   return data;
 }
+
+export async function updateWooOrder(id: string, payload: Record<string, unknown>) {
+  const data = await wooRequest<{ id: number }>(`/wp-json/wc/v3/orders/${id}`, {
+    method: "PUT",
+    body: payload,
+  });
+  return data;
+}

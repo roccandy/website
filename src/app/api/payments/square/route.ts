@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Square is not configured." }, { status: 500 });
     }
 
-    const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount } = await buildWooOrderContext(body.order);
+    const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
     const customerEmail = body.order.customer?.email ?? null;
     const amountCents = Math.round(totalAmount * 100);
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
@@ -71,6 +71,9 @@ export async function POST(request: Request) {
         location_id: locationId,
         verification_token: body.verificationToken || undefined,
         autocomplete: true,
+        buyer_email_address: customerEmail || undefined,
+        note: orderNumbers.baseOrderNumber ? `Roc Candy order ${orderNumbers.baseOrderNumber}` : undefined,
+        reference_id: orderNumbers.baseOrderNumber || undefined,
       }),
     });
 
@@ -116,6 +119,8 @@ export async function POST(request: Request) {
       payment_method: paymentMethodTitle,
       status: "pending",
       paid_at: paidAt,
+      payment_provider: "square",
+      payment_transaction_id: paymentData.payment?.id ?? null,
     }));
 
     const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);

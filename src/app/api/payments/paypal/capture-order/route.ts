@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const capture = await capturePayPalOrder(body.orderId);
     const transactionId = capture.captureId || capture.id;
 
-    const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount } = await buildWooOrderContext(body.order);
+    const { billing, dueDate, pickup, lineItems, orderPayloads } = await buildWooOrderContext(body.order);
     const customerEmail = body.order.customer?.email ?? null;
 
     const wooOrder = await createWooOrder({
@@ -61,6 +61,8 @@ export async function POST(request: Request) {
       payment_method: "PayPal",
       status: "pending",
       paid_at: paidAt,
+      payment_provider: "paypal",
+      payment_transaction_id: transactionId ?? null,
     }));
 
     const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);

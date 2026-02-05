@@ -153,6 +153,9 @@ export type OrderRow = {
   woo_order_key: string | null;
   woo_payment_url: string | null;
   paid_at: string | null;
+  payment_provider: string | null;
+  payment_transaction_id: string | null;
+  refunded_at: string | null;
   created_at: string;
 };
 

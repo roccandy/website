@@ -5,6 +5,8 @@ import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumber
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
+import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
+import { updateWooOrder } from "@/lib/woo";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -324,6 +326,58 @@ export async function upsertOrder(formData: FormData) {
     redirect(`${destination}?${params.toString()}`);
   }
   redirect(destination);
+}
+
+export async function refundOrder(formData: FormData) {
+  const id = formData.get("id")?.toString() || null;
+  if (!id) {
+    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
+  }
+  const client = supabaseServerClient;
+  const { data: order, error } = await client.from("orders").select("*").eq("id", id).maybeSingle();
+  if (error || !order) {
+    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
+  }
+
+  const provider = order.payment_provider;
+  const transactionId = order.payment_transaction_id;
+  if (!provider || !transactionId) {
+    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Missing%20payment%20details`);
+  }
+
+  const amount = Number(order.total_price ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
+  }
+
+  try {
+    if (provider === "square") {
+      await refundSquarePayment(String(transactionId), Math.round(amount * 100));
+    } else if (provider === "paypal") {
+      await refundPayPalCapture(String(transactionId), amount.toFixed(2));
+    } else {
+      redirect(`${ORDERS_PATH}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
+    }
+
+    const refundedAt = new Date().toISOString();
+    await client
+      .from("orders")
+      .update({
+        status: "refunded",
+        refunded_at: refundedAt,
+        woo_order_status: "refunded",
+      })
+      .eq("id", order.id);
+
+    if (order.woo_order_id) {
+      await updateWooOrder(String(order.woo_order_id), { status: "refunded" });
+    }
+
+    redirect(`${ORDERS_PATH}?toast_success=Refund%20processed`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Refund failed.";
+    redirect(`${ORDERS_PATH}?toast_error=${encodeURIComponent(message)}`);
+  }
 }
 
 export async function upsertSlot(formData: FormData) {
