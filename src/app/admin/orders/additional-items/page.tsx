@@ -59,6 +59,9 @@ const renderCountdown = (shippedAt: Date | null) => {
   const progress = Math.min(1, remaining / ONE_DAY_MS);
   const percent = Math.round(progress * 100);
   const angle = Math.round(progress * 360);
+  const remainingHours = Math.floor(remaining / (60 * 60 * 1000));
+  const remainingMinutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingLabel = `${remainingHours}h ${remainingMinutes}m`;
   return (
     <div className="flex items-center gap-2 text-xs text-zinc-500">
       <span
@@ -68,7 +71,7 @@ const renderCountdown = (shippedAt: Date | null) => {
       >
         <span className="h-3 w-3 rounded-full bg-white" />
       </span>
-      <span className="text-[11px] uppercase tracking-[0.2em]">{percent}% left</span>
+      <span className="text-[11px] uppercase tracking-[0.2em]">Hides in {remainingLabel}</span>
     </div>
   );
 };
@@ -209,10 +212,15 @@ export default async function AdditionalItemsPage() {
                   <td className="px-3 py-2 text-zinc-700">{orderedDate}</td>
                   <td className="px-3 py-2 text-zinc-700">{totalPriceLabel}</td>
                   <td className="px-3 py-2 text-zinc-700">
-                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(status)}`}>
-                      {statusLabel}
-                    </span>
-                    {isShipped ? <div className="mt-2">{renderCountdown(shippedAt)}</div> : null}
+                    {isShipped ? (
+                      renderCountdown(shippedAt)
+                    ) : (
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(status)}`}
+                      >
+                        {statusLabel}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-zinc-700">
                     {isShipped ? (
