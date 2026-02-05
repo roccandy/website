@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { createWooOrder } from "@/lib/woo";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PaidOrderRequest = {
@@ -12,6 +13,14 @@ type PaidOrderRequest = {
 };
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`payments:woo:paid:${ip}`, { windowMs: 5 * 60 * 1000, max: 10 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many payment attempts. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
   try {
     const body = (await request.json()) as PaidOrderRequest;
     if (!body?.order) {

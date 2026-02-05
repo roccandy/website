@@ -4,6 +4,7 @@ import { capturePayPalOrder } from "@/lib/paypal";
 import { createWooOrder } from "@/lib/woo";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PayPalCaptureRequest = {
@@ -12,6 +13,14 @@ type PayPalCaptureRequest = {
 };
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`payments:paypal:capture:${ip}`, { windowMs: 5 * 60 * 1000, max: 20 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many payment attempts. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
   try {
     const body = (await request.json()) as PayPalCaptureRequest;
     if (!body?.order || !body.orderId) {

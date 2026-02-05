@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { createPayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PayPalCreateRequest = {
@@ -9,6 +10,14 @@ type PayPalCreateRequest = {
 };
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`payments:paypal:create:${ip}`, { windowMs: 5 * 60 * 1000, max: 30 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many payment attempts. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
   try {
     const body = (await request.json()) as PayPalCreateRequest;
     if (!body?.order) {

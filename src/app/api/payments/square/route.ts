@@ -4,6 +4,7 @@ import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { createWooOrder } from "@/lib/woo";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type SquarePaymentRequest = {
@@ -22,6 +23,14 @@ type SquarePaymentResponse = {
 };
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const limit = rateLimit(`payments:square:${ip}`, { windowMs: 5 * 60 * 1000, max: 20 });
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many payment attempts. Please wait and try again." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+    );
+  }
   try {
     const body = (await request.json()) as SquarePaymentRequest;
     if (!body?.order || !body.sourceId) {
