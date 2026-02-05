@@ -604,7 +604,10 @@ export async function markAdditionalItemShipped(formData: FormData) {
   if (!orderId) throw new Error("Missing order id");
 
   const client = supabaseServerClient;
-  const { error } = await client.from("orders").update({ status: "shipped" }).eq("id", orderId);
+  const { error } = await client
+    .from("orders")
+    .update({ status: "shipped", shipped_at: new Date().toISOString() })
+    .eq("id", orderId);
   if (error) throw new Error(error.message);
 
   redirect(ADDITIONAL_ITEMS_PATH);
@@ -621,7 +624,26 @@ export async function markAdditionalItemsShipped(formData: FormData) {
   const client = supabaseServerClient;
   const { error } = await client
     .from("orders")
-    .update({ status: "shipped" })
+    .update({ status: "shipped", shipped_at: new Date().toISOString() })
+    .in("id", orderIds)
+    .eq("design_type", "premade");
+  if (error) throw new Error(error.message);
+
+  redirect(ADDITIONAL_ITEMS_PATH);
+}
+
+export async function markAdditionalItemsPending(formData: FormData) {
+  const orderIdsRaw = formData.get("order_ids")?.toString() || "";
+  const orderIds = orderIdsRaw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (orderIds.length === 0) throw new Error("Missing order ids");
+
+  const client = supabaseServerClient;
+  const { error } = await client
+    .from("orders")
+    .update({ status: "pending", shipped_at: null })
     .in("id", orderIds)
     .eq("design_type", "premade");
   if (error) throw new Error(error.message);

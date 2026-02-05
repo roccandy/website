@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { markAdditionalItemsShipped } from "../actions";
+import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -35,6 +35,44 @@ const statusBadge = (status: string) => {
   return "border-zinc-200 bg-zinc-50 text-zinc-600";
 };
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const resolveShippedAt = (orders: { shipped_at: string | null; created_at: string }[]) => {
+  const shippedTimes = orders
+    .map((order) => (order.shipped_at ? new Date(order.shipped_at).getTime() : null))
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  if (shippedTimes.length > 0) return new Date(Math.max(...shippedTimes));
+  return null;
+};
+
+const shouldShowPremade = (order: { status: string | null; shipped_at: string | null }) => {
+  if (order.status !== "shipped") return true;
+  if (!order.shipped_at) return true;
+  const ageMs = Date.now() - new Date(order.shipped_at).getTime();
+  return ageMs <= ONE_DAY_MS;
+};
+
+const renderCountdown = (shippedAt: Date | null) => {
+  if (!shippedAt) return null;
+  const elapsed = Math.max(0, Date.now() - shippedAt.getTime());
+  const remaining = Math.max(0, ONE_DAY_MS - elapsed);
+  const progress = Math.min(1, remaining / ONE_DAY_MS);
+  const percent = Math.round(progress * 100);
+  const angle = Math.round(progress * 360);
+  return (
+    <div className="flex items-center gap-2 text-xs text-zinc-500">
+      <span
+        className="relative inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-white"
+        style={{ background: `conic-gradient(#10b981 ${angle}deg, #e4e4e7 0deg)` }}
+        title={`${percent}% of 24h remaining`}
+      >
+        <span className="h-3 w-3 rounded-full bg-white" />
+      </span>
+      <span className="text-[11px] uppercase tracking-[0.2em]">{percent}% left</span>
+    </div>
+  );
+};
+
 export default async function AdditionalItemsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
@@ -42,6 +80,7 @@ export default async function AdditionalItemsPage() {
   const orders = await getOrders();
   const additionalItems = orders
     .filter((order) => order.design_type === "premade")
+    .filter((order) => shouldShowPremade(order))
     .sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
       const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -140,6 +179,7 @@ export default async function AdditionalItemsPage() {
               const totalPriceLabel =
                 totals.length > 0 ? formatMoney(totals.reduce((sum, value) => sum + value, 0)) : "-";
               const orderedDate = group.latestDate ? formatDate(group.latestDate) : "";
+              const shippedAt = isShipped ? resolveShippedAt(groupOrders) : null;
 
               return (
                 <tr key={`${orderNumber}-${orderIds}`} className="bg-white">
@@ -172,12 +212,19 @@ export default async function AdditionalItemsPage() {
                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(status)}`}>
                       {statusLabel}
                     </span>
+                    {isShipped ? <div className="mt-2">{renderCountdown(shippedAt)}</div> : null}
                   </td>
                   <td className="px-3 py-2 text-zinc-700">
                     {isShipped ? (
-                      <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-                        Shipped
-                      </span>
+                      <form action={markAdditionalItemsPending}>
+                        <input type="hidden" name="order_ids" value={orderIds} />
+                        <button
+                          type="submit"
+                          className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
+                        >
+                          Shipped
+                        </button>
+                      </form>
                     ) : (
                       <form action={markAdditionalItemsShipped}>
                         <input type="hidden" name="order_ids" value={orderIds} />
