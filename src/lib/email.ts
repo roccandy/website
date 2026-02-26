@@ -67,6 +67,9 @@ function getSmtpTransporter() {
     port,
     secure,
     auth: { user, pass },
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 10_000,
   });
   return cachedTransporter;
 }

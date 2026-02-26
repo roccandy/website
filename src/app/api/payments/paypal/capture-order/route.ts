@@ -13,6 +13,8 @@ type PayPalCaptureRequest = {
   order: CheckoutOrderPayload;
 };
 
+const EMAIL_WAIT_MS = 4000;
+
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   const limit = rateLimit(`payments:paypal:capture:${ip}`, { windowMs: 5 * 60 * 1000, max: 20 });
@@ -71,33 +73,37 @@ export async function POST(request: Request) {
       console.error("Supabase order insert failed:", insertError);
     }
 
-    if (customerEmail) {
-      await sendCustomerOrderEmail([customerEmail], {
-        orderNumber: orderNumbers.baseOrderNumber,
-        items: orderPayloads.map((item) => ({
-          title: String(item.title ?? "Order item"),
-          quantity: Number(item.quantity ?? 1),
-        })),
-        dueDate: dueDate ?? null,
-        paymentMethod: "PayPal",
-        pickup,
-        addressLine1: billing.address_1 || null,
-        addressLine2: billing.address_2 || null,
-        suburb: billing.city || null,
-        state: billing.state || null,
-        postcode: billing.postcode || null,
-        totalPrice: orderPayloads.reduce((sum, item) => sum + Number(item.total_price ?? 0), 0),
-      });
-    }
-
     const recipients = getOrdersRecipients();
     let adminEmailWarning: string | null = null;
+    const emailTasks: Array<Promise<unknown>> = [];
+
+    if (customerEmail) {
+      emailTasks.push(
+        sendCustomerOrderEmail([customerEmail], {
+          orderNumber: orderNumbers.baseOrderNumber,
+          items: orderPayloads.map((item) => ({
+            title: String(item.title ?? "Order item"),
+            quantity: Number(item.quantity ?? 1),
+          })),
+          dueDate: dueDate ?? null,
+          paymentMethod: "PayPal",
+          pickup,
+          addressLine1: billing.address_1 || null,
+          addressLine2: billing.address_2 || null,
+          suburb: billing.city || null,
+          state: billing.state || null,
+          postcode: billing.postcode || null,
+          totalPrice: orderPayloads.reduce((sum, item) => sum + Number(item.total_price ?? 0), 0),
+        })
+      );
+    }
+
     if (!isEmailConfigured() || recipients.length === 0) {
       adminEmailWarning = "Admin email not wired up.";
     } else {
-      for (const payload of orderPayloads) {
-        try {
-          await sendOrderEmail(recipients, {
+      emailTasks.push(
+        ...orderPayloads.map((payload) =>
+          sendOrderEmail(recipients, {
             orderNumber: payload.order_number as string | null,
             title: payload.title as string | null,
             designType: payload.design_type as string | null,
@@ -108,11 +114,23 @@ export async function POST(request: Request) {
             totalWeightKg: payload.total_weight_kg as number | null,
             totalPrice: payload.total_price as number | null,
             notes: payload.notes as string | null,
-          });
-        } catch (error) {
-          console.error("Admin order email failed:", error);
-          adminEmailWarning = "Admin email failed to send.";
-        }
+          })
+        )
+      );
+    }
+
+    if (emailTasks.length > 0) {
+      const emailResult = await Promise.race([
+        Promise.allSettled(emailTasks).then((results) => ({ kind: "results" as const, results })),
+        new Promise<{ kind: "timeout" }>((resolve) =>
+          setTimeout(() => resolve({ kind: "timeout" }), EMAIL_WAIT_MS)
+        ),
+      ]);
+
+      if (emailResult.kind === "timeout") {
+        adminEmailWarning = adminEmailWarning ?? "Email sending timed out (order still placed).";
+      } else if (emailResult.results.some((result) => result.status === "rejected")) {
+        adminEmailWarning = "Some order emails failed to send.";
       }
     }
 

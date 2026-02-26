@@ -129,6 +129,7 @@ function SquarePayment({
   const [setupError, setSetupError] = useState<string | null>(null);
   const [debugNote, setDebugNote] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  const paymentsRef = useRef<SquarePayments | null>(null);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
   const appleRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
   const initializedRef = useRef(false);
@@ -178,6 +179,36 @@ function SquarePayment({
     }
   };
 
+  const refreshApplePay = async (payments: SquarePayments) => {
+    if (amount <= 0) {
+      appleRef.current = null;
+      setAppleAvailable(false);
+      return null;
+    }
+
+    try {
+      const paymentRequest = payments.paymentRequest({
+        countryCode: "AU",
+        currencyCode: "AUD",
+        total: { amount: amount.toFixed(2), label: "Total" },
+      });
+      const applePay = await payments.applePay(paymentRequest);
+      if (!applePay || typeof (applePay as { tokenize?: unknown }).tokenize !== "function") {
+        throw new Error("Apple Pay not available.");
+      }
+      appleRef.current = applePay;
+      setAppleAvailable(true);
+      setDebugNote(null);
+      return applePay;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : JSON.stringify(error);
+      appleRef.current = null;
+      setAppleAvailable(false);
+      setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (initializedRef.current || initializingRef.current) return;
     if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
@@ -193,43 +224,17 @@ function SquarePayment({
         await loadScript(scriptUrl);
         if (!window.Square) throw new Error("Square SDK not available.");
         const payments = window.Square.payments(SQUARE_APP_ID, SQUARE_LOCATION_ID);
-        const paymentRequest = payments.paymentRequest({
-          countryCode: "AU",
-          currencyCode: "AUD",
-          total: { amount: amount.toFixed(2), label: "Total" },
-        });
+        paymentsRef.current = payments;
 
         const cardContainer = document.getElementById("square-card-container");
-        const appleContainer = document.getElementById("square-apple-pay");
         if (cardContainer) cardContainer.innerHTML = "";
-        if (appleContainer) appleContainer.innerHTML = "";
         if (cardContainer && cardContainer.childNodes.length === 0) {
           const card = await payments.card();
           await card.attach("#square-card-container");
           cardRef.current = card;
         }
 
-        try {
-          const applePay = await payments.applePay(paymentRequest);
-          if (!applePay || typeof (applePay as { tokenize?: unknown }).tokenize !== "function") {
-            throw new Error("Apple Pay not available.");
-          }
-          const appleNode = document.getElementById("square-apple-pay");
-          if (
-            appleNode &&
-            appleNode.childNodes.length === 0 &&
-            typeof (applePay as { attach?: unknown }).attach === "function"
-          ) {
-            await applePay.attach("#square-apple-pay");
-          }
-          appleRef.current = applePay;
-          setAppleAvailable(true);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : JSON.stringify(error);
-          appleRef.current = null;
-          setAppleAvailable(false);
-          setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
-        }
+        await refreshApplePay(payments);
 
         initializedRef.current = true;
         initializingRef.current = false;
@@ -243,13 +248,17 @@ function SquarePayment({
       }
     })();
 
-  }, [amount, canPay]);
+  }, [onError]);
+
+  useEffect(() => {
+    if (!ready || !paymentsRef.current) return;
+    void refreshApplePay(paymentsRef.current);
+  }, [amount, ready]);
 
   return (
     <div className="space-y-4">
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
       {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
-      <div id="square-apple-pay" className="hidden" />
       <div className={selectedMethod === "apple_pay" ? "space-y-3" : "hidden"}>
         {!appleAvailable ? (
           <p className="text-sm text-zinc-500">Apple Pay is currently unavailable on this device/browser.</p>
@@ -259,8 +268,13 @@ function SquarePayment({
           data-primary-button
           disabled={!ready || loading || !appleAvailable}
           onClick={() => {
-            if (!appleRef.current) return;
-            void handleTokenize(() => appleRef.current!.tokenize(), "Square - Apple Pay");
+            void (async () => {
+              const payments = paymentsRef.current;
+              if (!payments) return;
+              const applePay = await refreshApplePay(payments);
+              if (!applePay) return;
+              await handleTokenize(() => applePay.tokenize(), "Square - Apple Pay");
+            })();
           }}
           className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
         >
