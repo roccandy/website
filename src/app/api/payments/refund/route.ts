@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const refundedAt = new Date().toISOString();
-    await client
+    const refundUpdateWithReason = await client
       .from("orders")
       .update({
         status: "refunded",
@@ -55,6 +55,24 @@ export async function POST(request: Request) {
         woo_order_status: "refunded",
       })
       .eq("id", order.id);
+    if (refundUpdateWithReason.error) {
+      const missingColumn = /refund_reason/i.test(refundUpdateWithReason.error.message ?? "");
+      if (missingColumn) {
+        const refundUpdateFallback = await client
+          .from("orders")
+          .update({
+            status: "refunded",
+            refunded_at: refundedAt,
+            woo_order_status: "refunded",
+          })
+          .eq("id", order.id);
+        if (refundUpdateFallback.error) {
+          return NextResponse.json({ error: refundUpdateFallback.error.message }, { status: 400 });
+        }
+      } else {
+        return NextResponse.json({ error: refundUpdateWithReason.error.message }, { status: 400 });
+      }
+    }
 
     if (order.woo_order_id) {
       await updateWooOrder(String(order.woo_order_id), { status: "refunded" });
