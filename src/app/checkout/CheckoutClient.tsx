@@ -250,43 +250,40 @@ function SquarePayment({
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
       {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
       <div id="square-apple-pay" className="hidden" />
-      {selectedMethod === "apple_pay" ? (
-        <div className="space-y-3">
-          {!appleAvailable ? (
-            <p className="text-sm text-zinc-500">Apple Pay is currently unavailable on this device/browser.</p>
-          ) : null}
-          <button
-            type="button"
-            data-primary-button
-            disabled={!ready || loading || !appleAvailable}
-            onClick={() => {
-              if (!appleRef.current) return;
-              void handleTokenize(() => appleRef.current!.tokenize(), "Square - Apple Pay");
-            }}
-            className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {loading ? "Processing..." : "Pay with Apple Pay"}
-          </button>
+      <div className={selectedMethod === "apple_pay" ? "space-y-3" : "hidden"}>
+        {!appleAvailable ? (
+          <p className="text-sm text-zinc-500">Apple Pay is currently unavailable on this device/browser.</p>
+        ) : null}
+        <button
+          type="button"
+          data-primary-button
+          disabled={!ready || loading || !appleAvailable}
+          onClick={() => {
+            if (!appleRef.current) return;
+            void handleTokenize(() => appleRef.current!.tokenize(), "Square - Apple Pay");
+          }}
+          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? "Processing..." : "Pay with Apple Pay"}
+        </button>
+      </div>
+      <div className={selectedMethod === "credit_card" ? "space-y-3" : "hidden"}>
+        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+          <div id="square-card-container" />
         </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="rounded-xl border border-zinc-200 bg-white p-3">
-            <div id="square-card-container" />
-          </div>
-          <button
-            type="button"
-            data-primary-button
-            disabled={!ready || loading}
-            onClick={() => {
-              if (!cardRef.current) return;
-              void handleTokenize(() => cardRef.current!.tokenize(), "Square - Credit Card");
-            }}
-            className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {loading ? "Processing..." : "Pay with your credit card"}
-          </button>
-        </div>
-      )}
+        <button
+          type="button"
+          data-primary-button
+          disabled={!ready || loading}
+          onClick={() => {
+            if (!cardRef.current) return;
+            void handleTokenize(() => cardRef.current!.tokenize(), "Square - Credit Card");
+          }}
+          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? "Processing..." : "Pay with your credit card"}
+        </button>
+      </div>
     </div>
   );
 }
