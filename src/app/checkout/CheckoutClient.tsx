@@ -207,18 +207,18 @@ function SquarePayment({
           const card = await payments.card({
             style: {
               ".input-container": {
-                borderRadius: "12px",
-                borderColor: "#d4d4d8",
-                minHeight: "46px",
+                "border-radius": "12px",
+                "border-color": "#d4d4d8",
+                "min-height": "46px",
               },
               ".input-container.is-focus": {
-                borderColor: "#18181b",
+                "border-color": "#18181b",
               },
-              ".input": {
-                fontSize: "15px",
+              input: {
+                "font-size": "15px",
               },
               ".message-text": {
-                fontSize: "11px",
+                "font-size": "11px",
               },
             },
           });
