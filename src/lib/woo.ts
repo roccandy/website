@@ -103,12 +103,34 @@ async function wooRequest<T>(path: string, options: WooRequestOptions = {}): Pro
     cache: "no-store",
   });
 
-  const data = (await response.json().catch(() => ({}))) as { message?: string };
+  const data = (await response.json().catch(() => ({}))) as {
+    message?: string;
+    code?: string;
+    data?: { status?: number; params?: Record<string, string> };
+  };
   if (!response.ok) {
-    const message = data?.message || `Woo request failed (${response.status}).`;
+    const paramDetails =
+      data?.data?.params && Object.keys(data.data.params).length > 0
+        ? ` (${Object.entries(data.data.params)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(", ")})`
+        : "";
+    const message = data?.message
+      ? `${data.message}${paramDetails}`
+      : `Woo request failed (${response.status}).`;
     throw new Error(message);
   }
   return data as T;
+}
+
+function sanitizeWooAddress(address?: WooOrderAddress): WooOrderAddress | undefined {
+  if (!address) return undefined;
+  const sanitized = Object.fromEntries(
+    Object.entries(address)
+      .map(([key, value]) => [key, typeof value === "string" ? value.trim() : value] as const)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+  ) as WooOrderAddress;
+  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
 }
 
 let cachedWooCategory: { name: string; id: number } | null = null;
@@ -234,11 +256,16 @@ export async function createWooOrder(input: WooOrderCreateInput): Promise<{
   order_key?: string;
   payment_url?: string;
 }> {
+  const payload: WooOrderCreateInput = {
+    ...input,
+    billing: sanitizeWooAddress(input.billing),
+    shipping: sanitizeWooAddress(input.shipping),
+  };
   const data = await wooRequest<{ id: number; status: string; order_key?: string; payment_url?: string }>(
     "/wp-json/wc/v3/orders",
     {
       method: "POST",
-      body: input,
+      body: payload,
     }
   );
   return data;
