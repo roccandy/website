@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const capture = await capturePayPalOrder(body.orderId);
     const transactionId = capture.captureId || capture.id;
 
-    const { billing, dueDate, pickup, lineItems, orderPayloads, orderNumbers } = await buildWooOrderContext(body.order);
+    const { billing, dueDate, pickup, lineItems, feeLines, orderPayloads, orderNumbers, totalAmount } = await buildWooOrderContext(body.order);
     const customerEmail = body.order.customer?.email?.trim() || null;
 
     const wooOrder = await createWooOrder({
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       shipping: pickup ? billing : billing,
       customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
       line_items: lineItems,
+      fee_lines: feeLines,
       meta_data: [
         { key: "rc_source", value: "roccandy-next" },
         { key: "rc_due_date", value: dueDate ?? "" },
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
           suburb: billing.city || null,
           state: billing.state || null,
           postcode: billing.postcode || null,
-          totalPrice: orderPayloads.reduce((sum, item) => sum + Number(item.total_price ?? 0), 0),
+          totalPrice: totalAmount,
         })
       );
     }

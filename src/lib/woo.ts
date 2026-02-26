@@ -247,6 +247,7 @@ export type WooOrderCreateInput = {
   shipping?: WooOrderAddress;
   customer_note?: string;
   line_items: WooOrderLineItem[];
+  fee_lines?: Array<{ name: string; total: string }>;
   meta_data?: Array<{ key: string; value: string }>;
 };
 

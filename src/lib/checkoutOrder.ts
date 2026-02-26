@@ -1,6 +1,7 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { calculatePricing } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumbers";
+import { getSettings } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
 
 const DEFAULT_COUNTRY = "AU";
@@ -46,6 +47,7 @@ type BuildContextResult = {
   pickup: boolean;
   paymentPreference: string | null;
   lineItems: WooLineItem[];
+  feeLines: Array<{ name: string; total: string }>;
   orderPayloads: OrderInsertPayload[];
   orderNumbers: OrderNumberBundle;
   totalAmount: number;
@@ -164,6 +166,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const customer = body.customer;
   const billing = buildBilling(customer, pickup);
   const lineItems: WooLineItem[] = [];
+  let premadeSubtotal = 0;
   const orderPayloads: OrderInsertPayload[] = [];
 
   const baseOrderNumber = await generateOrderNumber();
@@ -231,6 +234,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
 
     const weightKg = (premade.weight_g * item.quantity) / 1000;
     const totalPrice = premade.price * item.quantity;
+    premadeSubtotal += totalPrice;
 
     lineItems.push({
       product_id: Number(premade.woo_product_id),
@@ -267,7 +271,20 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     });
   }
 
-  const totalAmount = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
+  const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
+  let premadeTransactionFee = 0;
+  if (premadeSubtotal > 0) {
+    const settings = await getSettings();
+    const percent = Number(settings.transaction_fee_percent ?? 0);
+    if (Number.isFinite(percent) && percent > 0) {
+      premadeTransactionFee = premadeSubtotal * (percent / 100);
+    }
+  }
+  const feeLines =
+    premadeTransactionFee > 0
+      ? [{ name: "Transaction fee", total: premadeTransactionFee.toFixed(2) }]
+      : [];
+  const totalAmount = baseTotal + premadeTransactionFee;
 
   return {
     billing,
@@ -275,6 +292,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     pickup,
     paymentPreference,
     lineItems,
+    feeLines,
     orderPayloads,
     orderNumbers,
     totalAmount,

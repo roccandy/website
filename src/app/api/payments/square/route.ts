@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Square is not configured." }, { status: 500 });
     }
 
-    const { billing, dueDate, pickup, lineItems, orderPayloads, totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
+    const { billing, dueDate, pickup, lineItems, feeLines, orderPayloads, totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
     const customerEmail = body.order.customer?.email?.trim() || null;
     const amountCents = Math.round(totalAmount * 100);
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
@@ -104,6 +104,7 @@ export async function POST(request: Request) {
       shipping: pickup ? billing : billing,
       customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
       line_items: lineItems,
+      fee_lines: feeLines,
       meta_data: [
         { key: "rc_source", value: "roccandy-next" },
         { key: "rc_due_date", value: dueDate ?? "" },

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment details are required." }, { status: 400 });
     }
 
-    const { billing, dueDate, pickup, lineItems, orderPayloads } = await buildWooOrderContext(body.order);
+    const { billing, dueDate, pickup, lineItems, feeLines, orderPayloads } = await buildWooOrderContext(body.order);
     const paymentMethodTitle = body.paymentMethodTitle || body.paymentMethod;
 
     const wooOrder = await createWooOrder({
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       shipping: pickup ? billing : billing,
       customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
       line_items: lineItems,
+      fee_lines: feeLines,
       meta_data: [
         { key: "rc_source", value: "roccandy-next" },
         { key: "rc_due_date", value: dueDate ?? "" },

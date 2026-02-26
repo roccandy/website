@@ -1560,7 +1560,7 @@ export function CheckoutClient({
               ) : null}
               {cartPricing.transactionTotal > 0 ? (
                 <div className="flex items-center justify-between gap-3">
-                  <span>Transaction fee (all payment methods)</span>
+                  <span>Transaction fee</span>
                   <span className="text-zinc-900">{formatMoney(cartPricing.transactionTotal)}</span>
                 </div>
               ) : null}

@@ -7,7 +7,7 @@ import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckoutOrderPayload;
-    const { billing, dueDate, pickup, paymentPreference, lineItems, orderPayloads } =
+    const { billing, dueDate, pickup, paymentPreference, lineItems, feeLines, orderPayloads } =
       await buildWooOrderContext(body);
 
     const wooOrder = await createWooOrder({
@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       shipping: pickup ? billing : billing,
       customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
       line_items: lineItems,
+      fee_lines: feeLines,
       meta_data: [
         { key: "rc_source", value: "roccandy-next" },
         { key: "rc_due_date", value: dueDate ?? "" },
