@@ -74,6 +74,7 @@ const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
+type PaymentMethod = "apple_pay" | "credit_card" | "paypal";
 
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`;
@@ -114,24 +115,22 @@ function SquarePayment({
   getOrderPayload,
   onSuccess,
   onError,
+  selectedMethod,
 }: {
   amount: number;
   canPay: boolean;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (adminEmailWarning?: string | null) => void;
   onError: (stage: string, message: string) => void;
+  selectedMethod: "apple_pay" | "credit_card";
 }) {
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [debugNote, setDebugNote] = useState<string | null>(null);
   const [appleAvailable, setAppleAvailable] = useState(false);
-  const [googleAvailable, setGoogleAvailable] = useState(false);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
   const appleRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
-  const googleRef = useRef<Awaited<ReturnType<SquarePayments["googlePay"]>> | null>(null);
-  const appleHandlerRef = useRef<(() => void) | null>(null);
-  const googleHandlerRef = useRef<(() => void) | null>(null);
   const initializedRef = useRef(false);
   const initializingRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
@@ -202,10 +201,8 @@ function SquarePayment({
 
         const cardContainer = document.getElementById("square-card-container");
         const appleContainer = document.getElementById("square-apple-pay");
-        const googleContainer = document.getElementById("square-google-pay");
         if (cardContainer) cardContainer.innerHTML = "";
         if (appleContainer) appleContainer.innerHTML = "";
-        if (googleContainer) googleContainer.innerHTML = "";
         if (cardContainer && cardContainer.childNodes.length === 0) {
           const card = await payments.card();
           await card.attach("#square-card-container");
@@ -214,48 +211,24 @@ function SquarePayment({
 
         try {
           const applePay = await payments.applePay(paymentRequest);
-          if (!applePay || typeof (applePay as { attach?: unknown }).attach !== "function") {
-            throw new Error("Apple Pay not available (attach missing).");
+          if (!applePay || typeof (applePay as { tokenize?: unknown }).tokenize !== "function") {
+            throw new Error("Apple Pay not available.");
           }
           const appleNode = document.getElementById("square-apple-pay");
-          if (appleNode && appleNode.childNodes.length === 0) {
+          if (
+            appleNode &&
+            appleNode.childNodes.length === 0 &&
+            typeof (applePay as { attach?: unknown }).attach === "function"
+          ) {
             await applePay.attach("#square-apple-pay");
           }
           appleRef.current = applePay;
           setAppleAvailable(true);
-          if (appleNode) {
-            const handler = () => void handleTokenize(() => applePay.tokenize(), "Square - Apple Pay");
-            appleHandlerRef.current = handler;
-            appleNode.addEventListener("click", handler);
-          }
         } catch (error) {
           const message = error instanceof Error ? error.message : JSON.stringify(error);
           appleRef.current = null;
           setAppleAvailable(false);
           setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
-        }
-
-        try {
-          const googlePay = await payments.googlePay(paymentRequest);
-          if (!googlePay || typeof (googlePay as { attach?: unknown }).attach !== "function") {
-            throw new Error("Google Pay not available (attach missing).");
-          }
-          const googleNode = document.getElementById("square-google-pay");
-          if (googleNode && googleNode.childNodes.length === 0) {
-            await googlePay.attach("#square-google-pay");
-          }
-          googleRef.current = googlePay;
-          setGoogleAvailable(true);
-          if (googleNode) {
-            const handler = () => void handleTokenize(() => googlePay.tokenize(), "Square - Google Pay");
-            googleHandlerRef.current = handler;
-            googleNode.addEventListener("click", handler);
-          }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : JSON.stringify(error);
-          googleRef.current = null;
-          setGoogleAvailable(false);
-          setDebugNote(`Square Google Pay unavailable: ${message || "googlePay() init failed."}`);
         }
 
         initializedRef.current = true;
@@ -270,85 +243,50 @@ function SquarePayment({
       }
     })();
 
-    return () => {
-      const appleNode = document.getElementById("square-apple-pay");
-      if (appleNode && appleHandlerRef.current) {
-        appleNode.removeEventListener("click", appleHandlerRef.current);
-      }
-      const googleNode = document.getElementById("square-google-pay");
-      if (googleNode && googleHandlerRef.current) {
-        googleNode.removeEventListener("click", googleHandlerRef.current);
-      }
-    };
   }, [amount, canPay]);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-semibold text-zinc-900">Pay by card or Apple Pay</h3>
+    <div className="space-y-4">
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
       {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-        <span
-          className={`rounded-full border px-2 py-1 ${
-            appleAvailable ? "border-emerald-200 text-emerald-700" : "border-zinc-200 text-zinc-500"
-          }`}
-        >
-          Apple Pay {appleAvailable ? "available" : "not available"}
-        </span>
-        <span
-          className={`rounded-full border px-2 py-1 ${
-            googleAvailable ? "border-emerald-200 text-emerald-700" : "border-zinc-200 text-zinc-500"
-          }`}
-        >
-          Google Pay {googleAvailable ? "available" : "not available"}
-        </span>
-      </div>
-      <div className="mt-4 space-y-4">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-          Wallets
+      <div id="square-apple-pay" className="hidden" />
+      {selectedMethod === "apple_pay" ? (
+        <div className="space-y-3">
+          {!appleAvailable ? (
+            <p className="text-sm text-zinc-500">Apple Pay is currently unavailable on this device/browser.</p>
+          ) : null}
+          <button
+            type="button"
+            data-primary-button
+            disabled={!ready || loading || !appleAvailable}
+            onClick={() => {
+              if (!appleRef.current) return;
+              void handleTokenize(() => appleRef.current!.tokenize(), "Square - Apple Pay");
+            }}
+            className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? "Processing..." : "Pay with Apple Pay"}
+          </button>
         </div>
-        <div className="flex w-full flex-col items-center gap-3">
-          <div className="w-full max-w-md">
-            <div
-              id="square-apple-pay"
-              className="w-full"
-              style={{ display: appleAvailable ? "flex" : "none", justifyContent: "center" }}
-            />
-            {!appleAvailable ? (
-              <div className="flex h-12 w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Apple Pay Unavailable
-              </div>
-            ) : null}
+      ) : (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-zinc-200 bg-white p-3">
+            <div id="square-card-container" />
           </div>
-          <div className="w-full max-w-md">
-            <div
-              id="square-google-pay"
-              className="w-full"
-              style={{ display: googleAvailable ? "flex" : "none", justifyContent: "center" }}
-            />
-            {!googleAvailable ? (
-              <div className="flex h-12 w-full items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Google Pay Unavailable
-              </div>
-            ) : null}
-          </div>
+          <button
+            type="button"
+            data-primary-button
+            disabled={!ready || loading}
+            onClick={() => {
+              if (!cardRef.current) return;
+              void handleTokenize(() => cardRef.current!.tokenize(), "Square - Credit Card");
+            }}
+            className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? "Processing..." : "Pay with your credit card"}
+          </button>
         </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
-          <div id="square-card-container" />
-        </div>
-        <button
-          type="button"
-          data-primary-button
-          disabled={!ready || loading}
-          onClick={() => {
-            if (!cardRef.current) return;
-            void handleTokenize(() => cardRef.current!.tokenize(), "Square - Card");
-          }}
-          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? "Processing..." : "Pay with card"}
-        </button>
-      </div>
+      )}
     </div>
   );
 }
@@ -396,6 +334,11 @@ function PayPalPayment({
         }
         window.paypal
           .Buttons({
+            style: {
+              label: "paypal",
+              shape: "pill",
+              height: 46,
+            },
             onClick: () => {
               if (!canPayRef.current) {
                 onError("validation", "Please complete all required fields before paying.");
@@ -447,10 +390,10 @@ function PayPalPayment({
   }, [canPay, getOrderPayload, onError, onSuccess]);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <h3 className="text-lg font-semibold text-zinc-900">Pay with PayPal</h3>
+    <div className="space-y-3">
+      <p className="text-sm text-zinc-600">Pay with PayPal</p>
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
-      <div ref={containerRef} className="mt-4" />
+      <div ref={containerRef} />
     </div>
   );
 }
@@ -1024,6 +967,7 @@ export function CheckoutClient({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("apple_pay");
   const [orderConfirmationVisible, setOrderConfirmationVisible] = useState(false);
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, PricingBreakdown>>({});
   const [pricingLoading, setPricingLoading] = useState(false);
@@ -1513,21 +1457,41 @@ export function CheckoutClient({
           </div>
 
           {!paymentSuccess ? (
-            <>
-              <SquarePayment
-                amount={cartPricing.total}
-                canPay={canPlace}
-                getOrderPayload={buildOrderPayload}
-                onSuccess={handlePaymentSuccess}
-                onError={(stage, message) => handlePaymentError("square", stage, message)}
-              />
-              <PayPalPayment
-                canPay={canPlace}
-                getOrderPayload={buildOrderPayload}
-                onSuccess={handlePaymentSuccess}
-                onError={(stage, message) => handlePaymentError("paypal", stage, message)}
-              />
-            </>
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <h3 className="text-lg font-semibold text-zinc-900">Payment method</h3>
+              <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Select payment method
+                <select
+                  value={selectedPaymentMethod}
+                  onChange={(event) => setSelectedPaymentMethod(event.target.value as PaymentMethod)}
+                  className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                >
+                  <option value="apple_pay">Apple Pay</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="paypal">PayPal</option>
+                </select>
+              </label>
+
+              <div className="mt-4">
+                {selectedPaymentMethod === "paypal" ? (
+                  <PayPalPayment
+                    canPay={canPlace}
+                    getOrderPayload={buildOrderPayload}
+                    onSuccess={handlePaymentSuccess}
+                    onError={(stage, message) => handlePaymentError("paypal", stage, message)}
+                  />
+                ) : (
+                  <SquarePayment
+                    amount={cartPricing.total}
+                    canPay={canPlace}
+                    getOrderPayload={buildOrderPayload}
+                    onSuccess={handlePaymentSuccess}
+                    onError={(stage, message) => handlePaymentError("square", stage, message)}
+                    selectedMethod={selectedPaymentMethod}
+                  />
+                )}
+              </div>
+            </div>
           ) : null}
         </div>
 
