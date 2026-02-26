@@ -19,14 +19,24 @@ type PayPalCaptureResponse = {
 };
 
 function getPayPalApiBase() {
-  return process.env.PAYPAL_API_BASE?.trim() || "https://api-m.paypal.com";
+  const explicit = process.env.PAYPAL_API_BASE?.trim();
+  if (explicit) return explicit;
+  const env = (process.env.PAYPAL_ENV ?? process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase();
+  return env === "sandbox" ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com";
 }
 
 function getPayPalCredentials() {
-  const clientId = process.env.PAYPAL_CLIENT_ID?.trim();
+  const clientId =
+    process.env.PAYPAL_CLIENT_ID?.trim() || process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID?.trim();
   const secret = process.env.PAYPAL_SECRET?.trim();
-  if (!clientId || !secret) {
-    throw new Error("PayPal is not configured.");
+  if (!clientId && !secret) {
+    throw new Error("PayPal is not configured (missing PAYPAL_CLIENT_ID and PAYPAL_SECRET).");
+  }
+  if (!clientId) {
+    throw new Error("PayPal is not configured (missing PAYPAL_CLIENT_ID).");
+  }
+  if (!secret) {
+    throw new Error("PayPal is not configured (missing PAYPAL_SECRET).");
   }
   return { clientId, secret };
 }

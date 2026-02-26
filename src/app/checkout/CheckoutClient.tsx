@@ -343,12 +343,14 @@ function PayPalPayment({
           renderedRef.current = true;
           return;
         }
-        window.paypal
+        await window.paypal
           .Buttons({
             style: {
               label: "paypal",
               shape: "pill",
               height: 46,
+              layout: "vertical",
+              disableMaxWidth: true,
             },
             onClick: () => {
               if (!canPayRef.current) {
@@ -358,16 +360,24 @@ function PayPalPayment({
               return true;
             },
             createOrder: async () => {
-              const response = await fetch("/api/payments/paypal/create-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ order: payloadRef.current() }),
-              });
-              const data = (await response.json().catch(() => ({}))) as { orderId?: string; error?: string };
-              if (!response.ok || !data.orderId) {
-                throw new Error(data.error || "Unable to start PayPal.");
+              try {
+                const response = await fetch("/api/payments/paypal/create-order", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ order: payloadRef.current() }),
+                });
+                const data = (await response.json().catch(() => ({}))) as { orderId?: string; error?: string };
+                if (!response.ok || !data.orderId) {
+                  const message = data.error || "Unable to start PayPal.";
+                  setSetupError(message);
+                  throw new Error(message);
+                }
+                return data.orderId;
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Unable to start PayPal.";
+                setSetupError(message);
+                throw error;
               }
-              return data.orderId;
             },
             onApprove: async (data: { orderID?: string }) => {
               if (!data.orderID) throw new Error("PayPal order missing.");
@@ -387,7 +397,9 @@ function PayPalPayment({
               onSuccess(payload.adminEmailWarning ?? null);
             },
             onError: (err: unknown) => {
-              onError("flow", err instanceof Error ? err.message : "PayPal failed.");
+              const message = err instanceof Error ? err.message : "PayPal failed.";
+              setSetupError(message);
+              onError("flow", message);
             },
           })
           .render(containerRef.current);
@@ -404,7 +416,7 @@ function PayPalPayment({
     <div className="space-y-3">
       <p className="text-sm text-zinc-600">Pay with PayPal</p>
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
-      <div ref={containerRef} />
+      <div ref={containerRef} className="w-full" />
     </div>
   );
 }
