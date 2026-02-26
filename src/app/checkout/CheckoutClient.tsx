@@ -322,7 +322,7 @@ function PayPalPayment({
     const sdkBase = PAYPAL_ENV === "sandbox" ? "https://www.sandbox.paypal.com" : "https://www.paypal.com";
     const scriptUrl = `${sdkBase}/sdk/js?client-id=${encodeURIComponent(
       PAYPAL_CLIENT_ID
-    )}&currency=AUD&intent=capture&components=buttons`;
+    )}&currency=AUD&intent=capture&components=buttons&disable-funding=card`;
 
     void (async () => {
       try {
