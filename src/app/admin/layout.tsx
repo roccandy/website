@@ -43,6 +43,10 @@ const navSections = [
   },
 ];
 
+const PAYMENTS_SANDBOX_MODE =
+  (process.env.NEXT_PUBLIC_SQUARE_ENV ?? "production").toLowerCase() === "sandbox" ||
+  (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
+
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
@@ -57,6 +61,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <LogoutButton />
           </div>
         </header>
+        {PAYMENTS_SANDBOX_MODE ? (
+          <div className="border-b border-amber-300 bg-amber-50">
+            <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">
+              Sandbox mode active: payments are test-only in this environment
+            </div>
+          </div>
+        ) : null}
         <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
       </div>
     </ToastProvider>

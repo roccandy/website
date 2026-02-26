@@ -73,6 +73,7 @@ const SQUARE_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID || "";
 const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
+const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
 
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`;
@@ -1273,6 +1274,11 @@ export function CheckoutClient({
 
   return (
     <div className="space-y-8">
+      {PAYMENTS_SANDBOX_MODE ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+          Sandbox Mode: Test payments only. No real customer charges should be made from this environment.
+        </div>
+      ) : null}
       {orderConfirmationVisible ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
