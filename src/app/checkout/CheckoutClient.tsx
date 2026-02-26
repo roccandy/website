@@ -204,23 +204,7 @@ function SquarePayment({
         if (cardContainer) cardContainer.innerHTML = "";
         if (appleContainer) appleContainer.innerHTML = "";
         if (cardContainer && cardContainer.childNodes.length === 0) {
-          const card = await payments.card({
-            style: {
-              ".input-container": {
-                borderRadius: "12px",
-                borderColor: "#d4d4d8",
-              },
-              ".input-container.is-focus": {
-                borderColor: "#18181b",
-              },
-              input: {
-                fontSize: "15px",
-              },
-              ".message-text": {
-                fontSize: "11px",
-              },
-            },
-          });
+          const card = await payments.card();
           await card.attach("#square-card-container");
           cardRef.current = card;
         }
