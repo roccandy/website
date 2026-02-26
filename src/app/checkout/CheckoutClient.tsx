@@ -53,7 +53,7 @@ const AU_STATES = [
 ];
 
 type SquarePayments = {
-  card: () => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
+  card: (options?: Record<string, unknown>) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
   applePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
   googlePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
   paymentRequest: (request: unknown) => unknown;
@@ -204,7 +204,24 @@ function SquarePayment({
         if (cardContainer) cardContainer.innerHTML = "";
         if (appleContainer) appleContainer.innerHTML = "";
         if (cardContainer && cardContainer.childNodes.length === 0) {
-          const card = await payments.card();
+          const card = await payments.card({
+            style: {
+              ".input-container": {
+                borderRadius: "12px",
+                borderColor: "#d4d4d8",
+                minHeight: "46px",
+              },
+              ".input-container.is-focus": {
+                borderColor: "#18181b",
+              },
+              ".input": {
+                fontSize: "15px",
+              },
+              ".message-text": {
+                fontSize: "11px",
+              },
+            },
+          });
           await card.attach("#square-card-container");
           cardRef.current = card;
         }
@@ -268,7 +285,7 @@ function SquarePayment({
         </button>
       </div>
       <div className={selectedMethod === "credit_card" ? "space-y-3" : "hidden"}>
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
+        <div className="rounded-xl border border-zinc-200 bg-white p-2">
           <div id="square-card-container" />
         </div>
         <button
