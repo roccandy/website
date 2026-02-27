@@ -202,6 +202,13 @@ const buildColorOptions = (options: ColorOption[], currentValue: string): ColorO
   return [{ value: trimmed, label: trimmed, hex: trimmed }, ...options];
 };
 
+const getContrastTextColor = (hex: string) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return "#111827";
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.6 ? "#111827" : "#ffffff";
+};
+
 const formatSizeLabel = (type: string, size: string) => {
   if (!type.toLowerCase().includes("jar")) return size;
   const trimmed = size.trim();
@@ -688,16 +695,39 @@ export function OrdersTable({
     const placeholder = format === "hex" ? "#000000" : format === "rgb" ? "255, 0, 0" : "0, 100, 100, 0";
 
     if (!isEditing) {
+      const normalizedValue = normalizeHex(value);
+      const swatchLabel = (() => {
+        if (!normalizedValue) return "-";
+        if (!normalizedValue.startsWith("#")) return normalizedValue;
+        const option = options.find((item) => item.value === normalizedValue.toLowerCase());
+        if (option?.label && option.label !== "Custom") return option.label;
+        return normalizedValue.toUpperCase();
+      })();
+      const swatchTextColor = showPreview ? getContrastTextColor(normalized) : "#111827";
       return (
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{label}</p>
           {showPreview ? (
-            <div
-              className="mt-1 h-9 w-full rounded border border-zinc-200"
-              style={{ backgroundColor: normalized }}
-            />
+            <div className="relative mt-1">
+              <div
+                className="flex h-9 w-full items-center justify-center rounded border border-zinc-200"
+                style={{ backgroundColor: normalized }}
+              />
+              <span
+                className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-[11px] font-semibold"
+                style={{
+                  color: swatchTextColor,
+                  textShadow:
+                    swatchTextColor === "#ffffff"
+                      ? "0 1px 2px rgba(0,0,0,0.55)"
+                      : "0 1px 1px rgba(255,255,255,0.55)",
+                }}
+              >
+                {swatchLabel}
+              </span>
+            </div>
           ) : (
-            <p className="mt-1 text-sm text-zinc-900">{value || "-"}</p>
+            <p className="mt-1 text-sm text-zinc-900">{swatchLabel}</p>
           )}
         </div>
       );
@@ -1795,8 +1825,6 @@ export function OrdersTable({
     </div>
   );
 }
-
-
 
 
 
