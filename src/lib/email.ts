@@ -6,6 +6,7 @@ type EmailPayload = {
   subject: string;
   text: string;
   html?: string;
+  attachments?: nodemailer.SendMailOptions["attachments"];
 };
 
 type OrderEmailPayload = {
@@ -106,6 +107,7 @@ export async function sendEmail(payload: EmailPayload) {
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
+    attachments: payload.attachments,
   });
 
   return { success: true };
@@ -229,6 +231,61 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
+type AttachmentResult = {
+  src: string | null;
+  attachment: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null;
+  externalUrl: string | null;
+};
+
+function isAttachment(
+  value: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null
+): value is NonNullable<nodemailer.SendMailOptions["attachments"]>[number] {
+  return value !== null;
+}
+
+async function buildInlineAttachment(
+  imageUrl: string | null | undefined,
+  cid: string,
+  filenameBase: string
+): Promise<AttachmentResult> {
+  if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) {
+    return { src: imageUrl ?? null, attachment: null, externalUrl: imageUrl ?? null };
+  }
+  try {
+    const response = await fetch(imageUrl, { cache: "no-store" });
+    if (!response.ok) {
+      return { src: imageUrl, attachment: null, externalUrl: imageUrl };
+    }
+    const contentType = response.headers.get("content-type") || "image/png";
+    if (!contentType.startsWith("image/")) {
+      return { src: imageUrl, attachment: null, externalUrl: imageUrl };
+    }
+    const ext = contentType.includes("jpeg")
+      ? "jpg"
+      : contentType.includes("webp")
+        ? "webp"
+        : contentType.includes("gif")
+          ? "gif"
+          : contentType.includes("svg")
+            ? "svg"
+            : "png";
+    const content = Buffer.from(await response.arrayBuffer());
+    return {
+      src: `cid:${cid}`,
+      externalUrl: imageUrl,
+      attachment: {
+        filename: `${filenameBase}.${ext}`,
+        content,
+        contentType,
+        cid,
+        contentDisposition: "inline",
+      },
+    };
+  } catch {
+    return { src: imageUrl, attachment: null, externalUrl: imageUrl };
+  }
+}
+
 export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
   const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "New order";
   const subject = `Order placed ${orderNumber}`;
@@ -267,12 +324,23 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customImageSrc = order.customDetails?.imageUrl ?? null;
-  const labelImageSrc = order.customDetails?.labelImageUrl ?? null;
+  const customPreview = await buildInlineAttachment(
+    order.customDetails?.imageUrl ?? null,
+    "candy-design@roccandy",
+    "candy-design"
+  );
+  const labelPreview = await buildInlineAttachment(
+    order.customDetails?.labelImageUrl ?? null,
+    "label-design@roccandy",
+    "label-design"
+  );
+  const customImageSrc = customPreview.src;
+  const labelImageSrc = labelPreview.src;
 
   const customSection = order.customDetails
     ? `
-      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customPreview.externalUrl ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
@@ -282,7 +350,8 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
       <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -327,11 +396,14 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     </div>
   `;
 
+  const attachments = [customPreview.attachment, labelPreview.attachment].filter(isAttachment);
+
   return sendEmail({
     to,
     subject,
     text: lines.join("\n"),
     html,
+    attachments: attachments.length > 0 ? attachments : undefined,
   });
 }
 
@@ -374,12 +446,23 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customImageSrc = order.customDetails?.imageUrl ?? null;
-  const labelImageSrc = order.customDetails?.labelImageUrl ?? null;
+  const customPreview = await buildInlineAttachment(
+    order.customDetails?.imageUrl ?? null,
+    "candy-design@roccandy",
+    "candy-design"
+  );
+  const labelPreview = await buildInlineAttachment(
+    order.customDetails?.labelImageUrl ?? null,
+    "label-design@roccandy",
+    "label-design"
+  );
+  const customImageSrc = customPreview.src;
+  const labelImageSrc = labelPreview.src;
 
   const customSection = order.customDetails
     ? `
-      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customPreview.externalUrl ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
@@ -388,7 +471,8 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
       <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -436,11 +520,14 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     </div>
   `;
 
+  const attachments = [customPreview.attachment, labelPreview.attachment].filter(isAttachment);
+
   return sendEmail({
     to,
     subject,
     text: lines.join("\n"),
     html,
+    attachments: attachments.length > 0 ? attachments : undefined,
   });
 }
 
