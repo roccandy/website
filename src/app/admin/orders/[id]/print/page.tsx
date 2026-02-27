@@ -269,7 +269,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <div>
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Requested date:</span>
-                  <span className="text-2xl font-semibold text-zinc-900 print:text-[16px]">
+                  <span className="font-semibold text-zinc-900" style={{ fontSize: "32pt", lineHeight: 1.1 }}>
                     {formatDate(order.due_date) || "-"}
                   </span>
                 </p>
@@ -330,16 +330,33 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         <div className="space-y-6 print:space-y-2">
           <div className={`${CARD_CLASS} print:hidden`}>
             <h2 className={SECTION_HEADING_CLASS}>Downloads</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 space-y-3">
               {labelImageUrl && (
-                <a
-                  href={labelImageUrl}
-                  download
-                  className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                >
-                  Download label image
-                </a>
+                <div className="flex items-center gap-3">
+                  {labelImageIsImage ? (
+                    <a
+                      href={labelImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block h-16 w-16 overflow-hidden rounded border border-zinc-200 bg-white"
+                    >
+                      <img
+                        src={labelImageUrl}
+                        alt="Label preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </a>
+                  ) : null}
+                  <a
+                    href={labelImageUrl}
+                    download
+                    className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                  >
+                    Download label image
+                  </a>
+                </div>
               )}
+              <div className="flex flex-wrap gap-2">
               {order.logo_url && (
                 <a
                   href={order.logo_url}
@@ -352,6 +369,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               {!labelImageUrl && !order.logo_url && (
                 <p className="text-xs text-zinc-500">No uploaded images for this order.</p>
               )}
+              </div>
             </div>
           </div>
 
@@ -360,7 +378,9 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
             <div className={SECTION_BODY_CLASS}>
               <p className={INLINE_ROW_CLASS}>
                 <span className={INLINE_LABEL_CLASS}>Order weight:</span>
-                <span className={INLINE_VALUE_CLASS}>{order.total_weight_kg} kg</span>
+                <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
+                  {order.total_weight_kg} kg
+                </span>
               </p>
               <p className={INLINE_ROW_CLASS}>
                 <span className={INLINE_LABEL_CLASS}>Flavour:</span>
@@ -411,7 +431,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     </div>
   );
 }
-
 
 
 
