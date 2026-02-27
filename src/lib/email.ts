@@ -247,8 +247,10 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
     order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
     order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
-    order.customDetails ? `Heart: ${order.customDetails.heartColour}` : null,
+    order.customDetails?.heartColour ? `Heart: ${order.customDetails.heartColour}` : null,
     order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
+    order.customDetails ? `Labels: ${order.customDetails.labels}` : null,
+    order.customDetails ? `Ingredient labels: ${order.customDetails.ingredientLabels}` : null,
     "",
     "Order Information",
     `Date ordered: ${formatDate(order.dateOrderedIso)}`,
@@ -273,8 +275,11 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
       <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
-      <div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>
+      ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
+      <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
+      <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
+      ${order.customDetails.labelImageUrl ? `<div style="margin-top:10px;"><img src="${escapeHtml(order.customDetails.labelImageUrl)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -346,8 +351,10 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
     order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
     order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
-    order.customDetails ? `Heart: ${order.customDetails.heartColour}` : null,
+    order.customDetails?.heartColour ? `Heart: ${order.customDetails.heartColour}` : null,
     order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
+    order.customDetails ? `Labels: ${order.customDetails.labels}` : null,
+    order.customDetails ? `Ingredient labels: ${order.customDetails.ingredientLabels}` : null,
     "",
     "Order Information",
     `Date ordered: ${formatDate(order.dateOrderedIso)}`,
@@ -371,8 +378,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
       <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
-      <div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>
+      ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
+      <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
+      <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
+      ${order.customDetails.labelImageUrl ? `<div style="margin-top:10px;"><img src="${escapeHtml(order.customDetails.labelImageUrl)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";

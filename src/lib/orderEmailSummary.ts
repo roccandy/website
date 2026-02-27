@@ -1,4 +1,4 @@
-import { getColorPalette, getPackagingOptions } from "@/lib/data";
+import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
 
 type OrderPayload = Record<string, unknown>;
 
@@ -23,8 +23,11 @@ export type AdminCustomOrderDetails = {
   outerColours: string;
   pinstripe: "Yes" | "No";
   textColour: string;
-  heartColour: string;
+  heartColour: string | null;
   packaging: string;
+  labels: string;
+  labelImageUrl: string | null;
+  ingredientLabels: "Yes" | "No";
 };
 
 export type AdminOrderSummaryEmailPayload = {
@@ -78,6 +81,74 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const ensureBaseUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\/+$/, "");
+  return `https://${trimmed.replace(/\/+$/, "")}`;
+};
+
+const getSiteBaseUrl = () => {
+  const explicit = ensureBaseUrl(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "");
+  if (explicit) return explicit;
+  const vercel = ensureBaseUrl(process.env.VERCEL_URL ?? "");
+  if (vercel) return vercel;
+  return null;
+};
+
+const deriveWeddingNames = (value: string) => {
+  const raw = value.trim();
+  if (!raw) return { lineOne: "", lineTwo: "" };
+  const separators = [" + ", " & ", " and ", "+", "&"];
+  for (const separator of separators) {
+    if (!raw.toLowerCase().includes(separator.trim().toLowerCase())) continue;
+    const parts = raw.split(new RegExp(separator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+    if (parts.length >= 2) {
+      return {
+        lineOne: parts[0]?.trim() ?? "",
+        lineTwo: parts.slice(1).join(" ").trim(),
+      };
+    }
+  }
+  return { lineOne: raw, lineTwo: "" };
+};
+
+const buildCandyPreviewUrl = (payload: OrderPayload) => {
+  const baseUrl = getSiteBaseUrl();
+  if (!baseUrl) return null;
+
+  const designType = String(payload.design_type ?? "").toLowerCase();
+  const modeRaw = String(payload.jacket_type ?? payload.jacket ?? "").toLowerCase();
+  const mode = modeRaw.includes("rainbow")
+    ? "rainbow"
+    : modeRaw.includes("two_colour")
+      ? "two_colour"
+      : modeRaw.includes("pinstripe")
+        ? "pinstripe"
+        : "solid";
+  const showHeart =
+    Boolean(payload.heart_color) &&
+    designType.includes("wedding");
+  const sourceText = String(payload.design_text ?? payload.title ?? "").trim();
+  const { lineOne, lineTwo } = designType.includes("wedding")
+    ? deriveWeddingNames(sourceText)
+    : { lineOne: "", lineTwo: "" };
+
+  const params = new URLSearchParams({
+    mode,
+    colorOne: String(payload.jacket_color_one ?? "#b7b7b7"),
+    colorTwo: String(payload.jacket_color_two ?? payload.jacket_color_one ?? "#b7b7b7"),
+    textColor: String(payload.text_color ?? "#5f5f5f"),
+    heartColor: String(payload.heart_color ?? payload.text_color ?? "#5f5f5f"),
+    designText: designType.includes("wedding") ? "" : sourceText,
+    lineOne,
+    lineTwo,
+    showHeart: showHeart ? "1" : "0",
+    logoUrl: String(payload.logo_url ?? ""),
+  });
+  return `${baseUrl}/api/preview/candy?${params.toString()}`;
+};
+
 export async function buildAdminOrderSummaryEmailPayload({
   orderPayloads,
   orderNumber,
@@ -96,7 +167,10 @@ export async function buildAdminOrderSummaryEmailPayload({
   paymentAmount: number;
 }): Promise<AdminOrderSummaryEmailPayload> {
   const palette = await getColorPalette();
-  const packagingOptions = await getPackagingOptions();
+  const [packagingOptions, labelTypes] = await Promise.all([
+    getPackagingOptions(),
+    getLabelTypes(),
+  ]);
 
   const colourMap = new Map<string, string>();
   for (const row of palette) {
@@ -111,6 +185,9 @@ export async function buildAdminOrderSummaryEmailPayload({
       option.id,
       `${titleCase(option.type)} ${option.size}`.trim(),
     ])
+  );
+  const labelTypeMap = new Map(
+    labelTypes.map((labelType) => [labelType.id, `${titleCase(labelType.shape)} ${labelType.dimensions}`.trim()])
   );
 
   const formatColour = (value: unknown) => {
@@ -147,10 +224,23 @@ export async function buildAdminOrderSummaryEmailPayload({
 
     const customWeight = customItems.reduce((sum, payload) => sum + (toNumber(payload.total_weight_kg) ?? 0), 0);
     const packagingLabel = packagingMap.get(String(firstCustom.packaging_option_id ?? "")) ?? "-";
+    const packageQty = Math.max(1, Number(firstCustom.quantity ?? 1) || 1);
+    const packagingWithQty = `${packageQty} x ${packagingLabel}`;
+    const notesRaw = String(firstCustom.notes ?? "").toLowerCase();
+    const ingredientLabels = notesRaw.includes("ingredient labels requested") ? "Yes" : "No";
+    const labelType = labelTypeMap.get(String(firstCustom.label_type_id ?? "")) ?? "No label selected";
+    const labelImageUrl =
+      typeof firstCustom.label_image_url === "string" && firstCustom.label_image_url.trim()
+        ? firstCustom.label_image_url
+        : null;
     const imageUrl =
+      buildCandyPreviewUrl(firstCustom) ||
       (typeof firstCustom.logo_url === "string" && firstCustom.logo_url.trim()) ||
-      (typeof firstCustom.label_image_url === "string" && firstCustom.label_image_url.trim()) ||
       null;
+    const shouldShowHeart =
+      typeof firstCustom.heart_color === "string" &&
+      firstCustom.heart_color.trim().length > 0 &&
+      String(firstCustom.design_type ?? "").toLowerCase().includes("wedding");
 
     customDetails = {
       imageUrl,
@@ -159,8 +249,11 @@ export async function buildAdminOrderSummaryEmailPayload({
       outerColours,
       pinstripe: pinstripe ? "Yes" : "No",
       textColour: formatColour(firstCustom.text_color),
-      heartColour: formatColour(firstCustom.heart_color),
-      packaging: packagingLabel,
+      heartColour: shouldShowHeart ? formatColour(firstCustom.heart_color) : null,
+      packaging: packagingWithQty,
+      labels: labelType,
+      labelImageUrl,
+      ingredientLabels,
     };
   }
 
