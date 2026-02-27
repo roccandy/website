@@ -441,7 +441,7 @@ export async function assignOrderToSlot(formData: FormData) {
   const slot_date = formData.get("slot_date")?.toString();
   const slot_index_input = formData.get("slot_index");
   const slot_index = slot_index_input !== null ? Number(slot_index_input) : NaN;
-  const kg_assigned = Number(formData.get("kg_assigned") || 0);
+  const requestedKgAssigned = Number(formData.get("kg_assigned") || 0);
   const todayKey = (() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -453,9 +453,6 @@ export async function assignOrderToSlot(formData: FormData) {
   if (!order_id) throw new Error("Order is required.");
   if (!slot_id && (!slot_date || !Number.isFinite(slot_index))) {
     throw new Error("Slot date and index are required.");
-  }
-  if (!Number.isFinite(kg_assigned) || kg_assigned <= 0) {
-    throw new Error("Assigned kg must be greater than zero.");
   }
   if (slot_date && slot_date < todayKey) {
     throw new Error("Cannot assign orders to past dates.");
@@ -470,6 +467,17 @@ export async function assignOrderToSlot(formData: FormData) {
     .eq("id", order_id)
     .single();
   if (orderError) throw new Error(orderError.message);
+  const totalOrderKgRaw = Number(order.total_weight_kg);
+  const totalOrderKg =
+    Number.isFinite(totalOrderKgRaw) && totalOrderKgRaw > 0 ? totalOrderKgRaw : null;
+  const kg_assigned =
+    Number.isFinite(requestedKgAssigned) && requestedKgAssigned > 0
+      ? requestedKgAssigned
+      : totalOrderKg ?? 0.01;
+
+  if (!Number.isFinite(kg_assigned) || kg_assigned <= 0) {
+    throw new Error("Assigned kg must be greater than zero.");
+  }
 
   if (!resolvedSlotId && slot_date && Number.isFinite(slot_index)) {
     const { data: existingSlot, error: existingError } = await client
@@ -534,7 +542,7 @@ export async function assignOrderToSlot(formData: FormData) {
     orderAssignments.reduce((sum, a) => sum + Number(a.kg_assigned || 0), 0) -
     Number(previousForAssignment || 0) +
     kg_assigned;
-  if (orderUsed > Number(order.total_weight_kg)) {
+  if (totalOrderKg !== null && orderUsed > totalOrderKg) {
     throw new Error("Assigned kg exceeds the order's total weight.");
   }
 

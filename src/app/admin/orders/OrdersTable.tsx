@@ -1750,10 +1750,21 @@ export function OrdersTable({
                 ) : (
                   unassignedOrders.map((order) => (
                     <form key={order.id} action={assignOrderToSlot}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <input type="hidden" name="slot_date" value={slotPicker.date} />
-                      <input type="hidden" name="slot_index" value={slotPicker.slotIndex} />
-                      <input type="hidden" name="kg_assigned" value={Number(order.total_weight_kg) || 0} />
+                      {(() => {
+                        const orderWeightKg = Number(order.total_weight_kg);
+                        const assignableKg =
+                          Number.isFinite(orderWeightKg) && orderWeightKg > 0
+                            ? orderWeightKg
+                            : 0.01;
+                        return (
+                          <>
+                            <input type="hidden" name="order_id" value={order.id} />
+                            <input type="hidden" name="slot_date" value={slotPicker.date} />
+                            <input type="hidden" name="slot_index" value={slotPicker.slotIndex} />
+                            <input type="hidden" name="kg_assigned" value={assignableKg} />
+                          </>
+                        );
+                      })()}
                       <button
                         type="submit"
                         className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-xs font-semibold text-zinc-800 hover:border-zinc-300"
@@ -1770,7 +1781,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 
