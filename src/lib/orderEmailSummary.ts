@@ -223,9 +223,14 @@ export async function buildAdminOrderSummaryEmailPayload({
         : colourOne;
 
     const customWeight = customItems.reduce((sum, payload) => sum + (toNumber(payload.total_weight_kg) ?? 0), 0);
-    const packagingLabel = packagingMap.get(String(firstCustom.packaging_option_id ?? "")) ?? "-";
-    const packageQty = Math.max(1, Number(firstCustom.quantity ?? 1) || 1);
-    const packagingWithQty = `${packageQty} x ${packagingLabel}`;
+    const packagingLines = customItems.map((payload) => {
+      const packagingLabel = packagingMap.get(String(payload.packaging_option_id ?? "")) ?? "-";
+      const packageQty = Math.max(1, Number(payload.quantity ?? 1) || 1);
+      const lidColourRaw = String(payload.jar_lid_color ?? "").trim();
+      const lidDetail = lidColourRaw ? ` (Lid colour: ${formatColour(lidColourRaw)})` : "";
+      return `${packageQty} x ${packagingLabel}${lidDetail}`;
+    });
+    const packagingWithQty = packagingLines.join(" | ");
     const notesRaw = String(firstCustom.notes ?? "").toLowerCase();
     const ingredientLabels = notesRaw.includes("ingredient labels requested") ? "Yes" : "No";
     const labelType = labelTypeMap.get(String(firstCustom.label_type_id ?? "")) ?? "No label selected";
