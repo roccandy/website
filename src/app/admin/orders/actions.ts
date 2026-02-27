@@ -18,6 +18,10 @@ const toastRedirect = (base: string, tone: "success" | "error", message: string)
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
 const isInvalidIntegerInputError = (message: string) =>
   message.toLowerCase().includes("invalid input syntax for type integer");
+const toSafeInteger = (value: number, fallback = 1) => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(fallback, Math.round(value));
+};
 
 const isOrderNumberConflict = (error: { code?: string | null; message?: string | null }) => {
   if (error.code === "23505") return true;
@@ -426,13 +430,23 @@ export async function upsertSlot(formData: FormData) {
   }
 
   const client = supabaseServerClient;
-  const payload = { slot_date, capacity_kg, status, notes };
-  if (id) {
-    const { error } = await client.from("production_slots").update(payload).eq("id", id);
-    if (error) throw new Error(error.message);
-  } else {
+  const writeSlot = async (capacityValue: number) => {
+    const payload = { slot_date, capacity_kg: capacityValue, status, notes };
+    if (id) {
+      const { error } = await client.from("production_slots").update(payload).eq("id", id);
+      if (error) throw new Error(error.message);
+      return;
+    }
     const { error } = await client.from("production_slots").insert(payload);
     if (error) throw new Error(error.message);
+  };
+
+  try {
+    await writeSlot(capacity_kg);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save slot.";
+    if (!isInvalidIntegerInputError(message)) throw error;
+    await writeSlot(toSafeInteger(capacity_kg));
   }
 
   redirect(ORDERS_PATH);
@@ -499,18 +513,29 @@ export async function assignOrderToSlot(formData: FormData) {
         resolvedSlotId = existingSlot.id;
       } else {
         const { max_total_kg } = await getSettings();
-        const { data: created, error: createError } = await client
-          .from("production_slots")
-          .insert({
-            slot_date,
-            slot_index,
-            capacity_kg: max_total_kg,
-            status: "open",
-          })
-          .select("id,capacity_kg")
-          .single();
-        if (createError) throw new Error(createError.message);
-        resolvedSlotId = created.id;
+        const createSlot = async (capacityValue: number) => {
+          const { data, error } = await client
+            .from("production_slots")
+            .insert({
+              slot_date,
+              slot_index,
+              capacity_kg: capacityValue,
+              status: "open",
+            })
+            .select("id,capacity_kg")
+            .single();
+          if (error) throw new Error(error.message);
+          return data;
+        };
+        try {
+          const created = await createSlot(max_total_kg);
+          resolvedSlotId = created.id;
+        } catch (createError) {
+          const message = createError instanceof Error ? createError.message : "Unable to create slot.";
+          if (!isInvalidIntegerInputError(message)) throw createError;
+          const created = await createSlot(toSafeInteger(max_total_kg));
+          resolvedSlotId = created.id;
+        }
       }
     }
 
