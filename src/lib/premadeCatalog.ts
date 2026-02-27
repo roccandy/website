@@ -48,7 +48,7 @@ export function buildPremadeItemPath(item: Pick<PremadeCandy, "id" | "name">) {
 }
 
 export function extractPremadeIdFromParam(param?: string | null) {
-  if (!param) return "";
+  if (!param || typeof param !== "string") return "";
   const [id] = param.split("--");
   return id?.trim() || "";
 }

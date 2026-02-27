@@ -37,7 +37,11 @@ async function loadItemFromParams(itemParam: string) {
 
 async function resolveItemParam(params: PageProps["params"]) {
   const resolved = await params;
-  return resolved?.item;
+  const candidate = resolved?.item;
+  if (Array.isArray(candidate)) {
+    return typeof candidate[0] === "string" ? candidate[0] : undefined;
+  }
+  return typeof candidate === "string" ? candidate : undefined;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
