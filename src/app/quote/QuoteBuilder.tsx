@@ -1651,18 +1651,6 @@ export function QuoteBuilder({
                   </label>
                 </>
               )}
-                {isWedding && (
-                  <div className="md:col-span-2">
-                    <PalettePicker
-                      label="Heart colour"
-                      value={heartColor}
-                      onChange={setHeartColor}
-                      groups={paletteGroups}
-                      onCustom={() => openCustomPicker("heart", heartColor)}
-                      placeholderSwatch={defaultTextColor}
-                    />
-                  </div>
-                )}
               {isText && (
                 <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
                   Custom text
@@ -1689,11 +1677,45 @@ export function QuoteBuilder({
                   />
                 </div>
               )}
+                {isWedding && (
+                  <div className="md:col-span-2">
+                    <PalettePicker
+                      label="Heart colour"
+                      value={heartColor}
+                      onChange={setHeartColor}
+                      groups={paletteGroups}
+                      onCustom={() => openCustomPicker("heart", heartColor)}
+                      placeholderSwatch={defaultTextColor}
+                    />
+                  </div>
+                )}
               <div className="md:col-span-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-900">
                     Jacket type & colors
                   </p>
                 <div className="mt-2 flex flex-col gap-2 text-sm">
+                  {!rainbowJacket && (
+                    <div className="mt-1 space-y-3">
+                      <PalettePicker
+                        label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
+                        value={jacketColorOne}
+                        onChange={setJacketColorOne}
+                        groups={paletteGroups}
+                        onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
+                        placeholderSwatch={defaultJacketColor}
+                      />
+                      {showColourTwo && (
+                        <PalettePicker
+                          label="Jacket Colour 2"
+                          value={jacketColorTwo}
+                          onChange={setJacketColorTwo}
+                          groups={paletteGroups}
+                          onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
+                          placeholderSwatch={defaultJacketColor}
+                        />
+                      )}
+                    </div>
+                  )}
                   <label
                     className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
                       rainbowDisabled && !rainbowJacket
@@ -1745,28 +1767,6 @@ export function QuoteBuilder({
                       2 Colour Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_two_colour)}</span>
                     </span>
                   </label>
-                  {!rainbowJacket && (
-                    <div className="mt-3 space-y-3">
-                      <PalettePicker
-                        label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
-                        value={jacketColorOne}
-                        onChange={setJacketColorOne}
-                        groups={paletteGroups}
-                        onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
-                        placeholderSwatch={defaultJacketColor}
-                      />
-                      {showColourTwo && (
-                        <PalettePicker
-                          label="Jacket Colour 2"
-                          value={jacketColorTwo}
-                          onChange={setJacketColorTwo}
-                          groups={paletteGroups}
-                          onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
-                          placeholderSwatch={defaultJacketColor}
-                        />
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
               {isBranded && (
