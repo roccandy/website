@@ -14,6 +14,8 @@ const OPEN_OVERRIDE_REASON = "Open override";
 const MANUAL_BLOCK_REASON = "Manual block";
 const QUOTE_BLOCK_REASON = "Front-end block";
 const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
+const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
+  `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
 
 const isOrderNumberConflict = (error: { code?: string | null; message?: string | null }) => {
   if (error.code === "23505") return true;
@@ -435,172 +437,182 @@ export async function upsertSlot(formData: FormData) {
 }
 
 export async function assignOrderToSlot(formData: FormData) {
-  const assignmentId = formData.get("assignment_id")?.toString() || undefined;
-  const order_id = formData.get("order_id")?.toString();
-  const slot_id = formData.get("slot_id")?.toString() || undefined;
-  const slot_date = formData.get("slot_date")?.toString();
-  const slot_index_input = formData.get("slot_index");
-  const slot_index = slot_index_input !== null ? Number(slot_index_input) : NaN;
-  const requestedKgAssigned = Number(formData.get("kg_assigned") || 0);
-  const todayKey = (() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = `${now.getMonth() + 1}`.padStart(2, "0");
-    const day = `${now.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  })();
+  try {
+    const assignmentId = formData.get("assignment_id")?.toString() || undefined;
+    const order_id = formData.get("order_id")?.toString();
+    const slot_id = formData.get("slot_id")?.toString() || undefined;
+    const slot_date = formData.get("slot_date")?.toString();
+    const slot_index_input = formData.get("slot_index");
+    const slot_index = slot_index_input !== null ? Number(slot_index_input) : NaN;
+    const requestedKgAssigned = Number(formData.get("kg_assigned") || 0);
+    const todayKey = (() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = `${now.getMonth() + 1}`.padStart(2, "0");
+      const day = `${now.getDate()}`.padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    })();
 
-  if (!order_id) throw new Error("Order is required.");
-  if (!slot_id && (!slot_date || !Number.isFinite(slot_index))) {
-    throw new Error("Slot date and index are required.");
-  }
-  if (slot_date && slot_date < todayKey) {
-    throw new Error("Cannot assign orders to past dates.");
-  }
-
-  const client = supabaseServerClient;
-  let resolvedSlotId = slot_id;
-
-  const { data: order, error: orderError } = await client
-    .from("orders")
-    .select("id,total_weight_kg")
-    .eq("id", order_id)
-    .single();
-  if (orderError) throw new Error(orderError.message);
-  const totalOrderKgRaw = Number(order.total_weight_kg);
-  const totalOrderKg =
-    Number.isFinite(totalOrderKgRaw) && totalOrderKgRaw > 0 ? totalOrderKgRaw : null;
-  const kg_assigned =
-    Number.isFinite(requestedKgAssigned) && requestedKgAssigned > 0
-      ? requestedKgAssigned
-      : totalOrderKg ?? 0.01;
-
-  if (!Number.isFinite(kg_assigned) || kg_assigned <= 0) {
-    throw new Error("Assigned kg must be greater than zero.");
-  }
-
-  if (!resolvedSlotId && slot_date && Number.isFinite(slot_index)) {
-    const { data: existingSlots, error: existingError } = await client
-      .from("production_slots")
-      .select("id,capacity_kg,created_at")
-      .eq("slot_date", slot_date)
-      .eq("slot_index", slot_index)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (existingError) throw new Error(existingError.message);
-    const existingSlot = existingSlots?.[0] ?? null;
-
-    if (existingSlot) {
-      resolvedSlotId = existingSlot.id;
-    } else {
-      const { max_total_kg } = await getSettings();
-      const { data: created, error: createError } = await client
-        .from("production_slots")
-        .insert({
-          slot_date,
-          slot_index,
-          capacity_kg: max_total_kg,
-          status: "open",
-        })
-        .select("id,capacity_kg")
-        .single();
-      if (createError) throw new Error(createError.message);
-      resolvedSlotId = created.id;
+    if (!order_id) throw new Error("Order is required.");
+    if (!slot_id && (!slot_date || !Number.isFinite(slot_index))) {
+      throw new Error("Slot date and index are required.");
     }
-  }
-
-  if (!resolvedSlotId) throw new Error("Slot could not be resolved.");
-  if (!slot_date && resolvedSlotId) {
-    const { data: slotDateRow, error: slotDateError } = await client
-      .from("production_slots")
-      .select("slot_date")
-      .eq("id", resolvedSlotId)
-      .maybeSingle();
-    if (slotDateError) throw new Error(slotDateError.message);
-    if (slotDateRow?.slot_date && slotDateRow.slot_date < todayKey) {
+    if (slot_date && slot_date < todayKey) {
       throw new Error("Cannot assign orders to past dates.");
     }
-  }
 
-  const { data: slotAssignments, error: slotAssignmentsError } = await client
-    .from("order_slots")
-    .select("id,kg_assigned")
-    .eq("slot_id", resolvedSlotId);
-  if (slotAssignmentsError) throw new Error(slotAssignmentsError.message);
+    const client = supabaseServerClient;
+    let resolvedSlotId = slot_id;
 
-  const { data: orderAssignments, error: orderAssignmentsError } = await client
-    .from("order_slots")
-    .select("id,kg_assigned")
-    .eq("order_id", order_id);
-  if (orderAssignmentsError) throw new Error(orderAssignmentsError.message);
+    const { data: order, error: orderError } = await client
+      .from("orders")
+      .select("id,total_weight_kg")
+      .eq("id", order_id)
+      .single();
+    if (orderError) throw new Error(orderError.message);
+    const totalOrderKgRaw = Number(order.total_weight_kg);
+    const totalOrderKg =
+      Number.isFinite(totalOrderKgRaw) && totalOrderKgRaw > 0 ? totalOrderKgRaw : null;
+    const kg_assigned =
+      Number.isFinite(requestedKgAssigned) && requestedKgAssigned > 0
+        ? requestedKgAssigned
+        : totalOrderKg ?? 0.01;
 
-  const existingOrderAssignment = orderAssignments[0];
-  const previousForAssignment =
-    assignmentId
-      ? slotAssignments.find((a) => a.id === assignmentId)?.kg_assigned ?? 0
-      : existingOrderAssignment?.kg_assigned ?? 0;
+    if (!Number.isFinite(kg_assigned) || kg_assigned <= 0) {
+      throw new Error("Assigned kg must be greater than zero.");
+    }
 
-  const orderUsed =
-    orderAssignments.reduce((sum, a) => sum + Number(a.kg_assigned || 0), 0) -
-    Number(previousForAssignment || 0) +
-    kg_assigned;
-  if (totalOrderKg !== null && orderUsed > totalOrderKg) {
-    throw new Error("Assigned kg exceeds the order's total weight.");
-  }
+    if (!resolvedSlotId && slot_date && Number.isFinite(slot_index)) {
+      const { data: existingSlots, error: existingError } = await client
+        .from("production_slots")
+        .select("id,capacity_kg,created_at")
+        .eq("slot_date", slot_date)
+        .eq("slot_index", slot_index)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (existingError) throw new Error(existingError.message);
+      const existingSlot = existingSlots?.[0] ?? null;
 
-  if (slotAssignments.length > 0 && slotAssignments[0]?.id !== assignmentId && slotAssignments[0]?.id !== existingOrderAssignment?.id) {
-    throw new Error("This slot already has an order assigned.");
-  }
+      if (existingSlot) {
+        resolvedSlotId = existingSlot.id;
+      } else {
+        const { max_total_kg } = await getSettings();
+        const { data: created, error: createError } = await client
+          .from("production_slots")
+          .insert({
+            slot_date,
+            slot_index,
+            capacity_kg: max_total_kg,
+            status: "open",
+          })
+          .select("id,capacity_kg")
+          .single();
+        if (createError) throw new Error(createError.message);
+        resolvedSlotId = created.id;
+      }
+    }
 
-  if (assignmentId) {
-    const { error } = await client
+    if (!resolvedSlotId) throw new Error("Slot could not be resolved.");
+    if (!slot_date && resolvedSlotId) {
+      const { data: slotDateRow, error: slotDateError } = await client
+        .from("production_slots")
+        .select("slot_date")
+        .eq("id", resolvedSlotId)
+        .maybeSingle();
+      if (slotDateError) throw new Error(slotDateError.message);
+      if (slotDateRow?.slot_date && slotDateRow.slot_date < todayKey) {
+        throw new Error("Cannot assign orders to past dates.");
+      }
+    }
+
+    const { data: slotAssignments, error: slotAssignmentsError } = await client
       .from("order_slots")
-      .update({ order_id, slot_id: resolvedSlotId, kg_assigned })
-      .eq("id", assignmentId);
-    if (error) throw new Error(error.message);
-  } else {
-    if (existingOrderAssignment) {
+      .select("id,kg_assigned")
+      .eq("slot_id", resolvedSlotId);
+    if (slotAssignmentsError) throw new Error(slotAssignmentsError.message);
+
+    const { data: orderAssignments, error: orderAssignmentsError } = await client
+      .from("order_slots")
+      .select("id,kg_assigned")
+      .eq("order_id", order_id);
+    if (orderAssignmentsError) throw new Error(orderAssignmentsError.message);
+
+    const existingOrderAssignment = orderAssignments[0];
+    const previousForAssignment =
+      assignmentId
+        ? slotAssignments.find((a) => a.id === assignmentId)?.kg_assigned ?? 0
+        : existingOrderAssignment?.kg_assigned ?? 0;
+
+    const orderUsed =
+      orderAssignments.reduce((sum, a) => sum + Number(a.kg_assigned || 0), 0) -
+      Number(previousForAssignment || 0) +
+      kg_assigned;
+    if (totalOrderKg !== null && orderUsed > totalOrderKg) {
+      throw new Error("Assigned kg exceeds the order's total weight.");
+    }
+
+    if (slotAssignments.length > 0 && slotAssignments[0]?.id !== assignmentId && slotAssignments[0]?.id !== existingOrderAssignment?.id) {
+      throw new Error("This slot already has an order assigned.");
+    }
+
+    if (assignmentId) {
       const { error } = await client
         .from("order_slots")
-        .update({ slot_id: resolvedSlotId, kg_assigned })
-        .eq("id", existingOrderAssignment.id);
+        .update({ order_id, slot_id: resolvedSlotId, kg_assigned })
+        .eq("id", assignmentId);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await client.from("order_slots").insert({ order_id, slot_id: resolvedSlotId, kg_assigned });
-      if (error) throw new Error(error.message);
+      if (existingOrderAssignment) {
+        const { error } = await client
+          .from("order_slots")
+          .update({ slot_id: resolvedSlotId, kg_assigned })
+          .eq("id", existingOrderAssignment.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await client.from("order_slots").insert({ order_id, slot_id: resolvedSlotId, kg_assigned });
+        if (error) throw new Error(error.message);
+      }
     }
+
+    const { error: statusError } = await client.from("orders").update({ status: "scheduled" }).eq("id", order_id);
+    if (statusError) throw new Error(statusError.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to assign order.";
+    redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
-  const { error: statusError } = await client.from("orders").update({ status: "scheduled" }).eq("id", order_id);
-  if (statusError) throw new Error(statusError.message);
-
-  redirect(ORDERS_PATH);
+  redirect(toastRedirect(ORDERS_PATH, "success", "Order assigned."));
 }
 
 export async function deleteAssignment(formData: FormData) {
-  const assignmentId = formData.get("assignment_id")?.toString();
-  if (!assignmentId) throw new Error("Missing assignment id");
+  try {
+    const assignmentId = formData.get("assignment_id")?.toString();
+    if (!assignmentId) throw new Error("Missing assignment id");
 
-  const client = supabaseServerClient;
-  const { data: orderSlot, error: slotLookupError } = await client
-    .from("order_slots")
-    .select("order_id")
-    .eq("id", assignmentId)
-    .maybeSingle();
-  if (slotLookupError) throw new Error(slotLookupError.message);
+    const client = supabaseServerClient;
+    const { data: orderSlot, error: slotLookupError } = await client
+      .from("order_slots")
+      .select("order_id")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    if (slotLookupError) throw new Error(slotLookupError.message);
 
-  const { error } = await client.from("order_slots").delete().eq("id", assignmentId);
-  if (error) throw new Error(error.message);
+    const { error } = await client.from("order_slots").delete().eq("id", assignmentId);
+    if (error) throw new Error(error.message);
 
-  if (orderSlot?.order_id) {
-    const { error: statusError } = await client
-      .from("orders")
-      .update({ status: "unassigned" })
-      .eq("id", orderSlot.order_id);
-    if (statusError) throw new Error(statusError.message);
+    if (orderSlot?.order_id) {
+      const { error: statusError } = await client
+        .from("orders")
+        .update({ status: "unassigned" })
+        .eq("id", orderSlot.order_id);
+      if (statusError) throw new Error(statusError.message);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to unassign order.";
+    redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
-  redirect(ORDERS_PATH);
+  redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
 }
 
 export async function archiveOrder(formData: FormData) {
