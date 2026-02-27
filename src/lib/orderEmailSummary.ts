@@ -146,7 +146,7 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
     showHeart: showHeart ? "1" : "0",
     logoUrl: String(payload.logo_url ?? ""),
   });
-  return `${baseUrl}/api/preview/candy?${params.toString()}`;
+  return `${baseUrl}/api/preview/candy-image?${params.toString()}`;
 };
 
 export async function buildAdminOrderSummaryEmailPayload({

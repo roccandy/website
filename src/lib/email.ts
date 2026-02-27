@@ -6,6 +6,7 @@ type EmailPayload = {
   subject: string;
   text: string;
   html?: string;
+  attachments?: nodemailer.SendMailOptions["attachments"];
 };
 
 type OrderEmailPayload = {
@@ -106,6 +107,7 @@ export async function sendEmail(payload: EmailPayload) {
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
+    attachments: payload.attachments,
   });
 
   return { success: true };
@@ -229,6 +231,56 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
+type InlineImageResult = {
+  src: string | null;
+  attachment: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null;
+};
+
+function isAttachment(
+  value: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null
+): value is NonNullable<nodemailer.SendMailOptions["attachments"]>[number] {
+  return value !== null;
+}
+
+async function fetchInlineImage(url: string | null | undefined, cid: string, defaultFilename: string): Promise<InlineImageResult> {
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return { src: url ?? null, attachment: null };
+  }
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) {
+      return { src: url, attachment: null };
+    }
+    const contentType = response.headers.get("content-type") || "application/octet-stream";
+    if (!contentType.startsWith("image/")) {
+      return { src: url, attachment: null };
+    }
+    const ext = contentType.includes("png")
+      ? "png"
+      : contentType.includes("jpeg")
+        ? "jpg"
+        : contentType.includes("webp")
+          ? "webp"
+          : contentType.includes("gif")
+            ? "gif"
+            : contentType.includes("svg")
+              ? "svg"
+              : "img";
+    const content = Buffer.from(await response.arrayBuffer());
+    return {
+      src: `cid:${cid}`,
+      attachment: {
+        filename: `${defaultFilename}.${ext}`,
+        content,
+        contentType,
+        cid,
+      },
+    };
+  } catch {
+    return { src: url, attachment: null };
+  }
+}
+
 export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
   const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "New order";
   const subject = `Order placed ${orderNumber}`;
@@ -267,9 +319,14 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
+  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview", "candy-preview");
+  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview", "label-preview");
+  const customImageSrc = customImage.src;
+  const labelImageSrc = labelImage.src;
+
   const customSection = order.customDetails
     ? `
-      ${order.customDetails.imageUrl ? `<img src="${escapeHtml(order.customDetails.imageUrl)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
@@ -279,7 +336,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
       <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      ${order.customDetails.labelImageUrl ? `<div style="margin-top:10px;"><img src="${escapeHtml(order.customDetails.labelImageUrl)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -324,11 +381,14 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     </div>
   `;
 
+  const attachments = [customImage.attachment, labelImage.attachment].filter(isAttachment);
+
   return sendEmail({
     to,
     subject,
     text: lines.join("\n"),
     html,
+    attachments: attachments.length > 0 ? attachments : undefined,
   });
 }
 
@@ -371,9 +431,14 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
+  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview", "candy-preview");
+  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview", "label-preview");
+  const customImageSrc = customImage.src;
+  const labelImageSrc = labelImage.src;
+
   const customSection = order.customDetails
     ? `
-      ${order.customDetails.imageUrl ? `<img src="${escapeHtml(order.customDetails.imageUrl)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
@@ -382,7 +447,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
       <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      ${order.customDetails.labelImageUrl ? `<div style="margin-top:10px;"><img src="${escapeHtml(order.customDetails.labelImageUrl)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -430,11 +495,14 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     </div>
   `;
 
+  const attachments = [customImage.attachment, labelImage.attachment].filter(isAttachment);
+
   return sendEmail({
     to,
     subject,
     text: lines.join("\n"),
     html,
+    attachments: attachments.length > 0 ? attachments : undefined,
   });
 }
 
