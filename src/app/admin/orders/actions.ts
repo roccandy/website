@@ -16,6 +16,8 @@ const QUOTE_BLOCK_REASON = "Front-end block";
 const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
+const isInvalidIntegerInputError = (message: string) =>
+  message.toLowerCase().includes("invalid input syntax for type integer");
 
 const isOrderNumberConflict = (error: { code?: string | null; message?: string | null }) => {
   if (error.code === "23505") return true;
@@ -555,23 +557,39 @@ export async function assignOrderToSlot(formData: FormData) {
       throw new Error("This slot already has an order assigned.");
     }
 
-    if (assignmentId) {
-      const { error } = await client
-        .from("order_slots")
-        .update({ order_id, slot_id: resolvedSlotId, kg_assigned })
-        .eq("id", assignmentId);
-      if (error) throw new Error(error.message);
-    } else {
+    const writeAssignment = async (assignedKg: number) => {
+      if (assignmentId) {
+        const { error } = await client
+          .from("order_slots")
+          .update({ order_id, slot_id: resolvedSlotId, kg_assigned: assignedKg })
+          .eq("id", assignmentId);
+        if (error) throw new Error(error.message);
+        return;
+      }
       if (existingOrderAssignment) {
         const { error } = await client
           .from("order_slots")
-          .update({ slot_id: resolvedSlotId, kg_assigned })
+          .update({ slot_id: resolvedSlotId, kg_assigned: assignedKg })
           .eq("id", existingOrderAssignment.id);
         if (error) throw new Error(error.message);
-      } else {
-        const { error } = await client.from("order_slots").insert({ order_id, slot_id: resolvedSlotId, kg_assigned });
-        if (error) throw new Error(error.message);
+        return;
       }
+      const { error } = await client
+        .from("order_slots")
+        .insert({ order_id, slot_id: resolvedSlotId, kg_assigned: assignedKg });
+      if (error) throw new Error(error.message);
+    };
+
+    try {
+      await writeAssignment(kg_assigned);
+    } catch (writeError) {
+      const writeMessage = writeError instanceof Error ? writeError.message : "Unable to assign order.";
+      if (!isInvalidIntegerInputError(writeMessage)) throw writeError;
+      const fallbackKgAssigned =
+        totalOrderKg !== null
+          ? Math.max(1, Math.min(Math.round(totalOrderKg), Math.round(kg_assigned)))
+          : Math.max(1, Math.round(kg_assigned));
+      await writeAssignment(fallbackKgAssigned);
     }
 
     const { error: statusError } = await client.from("orders").update({ status: "scheduled" }).eq("id", order_id);
