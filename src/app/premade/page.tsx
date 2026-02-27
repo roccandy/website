@@ -53,7 +53,7 @@ export default async function PremadePage() {
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <a href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" />
+                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
               </a>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">

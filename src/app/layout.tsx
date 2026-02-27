@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
+import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 
 const headingFont = Montserrat({
   variable: "--font-heading",
@@ -47,6 +48,7 @@ export default function RootLayout({
       <body
         className={`${headingFont.variable} ${bodyFont.variable} antialiased`}
       >
+        <MobileHeaderShrinkOnScroll />
         <CartProvider>{children}</CartProvider>
       </body>
     </html>

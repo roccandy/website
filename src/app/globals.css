@@ -114,6 +114,14 @@ textarea::placeholder {
 }
 
 @media (max-width: 768px) {
+  [data-header-logo] {
+    transition: height 180ms ease;
+  }
+
+  body.mobile-header-scrolled [data-header-logo] {
+    height: 2.5rem !important;
+  }
+
   input,
   select,
   textarea {
