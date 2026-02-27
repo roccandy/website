@@ -47,7 +47,8 @@ export function buildPremadeItemPath(item: Pick<PremadeCandy, "id" | "name">) {
   return `/pre-made-candy/${item.id}--${makePremadeSlug(item.name)}`;
 }
 
-export function extractPremadeIdFromParam(param: string) {
+export function extractPremadeIdFromParam(param?: string | null) {
+  if (!param) return "";
   const [id] = param.split("--");
   return id?.trim() || "";
 }

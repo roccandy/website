@@ -18,9 +18,13 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 type PageProps = {
-  params: {
-    item: string;
-  };
+  params:
+    | Promise<{
+        item?: string;
+      }>
+    | {
+        item?: string;
+      };
 };
 
 async function loadItemFromParams(itemParam: string) {
@@ -31,8 +35,14 @@ async function loadItemFromParams(itemParam: string) {
   return item;
 }
 
+async function resolveItemParam(params: PageProps["params"]) {
+  const resolved = await params;
+  return resolved?.item;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const item = await loadItemFromParams(params.item);
+  const itemParam = await resolveItemParam(params);
+  const item = itemParam ? await loadItemFromParams(itemParam) : null;
   if (!item) {
     return {
       title: "Pre-made candy | Roc Candy",
@@ -59,7 +69,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function PremadeItemPage({ params }: PageProps) {
-  const item = await loadItemFromParams(params.item);
+  const itemParam = await resolveItemParam(params);
+  const item = itemParam ? await loadItemFromParams(itemParam) : null;
   if (!item) notFound();
 
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
