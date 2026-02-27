@@ -8,11 +8,11 @@ export const fetchCache = "force-no-store";
 
 const FEATURE_LABELS = ["Vegan", "Gluten free", "Dairy free", "Handmade", "Australian made", "Free delivery"];
 const CANDY_OPTIONS = [
-  { label: "Branded", href: "/quote?type=branded", image: "/quote/subtypes/branded.jpg" },
-  { label: "Both Names", href: "/quote?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
-  { label: "Initials", href: "/quote?type=weddings&subtype=weddings-initials", image: "/quote/subtypes/weddings-initials.jpg" },
-  { label: "Custom Text 1-6 Letters", href: "/quote?type=text&subtype=custom-1-6", image: "/quote/subtypes/custom-1-6.jpg" },
-  { label: "Custom Text 7-14 Letters", href: "/quote?type=text&subtype=custom-7-14", image: "/quote/subtypes/custom-7-14.jpeg" },
+  { label: "Branded", href: "/design?type=branded", image: "/quote/subtypes/branded.jpg" },
+  { label: "Both Names", href: "/design?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
+  { label: "Initials", href: "/design?type=weddings&subtype=weddings-initials", image: "/quote/subtypes/weddings-initials.jpg" },
+  { label: "Custom Text 1-6 Letters", href: "/design?type=text&subtype=custom-1-6", image: "/quote/subtypes/custom-1-6.jpg" },
+  { label: "Custom Text 7-14 Letters", href: "/design?type=text&subtype=custom-7-14", image: "/quote/subtypes/custom-7-14.jpeg" },
   { label: "Pre-made candy", href: "/premade", image: "/quote/subtypes/premade.jpg" },
 ];
 const FAQS = [
@@ -205,6 +205,5 @@ export default async function Home() {
     </main>
   );
 }
-
 
 

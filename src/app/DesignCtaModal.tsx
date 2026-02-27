@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 const OPTIONS = [
-  { label: "Wedding Candy", href: "/quote?type=weddings" },
-  { label: "Text Candy", href: "/quote?type=text" },
-  { label: "Branded Logo Candy", href: "/quote?type=branded" },
+  { label: "Wedding Candy", href: "/design?type=weddings" },
+  { label: "Text Candy", href: "/design?type=text" },
+  { label: "Branded Logo Candy", href: "/design?type=branded" },
 ];
 
 export function DesignCtaModal() {

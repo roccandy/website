@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 
 const WEDDING_LINKS = [
-  { label: "Initials", href: "/quote?type=weddings&subtype=weddings-initials" },
-  { label: "Both names", href: "/quote?type=weddings&subtype=weddings-both-names" },
+  { label: "Initials", href: "/design?type=weddings&subtype=weddings-initials" },
+  { label: "Both names", href: "/design?type=weddings&subtype=weddings-both-names" },
 ];
 
 const TEXT_LINKS = [
-  { label: "1-6 letters", href: "/quote?type=text&subtype=custom-1-6" },
-  { label: "7-14 letters", href: "/quote?type=text&subtype=custom-7-14" },
+  { label: "1-6 letters", href: "/design?type=text&subtype=custom-1-6" },
+  { label: "7-14 letters", href: "/design?type=text&subtype=custom-7-14" },
 ];
 
 type OpenDropdown = "wedding" | "text" | null;
@@ -42,7 +42,7 @@ export default function HeaderNav() {
       ref={navRef}
       className="order-3 flex w-full flex-nowrap items-center justify-start gap-5 overflow-x-auto overflow-y-visible whitespace-nowrap px-1 pb-1 text-[15px] font-semibold normal-case tracking-normal text-[#ff6781] md:order-none md:flex-1 md:flex-wrap md:justify-center md:gap-17 md:overflow-visible md:whitespace-normal md:px-0 md:pb-0 md:text-[17px]"
     >
-      <a href="/quote?type=branded" className="leading-none transition-colors hover:text-[#e91e63]">
+      <a href="/design?type=branded" className="leading-none transition-colors hover:text-[#e91e63]">
         Branded
       </a>
       <div className="relative">
