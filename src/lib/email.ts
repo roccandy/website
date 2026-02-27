@@ -274,6 +274,7 @@ async function fetchInlineImage(url: string | null | undefined, cid: string, def
         content,
         contentType,
         cid,
+        contentDisposition: "inline",
       },
     };
   } catch {

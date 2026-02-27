@@ -89,10 +89,10 @@ const ensureBaseUrl = (value: string) => {
 };
 
 const getSiteBaseUrl = () => {
-  const explicit = ensureBaseUrl(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "");
-  if (explicit) return explicit;
   const vercel = ensureBaseUrl(process.env.VERCEL_URL ?? "");
   if (vercel) return vercel;
+  const explicit = ensureBaseUrl(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "");
+  if (explicit) return explicit;
   return null;
 };
 
