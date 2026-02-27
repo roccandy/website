@@ -366,12 +366,9 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   );
   const customImageSrc = customPreview.src;
   const labelImageSrc = labelPreview.src;
-  const customPreviewLink = order.customDetails?.imageUrl ?? customPreview.externalUrl;
-
   const customSection = order.customDetails
     ? `
       ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
-      ${customPreviewLink ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreviewLink)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
@@ -380,9 +377,9 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
-      <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
       ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
+      <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";
@@ -489,12 +486,9 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   );
   const customImageSrc = customPreview.src;
   const labelImageSrc = labelPreview.src;
-  const customPreviewLink = order.customDetails?.imageUrl ?? customPreview.externalUrl;
-
   const customSection = order.customDetails
     ? `
       ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
-      ${customPreviewLink ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreviewLink)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
@@ -502,9 +496,9 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
-      <div><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
       ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
+      <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
     `
     : "";

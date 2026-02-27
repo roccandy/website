@@ -1213,7 +1213,7 @@ export function CheckoutClient({
   const handlePaymentSuccess = (warning?: string | null) => {
     setPaymentSuccess(true);
     setPaymentError(null);
-    setAdminEmailWarning(warning ?? null);
+    setAdminEmailWarning(warning === "Admin email not wired up." ? warning : null);
     clearCart();
   };
 
@@ -1253,7 +1253,7 @@ export function CheckoutClient({
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
             <p className="text-lg font-semibold text-zinc-900">Check your email for order confirmation.</p>
             {adminEmailWarning ? (
-              <p className="mt-2 text-sm text-rose-600">Admin email not wired up.</p>
+              <p className="mt-2 text-sm text-rose-600">{adminEmailWarning}</p>
             ) : null}
             <button
               type="button"
@@ -1273,7 +1273,7 @@ export function CheckoutClient({
       ) : null}
       {paymentSuccess && adminEmailWarning ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center text-sm font-semibold text-rose-700">
-          Admin email not wired up. Please contact us if you need help.
+          {adminEmailWarning} Please contact us if you need help.
         </div>
       ) : null}
       <section className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">

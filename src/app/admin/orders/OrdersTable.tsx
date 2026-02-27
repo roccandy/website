@@ -617,6 +617,16 @@ export function OrdersTable({
     });
     return map;
   }, [assignments, slotMap]);
+  const slotIdByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    slots.forEach((slot) => {
+      const key = `${slot.slot_date}:${slot.slot_index}`;
+      if (!map.has(key)) {
+        map.set(key, slot.id);
+      }
+    });
+    return map;
+  }, [slots]);
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -1748,7 +1758,10 @@ export function OrdersTable({
                 {unassignedOrders.length === 0 ? (
                   <p className="text-xs text-zinc-500">No unassigned orders.</p>
                 ) : (
-                  unassignedOrders.map((order) => (
+                  unassignedOrders.map((order) => {
+                    const selectedSlotKey = `${slotPicker.date}:${slotPicker.slotIndex}`;
+                    const selectedSlotId = slotIdByKey.get(selectedSlotKey) ?? "";
+                    return (
                     <form key={order.id} action={assignOrderToSlot}>
                       {(() => {
                         const orderWeightKg = Number(order.total_weight_kg);
@@ -1759,6 +1772,7 @@ export function OrdersTable({
                         return (
                           <>
                             <input type="hidden" name="order_id" value={order.id} />
+                            <input type="hidden" name="slot_id" value={selectedSlotId} />
                             <input type="hidden" name="slot_date" value={slotPicker.date} />
                             <input type="hidden" name="slot_index" value={slotPicker.slotIndex} />
                             <input type="hidden" name="kg_assigned" value={assignableKg} />
@@ -1772,7 +1786,7 @@ export function OrdersTable({
                         {order.title ?? "Untitled"}
                       </button>
                     </form>
-                  ))
+                  )})
                 )}
               </div>
             </div>
@@ -1781,7 +1795,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 

@@ -295,9 +295,11 @@ export async function buildAdminOrderSummaryEmailPayload({
 
   let customDetails: AdminCustomOrderDetails | null = null;
   if (firstCustom) {
-    const jacketTypeRaw = String(firstCustom.jacket_type ?? firstCustom.jacket ?? "").toLowerCase();
-    const rainbow = jacketTypeRaw.includes("rainbow");
-    const pinstripe = jacketTypeRaw.includes("pinstripe");
+    const jacketTypeRaw = String(firstCustom.jacket_type ?? "").toLowerCase();
+    const jacketRaw = String(firstCustom.jacket ?? "").toLowerCase();
+    const jacketCombined = `${jacketTypeRaw} ${jacketRaw}`.trim();
+    const rainbow = jacketCombined.includes("rainbow");
+    const pinstripe = jacketCombined.includes("pinstripe");
     const colourOne = formatColour(firstCustom.jacket_color_one);
     const colourTwoRaw = formatColour(firstCustom.jacket_color_two);
     const hasSecondColour = typeof firstCustom.jacket_color_two === "string" && firstCustom.jacket_color_two.trim().length > 0;

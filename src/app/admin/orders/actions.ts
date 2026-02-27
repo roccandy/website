@@ -480,13 +480,15 @@ export async function assignOrderToSlot(formData: FormData) {
   }
 
   if (!resolvedSlotId && slot_date && Number.isFinite(slot_index)) {
-    const { data: existingSlot, error: existingError } = await client
+    const { data: existingSlots, error: existingError } = await client
       .from("production_slots")
-      .select("id,capacity_kg")
+      .select("id,capacity_kg,created_at")
       .eq("slot_date", slot_date)
       .eq("slot_index", slot_index)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
     if (existingError) throw new Error(existingError.message);
+    const existingSlot = existingSlots?.[0] ?? null;
 
     if (existingSlot) {
       resolvedSlotId = existingSlot.id;
