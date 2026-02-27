@@ -1,4 +1,5 @@
 import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
+import { supabaseServerClient } from "@/lib/supabase/server";
 
 type OrderPayload = Record<string, unknown>;
 
@@ -95,6 +96,63 @@ const getSiteBaseUrl = () => {
   if (explicit) return explicit;
   return null;
 };
+
+const safeOrderToken = (value: string | null | undefined) =>
+  (value ?? "order")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "") || "order";
+
+const encodeStoragePath = (value: string) =>
+  value
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
+async function persistEmailPreview(previewUrl: string | null, orderNumber: string | null | undefined) {
+  if (!previewUrl || !/^https?:\/\//i.test(previewUrl)) return previewUrl;
+
+  const supabaseBase = ensureBaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "");
+  if (!supabaseBase) return previewUrl;
+
+  const bucket = process.env.EMAIL_PREVIEW_BUCKET?.trim() || "flavor-images";
+  const now = new Date();
+  const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const orderKey = safeOrderToken(orderNumber);
+
+  try {
+    const response = await fetch(previewUrl, { cache: "no-store" });
+    if (!response.ok) return previewUrl;
+    const contentType = response.headers.get("content-type") || "image/png";
+    if (!contentType.startsWith("image/")) return previewUrl;
+
+    const ext = contentType.includes("jpeg")
+      ? "jpg"
+      : contentType.includes("webp")
+        ? "webp"
+        : contentType.includes("gif")
+          ? "gif"
+          : "png";
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const objectPath = `email-previews/${monthKey}/${orderKey}-${Date.now()}.${ext}`;
+    const { error } = await supabaseServerClient.storage.from(bucket).upload(objectPath, bytes, {
+      upsert: false,
+      contentType,
+      cacheControl: "31536000",
+    });
+    if (error) {
+      console.warn("Email preview upload failed:", error.message);
+      return previewUrl;
+    }
+    return `${supabaseBase}/storage/v1/object/public/${bucket}/${encodeStoragePath(objectPath)}`;
+  } catch (error) {
+    console.warn("Email preview generation failed:", error);
+    return previewUrl;
+  }
+}
 
 const deriveWeddingNames = (value: string) => {
   const raw = value.trim();
@@ -237,8 +295,10 @@ export async function buildAdminOrderSummaryEmailPayload({
       typeof firstCustom.label_image_url === "string" && firstCustom.label_image_url.trim()
         ? firstCustom.label_image_url
         : null;
+    const generatedPreviewUrl = buildCandyPreviewUrl(firstCustom);
     const imageUrl =
-      buildCandyPreviewUrl(firstCustom) ||
+      (await persistEmailPreview(generatedPreviewUrl, orderNumber)) ||
+      generatedPreviewUrl ||
       (typeof firstCustom.logo_url === "string" && firstCustom.logo_url.trim()) ||
       null;
     const shouldShowHeart =
