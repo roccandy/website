@@ -144,7 +144,6 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
     lineOne,
     lineTwo,
     showHeart: showHeart ? "1" : "0",
-    logoUrl: String(payload.logo_url ?? ""),
   });
   return `${baseUrl}/api/preview/candy-image?${params.toString()}`;
 };

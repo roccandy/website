@@ -249,6 +249,7 @@ async function fetchInlineImage(url: string | null | undefined, cid: string, def
   try {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) {
+      console.warn("Email inline image fetch failed:", response.status, url);
       return { src: url, attachment: null };
     }
     const contentType = response.headers.get("content-type") || "application/octet-stream";
@@ -278,6 +279,7 @@ async function fetchInlineImage(url: string | null | undefined, cid: string, def
       },
     };
   } catch {
+    console.warn("Email inline image fetch error:", url);
     return { src: url, attachment: null };
   }
 }
@@ -320,8 +322,8 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview", "candy-preview");
-  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview", "label-preview");
+  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview@roccandy", "candy-preview");
+  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview@roccandy", "label-preview");
   const customImageSrc = customImage.src;
   const labelImageSrc = labelImage.src;
 
@@ -432,8 +434,8 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview", "candy-preview");
-  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview", "label-preview");
+  const customImage = await fetchInlineImage(order.customDetails?.imageUrl, "candy_preview@roccandy", "candy-preview");
+  const labelImage = await fetchInlineImage(order.customDetails?.labelImageUrl, "label_preview@roccandy", "label-preview");
   const customImageSrc = customImage.src;
   const labelImageSrc = labelImage.src;
 
