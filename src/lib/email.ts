@@ -248,8 +248,38 @@ async function buildInlineAttachment(
   cid: string,
   filenameBase: string
 ): Promise<AttachmentResult> {
-  if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) {
-    return { src: imageUrl ?? null, attachment: null, externalUrl: imageUrl ?? null };
+  if (!imageUrl) {
+    return { src: null, attachment: null, externalUrl: null };
+  }
+
+  const dataMatch = imageUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\s]+)$/);
+  if (dataMatch) {
+    const contentType = dataMatch[1] || "image/png";
+    const ext = contentType.includes("jpeg")
+      ? "jpg"
+      : contentType.includes("webp")
+        ? "webp"
+        : contentType.includes("gif")
+          ? "gif"
+          : contentType.includes("svg")
+            ? "svg"
+            : "png";
+    const content = Buffer.from(dataMatch[2].replace(/\s+/g, ""), "base64");
+    return {
+      src: `cid:${cid}`,
+      externalUrl: null,
+      attachment: {
+        filename: `${filenameBase}.${ext}`,
+        content,
+        contentType,
+        cid,
+        contentDisposition: "inline",
+      },
+    };
+  }
+
+  if (!/^https?:\/\//i.test(imageUrl)) {
+    return { src: imageUrl, attachment: null, externalUrl: imageUrl };
   }
   try {
     const response = await fetch(imageUrl, { cache: "no-store" });
@@ -325,7 +355,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   ].filter((line) => line !== null) as string[];
 
   const customPreview = await buildInlineAttachment(
-    order.customDetails?.imageUrl ?? null,
+    order.customDetails?.imageDataUrl ?? order.customDetails?.imageUrl ?? null,
     "candy-design@roccandy",
     "candy-design"
   );
@@ -336,11 +366,12 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   );
   const customImageSrc = customPreview.src;
   const labelImageSrc = labelPreview.src;
+  const customPreviewLink = order.customDetails?.imageUrl ?? customPreview.externalUrl;
 
   const customSection = order.customDetails
     ? `
       ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
-      ${customPreview.externalUrl ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
+      ${customPreviewLink ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreviewLink)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
@@ -447,7 +478,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   ].filter((line) => line !== null) as string[];
 
   const customPreview = await buildInlineAttachment(
-    order.customDetails?.imageUrl ?? null,
+    order.customDetails?.imageDataUrl ?? order.customDetails?.imageUrl ?? null,
     "candy-design@roccandy",
     "candy-design"
   );
@@ -458,11 +489,12 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   );
   const customImageSrc = customPreview.src;
   const labelImageSrc = labelPreview.src;
+  const customPreviewLink = order.customDetails?.imageUrl ?? customPreview.externalUrl;
 
   const customSection = order.customDetails
     ? `
       ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
-      ${customPreview.externalUrl ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
+      ${customPreviewLink ? `<div style="margin:-4px 0 10px;"><a href="${escapeHtml(customPreviewLink)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy preview image</a></div>` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>

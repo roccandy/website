@@ -42,6 +42,8 @@ export type CustomCartItem = {
   textColor?: string | null;
   heartColor?: string | null;
   logoUrl?: string | null;
+  previewSvg?: string | null;
+  previewPngDataUrl?: string | null;
   designType?: string | null;
   designText?: string | null;
   jacketExtras?: { jacket: "rainbow" | "two_colour" | "pinstripe" }[];

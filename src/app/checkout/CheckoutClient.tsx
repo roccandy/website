@@ -1201,6 +1201,8 @@ export function CheckoutClient({
       heartColor: item.heartColor ?? null,
       flavor: item.flavor ?? null,
       logoUrl: item.logoUrl ?? null,
+      previewSvg: item.previewSvg ?? null,
+      previewPngDataUrl: item.previewPngDataUrl ?? null,
       designType: item.designType ?? null,
       designText: item.designText ?? null,
       jacketExtras: item.jacketExtras ?? [],

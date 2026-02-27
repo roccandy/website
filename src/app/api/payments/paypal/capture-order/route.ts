@@ -78,6 +78,7 @@ export async function POST(request: Request) {
     const recipients = getOrdersRecipients();
     let adminEmailWarning: string | null = null;
     const emailTasks: Array<Promise<unknown>> = [];
+    const firstCustomItem = body.order.customItems?.[0];
     const summaryEmailPayloadPromise = buildAdminOrderSummaryEmailPayload({
       orderPayloads,
       orderNumber: orderNumbers.baseOrderNumber,
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
       pickup,
       paymentMethod: "PayPal",
       paymentAmount: totalAmount,
+      customPreviewSvg: firstCustomItem?.previewSvg ?? null,
+      customPreviewPngDataUrl: firstCustomItem?.previewPngDataUrl ?? null,
     });
 
     if (customerEmail) {

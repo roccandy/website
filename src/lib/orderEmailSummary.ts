@@ -19,6 +19,7 @@ export type AdminOrderSummaryItem = {
 
 export type AdminCustomOrderDetails = {
   imageUrl: string | null;
+  imageDataUrl: string | null;
   orderNumber: string | null;
   weightKg: number | null;
   outerColours: string;
@@ -112,11 +113,20 @@ const encodeStoragePath = (value: string) =>
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 
-async function persistEmailPreview(previewUrl: string | null, orderNumber: string | null | undefined) {
-  if (!previewUrl || !/^https?:\/\//i.test(previewUrl)) return previewUrl;
+const DATA_IMAGE_REGEX = /^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\s]+)$/;
+
+const buildDataUrlFromSvg = (svg: string | null | undefined) => {
+  if (!svg) return null;
+  const trimmed = svg.trim();
+  if (!trimmed.startsWith("<svg")) return null;
+  return `data:image/svg+xml;base64,${Buffer.from(trimmed, "utf8").toString("base64")}`;
+};
+
+async function persistEmailPreview(previewSource: string | null, orderNumber: string | null | undefined) {
+  if (!previewSource) return null;
 
   const supabaseBase = ensureBaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL ?? "");
-  if (!supabaseBase) return previewUrl;
+  if (!supabaseBase) return null;
 
   const bucket = process.env.EMAIL_PREVIEW_BUCKET?.trim() || "flavor-images";
   const now = new Date();
@@ -124,10 +134,23 @@ async function persistEmailPreview(previewUrl: string | null, orderNumber: strin
   const orderKey = safeOrderToken(orderNumber);
 
   try {
-    const response = await fetch(previewUrl, { cache: "no-store" });
-    if (!response.ok) return previewUrl;
-    const contentType = response.headers.get("content-type") || "image/png";
-    if (!contentType.startsWith("image/")) return previewUrl;
+    let contentType = "image/png";
+    let bytes: Buffer | null = null;
+
+    const dataMatch = previewSource.match(DATA_IMAGE_REGEX);
+    if (dataMatch) {
+      contentType = dataMatch[1] || contentType;
+      bytes = Buffer.from(dataMatch[2].replace(/\s+/g, ""), "base64");
+    } else if (/^https?:\/\//i.test(previewSource)) {
+      const response = await fetch(previewSource, { cache: "no-store" });
+      if (!response.ok) return previewSource;
+      contentType = response.headers.get("content-type") || contentType;
+      if (!contentType.startsWith("image/")) return previewSource;
+      bytes = Buffer.from(await response.arrayBuffer());
+    } else {
+      return null;
+    }
+    if (!bytes || bytes.length === 0) return null;
 
     const ext = contentType.includes("jpeg")
       ? "jpg"
@@ -135,8 +158,9 @@ async function persistEmailPreview(previewUrl: string | null, orderNumber: strin
         ? "webp"
         : contentType.includes("gif")
           ? "gif"
-          : "png";
-    const bytes = Buffer.from(await response.arrayBuffer());
+          : contentType.includes("svg")
+            ? "svg"
+            : "png";
     const objectPath = `email-previews/${monthKey}/${orderKey}-${Date.now()}.${ext}`;
     const { error } = await supabaseServerClient.storage.from(bucket).upload(objectPath, bytes, {
       upsert: false,
@@ -145,12 +169,12 @@ async function persistEmailPreview(previewUrl: string | null, orderNumber: strin
     });
     if (error) {
       console.warn("Email preview upload failed:", error.message);
-      return previewUrl;
+      return null;
     }
     return `${supabaseBase}/storage/v1/object/public/${bucket}/${encodeStoragePath(objectPath)}`;
   } catch (error) {
     console.warn("Email preview generation failed:", error);
-    return previewUrl;
+    return null;
   }
 }
 
@@ -214,6 +238,8 @@ export async function buildAdminOrderSummaryEmailPayload({
   pickup,
   paymentMethod,
   paymentAmount,
+  customPreviewSvg,
+  customPreviewPngDataUrl,
 }: {
   orderPayloads: OrderPayload[];
   orderNumber: string | null;
@@ -222,6 +248,8 @@ export async function buildAdminOrderSummaryEmailPayload({
   pickup: boolean;
   paymentMethod: string | null;
   paymentAmount: number;
+  customPreviewSvg?: string | null;
+  customPreviewPngDataUrl?: string | null;
 }): Promise<AdminOrderSummaryEmailPayload> {
   const palette = await getColorPalette();
   const [packagingOptions, labelTypes] = await Promise.all([
@@ -295,9 +323,20 @@ export async function buildAdminOrderSummaryEmailPayload({
       typeof firstCustom.label_image_url === "string" && firstCustom.label_image_url.trim()
         ? firstCustom.label_image_url
         : null;
+    const previewPngDataUrl =
+      typeof customPreviewPngDataUrl === "string" && customPreviewPngDataUrl.trim().startsWith("data:image/")
+        ? customPreviewPngDataUrl.trim()
+        : null;
+    const previewSvgDataUrl = buildDataUrlFromSvg(
+      typeof customPreviewSvg === "string" ? customPreviewSvg : null
+    );
     const generatedPreviewUrl = buildCandyPreviewUrl(firstCustom);
+    const persistedPreviewUrl = await persistEmailPreview(
+      previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl,
+      orderNumber
+    );
     const imageUrl =
-      (await persistEmailPreview(generatedPreviewUrl, orderNumber)) ||
+      persistedPreviewUrl ||
       generatedPreviewUrl ||
       (typeof firstCustom.logo_url === "string" && firstCustom.logo_url.trim()) ||
       null;
@@ -308,6 +347,7 @@ export async function buildAdminOrderSummaryEmailPayload({
 
     customDetails = {
       imageUrl,
+      imageDataUrl: previewPngDataUrl,
       orderNumber,
       weightKg: customWeight > 0 ? customWeight : null,
       outerColours,

@@ -492,6 +492,65 @@ export function QuoteBuilder({
   const flavorDetailsRef = useRef<HTMLDetailsElement | null>(null);
   const hasManualSubtypeRef = useRef(false);
 
+  const capturePreviewSvg = () => {
+    if (typeof window === "undefined") return null;
+    const root = previewStickyRef.current;
+    if (!root) return null;
+
+    const svgs = Array.from(root.querySelectorAll("svg"));
+    if (svgs.length === 0) return null;
+
+    const baseSvg = svgs[0].cloneNode(true) as SVGSVGElement;
+    for (let i = 1; i < svgs.length; i += 1) {
+      const svg = svgs[i];
+      const children = Array.from(svg.childNodes).map((node) => node.cloneNode(true));
+      children.forEach((child) => baseSvg.appendChild(child));
+    }
+    if (!baseSvg.getAttribute("xmlns")) {
+      baseSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    }
+    if (!baseSvg.getAttribute("viewBox")) {
+      baseSvg.setAttribute("viewBox", "0 0 1772 1300");
+    }
+
+    try {
+      return new XMLSerializer().serializeToString(baseSvg);
+    } catch {
+      return null;
+    }
+  };
+
+  const capturePreviewPngDataUrl = async (svgMarkup: string | null) => {
+    if (typeof window === "undefined" || !svgMarkup) return null;
+
+    const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error("Preview image load failed."));
+        nextImage.src = objectUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 886;
+      canvas.height = 650;
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return null;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const navEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
@@ -1861,7 +1920,7 @@ export function QuoteBuilder({
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setPlaceError(null);
                   if (!canPlace) {
                     const missingText = missingFields.length ? missingFields.join(", ") : "required fields";
@@ -1869,56 +1928,67 @@ export function QuoteBuilder({
                     return;
                   }
                   setPlacing(true);
-                  const title = designTitle;
-                  const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
-                  const labelsCount = labelsOptIn
-                    ? hasBulkSelection
-                      ? labelCountOverride > 0
-                        ? Math.min(labelCountOverride, settings.labels_max_bulk)
-                        : 0
-                      : totalPackages
-                    : null;
-                  const jacketValue = rainbowJacket
-                    ? "rainbow"
-                    : twoColourJacket && pinstripeJacket
-                      ? "two_colour_pinstripe"
-                      : twoColourJacket
-                        ? "two_colour"
-                        : pinstripeJacket
-                          ? "pinstripe"
-                          : null;
-                  const jacketExtras = [
-                    ...(rainbowJacket ? [{ jacket: "rainbow" as const }] : []),
-                    ...(twoColourJacket ? [{ jacket: "two_colour" as const }] : []),
-                    ...(pinstripeJacket ? [{ jacket: "pinstripe" as const }] : []),
-                  ];
-                  addCustomItem({
-                    title: title || mainTitle,
-                    description,
-                    categoryId,
-                    packagingOptionId: selectedOptionId,
-                    totalPrice: result?.total ?? null,
-                    totalWeightKg,
-                    quantity: selectionQty,
-                    packagingLabel: description,
-                    jarLidColor: isJarOption ? jarLidColor || null : null,
-                    labelsCount,
-                    labelImageUrl: labelsOptIn ? labelImageUrl || null : null,
-                    labelTypeId: labelsOptIn ? labelTypeId || null : null,
-                    ingredientLabelsOptIn,
-                    jacket: jacketValue,
-                    jacketType: previewJacketMode || null,
-                    jacketColorOne,
-                    jacketColorTwo,
-                    textColor: isBranded ? null : textColor,
-                    heartColor: isWedding ? heartColor : null,
-                    flavor,
-                    logoUrl: logoUrl || null,
-                    designType: categoryId || orderType,
-                    designText: title || mainTitle,
-                    jacketExtras,
-                  });
-                  router.push("/checkout");
+                  try {
+                    const title = designTitle;
+                    const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
+                    const labelsCount = labelsOptIn
+                      ? hasBulkSelection
+                        ? labelCountOverride > 0
+                          ? Math.min(labelCountOverride, settings.labels_max_bulk)
+                          : 0
+                        : totalPackages
+                      : null;
+                    const jacketValue = rainbowJacket
+                      ? "rainbow"
+                      : twoColourJacket && pinstripeJacket
+                        ? "two_colour_pinstripe"
+                        : twoColourJacket
+                          ? "two_colour"
+                          : pinstripeJacket
+                            ? "pinstripe"
+                            : null;
+                    const jacketExtras = [
+                      ...(rainbowJacket ? [{ jacket: "rainbow" as const }] : []),
+                      ...(twoColourJacket ? [{ jacket: "two_colour" as const }] : []),
+                      ...(pinstripeJacket ? [{ jacket: "pinstripe" as const }] : []),
+                    ];
+                    const previewSvg = capturePreviewSvg();
+                    const previewPngDataUrl = await capturePreviewPngDataUrl(previewSvg);
+
+                    addCustomItem({
+                      title: title || mainTitle,
+                      description,
+                      categoryId,
+                      packagingOptionId: selectedOptionId,
+                      totalPrice: result?.total ?? null,
+                      totalWeightKg,
+                      quantity: selectionQty,
+                      packagingLabel: description,
+                      jarLidColor: isJarOption ? jarLidColor || null : null,
+                      labelsCount,
+                      labelImageUrl: labelsOptIn ? labelImageUrl || null : null,
+                      labelTypeId: labelsOptIn ? labelTypeId || null : null,
+                      ingredientLabelsOptIn,
+                      jacket: jacketValue,
+                      jacketType: previewJacketMode || null,
+                      jacketColorOne,
+                      jacketColorTwo,
+                      textColor: isBranded ? null : textColor,
+                      heartColor: isWedding ? heartColor : null,
+                      flavor,
+                      logoUrl: logoUrl || null,
+                      previewSvg,
+                      previewPngDataUrl,
+                      designType: categoryId || orderType,
+                      designText: title || mainTitle,
+                      jacketExtras,
+                    });
+                    router.push("/checkout");
+                  } catch (addError) {
+                    const message = addError instanceof Error ? addError.message : "Unable to add item to cart.";
+                    setPlaceError(message);
+                    setPlacing(false);
+                  }
                 }}
                 aria-disabled={!canPlace || placing}
                 className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm ${
