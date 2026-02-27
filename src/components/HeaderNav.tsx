@@ -111,7 +111,7 @@ export default function HeaderNav() {
           </div>
         ) : null}
       </div>
-      <a href="/premade" className="leading-none transition-colors hover:text-[#e91e63]">
+      <a href="/pre-made-candy" className="leading-none transition-colors hover:text-[#e91e63]">
         Pre-Made
       </a>
       <a href="/#gallery" className="leading-none transition-colors hover:text-[#e91e63]">

@@ -59,7 +59,7 @@ export default function CheckoutSuccessPage() {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <a
-                href="/premade"
+                href="/pre-made-candy"
                 className="rounded-full border border-zinc-900 bg-zinc-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
               >
                 Continue shopping

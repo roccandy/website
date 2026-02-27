@@ -292,3 +292,10 @@ export async function getPremadeCandies() {
   if (error) throw new Error(error.message);
   return data as PremadeCandy[];
 }
+
+export async function getPremadeCandyById(id: string) {
+  const client = supabaseServerClient;
+  const { data, error } = await client.from("premade_candies").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as PremadeCandy | null) ?? null;
+}

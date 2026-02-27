@@ -13,7 +13,7 @@ const CANDY_OPTIONS = [
   { label: "Initials", href: "/design?type=weddings&subtype=weddings-initials", image: "/quote/subtypes/weddings-initials.jpg" },
   { label: "Custom Text 1-6 Letters", href: "/design?type=text&subtype=custom-1-6", image: "/quote/subtypes/custom-1-6.jpg" },
   { label: "Custom Text 7-14 Letters", href: "/design?type=text&subtype=custom-7-14", image: "/quote/subtypes/custom-7-14.jpeg" },
-  { label: "Pre-made candy", href: "/premade", image: "/quote/subtypes/premade.jpg" },
+  { label: "Pre-made candy", href: "/pre-made-candy", image: "/quote/subtypes/premade.jpg" },
 ];
 const FAQS = [
   {
@@ -205,5 +205,4 @@ export default async function Home() {
     </main>
   );
 }
-
 
