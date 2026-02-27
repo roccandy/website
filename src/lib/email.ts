@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 
 type EmailPayload = {
   to: string[];
@@ -205,6 +206,225 @@ export async function sendCustomerRefundEmail(to: string[], refund: CustomerRefu
     to,
     subject,
     text: lines.join("\n"),
+  });
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-AU", {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+  });
+}
+
+export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
+  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "New order";
+  const subject = `Order placed ${orderNumber}`;
+  const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
+
+  const productsText = order.items
+    .map((item) => {
+      const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? ` ($${Number(item.totalPrice).toFixed(2)})` : "";
+      return `- ${item.quantity} x ${item.title}${lineTotal}`;
+    })
+    .join("\n");
+
+  const lines = [
+    `Order #: ${orderNumber}`,
+    order.customDetails ? `Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}` : null,
+    order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
+    order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
+    order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
+    order.customDetails ? `Heart: ${order.customDetails.heartColour}` : null,
+    order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
+    "",
+    "Order Information",
+    `Date ordered: ${formatDate(order.dateOrderedIso)}`,
+    `Order number: ${orderNumber}`,
+    `Customer: ${order.customerName ?? "-"}`,
+    `Email: ${order.customerEmail ?? "-"}`,
+    `Phone: ${order.customerPhone ?? "-"}`,
+    `Requested date: ${formatDate(order.requestedDate)}`,
+    `Delivery address: ${order.deliveryAddress}`,
+    "",
+    "Products ordered",
+    productsText || "-",
+    `Payment amount: ${paymentAmount}`,
+    `Payment method: ${order.paymentMethod ?? "-"}`,
+  ].filter((line) => line !== null) as string[];
+
+  const customSection = order.customDetails
+    ? `
+      ${order.customDetails.imageUrl ? `<img src="${escapeHtml(order.customDetails.imageUrl)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
+      <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
+      <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
+      <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
+      <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
+      <div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>
+      <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
+      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+    `
+    : "";
+
+  const productsHtml = order.items
+    .map((item) => {
+      const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? `$${Number(item.totalPrice).toFixed(2)}` : "-";
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;">${escapeHtml(item.title)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:right;">${escapeHtml(lineTotal)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
+      ${customSection}
+      <h3 style="margin:0 0 8px;">Order Information</h3>
+      <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
+      <div><strong>Order number:</strong> ${escapeHtml(orderNumber)}</div>
+      <div><strong>Customer:</strong> ${escapeHtml(order.customerName ?? "-")}</div>
+      <div><strong>Email:</strong> ${escapeHtml(order.customerEmail ?? "-")}</div>
+      <div><strong>Phone:</strong> ${escapeHtml(order.customerPhone ?? "-")}</div>
+      <div style="font-size:36px;font-weight:700;margin:12px 0 6px;">Requested date: ${escapeHtml(formatDate(order.requestedDate))}</div>
+      <div><strong>Delivery address:</strong> ${escapeHtml(order.deliveryAddress)}</div>
+      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+
+      <h3 style="margin:0 0 8px;">Products ordered</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px;border-bottom:2px solid #d4d4d8;">Product</th>
+            <th style="text-align:center;padding:8px;border-bottom:2px solid #d4d4d8;">Qty</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #d4d4d8;">Line total</th>
+          </tr>
+        </thead>
+        <tbody>${productsHtml}</tbody>
+      </table>
+      <div><strong>Payment amount:</strong> ${escapeHtml(paymentAmount)}</div>
+      <div><strong>Payment method:</strong> ${escapeHtml(order.paymentMethod ?? "-")}</div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    text: lines.join("\n"),
+    html,
+  });
+}
+
+export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
+  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "your order";
+  const subject = `Order confirmation ${orderNumber}`;
+  const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
+
+  const productsText = order.items
+    .map((item) => {
+      const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? ` ($${Number(item.totalPrice).toFixed(2)})` : "";
+      return `- ${item.quantity} x ${item.title}${lineTotal}`;
+    })
+    .join("\n");
+
+  const lines = [
+    "Thanks for your order. It has been confirmed and is now being prepared.",
+    "",
+    `Order #: ${orderNumber}`,
+    order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
+    order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
+    order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
+    order.customDetails ? `Heart: ${order.customDetails.heartColour}` : null,
+    order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
+    "",
+    "Order Information",
+    `Date ordered: ${formatDate(order.dateOrderedIso)}`,
+    `Order number: ${orderNumber}`,
+    `Customer: ${order.customerName ?? "-"}`,
+    `Email: ${order.customerEmail ?? "-"}`,
+    `Phone: ${order.customerPhone ?? "-"}`,
+    `Requested date: ${formatDate(order.requestedDate)}`,
+    `Delivery address: ${order.deliveryAddress}`,
+    "",
+    "Products ordered",
+    productsText || "-",
+    `Payment amount: ${paymentAmount}`,
+    `Payment method: ${order.paymentMethod ?? "-"}`,
+  ].filter((line) => line !== null) as string[];
+
+  const customSection = order.customDetails
+    ? `
+      ${order.customDetails.imageUrl ? `<img src="${escapeHtml(order.customDetails.imageUrl)}" alt="Candy design" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
+      <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
+      <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
+      <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
+      <div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>
+      <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
+      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+    `
+    : "";
+
+  const productsHtml = order.items
+    .map((item) => {
+      const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? `$${Number(item.totalPrice).toFixed(2)}` : "-";
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;">${escapeHtml(item.title)}</td>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:right;">${escapeHtml(lineTotal)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
+      <p style="margin:0 0 14px;font-size:15px;">
+        Thanks for your order. It has been confirmed and is now being prepared.
+      </p>
+      ${customSection}
+      <h3 style="margin:0 0 8px;">Order Information</h3>
+      <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
+      <div><strong>Order number:</strong> ${escapeHtml(orderNumber)}</div>
+      <div><strong>Customer:</strong> ${escapeHtml(order.customerName ?? "-")}</div>
+      <div><strong>Email:</strong> ${escapeHtml(order.customerEmail ?? "-")}</div>
+      <div><strong>Phone:</strong> ${escapeHtml(order.customerPhone ?? "-")}</div>
+      <div><strong>Requested date:</strong> ${escapeHtml(formatDate(order.requestedDate))}</div>
+      <div><strong>Delivery address:</strong> ${escapeHtml(order.deliveryAddress)}</div>
+      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+
+      <h3 style="margin:0 0 8px;">Products ordered</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px;border-bottom:2px solid #d4d4d8;">Product</th>
+            <th style="text-align:center;padding:8px;border-bottom:2px solid #d4d4d8;">Qty</th>
+            <th style="text-align:right;padding:8px;border-bottom:2px solid #d4d4d8;">Line total</th>
+          </tr>
+        </thead>
+        <tbody>${productsHtml}</tbody>
+      </table>
+      <div><strong>Payment amount:</strong> ${escapeHtml(paymentAmount)}</div>
+      <div><strong>Payment method:</strong> ${escapeHtml(order.paymentMethod ?? "-")}</div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    text: lines.join("\n"),
+    html,
   });
 }
 

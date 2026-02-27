@@ -4,7 +4,8 @@ import { capturePayPalOrder } from "@/lib/paypal";
 import { createWooOrder } from "@/lib/woo";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { logPaymentFailure } from "@/lib/paymentFailures";
-import { getOrdersRecipients, isEmailConfigured, sendCustomerOrderEmail, sendOrderEmail } from "@/lib/email";
+import { getOrdersRecipients, isEmailConfigured, sendAdminOrderSummaryEmail, sendCustomerOrderSummaryEmail } from "@/lib/email";
+import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -77,25 +78,21 @@ export async function POST(request: Request) {
     const recipients = getOrdersRecipients();
     let adminEmailWarning: string | null = null;
     const emailTasks: Array<Promise<unknown>> = [];
+    const summaryEmailPayloadPromise = buildAdminOrderSummaryEmailPayload({
+      orderPayloads,
+      orderNumber: orderNumbers.baseOrderNumber,
+      requestedDate: dueDate ?? null,
+      billing,
+      pickup,
+      paymentMethod: "PayPal",
+      paymentAmount: totalAmount,
+    });
 
     if (customerEmail) {
       emailTasks.push(
-        sendCustomerOrderEmail([customerEmail], {
-          orderNumber: orderNumbers.baseOrderNumber,
-          items: orderPayloads.map((item) => ({
-            title: String(item.title ?? "Order item"),
-            quantity: Number(item.quantity ?? 1),
-          })),
-          dueDate: dueDate ?? null,
-          paymentMethod: "PayPal",
-          pickup,
-          addressLine1: billing.address_1 || null,
-          addressLine2: billing.address_2 || null,
-          suburb: billing.city || null,
-          state: billing.state || null,
-          postcode: billing.postcode || null,
-          totalPrice: totalAmount,
-        })
+        summaryEmailPayloadPromise.then((summary) =>
+          sendCustomerOrderSummaryEmail([customerEmail], summary)
+        )
       );
     }
 
@@ -103,20 +100,7 @@ export async function POST(request: Request) {
       adminEmailWarning = "Admin email not wired up.";
     } else {
       emailTasks.push(
-        ...orderPayloads.map((payload) =>
-          sendOrderEmail(recipients, {
-            orderNumber: payload.order_number as string | null,
-            title: payload.title as string | null,
-            designType: payload.design_type as string | null,
-            quantity: payload.quantity as number | null,
-            dueDate: payload.due_date as string | null,
-            customerName: payload.customer_name as string | null,
-            customerEmail: customerEmail ?? null,
-            totalWeightKg: payload.total_weight_kg as number | null,
-            totalPrice: payload.total_price as number | null,
-            notes: payload.notes as string | null,
-          })
-        )
+        summaryEmailPayloadPromise.then((summary) => sendAdminOrderSummaryEmail(recipients, summary))
       );
     }
 
