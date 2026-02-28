@@ -393,7 +393,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     >
                       Download label image
                     </a>
-                    {labelImageIsImage ? <p className="text-[11px] text-zinc-500">Preview shown on left</p> : null}
                   </div>
                 </div>
               )}
