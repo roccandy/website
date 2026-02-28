@@ -62,7 +62,7 @@ export default async function AboutPage() {
         <div className="about-bg">
           <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
             <h1
-              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-zinc-500 md:text-5xl`}
+              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
             >
               A Little About Us
             </h1>
