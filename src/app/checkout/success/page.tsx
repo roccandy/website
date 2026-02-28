@@ -22,7 +22,7 @@ export default function CheckoutSuccessPage() {
                 <a
                   href="mailto:admin@roccandy.com.au"
                   aria-label="Email Roc Candy"
-                  className="inline-flex items-center justify-center text-[#ff7fa0] transition-colors hover:text-[#ff5e88]"
+                  className="inline-flex items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
                 >
                   <svg viewBox="0 0 24 24" className="h-10 w-10" aria-hidden="true">
                     <path
@@ -34,7 +34,7 @@ export default function CheckoutSuccessPage() {
                 <a
                   href="tel:0414519211"
                   aria-label="Call Roc Candy"
-                  className="inline-flex items-center justify-center text-[#ff7fa0] transition-colors hover:text-[#ff5e88]"
+                  className="inline-flex items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
                 >
                   <svg viewBox="0 0 24 24" className="h-10 w-10" aria-hidden="true">
                     <path

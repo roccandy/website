@@ -77,11 +77,11 @@ export default function HeaderMenu() {
         aria-label="View cart"
         aria-expanded={open}
         onClick={openDrawer}
-        className="inline-flex h-10 w-10 items-center justify-center text-[#ff7fa0] transition-colors hover:text-[#ff5e88]"
+        className="inline-flex h-10 w-10 items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
       >
         <Icon path={mdiCartOutline} size={1.6} aria-hidden="true" />
         {hasItems ? (
-          <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ff7fa0] px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ff6f95] px-1 text-[10px] font-semibold text-white">
             {itemCount}
           </span>
         ) : null}
@@ -105,11 +105,11 @@ export default function HeaderMenu() {
               >
                 <div className="flex h-full flex-col p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-semibold text-[#ff7fa0]">Cart Preview</p>
+                    <p className="text-lg font-semibold text-[#ff6f95]">Cart Preview</p>
                     <button
                       type="button"
                       onClick={closeDrawer}
-                      className="inline-flex h-7 w-7 items-center justify-center text-[#ff7fa0] hover:text-[#ff5e88]"
+                      className="inline-flex h-7 w-7 items-center justify-center text-[#ff6f95] hover:text-[#ff4f80]"
                     >
                       <Icon path={mdiClose} size={0.7} aria-hidden="true" />
                     </button>
@@ -205,14 +205,14 @@ export default function HeaderMenu() {
                     <button
                       type="button"
                       onClick={clearCart}
-                      className="flex-1 rounded-md border border-[#ff7fa0] px-3 py-2 text-xs font-semibold text-[#ff7fa0] hover:border-[#ff5e88] hover:text-[#ff5e88]"
+                      className="flex-1 rounded-md border border-[#ff6f95] px-3 py-2 text-xs font-semibold text-[#ff6f95] hover:border-[#ff4f80] hover:text-[#ff4f80]"
                     >
                       Empty cart
                     </button>
                     <Link
                       href="/checkout"
                       onClick={closeDrawer}
-                      className="flex-1 rounded-md border border-[#ff7fa0] bg-[#ff7fa0] px-3 py-2 text-center text-xs font-semibold text-white hover:border-[#ff5e88] hover:bg-[#ff5e88]"
+                      className="flex-1 rounded-md border border-[#ff6f95] bg-[#ff6f95] px-3 py-2 text-center text-xs font-semibold text-white hover:border-[#ff4f80] hover:bg-[#ff4f80]"
                     >
                       Checkout
                     </Link>
