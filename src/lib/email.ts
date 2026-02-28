@@ -504,7 +504,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   const labelImageSrc = labelPreview.src;
   const customSection = order.customDetails
     ? `
-      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="210" style="display:block;max-width:100%;width:210px;border-radius:12px;margin-bottom:12px;" />` : ""}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(displayOrderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
