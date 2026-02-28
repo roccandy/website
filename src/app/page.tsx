@@ -124,11 +124,11 @@ export default async function Home() {
           </section>
 
           <section className="grid gap-5 md:grid-cols-2">
-            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
                 src="/landing/home-feature.mp4"
                 poster="/about-carousel/about-1.jpg"
-                className="h-full min-h-[300px] w-full object-cover"
+                className="h-full w-full object-cover"
               />
             </div>
 
@@ -136,7 +136,7 @@ export default async function Home() {
               <p className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
                 Custom Rock Candy
               </p>
-              <p className="mt-4 normal-case text-[15px] leading-relaxed text-zinc-600 md:text-base">
+              <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you're planning a
                 wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
                 made to impress. From wedding candy tailored to your big day, to custom text candy that celebrates
@@ -152,7 +152,7 @@ export default async function Home() {
               <p className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
                 A little about us
               </p>
-              <p className="mt-4 normal-case text-[15px] leading-relaxed text-zinc-600 md:text-base">
+              <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 We are very happy Australian artisan confectioners specialising in personalised and custom handmade
                 rock candies for all types of occasions. Established in 1999, our rock candy treats are vegan,
                 gluten-free and dairy-free. Each piece of candy is meticulously handcrafted with the finest
