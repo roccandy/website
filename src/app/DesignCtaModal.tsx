@@ -28,8 +28,8 @@ export function DesignCtaModal() {
   return (
     <div ref={containerRef} className="mx-auto w-fit max-w-full">
       <div
-        className={`overflow-hidden rounded-3xl border bg-white/90 shadow-lg transition-transform duration-200 ease-out ${
-          expanded ? "border-[#ff6f95]" : "border-zinc-200 hover:scale-[1.02]"
+        className={`overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-lg transition-transform duration-200 ease-out ${
+          expanded ? "" : "hover:scale-[1.02]"
         }`}
       >
         <div
@@ -55,7 +55,7 @@ export function DesignCtaModal() {
           }`}
         >
           <div className="bg-white text-center">
-            <div className="divide-y divide-[#ff6f95]">
+            <div>
             {OPTIONS.map((option) => (
               <a
                 key={option.href}
