@@ -26,7 +26,7 @@ export function DesignCtaModal() {
   }, [expanded]);
 
   return (
-    <div ref={containerRef} className="mx-auto w-full max-w-xl">
+    <div ref={containerRef} className="mx-auto w-fit max-w-full">
       <div
         className={`overflow-hidden rounded-3xl border bg-white/90 shadow-lg transition-transform duration-200 ease-out ${
           expanded ? "border-[#ff6f95]" : "border-zinc-200 hover:scale-[1.02]"
@@ -42,7 +42,7 @@ export function DesignCtaModal() {
             onClick={() => setExpanded(true)}
             aria-expanded={expanded}
             aria-controls="design-options"
-            className="flex w-full items-center justify-center rounded-3xl bg-[#ff6f95] px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#ff4f80]"
+            className="inline-flex items-center justify-center rounded-3xl bg-[#ff6f95] px-6 py-4 text-sm font-semibold normal-case tracking-normal text-white transition-colors hover:bg-[#ff4f80]"
           >
             Design Your Candy + Pricing
           </button>

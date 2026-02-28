@@ -86,20 +86,20 @@ export default async function Home() {
 
           <section className="grid items-center gap-10 lg:grid-cols-[1.2fr,0.8fr]">
             <div className="space-y-6">
-              <div className="space-y-2 text-center">
+              <div className="space-y-1 text-center">
                 <h1
                   className={`${montserratLight.className} normal-case text-[64px] font-light leading-tight tracking-tight text-zinc-500`}
                 >
                   Personalised Rock Candy
                 </h1>
-                <h2 className="normal-case text-[28px] font-semibold leading-tight text-zinc-400">
+                <h2 className="normal-case text-[28px] font-medium leading-tight text-zinc-400">
                   Branded, Wedding and Text Lollies
                 </h2>
                 <p className="text-xl font-medium text-zinc-400">Artisan Handmade Candy</p>
               </div>
 
               <div className="flex justify-center">
-                <div className="inline-flex rounded-full border border-white/70 bg-white/70 px-4 py-2 text-center text-xs font-semibold tracking-[0.2em] text-zinc-700 shadow-sm backdrop-blur">
+                <div className="inline-flex rounded-full border border-white/45 bg-white/45 px-4 py-2 text-center text-xs font-medium tracking-[0.08em] text-zinc-500 shadow-sm backdrop-blur">
                   <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
                   <span className="sm:hidden">
                     {FEATURE_LABELS.slice(0, 3).join(" | ")}
