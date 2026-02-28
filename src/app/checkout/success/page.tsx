@@ -22,7 +22,7 @@ export default function CheckoutSuccessPage() {
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
-                  href="mailto:admin@roccandy.com.au"
+                  href="mailto:enquiries@roccandy.com.au"
                   aria-label="Email Roc Candy"
                   className="inline-flex items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
                 >

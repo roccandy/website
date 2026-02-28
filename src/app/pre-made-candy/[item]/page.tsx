@@ -78,7 +78,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
   const item = itemParam ? await loadItemFromParams(itemParam) : null;
   if (!item) notFound();
 
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const imageUrl = buildPremadeImageUrl(item.image_path);
   const weightLabel = formatPremadeWeight(Number(item.weight_g));

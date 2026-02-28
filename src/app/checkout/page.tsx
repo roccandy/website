@@ -46,7 +46,7 @@ export default async function CheckoutPage() {
       imageUrl: buildPremadeImageUrl(item.image_path),
       approx_pcs: item.approx_pcs,
     }));
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
 
   return (

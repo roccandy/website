@@ -18,7 +18,7 @@ export const fetchCache = "force-no-store";
 export default async function PremadePage() {
   const candies = await getPremadeCandies();
   const visible = candies.filter((item) => item.is_active);
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
 
   return (

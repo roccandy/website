@@ -47,7 +47,7 @@ function IconButton({
 }
 
 export default function SiteFooter() {
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const infoLinks = INFO_LINKS.map((link) =>
     link.href === "__CONTACT__" ? { ...link, href: enquiriesHref } : link

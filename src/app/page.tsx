@@ -25,7 +25,7 @@ const CANDY_OPTIONS = [
 ];
 
 export default async function Home() {
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   return (
     <main className="min-h-screen text-zinc-900">

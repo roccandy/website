@@ -63,7 +63,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: "What credit Cards do you accept?",
-    answerHtml: `<p>We accept Visa, MasterCard and AMEX. <br />Cancelled personalised orders will attract a $25 cancellation fee.<br />Cancelled pre-paid orders will attract the credit card transaction fee.</p> <p>Ph: 0414 519 211<br />E-mail: <a href="mailto:admin@roccandy.com.au">enquiries@roccandy.com.au</a>
+    answerHtml: `<p>We accept Visa, MasterCard and AMEX. <br />Cancelled personalised orders will attract a $25 cancellation fee.<br />Cancelled pre-paid orders will attract the credit card transaction fee.</p> <p>Ph: 0414 519 211<br />E-mail: <a href="mailto:enquiries@roccandy.com.au">enquiries@roccandy.com.au</a>
 </p>`,
   },
   {
@@ -76,7 +76,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     question: "Is there a cancellation fee?",
-    answerHtml: `<p>Cancelled personalised orders will attract a $25 cancellation fee.<br />Cancelled pre-made orders will attract the credit card transaction fee.</p> <p>Ph: 0414 519 211<br />E-mail: <a href="mailto:admin@roccandy.com.au">enquiries@roccandy.com.au</a>
+    answerHtml: `<p>Cancelled personalised orders will attract a $25 cancellation fee.<br />Cancelled pre-made orders will attract the credit card transaction fee.</p> <p>Ph: 0414 519 211<br />E-mail: <a href="mailto:enquiries@roccandy.com.au">enquiries@roccandy.com.au</a>
 </p>`,
   },
   {

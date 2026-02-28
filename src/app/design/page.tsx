@@ -66,7 +66,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
     getWeightTiers(),
     getLabelTypes(),
   ]);
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
+  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const minBasePrices = buildMinBasePrices(categories, tiers);
   const resolvedSearchParams = await searchParams;
