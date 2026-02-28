@@ -58,10 +58,23 @@ function looksLikeMissingStorage(message: string) {
 
 async function readStoredFaqPayload(): Promise<StoredFaqPayload | null> {
   const client = supabaseServerClient;
-  const { data, error } = await client.storage.from(FAQ_BUCKET).download(FAQ_PATH);
+  let data: Blob | null = null;
+  let error: { message?: string } | null = null;
+  try {
+    const response = await client.storage.from(FAQ_BUCKET).download(FAQ_PATH);
+    data = response.data ?? null;
+    error = response.error ? { message: response.error.message } : null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    if (looksLikeMissingStorage(message.toLowerCase()) || message.includes('"url"')) {
+      return null;
+    }
+    throw err;
+  }
+
   if (error || !data) {
     const message = (error?.message ?? "").toLowerCase();
-    if (looksLikeMissingStorage(message)) return null;
+    if (looksLikeMissingStorage(message) || message.includes('"url"')) return null;
     throw new Error(error?.message ?? "Unable to read FAQ data.");
   }
 
@@ -122,8 +135,12 @@ async function ensureFaqBucket() {
 }
 
 export async function getManagedFaqItems(): Promise<ManagedFaqItem[]> {
-  const stored = await readStoredFaqPayload();
-  if (stored && stored.items.length > 0) return stored.items;
+  try {
+    const stored = await readStoredFaqPayload();
+    if (stored && stored.items.length > 0) return stored.items;
+  } catch {
+    // Fail-safe for public page rendering if storage access is unavailable.
+  }
   return buildFallbackFaqItems();
 }
 
