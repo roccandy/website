@@ -112,6 +112,7 @@ function formatLabelTypeLabel(labelType?: LabelType | null) {
 function SquarePayment({
   amount,
   canPay,
+  validationMessage,
   getOrderPayload,
   onSuccess,
   onError,
@@ -119,6 +120,7 @@ function SquarePayment({
 }: {
   amount: number;
   canPay: boolean;
+  validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (adminEmailWarning?: string | null) => void;
   onError: (stage: string, message: string) => void;
@@ -148,7 +150,7 @@ function SquarePayment({
   ) => {
     setSetupError(null);
     if (!canPayRef.current) {
-      onError("validation", "Please complete all required fields before paying.");
+      onError("validation", validationMessage);
       return;
     }
     setLoading(true);
@@ -304,11 +306,13 @@ function SquarePayment({
 
 function PayPalPayment({
   canPay,
+  validationMessage,
   getOrderPayload,
   onSuccess,
   onError,
 }: {
   canPay: boolean;
+  validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (adminEmailWarning?: string | null) => void;
   onError: (stage: string, message: string) => void;
@@ -354,7 +358,7 @@ function PayPalPayment({
             },
             onClick: () => {
               if (!canPayRef.current) {
-                onError("validation", "Please complete all required fields before paying.");
+                onError("validation", validationMessage);
                 return false;
               }
               return true;
@@ -410,7 +414,7 @@ function PayPalPayment({
         onError("setup", message);
       }
     })();
-  }, [canPay, getOrderPayload, onError, onSuccess]);
+  }, [canPay, getOrderPayload, onError, onSuccess, validationMessage]);
 
   return (
     <div className="space-y-3">
@@ -1162,7 +1166,14 @@ export function CheckoutClient({
     return missing;
   };
 
-  const canPlace = hasItems && getMissingFields().length === 0;
+  const missingFields = getMissingFields();
+  const canPlace = hasItems && missingFields.length === 0;
+  const paymentValidationMessage =
+    missingFields.length === 0
+      ? "Please complete all required fields before paying."
+      : `Please complete: ${missingFields
+          .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
+          .join(", ")}.`;
 
   const buildOrderPayload = (): CheckoutOrderPayload => ({
     dueDate: dueDate || undefined,
@@ -1501,6 +1512,7 @@ export function CheckoutClient({
                 {selectedPaymentMethod === "paypal" ? (
                   <PayPalPayment
                     canPay={canPlace}
+                    validationMessage={paymentValidationMessage}
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("paypal", stage, message)}
@@ -1509,12 +1521,14 @@ export function CheckoutClient({
                   <SquarePayment
                     amount={cartPricing.total}
                     canPay={canPlace}
+                    validationMessage={paymentValidationMessage}
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("square", stage, message)}
                     selectedMethod={selectedPaymentMethod}
                   />
                 )}
+                {paymentError ? <p className="mt-2 text-sm text-red-600">{paymentError}</p> : null}
               </div>
             </div>
           ) : null}
@@ -1578,7 +1592,6 @@ export function CheckoutClient({
             </div>
           )}
           {pricingError ? <p className="mt-2 text-xs text-red-600">{pricingError}</p> : null}
-          {paymentError ? <p className="mt-2 text-xs text-red-600">{paymentError}</p> : null}
           {paymentSuccess ? (
             <p className="mt-2 text-xs font-semibold text-emerald-600">Payment confirmed.</p>
           ) : null}

@@ -79,6 +79,24 @@ const isImageUrl = (value: string) => {
   }
 };
 
+const sanitizeFilenamePart = (value: string) =>
+  value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+
+const getFileExtensionFromUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    const ext = url.pathname.split(".").pop()?.toLowerCase() ?? "";
+    return ext || "png";
+  } catch {
+    const ext = value.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+    return ext || "png";
+  }
+};
+
 const CARD_CLASS = "rounded-2xl border border-zinc-200 p-4 print:p-2";
 const SECTION_HEADING_CLASS = "text-[11px] uppercase tracking-[0.22em] text-zinc-500";
 const SECTION_BODY_CLASS = "mt-3 space-y-2 print:mt-1 print:space-y-1";
@@ -207,6 +225,12 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const jacketColorTwoDisplay = resolveColorDisplay(order.jacket_color_two, paletteHexMap);
   const labelImageUrl = order.label_image_url || "";
   const labelImageIsImage = labelImageUrl ? isImageUrl(labelImageUrl) : false;
+  const labelDownloadName = (() => {
+    const orderNumberPart = sanitizeFilenamePart(order.order_number ? String(order.order_number) : "Unknown");
+    const titlePart = sanitizeFilenamePart(order.title ? String(order.title) : "Untitled");
+    const ext = getFileExtensionFromUrl(labelImageUrl);
+    return `Order#${orderNumberPart} Custom Label ${titlePart}.${ext}`;
+  })();
 
   const designText = order.design_text ? normalizeHeart(order.design_text) : "";
   const hasHeart = designText.includes("\u2665");
@@ -349,7 +373,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                   ) : null}
                   <a
                     href={labelImageUrl}
-                    download
+                    download={labelDownloadName}
                     className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                   >
                     Download label image
@@ -431,6 +455,5 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     </div>
   );
 }
-
 
 
