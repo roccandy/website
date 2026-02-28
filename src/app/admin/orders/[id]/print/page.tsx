@@ -81,19 +81,32 @@ const isImageUrl = (value: string) => {
 
 const sanitizeFilenamePart = (value: string) =>
   value
+    .normalize("NFKD")
+    .replace(/[^\x20-\x7E]/g, "")
     .trim()
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
     .replace(/\s+/g, " ")
     .slice(0, 120);
 
 const getFileExtensionFromUrl = (value: string) => {
+  const dataUrlMatch = value.match(/^data:([^;,]+)[;,]/i);
+  if (dataUrlMatch?.[1]) {
+    const mime = dataUrlMatch[1].toLowerCase();
+    if (mime === "image/jpeg") return "jpg";
+    if (mime === "image/png") return "png";
+    if (mime === "image/gif") return "gif";
+    if (mime === "image/webp") return "webp";
+    if (mime === "image/svg+xml") return "svg";
+    return "png";
+  }
+
   try {
     const url = new URL(value);
     const ext = url.pathname.split(".").pop()?.toLowerCase() ?? "";
-    return ext || "png";
+    return ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext) ? ext : "png";
   } catch {
     const ext = value.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
-    return ext || "png";
+    return ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(ext) ? ext : "png";
   }
 };
 
@@ -455,5 +468,4 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     </div>
   );
 }
-
 
