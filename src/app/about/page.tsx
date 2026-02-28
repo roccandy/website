@@ -1,6 +1,7 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -54,6 +55,8 @@ export default async function AboutPage() {
 
         <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
           <h1 className="normal-case text-4xl font-semibold text-zinc-700 md:text-5xl">A Little About Us</h1>
+
+          <AboutPhotoCarousel />
 
           <p className="normal-case text-2xl font-semibold leading-tight text-[#ff6f95] md:text-3xl">
             Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!
