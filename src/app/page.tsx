@@ -79,10 +79,10 @@ export default async function Home() {
                 >
                   Personalised Rock Candy
                 </h1>
-                <h2 className="normal-case text-[28px] font-medium leading-tight text-zinc-400">
+                <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
                   Branded, Wedding and Text Lollies
                 </h2>
-                <p className="text-xl font-medium text-zinc-400">Artisan Handmade Candy</p>
+                <p className="text-xl font-medium text-[rgb(130,130,140)]">Artisan Handmade Candy</p>
               </div>
 
               <div className="flex justify-center">
