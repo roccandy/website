@@ -85,7 +85,7 @@ export default async function Home() {
         <div className="landing-bg -mt-8 pt-8">
           <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
 
-          <section className="grid items-center gap-10 lg:grid-cols-[1.2fr,0.8fr]">
+          <section className="grid items-center gap-20 lg:grid-cols-[1.2fr,0.8fr]">
             <div className="space-y-6">
               <div className="space-y-1 text-center">
                 <h1
@@ -110,12 +110,12 @@ export default async function Home() {
                 </div>
               </div>
 
-              <div id="design" className="pt-2">
+              <div id="design" className="pt-4">
                 <DesignCtaModal />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               {CANDY_OPTIONS.map((option) => (
                 <a
                   key={option.label}
@@ -132,28 +132,6 @@ export default async function Home() {
                   <div className="px-2 py-2 text-xs font-semibold text-zinc-900">{option.label}</div>
                 </a>
               ))}
-            </div>
-          </section>
-
-          <section
-            id="about"
-            className="scroll-mt-44 grid gap-6 rounded-3xl border border-zinc-200 bg-white/90 p-8 shadow-md md:grid-cols-[1fr,1.1fr]"
-          >
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">About</p>
-              <h2 className="text-2xl font-semibold text-zinc-900">
-                Handcrafted rock candy with a modern twist.
-              </h2>
-            </div>
-            <div className="space-y-3 text-sm text-zinc-600">
-              <p>
-                Roc Candy crafts artisian rock candy in Australia using traditional techniques with modern flavor
-                and design. Every batch is made to order so your colors, names, and branding stay crisp.
-              </p>
-              <p>
-                From weddings and events to corporate gifting, we partner with you on color palettes, packaging,
-                and delivery timing so your candy arrives ready to impress.
-              </p>
             </div>
           </section>
 
