@@ -40,9 +40,9 @@ export default function HeaderNav() {
   return (
     <div
       ref={navRef}
-      className="order-3 flex w-full flex-nowrap items-center justify-start gap-5 overflow-x-auto overflow-y-visible whitespace-nowrap px-1 pb-1 text-[15px] font-semibold normal-case tracking-normal text-[#ff6781] md:order-none md:flex-1 md:flex-wrap md:justify-center md:gap-17 md:overflow-visible md:whitespace-normal md:px-0 md:pb-0 md:text-[17px]"
+      className="order-3 flex w-full flex-nowrap items-center justify-start gap-5 overflow-x-auto overflow-y-visible whitespace-nowrap px-1 pb-1 text-[15px] font-semibold normal-case tracking-normal text-[#ff7fa0] md:order-none md:flex-1 md:flex-wrap md:justify-center md:gap-17 md:overflow-visible md:whitespace-normal md:px-0 md:pb-0 md:text-[17px]"
     >
-      <a href="/design?type=branded" className="leading-none transition-colors hover:text-[#e91e63]">
+      <a href="/design?type=branded" className="leading-none transition-colors hover:text-[#ff5e88]">
         Branded
       </a>
       <div className="relative">
@@ -52,7 +52,7 @@ export default function HeaderNav() {
           onClick={() => toggleDropdown("wedding")}
           aria-haspopup="menu"
           aria-expanded={openDropdown === "wedding"}
-          className="inline-flex cursor-pointer items-center gap-2 leading-none transition-colors !text-[#ff6781] hover:!text-[#e91e63]"
+          className="inline-flex cursor-pointer items-center gap-2 leading-none transition-colors !text-[#ff7fa0] hover:!text-[#ff5e88]"
         >
           Wedding
           <svg
@@ -70,7 +70,7 @@ export default function HeaderNav() {
                 key={link.href}
                 href={link.href}
                 onClick={closeDropdown}
-                className="block rounded-xl px-3 py-2 text-[#ff6781] transition-colors hover:bg-[#fedae1]/60 hover:text-[#e91e63]"
+                className="block rounded-xl px-3 py-2 text-[#ff7fa0] transition-colors hover:bg-[#fedae1]/60 hover:text-[#ff5e88]"
               >
                 {link.label}
               </a>
@@ -85,7 +85,7 @@ export default function HeaderNav() {
           onClick={() => toggleDropdown("text")}
           aria-haspopup="menu"
           aria-expanded={openDropdown === "text"}
-          className="inline-flex cursor-pointer items-center gap-2 leading-none transition-colors !text-[#ff6781] hover:!text-[#e91e63]"
+          className="inline-flex cursor-pointer items-center gap-2 leading-none transition-colors !text-[#ff7fa0] hover:!text-[#ff5e88]"
         >
           Text
           <svg
@@ -103,7 +103,7 @@ export default function HeaderNav() {
                 key={link.href}
                 href={link.href}
                 onClick={closeDropdown}
-                className="block rounded-xl px-3 py-2 text-[#ff6781] transition-colors hover:bg-[#fedae1]/60 hover:text-[#e91e63]"
+                className="block rounded-xl px-3 py-2 text-[#ff7fa0] transition-colors hover:bg-[#fedae1]/60 hover:text-[#ff5e88]"
               >
                 {link.label}
               </a>
@@ -111,10 +111,10 @@ export default function HeaderNav() {
           </div>
         ) : null}
       </div>
-      <a href="/pre-made-candy" className="leading-none transition-colors hover:text-[#e91e63]">
+      <a href="/pre-made-candy" className="leading-none transition-colors hover:text-[#ff5e88]">
         Pre-Made
       </a>
-      <a href="/#gallery" className="leading-none transition-colors hover:text-[#e91e63]">
+      <a href="/#gallery" className="leading-none transition-colors hover:text-[#ff5e88]">
         Gallery
       </a>
     </div>

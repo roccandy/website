@@ -29,7 +29,7 @@ export function DesignCtaModal() {
     <div ref={containerRef} className="mx-auto w-full max-w-xl">
       <div
         className={`overflow-hidden rounded-3xl border bg-white/90 shadow-lg transition-transform duration-200 ease-out ${
-          expanded ? "border-[#e91e63]" : "border-zinc-200 hover:scale-[1.02]"
+          expanded ? "border-[#ff7fa0]" : "border-zinc-200 hover:scale-[1.02]"
         }`}
       >
         <div
@@ -42,7 +42,7 @@ export function DesignCtaModal() {
             onClick={() => setExpanded(true)}
             aria-expanded={expanded}
             aria-controls="design-options"
-            className="flex w-full items-center justify-center rounded-3xl bg-[#e91e63] px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#d81b60]"
+            className="flex w-full items-center justify-center rounded-3xl bg-[#ff7fa0] px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#ff5e88]"
           >
             Design Your Candy + Pricing
           </button>
@@ -55,12 +55,12 @@ export function DesignCtaModal() {
           }`}
         >
           <div className="bg-[#fbd6e3] text-center">
-            <div className="divide-y divide-[#e91e63]">
+            <div className="divide-y divide-[#ff7fa0]">
             {OPTIONS.map((option) => (
               <a
                 key={option.href}
                 href={option.href}
-                className="block px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#e91e63] transition-colors hover:bg-[#f6c1d3] hover:text-[#d81b60]"
+                className="block px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#ff7fa0] transition-colors hover:bg-[#f6c1d3] hover:text-[#ff5e88]"
               >
                 {option.label}
               </a>
