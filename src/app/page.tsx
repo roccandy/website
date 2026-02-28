@@ -164,7 +164,7 @@ export default async function Home() {
 
             <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <img
-                src="/about-carousel/about-2.jpg"
+                src="/about-carousel/about-1.jpg"
                 alt="Handmade Roc Candy pieces"
                 className="h-full min-h-[300px] w-full object-cover"
                 loading="lazy"
