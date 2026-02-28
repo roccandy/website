@@ -130,7 +130,7 @@ export default async function Home() {
                     />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white/90" />
                   </div>
-                  <div className="px-2 py-2 text-xs font-semibold text-zinc-900">{option.label}</div>
+                  <div className="px-2 py-2 text-xs font-semibold text-[rgb(114,112,111)]">{option.label}</div>
                 </a>
               ))}
             </div>
