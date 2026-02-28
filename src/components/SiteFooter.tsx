@@ -65,7 +65,7 @@ export default function SiteFooter() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <IconButton href="https://www.facebook.com/roccandy" label="Facebook">
+            <IconButton href="https://www.facebook.com/RocCandyPages/" label="Facebook">
               <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
                 <path
                   fill="currentColor"
@@ -74,7 +74,7 @@ export default function SiteFooter() {
               </svg>
             </IconButton>
 
-            <IconButton href="https://www.instagram.com/roccandyau" label="Instagram">
+            <IconButton href="https://www.instagram.com/roccandyyum/" label="Instagram">
               <svg viewBox="0 0 24 24" className="h-8 w-8" aria-hidden="true">
                 <rect x="4" y="4" width="16" height="16" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2" />
                 <circle cx="12" cy="12" r="3.8" fill="none" stroke="currentColor" strokeWidth="2" />
