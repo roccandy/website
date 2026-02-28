@@ -45,6 +45,26 @@ body {
   mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
 }
 
+:root .about-bg {
+  position: relative;
+  isolation: isolate;
+  background-color: #ffffff;
+}
+
+:root .about-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/about-carousel/watercolour-home-middle.webp");
+  background-repeat: no-repeat;
+  background-size: 1200px auto;
+  background-position: center top;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
 
 :is(h1, h2, h3, h4, h5, h6, button, label, summary, nav, th, thead, legend),
 .uppercase {

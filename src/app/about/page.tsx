@@ -2,10 +2,16 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
+import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["300"],
+});
 
 export default async function AboutPage() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
@@ -53,84 +59,90 @@ export default async function AboutPage() {
           </div>
         </div>
 
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
-          <h1 className="normal-case text-4xl font-semibold text-zinc-700 md:text-5xl">A Little About Us</h1>
+        <div className="about-bg">
+          <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
+            <h1
+              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-zinc-500 md:text-5xl`}
+            >
+              A Little About Us
+            </h1>
 
-          <AboutPhotoCarousel />
+            <AboutPhotoCarousel />
 
-          <p className="normal-case text-2xl font-semibold leading-tight text-[#ff6f95] md:text-3xl">
-            Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!
-          </p>
-
-          <p className="normal-case text-lg font-medium text-zinc-700">
-            Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays,
-            christenings, and 'special event' days such as NAIDOC, Pride, Idahobit, R U OK? to name a few.
-          </p>
-
-          <div className="space-y-5 text-base leading-relaxed text-zinc-700">
-            <p>
-              At Roc Candy, we believe in the power of sweetness and the joy it brings to people's lives in a visual
-              and tasty way. Our passion for crafting delectable handmade candies is matched only by our dedication to
-              creating personalised treats that are as unique as the individuals who savor them.
+            <p className="normal-case text-2xl font-semibold leading-tight text-[#ff6f95] md:text-3xl">
+              Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!
             </p>
 
-            <p>
-              With our roots deeply embedded in the art of traditional candy-making, Roc Candy has evolved into a
-              modern confectionery brand, combining time-honored techniques with innovative flavors and custom
-              designs, we are here to make your celebrations truly unforgettable.
+            <p className="normal-case text-lg font-medium text-zinc-700">
+              Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays,
+              christenings, and 'special event' days such as NAIDOC, Pride, Idahobit, R U OK? to name a few.
             </p>
 
-            <p>
-              What sets Roc Candy apart is our commitment to quality. We handcraft each and every piece of candy with
-              meticulous attention to detail, using only the finest ingredients sourced from trusted suppliers of which
-              98% is Australian. Every step of our candy-making process is carefully executed to ensure that every
-              bite delivers an explosion of flavor and a delightful experience.
-            </p>
+            <div className="space-y-5 text-base leading-relaxed text-zinc-700">
+              <p>
+                At Roc Candy, we believe in the power of sweetness and the joy it brings to people's lives in a visual
+                and tasty way. Our passion for crafting delectable handmade candies is matched only by our dedication
+                to creating personalised treats that are as unique as the individuals who savor them.
+              </p>
 
-            <p>
-              Our personalised candy creations are a true testament to the limitless possibilities of customization.
-              With Roc Candy, you have the freedom to design your own candy, tailored to match your unique style and
-              event theme. Choose from an array of vibrant colors, enticing flavors, and captivating shapes to create
-              a candy masterpiece that will leave a lasting impression on your guests. We will also match your colour
-              theme or logo colours as close to as possible.
-            </p>
+              <p>
+                With our roots deeply embedded in the art of traditional candy-making, Roc Candy has evolved into a
+                modern confectionery brand, combining time-honored techniques with innovative flavors and custom
+                designs, we are here to make your celebrations truly unforgettable.
+              </p>
 
-            <p>
-              Whether you're looking for elegant wedding favors, eye-catching promotional items, or simply a sweet
-              treat to brighten someone's day, Roc Candy has got you covered. Our candies are not only a feast for the
-              taste buds but also a feast for the eyes, designed to captivate and delight. We take pride in our
-              ability to turn ordinary candies into extraordinary creations, infused with the essence of your vision
-              and personality.
-            </p>
+              <p>
+                What sets Roc Candy apart is our commitment to quality. We handcraft each and every piece of candy
+                with meticulous attention to detail, using only the finest ingredients sourced from trusted suppliers
+                of which 98% is Australian. Every step of our candy-making process is carefully executed to ensure
+                that every bite delivers an explosion of flavor and a delightful experience.
+              </p>
 
-            <p>
-              At Roc Candy, we understand that customer satisfaction is the cornerstone of our success. We strive to
-              provide exceptional service, from the moment you visit our user-friendly website to the prompt delivery
-              of your custom-made candies. With our seamless ordering process, you can easily navigate through our
-              extensive range of options, select your preferences, and watch as we bring your candy dreams to life. We
-              also understand that sometimes events come up quickly so please ask us about our Urgent Order process and
-              how we can accommodate. We believe in personal customer service with efficiency to deliver a high end
-              product.
-            </p>
+              <p>
+                Our personalised candy creations are a true testament to the limitless possibilities of customization.
+                With Roc Candy, you have the freedom to design your own candy, tailored to match your unique style and
+                event theme. Choose from an array of vibrant colors, enticing flavors, and captivating shapes to
+                create a candy masterpiece that will leave a lasting impression on your guests. We will also match your
+                colour theme or logo colours as close to as possible.
+              </p>
 
-            <p>
-              We ship Australia-wide, delivering our delicious rock candy to all major cities, including Sydney,
-              Melbourne, Brisbane, Perth, Adelaide, and beyond!
-            </p>
+              <p>
+                Whether you're looking for elegant wedding favors, eye-catching promotional items, or simply a sweet
+                treat to brighten someone's day, Roc Candy has got you covered. Our candies are not only a feast for
+                the taste buds but also a feast for the eyes, designed to captivate and delight. We take pride in our
+                ability to turn ordinary candies into extraordinary creations, infused with the essence of your vision
+                and personality.
+              </p>
 
-            <p>
-              Join us on this mouthwatering journey and indulge in the magic of personalised handmade candy. Discover
-              the sweetness that sets Roc Candy apart and make your next celebration an extraordinary affair. Check out
-              our{" "}
-              <a href="/design?type=weddings" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                Wedding candy designer
-              </a>{" "}
-              or{" "}
-              <a href="/design?type=text" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                Text candy designer
-              </a>{" "}
-              and let the confectionery adventure begin!
-            </p>
+              <p>
+                At Roc Candy, we understand that customer satisfaction is the cornerstone of our success. We strive to
+                provide exceptional service, from the moment you visit our user-friendly website to the prompt delivery
+                of your custom-made candies. With our seamless ordering process, you can easily navigate through our
+                extensive range of options, select your preferences, and watch as we bring your candy dreams to life.
+                We also understand that sometimes events come up quickly so please ask us about our Urgent Order
+                process and how we can accommodate. We believe in personal customer service with efficiency to deliver
+                a high end product.
+              </p>
+
+              <p>
+                We ship Australia-wide, delivering our delicious rock candy to all major cities, including Sydney,
+                Melbourne, Brisbane, Perth, Adelaide, and beyond!
+              </p>
+
+              <p>
+                Join us on this mouthwatering journey and indulge in the magic of personalised handmade candy.
+                Discover the sweetness that sets Roc Candy apart and make your next celebration an extraordinary
+                affair. Check out our{" "}
+                <a href="/design?type=weddings" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  Wedding candy designer
+                </a>{" "}
+                or{" "}
+                <a href="/design?type=text" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  Text candy designer
+                </a>{" "}
+                and let the confectionery adventure begin!
+              </p>
+            </div>
           </div>
         </div>
       </div>
