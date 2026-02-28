@@ -386,7 +386,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
       <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
-      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
+      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="130" style="display:block;max-width:100%;width:130px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
       <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
       <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
