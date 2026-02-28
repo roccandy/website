@@ -89,7 +89,7 @@ export default async function PremadePage() {
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
                       {item.great_value ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-[#e91e63] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        <span className="absolute left-2 top-2 rounded-full bg-[#ff6f95] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
                           Discounted
                         </span>
                       ) : null}

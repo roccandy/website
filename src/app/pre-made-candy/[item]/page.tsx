@@ -136,7 +136,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
             <div className="relative overflow-hidden rounded-2xl bg-zinc-100">
               {imageUrl ? <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" /> : null}
               {item.great_value ? (
-                <span className="absolute left-3 top-3 rounded-full bg-[#e91e63] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+                <span className="absolute left-3 top-3 rounded-full bg-[#ff6f95] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                   Discounted
                 </span>
               ) : null}

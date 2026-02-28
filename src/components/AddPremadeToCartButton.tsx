@@ -64,7 +64,7 @@ export function AddPremadeToCartButton({ item, className = "" }: Props) {
         aria-label={`Add ${item.name} to cart`}
         className={className}
       >
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#e91e63] bg-[#e91e63] text-white shadow-sm">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#ff6f95] bg-[#ff6f95] text-white shadow-sm">
           <Icon path={mdiCartArrowDown} size={1.4} color="#ffffff" aria-hidden="true" />
         </span>
       </button>
