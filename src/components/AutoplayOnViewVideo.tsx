@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   src: string;
@@ -11,10 +11,15 @@ type Props = {
 export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isVisibleRef = useRef(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const node = videoRef.current;
     if (!node) return;
+
+    node.muted = true;
+    node.defaultMuted = true;
+    node.playsInline = true;
 
     const tryPlay = () => {
       const playPromise = node.play();
@@ -46,32 +51,61 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       }
     };
 
+    const handlePlaying = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleWaiting = () => setIsPlaying(false);
+
+    const retryTimer = window.setInterval(() => {
+      if (isVisibleRef.current && node.paused) {
+        tryPlay();
+      }
+    }, 900);
+
     node.addEventListener("loadeddata", handleCanPlay);
     node.addEventListener("canplay", handleCanPlay);
+    node.addEventListener("playing", handlePlaying);
+    node.addEventListener("pause", handlePause);
+    node.addEventListener("waiting", handleWaiting);
     observer.observe(node);
 
     return () => {
+      window.clearInterval(retryTimer);
       node.removeEventListener("loadeddata", handleCanPlay);
       node.removeEventListener("canplay", handleCanPlay);
+      node.removeEventListener("playing", handlePlaying);
+      node.removeEventListener("pause", handlePause);
+      node.removeEventListener("waiting", handleWaiting);
       observer.disconnect();
     };
   }, []);
 
   return (
-    <video
-      ref={videoRef}
-      className={className}
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="auto"
-      poster={poster}
-      controls={false}
-      disablePictureInPicture
-      aria-label="Roc Candy feature video"
-    >
-      <source src={src} type="video/mp4" />
-    </video>
+    <div className="relative h-full w-full overflow-hidden">
+      {poster ? (
+        <img
+          src={poster}
+          alt=""
+          aria-hidden="true"
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
+            isPlaying ? "opacity-0" : "opacity-100"
+          }`}
+        />
+      ) : null}
+      <video
+        ref={videoRef}
+        className={className}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        poster={poster}
+        controls={false}
+        disablePictureInPicture
+        aria-label="Roc Candy feature video"
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+    </div>
   );
 }

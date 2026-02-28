@@ -127,7 +127,7 @@ export default async function Home() {
             <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
-                poster="/about-carousel/about-1.jpg"
+                poster="/landing/home-feature-poster.png"
                 className="h-full w-full object-cover"
               />
             </div>
