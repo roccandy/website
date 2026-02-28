@@ -146,11 +146,17 @@ export async function sendOrderEmail(to: string[], order: OrderEmailPayload) {
 }
 
 export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderEmailPayload) {
-  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "your order";
-  const subject = `Order confirmation ${orderNumber}`;
+  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : null;
+  const subject = orderNumber
+    ? `RocCandy Order confirmation ${orderNumber}`
+    : "RocCandy Order confirmation";
   const totalPrice =
     Number.isFinite(order.totalPrice ?? NaN) && order.totalPrice !== null
       ? `$${Number(order.totalPrice).toFixed(2)}`
+      : "-";
+  const gstIncluded =
+    Number.isFinite(order.totalPrice ?? NaN) && order.totalPrice !== null
+      ? `$${(Number(order.totalPrice) / 11).toFixed(2)}`
       : "-";
   const deliveryLabel = order.pickup ? "Pickup" : "Delivery";
   const deliveryNote = order.pickup
@@ -167,8 +173,10 @@ export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderE
     .join(", ");
 
   const lines = [
+    "Tax invoice",
+    "",
     `Thanks for your order!`,
-    `Order #: ${order.orderNumber ? `#${order.orderNumber}` : "-"}`,
+    `Order #: ${orderNumber ?? "-"}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
     `Due date: ${order.dueDate ?? "-"}`,
     `${deliveryLabel}: ${addressParts || "-"}`,
@@ -178,6 +186,7 @@ export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderE
     ...order.items.map((item) => `- ${item.quantity} x ${item.title}`),
     "",
     `Total: ${totalPrice}`,
+    `GST included (10%): ${gstIncluded}`,
   ];
 
   return sendEmail({
@@ -436,9 +445,13 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 }
 
 export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
-  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "your order";
-  const subject = `Order confirmation ${orderNumber}`;
+  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : null;
+  const displayOrderNumber = orderNumber ?? "-";
+  const subject = orderNumber
+    ? `RocCandy Order confirmation ${orderNumber}`
+    : "RocCandy Order confirmation";
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
+  const gstIncluded = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount / 11).toFixed(2)}` : "-";
 
   const productsText = order.items
     .map((item) => {
@@ -448,9 +461,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     .join("\n");
 
   const lines = [
+    "Tax invoice",
+    "",
     "Thanks for your order. It has been confirmed and is now being prepared.",
     "",
-    `Order #: ${orderNumber}`,
+    `Order #: ${displayOrderNumber}`,
     order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
     order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
     order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
@@ -471,6 +486,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     "Products ordered",
     productsText || "-",
     `Payment amount: ${paymentAmount}`,
+    `GST included (10%): ${gstIncluded}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
@@ -489,7 +505,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   const customSection = order.customDetails
     ? `
       ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(displayOrderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
       <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
@@ -516,13 +532,14 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
 
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
+      <div style="display:inline-block;margin:0 0 10px;padding:5px 10px;border:1px solid #d4d4d8;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#52525b;">Tax invoice</div>
       <p style="margin:0 0 14px;font-size:15px;">
         Thanks for your order. It has been confirmed and is now being prepared.
       </p>
       ${customSection}
       <h3 style="margin:0 0 8px;">Order Information</h3>
       <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
-      <div><strong>Order number:</strong> ${escapeHtml(orderNumber)}</div>
+      <div><strong>Order number:</strong> ${escapeHtml(displayOrderNumber)}</div>
       <div><strong>Customer:</strong> ${escapeHtml(order.customerName ?? "-")}</div>
       <div><strong>Email:</strong> ${escapeHtml(order.customerEmail ?? "-")}</div>
       <div><strong>Phone:</strong> ${escapeHtml(order.customerPhone ?? "-")}</div>
@@ -542,6 +559,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         <tbody>${productsHtml}</tbody>
       </table>
       <div><strong>Payment amount:</strong> ${escapeHtml(paymentAmount)}</div>
+      <div><strong>GST included (10%):</strong> ${escapeHtml(gstIncluded)}</div>
       <div><strong>Payment method:</strong> ${escapeHtml(order.paymentMethod ?? "-")}</div>
     </div>
   `;
