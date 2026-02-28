@@ -126,7 +126,7 @@ export default async function Home() {
           <section className="grid gap-5 md:grid-cols-2">
             <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
-                src="/landing/home-feature-web.mp4"
+                src="/landing/home-feature-fast.mp4"
                 poster="/landing/home-feature-poster.png"
                 className="h-full w-full object-cover"
               />

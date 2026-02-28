@@ -11,6 +11,7 @@ type Props = {
 export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isVisibleRef = useRef(false);
+  const hasPreloadedRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       }
     };
 
-    const observer = new IntersectionObserver(
+    const playObserver = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
@@ -43,6 +44,18 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
         }
       },
       { threshold: 0.2 }
+    );
+
+    const preloadObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry || !entry.isIntersecting || hasPreloadedRef.current) return;
+        hasPreloadedRef.current = true;
+        node.preload = "auto";
+        node.load();
+        preloadObserver.disconnect();
+      },
+      { threshold: 0.01, rootMargin: "900px 0px" }
     );
 
     const handleCanPlay = () => {
@@ -66,7 +79,8 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     node.addEventListener("playing", handlePlaying);
     node.addEventListener("pause", handlePause);
     node.addEventListener("waiting", handleWaiting);
-    observer.observe(node);
+    playObserver.observe(node);
+    preloadObserver.observe(node);
 
     return () => {
       window.clearInterval(retryTimer);
@@ -75,7 +89,8 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       node.removeEventListener("playing", handlePlaying);
       node.removeEventListener("pause", handlePause);
       node.removeEventListener("waiting", handleWaiting);
-      observer.disconnect();
+      playObserver.disconnect();
+      preloadObserver.disconnect();
     };
   }, []);
 
