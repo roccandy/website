@@ -42,7 +42,7 @@ export function DesignCtaModal() {
             onClick={() => setExpanded(true)}
             aria-expanded={expanded}
             aria-controls="design-options"
-            className="inline-flex items-center justify-center rounded-3xl bg-[#ff6f95] px-6 py-4 text-sm font-semibold normal-case tracking-normal text-white transition-colors hover:bg-[#ff4f80]"
+            className="inline-flex w-full items-center justify-center rounded-3xl bg-[#ff6f95] px-8 py-3 text-sm font-semibold normal-case tracking-normal text-white transition-colors hover:bg-[#ff4f80]"
           >
             Design Your Candy + Pricing
           </button>
@@ -54,13 +54,13 @@ export function DesignCtaModal() {
             expanded ? "max-h-[240px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
           }`}
         >
-          <div className="bg-[#fbd6e3] text-center">
+          <div className="bg-white text-center">
             <div className="divide-y divide-[#ff6f95]">
             {OPTIONS.map((option) => (
               <a
                 key={option.href}
                 href={option.href}
-                className="block px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-[#ff6f95] transition-colors hover:bg-[#f6c1d3] hover:text-[#ff4f80]"
+                className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:bg-[#fff4f8] hover:text-[#ff4f80]"
               >
                 {option.label}
               </a>

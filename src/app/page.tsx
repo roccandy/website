@@ -41,9 +41,9 @@ export default async function Home() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   return (
-    <main className="landing-bg min-h-screen text-zinc-900">
+    <main className="min-h-screen text-zinc-900">
       <div className="relative">
-        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
+        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]">
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -82,7 +82,8 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
+        <div className="landing-bg">
+          <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
 
           <section className="grid items-center gap-10 lg:grid-cols-[1.2fr,0.8fr]">
             <div className="space-y-6">
@@ -212,6 +213,7 @@ export default async function Home() {
               stories here.
             </div>
           </section>
+          </div>
         </div>
       </div>
     </main>
