@@ -1,12 +1,18 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import { DesignCtaModal } from "./DesignCtaModal";
+import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-const FEATURE_LABELS = ["Vegan", "Gluten free", "Dairy free", "Handmade", "Australian made", "Free delivery"];
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["300"],
+});
+
+const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 const CANDY_OPTIONS = [
   { label: "Branded", href: "/design?type=branded", image: "/quote/subtypes/branded.jpg" },
   { label: "Both Names", href: "/design?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
@@ -79,15 +85,19 @@ export default async function Home() {
           <section className="grid items-center gap-10 lg:grid-cols-[1.2fr,0.8fr]">
             <div className="space-y-6">
               <div className="space-y-2 text-center">
-                <h1 className="text-4xl font-semibold leading-tight tracking-tight text-zinc-600 sm:text-5xl">
+                <h1
+                  className={`${montserratLight.className} normal-case text-[40px] font-light leading-tight tracking-tight text-zinc-500`}
+                >
                   Personalised Rock Candy
                 </h1>
-                <p className="text-xl font-semibold text-zinc-900">Artisian Handmade Candy</p>
-                <p className="text-base text-zinc-600">Branded, Wedding and Text Lollies</p>
+                <h2 className="normal-case text-[28px] font-semibold leading-tight text-zinc-900">
+                  Branded, Wedding and Text Lollies
+                </h2>
+                <p className="text-xl font-medium text-zinc-400">Artesian Handmade Candy</p>
               </div>
 
               <div className="flex justify-center">
-                <div className="inline-flex rounded-full border border-white/70 bg-white/70 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.3em] text-zinc-700 shadow-sm backdrop-blur">
+                <div className="inline-flex rounded-full border border-white/70 bg-white/70 px-4 py-2 text-center text-xs font-semibold tracking-[0.2em] text-zinc-700 shadow-sm backdrop-blur">
                   <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
                   <span className="sm:hidden">
                     {FEATURE_LABELS.slice(0, 3).join(" | ")}
@@ -205,4 +215,3 @@ export default async function Home() {
     </main>
   );
 }
-
