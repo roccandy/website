@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 const LINKS = [
-  { label: "FAQ", href: "#faq" },
+  { label: "FAQ", href: "/#faq" },
   { label: "About", href: "/about" },
-  { label: "Blog", href: "#blog" },
+  { label: "Blog", href: "/#blog" },
 ];
 
 const TOP_SCROLL_THRESHOLD = 0;
