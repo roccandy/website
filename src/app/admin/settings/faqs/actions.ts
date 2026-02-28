@@ -98,3 +98,33 @@ export async function moveFaqDown(formData: FormData) {
   await saveManagedFaqItems(reindex(next));
   redirect(FAQ_SETTINGS_PATH);
 }
+
+export async function updateFaqOrder(
+  updates: { id: string; sortOrder: number }[]
+): Promise<{ error: string | null }> {
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return { error: null };
+  }
+
+  const current = await getManagedFaqItems();
+  const byId = new Map(current.map((item) => [item.id, item]));
+  const next = updates
+    .map((update) => {
+      const item = byId.get(update.id);
+      if (!item) return null;
+      return {
+        ...item,
+        sortOrder: Number.isFinite(update.sortOrder) ? update.sortOrder : item.sortOrder,
+      };
+    })
+    .filter((item): item is ManagedFaqItem => Boolean(item))
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((item, index) => ({ ...item, sortOrder: index }));
+
+  try {
+    await saveManagedFaqItems(next);
+    return { error: null };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save FAQ order." };
+  }
+}
