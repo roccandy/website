@@ -22,20 +22,6 @@ const CANDY_OPTIONS = [
   { label: "Custom Text 7-14 Letters", href: "/design?type=text&subtype=custom-7-14", image: "/quote/subtypes/custom-7-14.jpeg" },
   { label: "Pre-made candy", href: "/pre-made-candy", image: "/quote/subtypes/premade.jpg" },
 ];
-const FAQS = [
-  {
-    question: "How far in advance should I order?",
-    answer: "We recommend ordering at least two weeks ahead for events so we can confirm artwork, flavors, and delivery.",
-  },
-  {
-    question: "Can I mix flavors in one order?",
-    answer: "Yes. You can select multiple flavors and we will balance quantities to match your packaging choice.",
-  },
-  {
-    question: "Do you provide samples?",
-    answer: "We can arrange sample packs for branding approvals. Contact us with your dates and quantities.",
-  },
-];
 
 export default async function Home() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
@@ -132,23 +118,6 @@ export default async function Home() {
                   </div>
                   <div className="px-2 py-2 text-xs font-semibold text-[rgb(114,112,111)]">{option.label}</div>
                 </a>
-              ))}
-            </div>
-          </section>
-
-          <section id="faq" className="scroll-mt-44 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">FAQs</p>
-                <h2 className="text-2xl font-semibold text-zinc-900">Questions we hear every week</h2>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {FAQS.map((faq) => (
-                <div key={faq.question} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                  <p className="text-sm font-semibold text-zinc-900">{faq.question}</p>
-                  <p className="mt-2 text-sm text-zinc-600">{faq.answer}</p>
-                </div>
               ))}
             </div>
           </section>
