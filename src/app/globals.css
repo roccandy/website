@@ -26,23 +26,11 @@ body {
 }
 
 :root .landing-bg {
-  position: relative;
-  isolation: isolate;
-  background-color: #fff7f0;
-}
-
-:root .landing-bg::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
   background-color: #fff7f0;
   background-image: url("/landing/hero-bg.webp");
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: 100% auto;
   background-position: center top;
-  pointer-events: none;
-  backface-visibility: hidden;
 }
 
 

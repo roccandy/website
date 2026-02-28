@@ -1,5 +1,6 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
+import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
 
@@ -43,6 +44,7 @@ export default async function Home() {
     <main className="landing-bg min-h-screen text-zinc-900">
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
+          <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <a href="/" className="shrink-0">
@@ -134,7 +136,7 @@ export default async function Home() {
 
           <section
             id="about"
-            className="grid gap-6 rounded-3xl border border-zinc-200 bg-white/90 p-8 shadow-md md:grid-cols-[1fr,1.1fr]"
+            className="scroll-mt-44 grid gap-6 rounded-3xl border border-zinc-200 bg-white/90 p-8 shadow-md md:grid-cols-[1fr,1.1fr]"
           >
             <div className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">About</p>
@@ -154,7 +156,7 @@ export default async function Home() {
             </div>
           </section>
 
-          <section id="faqs" className="space-y-6">
+          <section id="faq" className="scroll-mt-44 space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">FAQs</p>
@@ -200,7 +202,7 @@ export default async function Home() {
             </div>
           </section>
 
-          <section id="blog" className="space-y-6 pb-10">
+          <section id="blog" className="scroll-mt-44 space-y-6 pb-10">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Blog</p>
               <h2 className="text-2xl font-semibold text-zinc-900">Latest from Roc Candy</h2>
