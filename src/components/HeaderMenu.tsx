@@ -93,7 +93,7 @@ export default function HeaderMenu() {
               <button
                 type="button"
                 aria-label="Close cart preview"
-                className={`absolute inset-0 bg-zinc-900/30 transition-opacity duration-300 ${
+                className={`absolute inset-0 bg-zinc-900/45 transition-opacity duration-300 ${
                   open ? "opacity-100" : "opacity-0"
                 }`}
                 onClick={closeDrawer}
