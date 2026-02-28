@@ -8,7 +8,7 @@ import {
   DEFAULT_PRODUCT_CONDITION,
 } from "@/lib/premadeDefaults";
 import { supabaseClient } from "@/lib/supabase/client";
-import { createPremadeUploadUrl, syncPremadeToWoo, updatePremadeCandy } from "./actions";
+import { createPremadeUploadUrl, deletePremadeCandy, syncPremadeToWoo, updatePremadeCandy } from "./actions";
 
 const MAX_IMAGE_SIZE_MB = 2;
 const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
@@ -60,10 +60,11 @@ type Props = {
   imageUrl: string;
   flavorOptions: string[];
   onToggleActive?: (id: string, nextActive: boolean) => void;
+  onDelete?: (id: string) => void;
   dragHandleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 };
 
-export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive, dragHandleProps }: Props) {
+export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive, onDelete, dragHandleProps }: Props) {
   const router = useRouter();
   const initialWeightUnit = useMemo(() => {
     const weight = Number(item.weight_g);
@@ -99,6 +100,9 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [showProductFields, setShowProductFields] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditing) return;
@@ -297,6 +301,22 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
     }
   };
 
+  const handleDelete = async () => {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      const { error: deleteErrorMessage } = await deletePremadeCandy(item.id);
+      if (deleteErrorMessage) {
+        setDeleteError(deleteErrorMessage);
+        return;
+      }
+      onDelete?.(item.id);
+      router.refresh();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const flavorSummary = (item.flavors ?? []).length ? (item.flavors ?? []).join(", ") : "-";
   const weightLabel = initialWeightUnit === "kg" ? `${initialWeightValue}kg` : `${initialWeightValue}g`;
   const isActive = item.is_active;
@@ -397,6 +417,16 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
                     />
                   </svg>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmDelete((prev) => !prev);
+                    setDeleteError(null);
+                  }}
+                  className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100"
+                >
+                  Delete
+                </button>
               </div>
             </div>
             <div className="text-xs text-zinc-600">
@@ -434,6 +464,36 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
               ) : null}
             </div>
             <div className="text-xs text-zinc-500">{item.description ? item.description : "No description."}</div>
+            {confirmDelete ? (
+              <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-800">
+                <p className="font-semibold">Delete this item permanently?</p>
+                <p className="mt-1 text-[11px] text-red-700">
+                  This removes it from admin, the storefront, and Woo product sync.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-md border border-red-300 bg-red-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {deleting ? "Deleting..." : "Confirm delete"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmDelete(false);
+                      setDeleteError(null);
+                    }}
+                    disabled={deleting}
+                    className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    Cancel
+                  </button>
+                  {deleteError ? <span className="text-[11px] text-red-700">{deleteError}</span> : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

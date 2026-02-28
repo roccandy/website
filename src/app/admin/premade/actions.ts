@@ -8,7 +8,7 @@ import {
   DEFAULT_WOO_CATEGORY,
 } from "@/lib/premadeDefaults";
 import { supabaseServerClient } from "@/lib/supabase/server";
-import { upsertWooProduct } from "@/lib/woo";
+import { deleteWooProduct, upsertWooProduct } from "@/lib/woo";
 
 const PREMADE_IMAGE_BUCKET = "premade-images";
 const WOO_STATUS_SYNCING = "syncing";
@@ -360,4 +360,35 @@ export async function syncAllPremadeToWoo(): Promise<{
   }
   const errorMessage = failed > 0 ? `${failed} item${failed === 1 ? "" : "s"} failed to sync.` : null;
   return { error: errorMessage, synced, failed, total: items.length };
+}
+
+export async function deletePremadeCandy(id: string): Promise<{ error: string | null }> {
+  if (!id) return { error: "Missing item id." };
+  const client = supabaseServerClient;
+  const { data: existing, error: readError } = await client
+    .from("premade_candies")
+    .select("id,image_path,woo_product_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!existing) return { error: "Pre-made item not found." };
+
+  if (existing.woo_product_id) {
+    try {
+      await deleteWooProduct(String(existing.woo_product_id), true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to delete Woo product.";
+      return { error: message };
+    }
+  }
+
+  const { error: deleteError } = await client.from("premade_candies").delete().eq("id", id);
+  if (deleteError) return { error: deleteError.message };
+
+  if (existing.image_path) {
+    const { error: storageError } = await client.storage.from(PREMADE_IMAGE_BUCKET).remove([existing.image_path]);
+    if (storageError) return { error: storageError.message };
+  }
+
+  return { error: null };
 }

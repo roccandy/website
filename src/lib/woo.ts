@@ -279,3 +279,13 @@ export async function updateWooOrder(id: string, payload: Record<string, unknown
   });
   return data;
 }
+
+export async function deleteWooProduct(id: string, force = true) {
+  if (!id) {
+    throw new Error("Missing Woo product id.");
+  }
+  const query = force ? "?force=true" : "";
+  await wooRequest<{ id: number }>(`/wp-json/wc/v3/products/${id}${query}`, {
+    method: "DELETE",
+  });
+}

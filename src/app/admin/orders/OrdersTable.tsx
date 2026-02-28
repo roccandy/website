@@ -1590,6 +1590,7 @@ export function OrdersTable({
                               const slotKey = `${key}:${slotIndex}`;
                               const assignment = assignmentBySlotKey.get(slotKey);
                               const order = assignment ? ordersById.get(assignment.order_id) : null;
+                              const printTarget = order?.id ?? order?.order_number;
                               const label =
                                 order?.title ||
                                 (order ? formatOrderDescription(order) : "") ||
@@ -1608,17 +1609,29 @@ export function OrdersTable({
                                       <p className="text-zinc-600">
                                         {weightLabel(order.total_weight_kg)} - Due {formatDate(order.due_date)}
                                       </p>
-                                      {!isPastSlot && (
-                                        <form action={deleteAssignment} className="mt-1">
-                                          <input type="hidden" name="assignment_id" value={assignment.id} />
-                                          <button
-                                            type="submit"
-                                            className="text-[10px] font-semibold text-red-600 underline underline-offset-2"
+                                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        {printTarget ? (
+                                          <a
+                                            href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[10px] font-semibold text-zinc-700 underline underline-offset-2"
                                           >
-                                            Unassign
-                                          </button>
-                                        </form>
-                                      )}
+                                            Print order
+                                          </a>
+                                        ) : null}
+                                        {!isPastSlot && (
+                                          <form action={deleteAssignment}>
+                                            <input type="hidden" name="assignment_id" value={assignment.id} />
+                                            <button
+                                              type="submit"
+                                              className="text-[10px] font-semibold text-red-600 underline underline-offset-2"
+                                            >
+                                              Unassign
+                                            </button>
+                                          </form>
+                                        )}
+                                      </div>
                                     </div>
                                   ) : (
                                     <button
@@ -1712,6 +1725,7 @@ export function OrdersTable({
                           const slotKey = `${key}:${slotIndex}`;
                           const assignment = assignmentBySlotKey.get(slotKey);
                           const order = assignment ? ordersById.get(assignment.order_id) : null;
+                          const printTarget = order?.id ?? order?.order_number;
                           const slotLabel = `Slot ${slotIndex}`;
                           const orderLabel =
                             order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
@@ -1730,17 +1744,29 @@ export function OrdersTable({
                                 <div className={`mt-1 rounded-md border px-2 py-1 ${statusCard(getScheduleStatus(order))}`}>
                                   <p className="font-semibold text-zinc-900">{orderLabel}</p>
                                   <p>Due {formatDate(order.due_date)}</p>
-                                  {!isPastSlot && (
-                                    <form action={deleteAssignment} className="mt-1">
-                                      <input type="hidden" name="assignment_id" value={assignment.id} />
-                                      <button
-                                        type="submit"
-                                        className="text-[11px] font-semibold text-red-600 underline underline-offset-2"
+                                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    {printTarget ? (
+                                      <a
+                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[11px] font-semibold text-zinc-700 underline underline-offset-2"
                                       >
-                                        Unassign
-                                      </button>
-                                    </form>
-                                  )}
+                                        Print order
+                                      </a>
+                                    ) : null}
+                                    {!isPastSlot && (
+                                      <form action={deleteAssignment}>
+                                        <input type="hidden" name="assignment_id" value={assignment.id} />
+                                        <button
+                                          type="submit"
+                                          className="text-[11px] font-semibold text-red-600 underline underline-offset-2"
+                                        >
+                                          Unassign
+                                        </button>
+                                      </form>
+                                    )}
+                                  </div>
                                 </div>
                               ) : (
                                 <button
@@ -1825,7 +1851,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 

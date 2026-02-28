@@ -20,10 +20,12 @@ function SortablePremadeItem({
   item,
   flavorOptions,
   onToggleActive,
+  onDelete,
 }: {
   item: PremadeAdminItem;
   flavorOptions: string[];
   onToggleActive: (id: string, nextActive: boolean) => void;
+  onDelete: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -40,6 +42,7 @@ function SortablePremadeItem({
         imageUrl={item.imageUrl}
         flavorOptions={flavorOptions}
         onToggleActive={onToggleActive}
+        onDelete={onDelete}
         dragHandleProps={{ ...attributes, ...listeners }}
       />
     </div>
@@ -68,6 +71,11 @@ export function PremadeList({ items, flavorOptions }: Props) {
       setActionError(error);
       setList((prev) => prev.map((item) => (item.id === id ? { ...item, is_active: !nextActive } : item)));
     }
+  };
+
+  const handleDelete = (id: string) => {
+    setActionError(null);
+    setList((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -105,6 +113,7 @@ export function PremadeList({ items, flavorOptions }: Props) {
                   item={item}
                   flavorOptions={flavorOptions}
                   onToggleActive={handleToggleActive}
+                  onDelete={handleDelete}
                 />
               ))}
             </div>
@@ -119,6 +128,7 @@ export function PremadeList({ items, flavorOptions }: Props) {
               imageUrl={item.imageUrl}
               flavorOptions={flavorOptions}
               onToggleActive={handleToggleActive}
+              onDelete={handleDelete}
             />
           ))}
         </div>
