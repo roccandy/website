@@ -69,6 +69,7 @@ const normalizeHeart = (text: string) =>
     .replace(/\s*\u2665\s*/g, " \u2665 ");
 
 const isImageUrl = (value: string) => {
+  if (/^data:image\//i.test(value)) return true;
   try {
     const url = new URL(value);
     const ext = url.pathname.split(".").pop()?.toLowerCase();
@@ -375,7 +376,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       href={labelImageUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="block h-16 w-16 overflow-hidden rounded border border-zinc-200 bg-white"
+                      className="block h-16 w-16 shrink-0 overflow-hidden rounded border border-zinc-200 bg-white"
                     >
                       <img
                         src={labelImageUrl}
@@ -384,13 +385,16 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       />
                     </a>
                   ) : null}
-                  <a
-                    href={labelImageUrl}
-                    download={labelDownloadName}
-                    className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                  >
-                    Download label image
-                  </a>
+                  <div className="space-y-1">
+                    <a
+                      href={labelImageUrl}
+                      download={labelDownloadName}
+                      className="inline-flex rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                    >
+                      Download label image
+                    </a>
+                    {labelImageIsImage ? <p className="text-[11px] text-zinc-500">Preview shown on left</p> : null}
+                  </div>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
@@ -468,4 +472,3 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     </div>
   );
 }
-
