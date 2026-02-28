@@ -12,6 +12,8 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isVisibleRef = useRef(false);
   const hasPreloadedRef = useRef(false);
+  const [isInView, setIsInView] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
         if (!entry) return;
 
         isVisibleRef.current = entry.isIntersecting;
+        setIsInView(entry.isIntersecting);
         if (entry.isIntersecting) {
           tryPlay();
         } else {
@@ -59,6 +62,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     );
 
     const handleCanPlay = () => {
+      setIsReady(true);
       if (isVisibleRef.current) {
         tryPlay();
       }
@@ -94,6 +98,8 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     };
   }, []);
 
+  const showLoader = isInView && (!isReady || !isPlaying);
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {poster ? (
@@ -121,6 +127,11 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       >
         <source src={src} type="video/mp4" />
       </video>
+      {showLoader ? (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/12">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/55 border-t-white" />
+        </div>
+      ) : null}
     </div>
   );
 }
