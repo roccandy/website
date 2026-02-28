@@ -88,6 +88,11 @@ const sections = [
         description: "Production options & blocked dates.",
       },
       {
+        href: "/admin/settings/faqs",
+        label: "FAQs",
+        description: "Public FAQ list and order.",
+      },
+      {
         href: "/admin/flavors",
         label: "Candy Flavours",
         description: "Flavour list + symbols.",

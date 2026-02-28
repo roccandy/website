@@ -2,15 +2,22 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import FaqAccordion from "@/components/FaqAccordion";
-import { FAQ_ITEMS } from "@/lib/faqData";
+import { getFaqContentItems } from "@/lib/faqs";
+import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["300"],
+});
+
 export default async function FaqPage() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "admin@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const faqItems = await getFaqContentItems();
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
@@ -56,13 +63,13 @@ export default async function FaqPage() {
 
         <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
           <section className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Support</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">
+            <h1
+              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
+            >
               Frequently Asked Questions
             </h1>
-            <p className="text-base text-zinc-600">Answers from the current roccandy.com.au FAQ list.</p>
           </section>
-          <FaqAccordion items={FAQ_ITEMS} />
+          <FaqAccordion items={faqItems} />
         </div>
       </div>
     </main>

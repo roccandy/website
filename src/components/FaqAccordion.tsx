@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { FaqItem } from "@/lib/faqData";
+import type { FaqContent } from "@/lib/faqs";
 
 type Props = {
-  items: FaqItem[];
+  items: FaqContent[];
 };
 
 export default function FaqAccordion({ items }: Props) {
