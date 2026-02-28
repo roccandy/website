@@ -51,7 +51,7 @@ export function CandyPreview({
   const useRainbow = mode === "rainbow";
   // Match live site defaults; both text and heart start as neutral gray.
   const textColorValue = textColor || "#b7b7b7";
-  const heartColorValue = heartColor || textColorValue;
+  const heartColorValue = heartColor || "#b7b7b7";
   const pinOpacity = showPinstripe || mode === "pinstripe" ? 1 : 0;
   const pinFill = "#ffffff";
 

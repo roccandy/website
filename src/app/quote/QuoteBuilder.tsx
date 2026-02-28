@@ -646,7 +646,7 @@ export function QuoteBuilder({
   const previewJacketColorOne = jacketColorOne || defaultJacketColor;
   const previewJacketColorTwo = jacketColorTwo || defaultJacketColor;
   const previewTextColor = textColor || defaultTextColor;
-  const previewHeartColor = heartColor || previewTextColor;
+  const previewHeartColor = heartColor || defaultTextColor;
   const formatMoney = (value: number) => `$${value.toFixed(2)}`;
   const mainTitle = ORDER_TYPE_TITLES[orderType] ?? "Candy";
   const subtitleLabel =
