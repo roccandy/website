@@ -110,7 +110,7 @@ export default async function Home() {
                 </div>
               </div>
 
-              <div id="design" className="pt-4">
+              <div id="design" className="pt-6">
                 <DesignCtaModal />
               </div>
             </div>
