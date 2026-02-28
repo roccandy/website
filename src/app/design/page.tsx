@@ -79,7 +79,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         <div className="pointer-events-none absolute -left-24 top-0 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-24 h-96 w-96 rounded-full bg-rose-200/40 blur-3xl" />
 
-        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur" data-quote-header>
+        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]" data-quote-header>
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <a href="/" className="shrink-0">

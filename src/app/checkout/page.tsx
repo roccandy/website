@@ -51,7 +51,7 @@ export default async function CheckoutPage() {
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
       <div className="relative">
-        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur">
+        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <a href="/" className="shrink-0">

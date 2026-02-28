@@ -42,7 +42,7 @@ export default async function Home() {
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
       <div className="relative">
-        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur">
+        <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <a href="/" className="shrink-0">
@@ -86,14 +86,14 @@ export default async function Home() {
             <div className="space-y-6">
               <div className="space-y-2 text-center">
                 <h1
-                  className={`${montserratLight.className} normal-case text-[40px] font-light leading-tight tracking-tight text-zinc-500`}
+                  className={`${montserratLight.className} normal-case text-[64px] font-light leading-tight tracking-tight text-zinc-500`}
                 >
                   Personalised Rock Candy
                 </h1>
-                <h2 className="normal-case text-[28px] font-semibold leading-tight text-zinc-900">
+                <h2 className="normal-case text-[28px] font-semibold leading-tight text-zinc-400">
                   Branded, Wedding and Text Lollies
                 </h2>
-                <p className="text-xl font-medium text-zinc-400">Artesian Handmade Candy</p>
+                <p className="text-xl font-medium text-zinc-400">Artisan Handmade Candy</p>
               </div>
 
               <div className="flex justify-center">
