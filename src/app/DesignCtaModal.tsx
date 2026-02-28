@@ -54,13 +54,13 @@ export function DesignCtaModal() {
             expanded ? "max-h-[240px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
           }`}
         >
-          <div className="bg-white text-center">
+          <div className="bg-transparent text-center">
             <div>
             {OPTIONS.map((option) => (
               <a
                 key={option.href}
                 href={option.href}
-                className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:bg-[#fff4f8] hover:text-[#ff4f80]"
+                className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
               >
                 {option.label}
               </a>

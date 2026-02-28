@@ -117,6 +117,9 @@ const SECTION_BODY_CLASS = "mt-3 space-y-2 print:mt-1 print:space-y-1";
 const INLINE_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1";
 const INLINE_LABEL_CLASS = "text-[10px] uppercase tracking-[0.18em] text-zinc-500";
 const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
+const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[24px] leading-[1.15]";
+const SPEC_LABEL_CLASS = "text-[24px] font-semibold uppercase tracking-[0.04em] text-zinc-500";
+const SPEC_VALUE_CLASS = "text-[24px] font-semibold text-zinc-900";
 
 type ColorDisplay = {
   label: string;
@@ -422,47 +425,47 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                   {order.total_weight_kg} kg
                 </span>
               </p>
-              <p className={INLINE_ROW_CLASS}>
-                <span className={INLINE_LABEL_CLASS}>Flavour:</span>
-                <span className={INLINE_VALUE_CLASS}>{order.flavor || "-"}</span>
+              <p className={SPEC_ROW_CLASS}>
+                <span className={SPEC_LABEL_CLASS}>Flavour:</span>
+                <span className={SPEC_VALUE_CLASS}>{order.flavor || "-"}</span>
               </p>
               {!isBranded && (
-                <p className={INLINE_ROW_CLASS}>
-                  <span className={INLINE_LABEL_CLASS}>Text colour:</span>
-                  {renderColorDisplay(textColorDisplay)}
+                <p className={SPEC_ROW_CLASS}>
+                  <span className={SPEC_LABEL_CLASS}>Text colour:</span>
+                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
                 </p>
               )}
               {isWedding && (
-                <p className={INLINE_ROW_CLASS}>
-                  <span className={INLINE_LABEL_CLASS}>Heart colour:</span>
-                  {renderColorDisplay(heartColorDisplay)}
+                <p className={SPEC_ROW_CLASS}>
+                  <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
+                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
                 </p>
               )}
               <div>
-                <p className={INLINE_ROW_CLASS}>
-                  <span className={INLINE_LABEL_CLASS}>Jacket:</span>
-                  <span className={INLINE_VALUE_CLASS}>{jacketLabel}</span>
+                <p className={SPEC_ROW_CLASS}>
+                  <span className={SPEC_LABEL_CLASS}>Jacket:</span>
+                  <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
                 </p>
                 {order.jacket !== "rainbow" && (
                   <div className="mt-2 space-y-1 text-zinc-700">
                     {showJacketColorOne && (
-                      <p className={INLINE_ROW_CLASS}>
-                        <span className={INLINE_LABEL_CLASS}>Colour 1:</span>
-                        {renderColorDisplay(jacketColorOneDisplay)}
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Colour 1:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
                       </p>
                     )}
                     {showJacketColorTwo && (
-                      <p className={INLINE_ROW_CLASS}>
-                        <span className={INLINE_LABEL_CLASS}>Colour 2:</span>
-                        {renderColorDisplay(jacketColorTwoDisplay)}
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Colour 2:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorTwoDisplay)}</span>
                       </p>
                     )}
                   </div>
                 )}
               </div>
-              <p className={INLINE_ROW_CLASS}>
-                <span className={INLINE_LABEL_CLASS}>Packaging type:</span>
-                <span className={INLINE_VALUE_CLASS}>{packaging ? packaging.type : "N/A"}</span>
+              <p className={SPEC_ROW_CLASS}>
+                <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
+                <span className={SPEC_VALUE_CLASS}>{packaging ? packaging.type : "N/A"}</span>
               </p>
             </div>
           </div>

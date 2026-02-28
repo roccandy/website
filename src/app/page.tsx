@@ -82,14 +82,14 @@ export default async function Home() {
           </div>
         </div>
 
-        <div className="landing-bg">
+        <div className="landing-bg -mt-8 pt-8">
           <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
 
           <section className="grid items-center gap-10 lg:grid-cols-[1.2fr,0.8fr]">
             <div className="space-y-6">
               <div className="space-y-1 text-center">
                 <h1
-                  className={`${montserratLight.className} normal-case text-[64px] font-light leading-tight tracking-tight text-zinc-500`}
+                  className={`${montserratLight.className} mb-3 normal-case text-[64px] font-light leading-tight tracking-tight text-zinc-500`}
                 >
                   Personalised Rock Candy
                 </h1>
