@@ -1267,8 +1267,8 @@ export function QuoteBuilder({
 
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">
         {/* Price sidebar */}
-        <div ref={priceWrapRef} className="relative mx-auto w-full md:w-1/3">
-          <div ref={priceStickyRef} className="w-full">
+        <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full">
+          <div ref={priceStickyRef} className="w-fit max-w-full">
             <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg">
               {needsSubtypeSelection ? (
                 <p className="text-sm text-zinc-500 text-center">Select your order type</p>
@@ -1277,9 +1277,8 @@ export function QuoteBuilder({
                   {(() => {
                     const subtotal = Math.max(0, result.total - result.transactionFee);
                     return (
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                        <span aria-hidden="true" />
-                        <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center gap-2">
                           <p
                             className="text-center text-2xl font-semibold leading-none"
                             style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
@@ -1297,7 +1296,7 @@ export function QuoteBuilder({
                           type="button"
                           onClick={() => setShowBreakdown((prev) => !prev)}
                           data-neutral-button
-                          className="justify-self-end rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                          className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
                         >
                           {showBreakdown ? "Hide breakdown" : "Show breakdown"}
                         </button>
