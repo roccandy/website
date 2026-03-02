@@ -1242,8 +1242,8 @@ export function QuoteBuilder({
   return (
     <div className="relative space-y-6">
       <section className="pt-10 text-center lg:mx-auto lg:max-w-5xl">
-        <h1 className="text-5xl font-semibold tracking-tight text-zinc-900 sm:text-6xl">{mainTitle}</h1>
-        {subtitle && <p className="mt-2 text-xl text-zinc-600 sm:text-2xl">{subtitle}</p>}
+        <h1 className="text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{mainTitle}</h1>
+        {subtitle && <p className="mt-2 text-[24px] font-medium text-[rgb(146,146,177)]">{subtitle}</p>}
       </section>
 
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">

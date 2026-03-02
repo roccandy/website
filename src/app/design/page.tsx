@@ -14,6 +14,7 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
+import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -22,6 +23,12 @@ export const fetchCache = "force-no-store";
 type QuotePageProps = {
   searchParams?: { type?: string } | Promise<{ type?: string }>;
 };
+
+const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["200"],
+});
 
 
 function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
@@ -75,11 +82,8 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
     typeParam === "weddings" || typeParam === "text" || typeParam === "branded" ? typeParam : undefined;
 
   return (
-    <main className="landing-bg min-h-screen text-zinc-900">
+    <main className="min-h-screen bg-white text-zinc-900">
       <div className="relative">
-        <div className="pointer-events-none absolute -left-24 top-0 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-24 h-96 w-96 rounded-full bg-rose-200/40 blur-3xl" />
-
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]" data-quote-header>
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
@@ -120,6 +124,18 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 pb-16">
+          <div className="flex justify-center pt-6">
+            <div
+              className={`${montserratLight.className} inline-flex rounded-full border border-zinc-200 bg-white px-5 py-2 text-center text-[14px] font-extralight tracking-[0.04em] text-zinc-600 shadow-sm`}
+            >
+              <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
+              <span className="sm:hidden">
+                {FEATURE_LABELS.slice(0, 3).join(" | ")}
+                <br />
+                {FEATURE_LABELS.slice(3).join(" | ")}
+              </span>
+            </div>
+          </div>
           <QuoteBuilder
             categories={categories}
             packagingOptions={packagingOptions}
