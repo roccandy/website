@@ -1548,7 +1548,8 @@ export function QuoteBuilder({
                       type="checkbox"
                       checked={labelsOptIn}
                       onChange={(e) => setLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#f7e4ec] accent-[#f7e4ec] focus:ring-[#f7e4ec]"
+                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[rgb(247,228,236)] accent-[rgb(247,228,236)] focus:ring-[rgb(247,228,236)]"
+                      style={{ accentColor: "rgb(247,228,236)" }}
                     />
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
@@ -1645,7 +1646,8 @@ export function QuoteBuilder({
                       type="checkbox"
                       checked={ingredientLabelsOptIn}
                       onChange={(e) => setIngredientLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#f7e4ec] accent-[#f7e4ec] focus:ring-[#f7e4ec]"
+                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[rgb(247,228,236)] accent-[rgb(247,228,236)] focus:ring-[rgb(247,228,236)]"
+                      style={{ accentColor: "rgb(247,228,236)" }}
                     />
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
