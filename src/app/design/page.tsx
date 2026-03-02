@@ -14,7 +14,6 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
-import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -23,13 +22,6 @@ export const fetchCache = "force-no-store";
 type QuotePageProps = {
   searchParams?: { type?: string } | Promise<{ type?: string }>;
 };
-
-const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["200"],
-});
-
 
 function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
   const result: Record<string, number> = {};
@@ -124,18 +116,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 pb-16">
-          <div className="flex justify-center pt-6">
-            <div
-              className={`${montserratLight.className} inline-flex rounded-full border border-zinc-200 bg-white px-5 py-2 text-center text-[14px] font-extralight tracking-[0.04em] text-zinc-600 shadow-sm`}
-            >
-              <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
-              <span className="sm:hidden">
-                {FEATURE_LABELS.slice(0, 3).join(" | ")}
-                <br />
-                {FEATURE_LABELS.slice(3).join(" | ")}
-              </span>
-            </div>
-          </div>
           <QuoteBuilder
             categories={categories}
             packagingOptions={packagingOptions}

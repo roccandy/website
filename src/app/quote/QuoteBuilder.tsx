@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Montserrat } from "next/font/google";
 import type {
   Category,
   ColorPaletteRow,
@@ -67,6 +68,12 @@ type Rgba = {
   b: number;
   a: number;
 };
+
+const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["200"],
+});
 
 function normalizeOrderType(value?: string | null): OrderTypeId | undefined {
   if (value === "weddings" || value === "text" || value === "branded") {
@@ -1242,7 +1249,15 @@ export function QuoteBuilder({
   return (
     <div className="relative space-y-6">
       <section className="pt-10 text-center lg:mx-auto lg:max-w-5xl">
-        <h1 className="text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{mainTitle}</h1>
+        <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{mainTitle}</h1>
+        <p className={`${montserratLight.className} mt-3 text-[14px] font-[200] tracking-[0.03em] text-zinc-600`}>
+          <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
+          <span className="sm:hidden">
+            {FEATURE_LABELS.slice(0, 3).join(" | ")}
+            <br />
+            {FEATURE_LABELS.slice(3).join(" | ")}
+          </span>
+        </p>
         {subtitle && <p className="mt-2 text-[24px] font-medium text-[rgb(146,146,177)]">{subtitle}</p>}
       </section>
 
@@ -1358,9 +1373,9 @@ export function QuoteBuilder({
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging type</p>
-                      <div className="flex w-full flex-col overflow-hidden rounded-2xl border border-[#e91e63] bg-[#fedae1] divide-y divide-[#e91e63]/30">
+                      <div className="flex w-full flex-wrap gap-2">
                         {packagingTypes.length > 0 ? (
-                          packagingTypes.map((type, index) => {
+                          packagingTypes.map((type) => {
                             const isActive = selectionType === type;
                             return (
                               <button
@@ -1372,14 +1387,14 @@ export function QuoteBuilder({
                                   setSelectionType(type);
                                   setSelectionSize("");
                                 }}
-                                className="w-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
+                                className="rounded-full border border-zinc-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
                               >
                                 {type}
                               </button>
                             );
                           })
                       ) : (
-                        <span className="w-full px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        <span className="w-full px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
                           No types available
                         </span>
                       )}
@@ -1388,15 +1403,9 @@ export function QuoteBuilder({
 
                   <div className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging size</p>
-                      <div
-                        className={`flex w-full flex-col overflow-hidden rounded-2xl border ${
-                          selectionType
-                            ? "border-[#e91e63] bg-[#fedae1] divide-y divide-[#e91e63]/30"
-                            : "border-zinc-200 bg-zinc-50"
-                        }`}
-                      >
+                      <div className="flex w-full flex-wrap gap-2">
                         {selectionType ? (
-                          sizesForType.map((opt, index) => {
+                          sizesForType.map((opt) => {
                             const isActive = selectionSize === opt.size;
                             return (
                               <button
@@ -1405,14 +1414,14 @@ export function QuoteBuilder({
                                 data-segmented
                                 data-active={isActive ? "true" : "false"}
                                 onClick={() => setSelectionSize(opt.size)}
-                                className="w-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition"
+                                className="rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition"
                               >
                                 <span className="whitespace-nowrap">{opt.size}</span>
                               </button>
                             );
                           })
                       ) : (
-                        <span className="w-full px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        <span className="w-full px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
                           Select a type to see sizes
                         </span>
                       )}
