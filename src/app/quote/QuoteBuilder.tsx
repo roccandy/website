@@ -1355,6 +1355,7 @@ export function QuoteBuilder({
                           backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                           borderColor: "rgb(239,232,239)",
                           borderWidth: "0.5px",
+                          borderStyle: "solid",
                           color: "rgb(124,121,131)",
                           fontFamily: "var(--font-body), sans-serif",
                         }}
@@ -1375,12 +1376,12 @@ export function QuoteBuilder({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-zinc-900">Select packaging</h3>
+                    <h3 className="text-lg font-semibold text-zinc-900">Select Packaging</h3>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging type</p>
+                    <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Packaging Type</p>
                       <div className="flex w-full flex-wrap gap-2">
                         {packagingTypes.length > 0 ? (
                           packagingTypes.map((type) => {
@@ -1398,6 +1399,7 @@ export function QuoteBuilder({
                                   backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                                   borderColor: "rgb(239,232,239)",
                                   borderWidth: "0.5px",
+                                  borderStyle: "solid",
                                   color: "rgb(124,121,131)",
                                   fontFamily: "var(--font-body), sans-serif",
                                 }}
@@ -1407,7 +1409,7 @@ export function QuoteBuilder({
                             );
                           })
                       ) : (
-                        <span className="w-full px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        <span className="w-full px-4 py-3 text-left text-xs font-semibold normal-case tracking-[0.04em] text-zinc-400">
                           No types available
                         </span>
                       )}
@@ -1415,81 +1417,92 @@ export function QuoteBuilder({
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging size</p>
+                    <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Packaging Size</p>
                       <div className="flex w-full flex-wrap gap-2">
                         {selectionType ? (
-                          sizesForType.map((opt) => {
-                            const isActive = selectionSize === opt.size;
-                            return (
-                              <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => setSelectionSize(opt.size)}
-                                className="rounded-full px-3 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
-                                style={{
-                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                                  borderColor: "rgb(239,232,239)",
-                                  borderWidth: "0.5px",
-                                  color: "rgb(124,121,131)",
-                                  fontFamily: "var(--font-body), sans-serif",
-                                }}
-                              >
-                                <span className="whitespace-nowrap">{toTitleCase(opt.size)}</span>
-                              </button>
-                            );
-                          })
+                          <>
+                            {sizesForType.map((opt) => {
+                              const isActive = selectionSize === opt.size;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => setSelectionSize(opt.size)}
+                                  className="rounded-full px-3 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                                  style={{
+                                    backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                    borderColor: "rgb(239,232,239)",
+                                    borderWidth: "0.5px",
+                                    color: "rgb(124,121,131)",
+                                    fontFamily: "var(--font-body), sans-serif",
+                                  }}
+                                >
+                                  <span className="whitespace-nowrap">{toTitleCase(opt.size)}</span>
+                                </button>
+                              );
+                            })}
+                            <input
+                              type="number"
+                              min={0}
+                              max={selectedOption?.max_packages}
+                              value={selectionQtyInput}
+                              onChange={(e) => setSelectionQtyInput(e.target.value)}
+                              aria-label="Quantity"
+                              className="w-24 rounded-full px-3 py-2 text-center text-xs font-semibold normal-case tracking-[0.08em] text-[rgb(124,121,131)] outline-none transition"
+                              style={{
+                                backgroundColor: "rgb(250,243,247)",
+                                borderColor: "rgb(239,232,239)",
+                                borderWidth: "0.5px",
+                                borderStyle: "solid",
+                                fontFamily: "var(--font-body), sans-serif",
+                              }}
+                            />
+                          </>
                       ) : (
-                        <span className="w-full px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                        <span className="w-full px-4 py-3 text-left text-xs font-semibold normal-case tracking-[0.04em] text-zinc-400">
                           Select a type to see sizes
                         </span>
                       )}
                     </div>
+                    <p className="text-[11px] text-zinc-400">
+                      {selectedOption ? `Quantity max: ${selectedOption.max_packages}` : ""}
+                    </p>
                   </div>
 
                   {isJarOption && availableLidColors.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Jar lid colour</p>
-                        <div className="flex w-full overflow-hidden rounded-full border border-[#e91e63] bg-[#fedae1] divide-x divide-[#e91e63]/30">
-                          {availableLidColors.map((color, index) => {
+                      <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Jar Lid Colour</p>
+                        <div className="flex w-full flex-wrap gap-2">
+                          {availableLidColors.map((color) => {
                             const swatch = LID_COLOR_SWATCH[color] ?? color;
                             const isActive = jarLidColor === color;
                             return (
                               <button
                                 key={color}
                                 type="button"
-                                data-segmented
-                                data-active={isActive ? "true" : "false"}
                                 onClick={() => setJarLidColor(color)}
-                                className="flex flex-1 items-center justify-center gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
+                                className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                                style={{
+                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                  borderColor: "rgb(239,232,239)",
+                                  borderWidth: "0.5px",
+                                  borderStyle: "solid",
+                                  color: "rgb(124,121,131)",
+                                  fontFamily: "var(--font-body), sans-serif",
+                                }}
                               >
+                                <span>{toTitleCase(color)}</span>
                                 <span
                                   className="h-3.5 w-3.5 rounded-full border border-white/60"
                                   style={{ backgroundColor: swatch }}
                                   aria-hidden="true"
-                              />
-                              <span>{color.charAt(0).toUpperCase() + color.slice(1)}</span>
+                                />
                             </button>
                           );
                         })}
                       </div>
                     </div>
                   )}
-
-                  <div className="space-y-2">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Quantity{selectedOption ? ` (max ${selectedOption.max_packages})` : ""}
-                    </p>
-                      <div className="flex w-full overflow-hidden rounded-full border border-zinc-200 bg-white">
-                        <input
-                          type="number"
-                          min={0}
-                          max={selectedOption?.max_packages}
-                          value={selectionQtyInput}
-                          onChange={(e) => setSelectionQtyInput(e.target.value)}
-                          className="w-full px-4 py-3 text-center text-base font-semibold text-zinc-900 outline-none"
-                        />
-                      </div>
-                    </div>
                   </div>
 
               </div>
