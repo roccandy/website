@@ -10,6 +10,7 @@ import {
   type LabelRange,
   type WeightTier,
 } from "@/lib/data";
+import { getManagedLabelSettings } from "@/lib/labelSettings";
 
 type PackagingSelection = {
   optionId: string;
@@ -24,6 +25,7 @@ export type PricingInput = {
   categoryId: string;
   packaging: PackagingSelection[];
   labelsCount?: number;
+  ingredientLabelsCount?: number;
   dueDate?: string; // ISO date string
   extras?: ExtrasSelection[];
 };
@@ -32,6 +34,7 @@ export type PricingBreakdown = {
   basePrice: number;
   packagingPrice: number;
   labelsPrice: number;
+  ingredientLabelsPrice: number;
   extrasPrice: number;
   urgencyFee: number;
   transactionFee: number;
@@ -46,6 +49,7 @@ export type PricingContext = {
   packagingOptions: PackagingOption[];
   labelRanges: LabelRange[];
   settings: SettingsRow;
+  ingredientLabelPrice: number;
 };
 
 function findTierForWeight(tiers: WeightTier[], weightKg: number) {
@@ -67,18 +71,26 @@ export async function calculatePricing(input: PricingInput): Promise<PricingBrea
 }
 
 export async function buildPricingContext(): Promise<PricingContext> {
-  const [categories, tiers, packagingOptions, labelRanges, settings] = await Promise.all([
+  const [categories, tiers, packagingOptions, labelRanges, settings, managedLabelSettings] = await Promise.all([
     getCategories(),
     getWeightTiers(),
     getPackagingOptions(),
     getLabelRanges(),
     getSettings(),
+    getManagedLabelSettings(),
   ]);
-  return { categories, tiers, packagingOptions, labelRanges, settings };
+  return {
+    categories,
+    tiers,
+    packagingOptions,
+    labelRanges,
+    settings,
+    ingredientLabelPrice: Number(managedLabelSettings.ingredientLabelPrice ?? 0),
+  };
 }
 
 export function calculatePricingWithContext(input: PricingInput, context: PricingContext): PricingBreakdown {
-  const { categories, tiers, packagingOptions, labelRanges, settings } = context;
+  const { categories, tiers, packagingOptions, labelRanges, settings, ingredientLabelPrice } = context;
   const category = categories.find((c) => c.id === input.categoryId);
   if (!category) {
     throw new Error("Invalid category");
@@ -134,9 +146,13 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
   );
 
   const labelsCount = input.labelsCount ?? 0;
+  if (labelsCount > Number(settings.labels_max_bulk)) {
+    throw new Error("Label count exceeds maximum");
+  }
   let labelsPrice = 0;
   if (labelsCount > 0) {
-    const range = findLabelRange(labelRanges, labelsCount);
+    const sortedRanges = [...labelRanges].sort((a, b) => a.upper_bound - b.upper_bound);
+    const range = findLabelRange(sortedRanges, labelsCount) ?? sortedRanges[sortedRanges.length - 1];
     if (!range) {
       throw new Error("Label count exceeds supported ranges");
     }
@@ -144,6 +160,12 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
       (labelsCount * Number(range.range_cost) + Number(settings.labels_supplier_shipping)) *
       Number(settings.labels_markup_multiplier);
   }
+
+  const ingredientLabelsCount = Math.max(0, Number(input.ingredientLabelsCount ?? 0));
+  const ingredientLabelsPrice =
+    ingredientLabelsCount > 0 && ingredientLabelPrice > 0
+      ? ingredientLabelsCount * ingredientLabelPrice
+      : 0;
 
   const extrasPrice = (input.extras ?? []).reduce((sum, extra) => {
     if (!extra.jacket) return sum;
@@ -153,7 +175,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     return sum;
   }, 0);
 
-  const subtotalBeforeUrgency = basePrice + packagingPrice + labelsPrice + extrasPrice;
+  const subtotalBeforeUrgency = basePrice + packagingPrice + labelsPrice + ingredientLabelsPrice + extrasPrice;
   const urgencyFee = (() => {
     if (!input.dueDate) return 0;
     const due = new Date(input.dueDate);
@@ -171,6 +193,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     basePrice,
     packagingPrice,
     labelsPrice,
+    ingredientLabelsPrice,
     extrasPrice,
     urgencyFee,
     transactionFee,
@@ -180,6 +203,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
       { label: "Base", amount: basePrice },
       { label: "Packaging", amount: packagingPrice },
       { label: "Labels", amount: labelsPrice },
+      { label: "Ingredient labels", amount: ingredientLabelsPrice },
       { label: "Extras", amount: extrasPrice },
       { label: "Urgency", amount: urgencyFee },
       { label: "Transaction fee", amount: transactionFee },

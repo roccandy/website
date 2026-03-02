@@ -12,6 +12,7 @@ import type {
   PackagingOptionImage,
   SettingsRow,
 } from "@/lib/data";
+import type { ManagedLabelSettings } from "@/lib/labelSettings";
 import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart } from "@/components/CartProvider";
@@ -26,6 +27,7 @@ type Props = {
   flavors: Flavor[];
   palette: ColorPaletteRow[];
   labelTypes: LabelType[];
+  ingredientLabelSettings: ManagedLabelSettings;
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
 };
@@ -36,6 +38,7 @@ type QuoteResult = {
   basePrice: number;
   packagingPrice: number;
   labelsPrice: number;
+  ingredientLabelsPrice: number;
   extrasPrice: number;
   urgencyFee: number;
   transactionFee: number;
@@ -408,6 +411,7 @@ export function QuoteBuilder({
   flavors,
   palette,
   labelTypes,
+  ingredientLabelSettings,
   minBasePrices,
   initialOrderType,
 }: Props) {
@@ -416,6 +420,10 @@ export function QuoteBuilder({
   const { addCustomItem } = useCart();
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
+  const ingredientLabelType = useMemo(() => {
+    const id = ingredientLabelSettings.ingredientLabelTypeId;
+    return id ? labelTypeById.get(id) ?? null : null;
+  }, [ingredientLabelSettings.ingredientLabelTypeId, labelTypeById]);
   const [flavorCacheBust, setFlavorCacheBust] = useState(0);
   useEffect(() => {
     setFlavorCacheBust(Date.now());
@@ -1002,6 +1010,7 @@ export function QuoteBuilder({
           categoryId: string;
           packaging: Selection[];
           labelsCount?: number;
+          ingredientLabelsCount?: number;
           extras?: { jacket: "rainbow" | "two_colour" | "pinstripe" }[];
         } = {
           categoryId,
@@ -1018,6 +1027,9 @@ export function QuoteBuilder({
           } else {
             body.labelsCount = totalPackages;
           }
+        }
+        if (ingredientLabelsOptIn) {
+          body.ingredientLabelsCount = totalPackages;
         }
         const jacketExtras: { jacket: "rainbow" | "two_colour" | "pinstripe" }[] = [];
         if (rainbowJacket) jacketExtras.push({ jacket: "rainbow" });
@@ -1063,6 +1075,7 @@ export function QuoteBuilder({
     pinstripeJacket,
     twoColourJacket,
     labelsOptIn,
+    ingredientLabelsOptIn,
     hasBulkSelection,
     labelCountOverride,
     settings.labels_max_bulk,
@@ -1651,7 +1664,14 @@ export function QuoteBuilder({
                     />
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
-                      <span className="block text-xs text-zinc-500">Circle 30mm</span>
+                      <span className="block text-xs text-zinc-500">
+                        {ingredientLabelType ? formatLabelTypeLabel(ingredientLabelType) : "Circle 30mm"}
+                      </span>
+                      {ingredientLabelSettings.ingredientLabelPrice > 0 && (
+                        <span className="block text-xs text-zinc-500">
+                          +${ingredientLabelSettings.ingredientLabelPrice.toFixed(2)} each
+                        </span>
+                      )}
                     </span>
                   </label>
                   {!ingredientPreviewFailed && (

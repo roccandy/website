@@ -1,51 +1,95 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { LabelRange, SettingsRow } from "@/lib/data";
-import { deleteLabelRange, upsertLabelRange, updateLabelSettings } from "./actions";
+import type { LabelRange, LabelType, SettingsRow } from "@/lib/data";
+import type { ManagedLabelSettings } from "@/lib/labelSettings";
+import {
+  deleteLabelRange,
+  updateIngredientLabelSettings,
+  updateLabelSettings,
+  upsertLabelRange,
+} from "./actions";
 
 type Props = {
   ranges: LabelRange[];
   settings: SettingsRow;
+  labelTypes: LabelType[];
+  managedLabelSettings: ManagedLabelSettings;
 };
 
-export function LabelsTable({ ranges, settings }: Props) {
+export function LabelsTable({ ranges, settings, labelTypes, managedLabelSettings }: Props) {
   const [editMode, setEditMode] = useState(false);
   const sorted = [...ranges].sort((a, b) => a.upper_bound - b.upper_bound);
   const [shipping, setShipping] = useState(settings.labels_supplier_shipping);
   const [markup, setMarkup] = useState(settings.labels_markup_multiplier);
+  const [maxBulk, setMaxBulk] = useState(settings.labels_max_bulk);
+  const [ingredientPrice, setIngredientPrice] = useState(managedLabelSettings.ingredientLabelPrice);
+  const [ingredientTypeId, setIngredientTypeId] = useState(managedLabelSettings.ingredientLabelTypeId ?? "");
   const [dirtyRangeIds, setDirtyRangeIds] = useState<Set<string>>(new Set());
   const [settingsDirty, setSettingsDirty] = useState(false);
-  const [newDirty, setNewDirty] = useState(false);
-  const hasDirty = settingsDirty || newDirty || dirtyRangeIds.size > 0;
+  const [ingredientDirty, setIngredientDirty] = useState(false);
+  const hasDirty = settingsDirty || ingredientDirty || dirtyRangeIds.size > 0;
+
   const originalRanges = useMemo(() => {
     const map = new Map<string, LabelRange>();
     ranges.forEach((r) => map.set(r.id, r));
     return map;
   }, [ranges]);
+
   const originalSettings = useMemo(
     () => ({
       shipping: settings.labels_supplier_shipping,
       markup: settings.labels_markup_multiplier,
+      maxBulk: settings.labels_max_bulk,
     }),
     [settings]
   );
+
+  const originalIngredientSettings = useMemo(
+    () => ({
+      price: managedLabelSettings.ingredientLabelPrice,
+      typeId: managedLabelSettings.ingredientLabelTypeId ?? "",
+    }),
+    [managedLabelSettings.ingredientLabelPrice, managedLabelSettings.ingredientLabelTypeId]
+  );
+
+  const recomputeSettingsDirty = (next: { shipping?: number; markup?: number; maxBulk?: number }) => {
+    const nextShipping = next.shipping ?? shipping;
+    const nextMarkup = next.markup ?? markup;
+    const nextMaxBulk = next.maxBulk ?? maxBulk;
+    setSettingsDirty(
+      nextShipping !== originalSettings.shipping ||
+        nextMarkup !== originalSettings.markup ||
+        nextMaxBulk !== originalSettings.maxBulk
+    );
+  };
+
+  const recomputeIngredientDirty = (next: { price?: number; typeId?: string }) => {
+    const nextPrice = next.price ?? ingredientPrice;
+    const nextTypeId = next.typeId ?? ingredientTypeId;
+    setIngredientDirty(
+      nextPrice !== originalIngredientSettings.price || nextTypeId !== originalIngredientSettings.typeId
+    );
+  };
 
   const handleSaveAll = () => {
     if (settingsDirty) {
       const settingsForm = document.querySelector<HTMLFormElement>("#label-settings");
       settingsForm?.requestSubmit();
     }
+    if (ingredientDirty) {
+      const ingredientSettingsForm = document.querySelector<HTMLFormElement>("#ingredient-label-settings");
+      ingredientSettingsForm?.requestSubmit();
+    }
     document.querySelectorAll<HTMLFormElement>("form[data-label-form]").forEach((f) => {
       const id = f.dataset.id;
-      const isNew = f.dataset.new === "true";
-      if (isNew ? newDirty : id && dirtyRangeIds.has(id)) {
+      if (id && dirtyRangeIds.has(id)) {
         f.requestSubmit();
       }
     });
     setDirtyRangeIds(new Set());
     setSettingsDirty(false);
-    setNewDirty(false);
+    setIngredientDirty(false);
     try {
       const evt = new CustomEvent("toast", { detail: { message: "Labels saved", tone: "success" } });
       window.dispatchEvent(evt);
@@ -91,7 +135,12 @@ export function LabelsTable({ ranges, settings }: Props) {
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <h3 className="text-base font-semibold text-zinc-900">Global label settings</h3>
-        <form id="label-settings" data-label-form action={updateLabelSettings} className="mt-2 grid gap-4 text-sm text-zinc-700 sm:grid-cols-2 md:grid-cols-3">
+        <form
+          id="label-settings"
+          data-label-form
+          action={updateLabelSettings}
+          className="mt-2 grid gap-4 text-sm text-zinc-700 sm:grid-cols-2 md:grid-cols-3"
+        >
           <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
             Supplier shipping
             {editMode ? (
@@ -101,9 +150,9 @@ export function LabelsTable({ ranges, settings }: Props) {
                 name="labels_supplier_shipping"
                 value={shipping}
                 onChange={(e) => {
-                  setShipping(Number(e.target.value));
                   const next = Number(e.target.value);
-                  setSettingsDirty(next !== originalSettings.shipping || markup !== originalSettings.markup);
+                  setShipping(next);
+                  recomputeSettingsDirty({ shipping: next });
                 }}
                 className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
               />
@@ -111,6 +160,7 @@ export function LabelsTable({ ranges, settings }: Props) {
               <span className="text-sm font-semibold text-zinc-900">${shipping.toFixed(2)}</span>
             )}
           </label>
+
           <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
             Markup multiplier
             {editMode ? (
@@ -122,9 +172,7 @@ export function LabelsTable({ ranges, settings }: Props) {
                 onChange={(e) => {
                   const next = Number(e.target.value);
                   setMarkup(next);
-                  setSettingsDirty(
-                    shipping !== originalSettings.shipping || next !== originalSettings.markup
-                  );
+                  recomputeSettingsDirty({ markup: next });
                 }}
                 className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
               />
@@ -135,6 +183,88 @@ export function LabelsTable({ ranges, settings }: Props) {
               </div>
             )}
           </label>
+
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Max labels (bulk)
+            {editMode ? (
+              <input
+                type="number"
+                step="1"
+                min="0"
+                name="labels_max_bulk"
+                value={maxBulk}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setMaxBulk(next);
+                  recomputeSettingsDirty({ maxBulk: next });
+                }}
+                className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-zinc-900">{maxBulk}</span>
+            )}
+          </label>
+        </form>
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <h3 className="text-base font-semibold text-zinc-900">Ingredient label settings</h3>
+        <form
+          id="ingredient-label-settings"
+          action={updateIngredientLabelSettings}
+          className="mt-2 grid gap-4 text-sm text-zinc-700 sm:grid-cols-2"
+        >
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Ingredient label price
+            {editMode ? (
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="ingredient_label_price"
+                value={ingredientPrice}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setIngredientPrice(next);
+                  recomputeIngredientDirty({ price: next });
+                }}
+                className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
+              />
+            ) : (
+              <span className="text-sm font-semibold text-zinc-900">${ingredientPrice.toFixed(2)}</span>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Ingredient label type
+            {editMode ? (
+              <select
+                name="ingredient_label_type_id"
+                value={ingredientTypeId}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setIngredientTypeId(next);
+                  recomputeIngredientDirty({ typeId: next });
+                }}
+                className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-900"
+              >
+                <option value="">No default selected</option>
+                {labelTypes.map((labelType) => (
+                  <option key={labelType.id} value={labelType.id}>
+                    {labelType.shape} - {labelType.dimensions}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-sm font-semibold text-zinc-900">
+                {labelTypes.find((labelType) => labelType.id === ingredientTypeId)
+                  ? `${labelTypes.find((labelType) => labelType.id === ingredientTypeId)?.shape} - ${
+                      labelTypes.find((labelType) => labelType.id === ingredientTypeId)?.dimensions
+                    }`
+                  : "No default selected"}
+              </span>
+            )}
+          </label>
         </form>
       </div>
 
@@ -143,7 +273,6 @@ export function LabelsTable({ ranges, settings }: Props) {
           <thead>
             <tr className="text-left text-zinc-500">
               <th className="px-3 py-2">Upper bound</th>
-              <th className="px-3 py-2">Range cost</th>
               {editMode && <th className="px-3 py-2 w-28">Actions</th>}
             </tr>
           </thead>
@@ -154,10 +283,10 @@ export function LabelsTable({ ranges, settings }: Props) {
                 const form = document.getElementById(formId) as HTMLFormElement | null;
                 const original = originalRanges.get(range.id);
                 if (!form || !original) return;
-                const upper = Number((form.elements.namedItem("upper_bound") as HTMLInputElement | null)?.value ?? 0);
-                const cost = Number((form.elements.namedItem("range_cost") as HTMLInputElement | null)?.value ?? 0);
-                const isSame =
-                  Number(original.upper_bound) === upper && Number(original.range_cost) === cost;
+                const upper = Number(
+                  (form.elements.namedItem("upper_bound") as HTMLInputElement | null)?.value ?? 0
+                );
+                const isSame = Number(original.upper_bound) === upper;
                 setDirtyRangeIds((prev) => {
                   const next = new Set(prev);
                   if (isSame) next.delete(range.id);
@@ -165,6 +294,7 @@ export function LabelsTable({ ranges, settings }: Props) {
                   return next;
                 });
               };
+
               return (
                 <tr key={range.id} className="border-t border-zinc-100">
                   <td className="px-3 py-2">
@@ -182,22 +312,6 @@ export function LabelsTable({ ranges, settings }: Props) {
                       range.upper_bound
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {editMode ? (
-                      <input
-                        form={formId}
-                        type="number"
-                        step="0.01"
-                        name="range_cost"
-                        defaultValue={range.range_cost}
-                        className="w-full rounded border border-zinc-200 px-2 py-1"
-                        onChange={recomputeRangeDirty}
-                        required
-                      />
-                    ) : (
-                      <>${range.range_cost.toFixed(2)}</>
-                    )}
-                  </td>
                   {editMode && (
                     <td className="px-3 py-2 space-y-1">
                       <form
@@ -209,6 +323,7 @@ export function LabelsTable({ ranges, settings }: Props) {
                         className="hidden"
                       >
                         <input type="hidden" name="id" value={range.id} />
+                        <input type="hidden" name="range_cost" value={range.range_cost} />
                       </form>
                       <form action={deleteLabelRange}>
                         <input type="hidden" name="id" value={range.id} />
@@ -224,34 +339,6 @@ export function LabelsTable({ ranges, settings }: Props) {
                 </tr>
               );
             })}
-            {editMode && (
-              <tr className="border-t border-zinc-100 bg-zinc-50/60">
-                <td className="px-3 py-2">
-                  <input
-                    form="range-new"
-                    type="number"
-                    name="upper_bound"
-                    className="w-full rounded border border-zinc-200 px-2 py-1"
-                    onChange={() => setNewDirty(true)}
-                    required
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <input
-                    form="range-new"
-                    type="number"
-                    step="0.01"
-                    name="range_cost"
-                    className="w-full rounded border border-zinc-200 px-2 py-1"
-                    onChange={() => setNewDirty(true)}
-                    required
-                  />
-                </td>
-                <td className="px-3 py-2">
-                  <form id="range-new" data-label-form data-id="new" data-new="true" action={upsertLabelRange} className="hidden" />
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
