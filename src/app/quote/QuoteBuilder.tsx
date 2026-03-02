@@ -1327,10 +1327,17 @@ export function QuoteBuilder({
         </div>
         {/* Step 1: Subtype */}
         {showSubtype && (
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div>
-                <div className="flex w-full flex-wrap gap-2">
-                  {ORDER_SUBTYPES[orderType]?.map((sub) => {
+          <div className="flex justify-center">
+            <div
+              className="inline-flex w-full max-w-xl overflow-hidden rounded-full"
+              style={{
+                borderColor: "rgb(239,232,239)",
+                borderWidth: "0.5px",
+                borderStyle: "solid",
+                backgroundColor: "rgb(250,243,247)",
+              }}
+            >
+                  {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                     const cat = categories.find((c) => c.id === sub.id);
                     const label = (() => {
                       if (sub.id === "custom-1-6") {
@@ -1350,12 +1357,10 @@ export function QuoteBuilder({
                           hasManualSubtypeRef.current = true;
                           setCategoryId(sub.id);
                         }}
-                        className="rounded-full px-4 py-3 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                        className={`flex-1 px-4 py-2.5 text-xs font-semibold normal-case tracking-[0.08em] transition ${index > 0 ? "border-l" : ""}`}
                         style={{
                           backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                           borderColor: "rgb(239,232,239)",
-                          borderWidth: "0.5px",
-                          borderStyle: "solid",
                           color: "rgb(124,121,131)",
                           fontFamily: "var(--font-body), sans-serif",
                         }}
@@ -1364,14 +1369,13 @@ export function QuoteBuilder({
                       </button>
                     );
                   })}
-              </div>
             </div>
           </div>
         )}
 
         <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
-          <div className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="space-y-3">
             <div className="grid items-start gap-4 lg:grid-cols-2">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1429,13 +1433,14 @@ export function QuoteBuilder({
                                   type="button"
                                   onClick={() => setSelectionSize(opt.size)}
                                   className="rounded-full px-3 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
-                                  style={{
-                                    backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                                    borderColor: "rgb(239,232,239)",
-                                    borderWidth: "0.5px",
-                                    color: "rgb(124,121,131)",
-                                    fontFamily: "var(--font-body), sans-serif",
-                                  }}
+                                style={{
+                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                  borderColor: "rgb(239,232,239)",
+                                  borderWidth: "0.5px",
+                                  borderStyle: "solid",
+                                  color: "rgb(124,121,131)",
+                                  fontFamily: "var(--font-body), sans-serif",
+                                }}
                                 >
                                   <span className="whitespace-nowrap">{toTitleCase(opt.size)}</span>
                                 </button>
@@ -1497,7 +1502,7 @@ export function QuoteBuilder({
                         value={selectionQtyInput}
                         onChange={(e) => setSelectionQtyInput(e.target.value)}
                         aria-label="Quantity"
-                        className="w-full px-4 py-3 text-center text-base font-semibold text-zinc-900 outline-none"
+                        className="w-full px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />
                     </div>
                   </div>
@@ -1656,10 +1661,10 @@ export function QuoteBuilder({
           {/* Step 4: Candy design & flavor */}
           <div
             ref={designSectionRef}
-            className="relative overflow-visible rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
+            className="relative overflow-visible"
           >
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900">Candy design & flavor</h3>
+            <h3 className="text-lg font-semibold text-zinc-900">Candy Design & Flavor</h3>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
