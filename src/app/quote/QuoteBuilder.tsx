@@ -373,6 +373,10 @@ function formatLabelTypeLabel(labelType: LabelType) {
   return dimension ? `${shape} ${dimension}` : shape;
 }
 
+function toTitleCase(value: string) {
+  return value.replace(/\w\S*/g, (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+}
+
 function FlavorIcon({
   name,
   cacheBust,
@@ -1325,8 +1329,8 @@ export function QuoteBuilder({
         {showSubtype && (
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <div>
-                <div className="flex w-full overflow-hidden rounded-full border border-[#e91e63] bg-[#fedae1] divide-x divide-[#e91e63]">
-                  {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
+                <div className="flex w-full flex-wrap gap-2">
+                  {ORDER_SUBTYPES[orderType]?.map((sub) => {
                     const cat = categories.find((c) => c.id === sub.id);
                     const label = (() => {
                       if (sub.id === "custom-1-6") {
@@ -1342,15 +1346,20 @@ export function QuoteBuilder({
                       <button
                         key={sub.id}
                         type="button"
-                        data-segmented
-                        data-active={isActive ? "true" : "false"}
                         onClick={() => {
                           hasManualSubtypeRef.current = true;
                           setCategoryId(sub.id);
                         }}
-                        className="flex-1 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] transition"
+                        className="rounded-full px-4 py-3 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                        style={{
+                          backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                          borderColor: "rgb(239,232,239)",
+                          borderWidth: "0.5px",
+                          color: "rgb(124,121,131)",
+                          fontFamily: "var(--font-body), sans-serif",
+                        }}
                       >
-                        {label}
+                        {toTitleCase(label)}
                       </button>
                     );
                   })}
@@ -1362,14 +1371,13 @@ export function QuoteBuilder({
         <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
           <div className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-zinc-900">Select packaging</h3>
-              </div>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2 items-stretch">
+            <div className="grid items-start gap-4 lg:grid-cols-2">
               <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900">Select packaging</h3>
+                  </div>
+                </div>
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging type</p>
@@ -1381,15 +1389,20 @@ export function QuoteBuilder({
                               <button
                                 key={type}
                                 type="button"
-                                data-segmented
-                                data-active={isActive ? "true" : "false"}
                                 onClick={() => {
                                   setSelectionType(type);
                                   setSelectionSize("");
                                 }}
-                                className="rounded-full border border-zinc-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
+                                className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                                style={{
+                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                  borderColor: "rgb(239,232,239)",
+                                  borderWidth: "0.5px",
+                                  color: "rgb(124,121,131)",
+                                  fontFamily: "var(--font-body), sans-serif",
+                                }}
                               >
-                                {type}
+                                {toTitleCase(type)}
                               </button>
                             );
                           })
@@ -1411,12 +1424,17 @@ export function QuoteBuilder({
                               <button
                                 key={opt.id}
                                 type="button"
-                                data-segmented
-                                data-active={isActive ? "true" : "false"}
                                 onClick={() => setSelectionSize(opt.size)}
-                                className="rounded-full border border-zinc-300 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition"
+                                className="rounded-full px-3 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                                style={{
+                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                  borderColor: "rgb(239,232,239)",
+                                  borderWidth: "0.5px",
+                                  color: "rgb(124,121,131)",
+                                  fontFamily: "var(--font-body), sans-serif",
+                                }}
                               >
-                                <span className="whitespace-nowrap">{opt.size}</span>
+                                <span className="whitespace-nowrap">{toTitleCase(opt.size)}</span>
                               </button>
                             );
                           })
@@ -1476,7 +1494,7 @@ export function QuoteBuilder({
 
               </div>
 
-              <div className="flex min-h-[220px] h-full items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="flex h-full min-h-[220px] items-start justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                 <div className="aspect-square h-full w-full max-h-[360px]">
                   {packagingImageUrl && !packagingImageFailed ? (
                     <img
