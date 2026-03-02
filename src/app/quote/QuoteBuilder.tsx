@@ -1267,7 +1267,7 @@ export function QuoteBuilder({
 
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">
         {/* Price sidebar */}
-        <div ref={priceWrapRef} className="relative">
+        <div ref={priceWrapRef} className="relative mx-auto w-full md:w-1/3">
           <div ref={priceStickyRef} className="w-full">
             <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg">
               {needsSubtypeSelection ? (
@@ -1277,9 +1277,14 @@ export function QuoteBuilder({
                   {(() => {
                     const subtotal = Math.max(0, result.total - result.transactionFee);
                     return (
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-baseline gap-2">
-                          <p className="text-2xl font-semibold leading-none">${subtotal.toFixed(2)}</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <p
+                            className="text-center text-2xl font-semibold leading-none"
+                            style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
+                          >
+                            ${subtotal.toFixed(2)}
+                          </p>
                           {loading && (
                             <span className="inline-flex items-center">
                               <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
@@ -1287,6 +1292,7 @@ export function QuoteBuilder({
                             </span>
                           )}
                         </div>
+                        <div className="flex justify-center">
                           <button
                             type="button"
                             onClick={() => setShowBreakdown((prev) => !prev)}
@@ -1295,6 +1301,7 @@ export function QuoteBuilder({
                           >
                             {showBreakdown ? "Hide breakdown" : "Show breakdown"}
                           </button>
+                        </div>
                       </div>
                     );
                   })()}
