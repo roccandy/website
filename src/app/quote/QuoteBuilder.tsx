@@ -1441,22 +1441,6 @@ export function QuoteBuilder({
                                 </button>
                               );
                             })}
-                            <input
-                              type="number"
-                              min={0}
-                              max={selectedOption?.max_packages}
-                              value={selectionQtyInput}
-                              onChange={(e) => setSelectionQtyInput(e.target.value)}
-                              aria-label="Quantity"
-                              className="w-24 rounded-full px-3 py-2 text-center text-xs font-semibold normal-case tracking-[0.08em] text-[rgb(124,121,131)] outline-none transition"
-                              style={{
-                                backgroundColor: "rgb(250,243,247)",
-                                borderColor: "rgb(239,232,239)",
-                                borderWidth: "0.5px",
-                                borderStyle: "solid",
-                                fontFamily: "var(--font-body), sans-serif",
-                              }}
-                            />
                           </>
                       ) : (
                         <span className="w-full px-4 py-3 text-left text-xs font-semibold normal-case tracking-[0.04em] text-zinc-400">
@@ -1464,9 +1448,6 @@ export function QuoteBuilder({
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-400">
-                      {selectedOption ? `Quantity max: ${selectedOption.max_packages}` : ""}
-                    </p>
                   </div>
 
                   {isJarOption && availableLidColors.length > 0 && (
@@ -1503,6 +1484,23 @@ export function QuoteBuilder({
                       </div>
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">
+                      Quantity{selectedOption ? ` (Max ${selectedOption.max_packages})` : ""}
+                    </p>
+                    <div className="flex w-full overflow-hidden rounded-full border border-zinc-200 bg-white">
+                      <input
+                        type="number"
+                        min={0}
+                        max={selectedOption?.max_packages}
+                        value={selectionQtyInput}
+                        onChange={(e) => setSelectionQtyInput(e.target.value)}
+                        aria-label="Quantity"
+                        className="w-full px-4 py-3 text-center text-base font-semibold text-zinc-900 outline-none"
+                      />
+                    </div>
+                  </div>
                   </div>
 
               </div>
