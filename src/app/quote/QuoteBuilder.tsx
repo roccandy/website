@@ -1277,7 +1277,8 @@ export function QuoteBuilder({
                   {(() => {
                     const subtotal = Math.max(0, result.total - result.transactionFee);
                     return (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                        <span aria-hidden="true" />
                         <div className="flex items-center justify-center gap-2">
                           <p
                             className="text-center text-2xl font-semibold leading-none"
@@ -1292,16 +1293,14 @@ export function QuoteBuilder({
                             </span>
                           )}
                         </div>
-                        <div className="flex justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setShowBreakdown((prev) => !prev)}
-                            data-neutral-button
-                            className="rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
-                          >
-                            {showBreakdown ? "Hide breakdown" : "Show breakdown"}
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowBreakdown((prev) => !prev)}
+                          data-neutral-button
+                          className="justify-self-end rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                        >
+                          {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                        </button>
                       </div>
                     );
                   })()}
@@ -1518,7 +1517,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="flex h-full min-h-[220px] items-start justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="aspect-square h-full w-full max-h-[360px]">
+                <div className="aspect-square w-full max-w-[360px]">
                   {packagingImageUrl && !packagingImageFailed ? (
                     <img
                       src={packagingImageUrl}
@@ -1550,7 +1549,7 @@ export function QuoteBuilder({
                       className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#e91e63] accent-[#e91e63] focus:ring-[#e91e63]"
                     />
                     <span className="flex-1 space-y-0.5">
-                      <span className="block text-sm font-semibold text-zinc-900">Custom labels</span>
+                      <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
                       <span className="block text-xs text-zinc-500">
                         Add printed labels to your packaging.
                       </span>
@@ -1559,7 +1558,7 @@ export function QuoteBuilder({
                   {labelsOptIn && (
                     <div className="space-y-3">
                       <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">Label type</p>
+                        <p className="text-[11px] font-semibold normal-case tracking-[0.1em] text-zinc-500">Label Type</p>
                         {hasLabelTypes ? (
                           <div className="mt-2 grid gap-2 sm:grid-cols-2">
                             {availableLabelTypes.map((labelType) => {
@@ -1587,7 +1586,7 @@ export function QuoteBuilder({
                       </div>
                       {hasBulkSelection && (
                         <label className="block text-xs text-zinc-600">
-                          Labels count (max {settings.labels_max_bulk})
+                          Labels Count (Max {settings.labels_max_bulk})
                           <input
                             type="number"
                             min={0}
@@ -1599,8 +1598,8 @@ export function QuoteBuilder({
                         </label>
                       )}
                       <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700">
-                        <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                          Artwork file
+                        <span className="block text-[11px] font-semibold normal-case tracking-[0.1em] text-zinc-500">
+                          Artwork File
                         </span>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <input
@@ -1643,7 +1642,7 @@ export function QuoteBuilder({
                       className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#e91e63] accent-[#e91e63] focus:ring-[#e91e63]"
                     />
                     <span className="flex-1 space-y-0.5">
-                      <span className="block text-sm font-semibold text-zinc-900">Ingredient labels</span>
+                      <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
                       <span className="block text-xs text-zinc-500">
                         Include ingredients and allergens with each pack.
                       </span>
