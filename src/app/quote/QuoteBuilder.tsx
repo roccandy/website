@@ -1182,6 +1182,7 @@ export function QuoteBuilder({
       stickyEl.style.width = "";
       stickyEl.style.zIndex = "";
       wrap.style.height = "";
+      wrap.style.width = "";
     };
 
     const update = () => {
@@ -1202,8 +1203,10 @@ export function QuoteBuilder({
         return;
       }
 
+      const liveWidth = stickyEl.getBoundingClientRect().width;
+      const width = Math.max(wrapRect.width, liveWidth, 220);
       wrap.style.height = `${stickyHeight}px`;
-      const width = wrapRect.width;
+      wrap.style.width = `${width}px`;
       const left = wrapRect.left;
 
       if (scrollY <= end) {
@@ -1385,7 +1388,7 @@ export function QuoteBuilder({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-zinc-900">Select Packaging</h3>
+                    <h3 className="text-lg font-semibold normal-case text-zinc-900">Select Packaging</h3>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1537,7 +1540,7 @@ export function QuoteBuilder({
             </div>
 
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-              <h3 className="text-lg font-semibold text-zinc-900">Labels</h3>
+              <h3 className="text-lg font-semibold normal-case text-zinc-900">Labels</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
                   <label className="group flex items-start gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm transition hover:border-zinc-300 cursor-pointer">
@@ -1669,7 +1672,7 @@ export function QuoteBuilder({
             className="relative overflow-visible"
           >
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900">Candy Design & Flavor</h3>
+            <h3 className="text-lg font-semibold normal-case text-zinc-900">Candy Design & Flavor</h3>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
