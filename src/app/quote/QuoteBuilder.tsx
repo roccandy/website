@@ -1542,13 +1542,13 @@ export function QuoteBuilder({
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
               <h3 className="text-lg font-semibold normal-case text-zinc-900">Labels</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                  <label className="group flex items-start gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm transition hover:border-zinc-300 cursor-pointer">
+                <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
+                  <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={labelsOptIn}
                       onChange={(e) => setLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#e91e63] accent-[#e91e63] focus:ring-[#e91e63]"
+                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#f7e4ec] accent-[#f7e4ec] focus:ring-[#f7e4ec]"
                     />
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
@@ -1571,11 +1571,15 @@ export function QuoteBuilder({
                                   type="button"
                                   onClick={() => setLabelTypeId(labelType.id)}
                                   aria-pressed={isActive}
-                                  className={`inline-flex w-full items-center justify-between rounded-full border bg-white px-3 py-2 text-left text-[11px] font-semibold normal-case tracking-[0.08em] shadow-sm transition ${
-                                    isActive
-                                      ? "border-[#e91e63] bg-[#fbd6e3] text-[#e91e63]"
-                                      : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
-                                  }`}
+                                  className="inline-flex w-full items-center justify-between rounded-full px-3 py-2 text-left text-[11px] font-semibold normal-case tracking-[0.08em] transition"
+                                  style={{
+                                    backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                    borderColor: "rgb(239,232,239)",
+                                    borderWidth: "0.5px",
+                                    borderStyle: "solid",
+                                    color: "rgb(124,121,131)",
+                                    fontFamily: "var(--font-body), sans-serif",
+                                  }}
                                 >
                                   <span>{formatLabelTypeLabel(labelType)}</span>
                                 </button>
@@ -1635,19 +1639,17 @@ export function QuoteBuilder({
                     </div>
                   )}
                 </div>
-                <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-                  <label className="group flex items-start gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-sm transition hover:border-zinc-300 cursor-pointer">
+                <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
+                  <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={ingredientLabelsOptIn}
                       onChange={(e) => setIngredientLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#e91e63] accent-[#e91e63] focus:ring-[#e91e63]"
+                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[#f7e4ec] accent-[#f7e4ec] focus:ring-[#f7e4ec]"
                     />
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
-                      <span className="block text-xs text-zinc-500">
-                        Include ingredients and allergens with each pack.
-                      </span>
+                      <span className="block text-xs text-zinc-500">Circle 30mm</span>
                     </span>
                   </label>
                   {!ingredientPreviewFailed && (
