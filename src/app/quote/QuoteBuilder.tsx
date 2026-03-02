@@ -1350,7 +1350,7 @@ export function QuoteBuilder({
         {showSubtype && (
           <div className="flex justify-center">
             <div
-              className="inline-flex w-full max-w-xl overflow-hidden rounded-full"
+              className="inline-flex w-auto max-w-full overflow-hidden rounded-full"
               style={{
                 borderColor: "rgb(239,232,239)",
                 borderWidth: "0.5px",
@@ -1359,16 +1359,6 @@ export function QuoteBuilder({
               }}
             >
                   {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
-                    const cat = categories.find((c) => c.id === sub.id);
-                    const label = (() => {
-                      if (sub.id === "custom-1-6") {
-                        return cat?.name ? cat.name.replace("(1-6)", "(1-6 letters)") : "1-6 letters";
-                      }
-                      if (sub.id === "custom-7-14") {
-                        return cat?.name ? cat.name.replace("(7-14)", "(7-14 letters)") : "7-14 letters";
-                      }
-                      return cat?.name ?? sub.label;
-                    })();
                     const isActive = categoryId === sub.id;
                     return (
                       <button
@@ -1378,7 +1368,7 @@ export function QuoteBuilder({
                           hasManualSubtypeRef.current = true;
                           setCategoryId(sub.id);
                         }}
-                        className={`flex-1 px-4 py-2.5 text-xs font-semibold normal-case tracking-[0.08em] transition ${index > 0 ? "border-l" : ""}`}
+                        className={`px-6 py-3 text-sm font-semibold normal-case tracking-[0.04em] transition ${index > 0 ? "border-l" : ""}`}
                         style={{
                           backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                           borderColor: "rgb(239,232,239)",
@@ -1386,7 +1376,7 @@ export function QuoteBuilder({
                           fontFamily: "var(--font-body), sans-serif",
                         }}
                       >
-                        {toTitleCase(label)}
+                        {toTitleCase(sub.label)}
                       </button>
                     );
                   })}
@@ -1532,7 +1522,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="flex h-full items-start justify-center">
-                <div className="aspect-square w-full max-w-[360px] rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="aspect-square w-[500px] max-w-full rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   {packagingImageUrl && !packagingImageFailed ? (
                     <img
                       src={packagingImageUrl}
