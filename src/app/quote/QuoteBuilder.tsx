@@ -1677,7 +1677,7 @@ export function QuoteBuilder({
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
               ref={previewWrapRef}
-              className="order-1 w-full md:order-2 md:flex md:h-[360px] md:items-center md:justify-center md:self-start"
+              className="order-1 w-full md:order-2 md:flex md:h-[540px] md:items-center md:justify-center md:self-start"
             >
               <div ref={previewStickyRef} className="flex justify-center">
                 <CandyPreview
@@ -1713,7 +1713,7 @@ export function QuoteBuilder({
                   heartColor={previewHeartColor}
                   textColor={previewTextColor}
                   isInitials={isWeddingInitials}
-                  dimensions={{ width: 420, height: 312 }}
+                  dimensions={{ width: 630, height: 468 }}
                 />
               </div>
             </div>
