@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type { LabelRange, LabelType, SettingsRow } from "@/lib/data";
-import type { ManagedLabelSettings } from "@/lib/labelSettings";
 import {
   deleteLabelRange,
   updateIngredientLabelSettings,
@@ -14,17 +13,16 @@ type Props = {
   ranges: LabelRange[];
   settings: SettingsRow;
   labelTypes: LabelType[];
-  managedLabelSettings: ManagedLabelSettings;
 };
 
-export function LabelsTable({ ranges, settings, labelTypes, managedLabelSettings }: Props) {
+export function LabelsTable({ ranges, settings, labelTypes }: Props) {
   const [editMode, setEditMode] = useState(false);
   const sorted = [...ranges].sort((a, b) => a.upper_bound - b.upper_bound);
   const [shipping, setShipping] = useState(settings.labels_supplier_shipping);
   const [markup, setMarkup] = useState(settings.labels_markup_multiplier);
   const [maxBulk, setMaxBulk] = useState(settings.labels_max_bulk);
-  const [ingredientPrice, setIngredientPrice] = useState(managedLabelSettings.ingredientLabelPrice);
-  const [ingredientTypeId, setIngredientTypeId] = useState(managedLabelSettings.ingredientLabelTypeId ?? "");
+  const [ingredientPrice, setIngredientPrice] = useState(Number(settings.ingredient_label_price ?? 0));
+  const [ingredientTypeId, setIngredientTypeId] = useState(settings.ingredient_label_type_id ?? "");
   const [dirtyRangeIds, setDirtyRangeIds] = useState<Set<string>>(new Set());
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [ingredientDirty, setIngredientDirty] = useState(false);
@@ -47,10 +45,10 @@ export function LabelsTable({ ranges, settings, labelTypes, managedLabelSettings
 
   const originalIngredientSettings = useMemo(
     () => ({
-      price: managedLabelSettings.ingredientLabelPrice,
-      typeId: managedLabelSettings.ingredientLabelTypeId ?? "",
+      price: Number(settings.ingredient_label_price ?? 0),
+      typeId: settings.ingredient_label_type_id ?? "",
     }),
-    [managedLabelSettings.ingredientLabelPrice, managedLabelSettings.ingredientLabelTypeId]
+    [settings.ingredient_label_price, settings.ingredient_label_type_id]
   );
 
   const recomputeSettingsDirty = (next: { shipping?: number; markup?: number; maxBulk?: number }) => {

@@ -70,6 +70,8 @@ export type SettingsRow = {
   labels_supplier_shipping: number;
   labels_markup_multiplier: number;
   labels_max_bulk: number;
+  ingredient_label_price: number | null;
+  ingredient_label_type_id: string | null;
   orders_email: string | null;
   admin_email: string | null;
   enquiries_email: string | null;

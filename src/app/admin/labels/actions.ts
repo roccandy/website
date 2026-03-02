@@ -1,7 +1,6 @@
 "use server";
 
 import { supabaseServerClient } from "@/lib/supabase/server";
-import { saveManagedLabelSettings } from "@/lib/labelSettings";
 import { redirect } from "next/navigation";
 
 export async function upsertLabelRange(formData: FormData) {
@@ -63,9 +62,14 @@ export async function updateLabelSettings(formData: FormData) {
 export async function updateIngredientLabelSettings(formData: FormData) {
   const ingredientLabelPrice = Number(formData.get("ingredient_label_price"));
   const ingredientLabelTypeIdRaw = formData.get("ingredient_label_type_id")?.toString().trim() ?? "";
-  await saveManagedLabelSettings({
-    ingredientLabelPrice: Number.isFinite(ingredientLabelPrice) ? ingredientLabelPrice : 0,
-    ingredientLabelTypeId: ingredientLabelTypeIdRaw || null,
-  });
+  const client = supabaseServerClient;
+  const { error } = await client
+    .from("settings")
+    .update({
+      ingredient_label_price: Number.isFinite(ingredientLabelPrice) ? ingredientLabelPrice : 0,
+      ingredient_label_type_id: ingredientLabelTypeIdRaw || null,
+    })
+    .eq("id", 1);
+  if (error) throw new Error(error.message);
   redirect("/admin/labels");
 }

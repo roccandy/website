@@ -10,7 +10,6 @@ import {
   type Category,
   type WeightTier,
 } from "@/lib/data";
-import { getManagedLabelSettings } from "@/lib/labelSettings";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
@@ -66,7 +65,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
     getWeightTiers(),
     getLabelTypes(),
   ]);
-  const managedLabelSettings = await getManagedLabelSettings();
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const minBasePrices = buildMinBasePrices(categories, tiers);
@@ -126,7 +124,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
             flavors={flavors}
             palette={palette}
             labelTypes={labelTypes}
-            ingredientLabelSettings={managedLabelSettings}
             minBasePrices={minBasePrices}
             initialOrderType={initialOrderType}
           />

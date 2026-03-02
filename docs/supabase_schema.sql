@@ -80,7 +80,9 @@ create table if not exists settings (
     max_total_kg numeric(8,2) not null default 8,
     labels_supplier_shipping numeric(12,2) not null default 0,
     labels_markup_multiplier numeric(6,3) not null default 1.0,
-    labels_max_bulk int not null default 1000
+    labels_max_bulk int not null default 1000,
+    ingredient_label_price numeric(12,2) not null default 0,
+    ingredient_label_type_id uuid references label_types(id)
   );
 
   create table if not exists color_palette (
@@ -92,6 +94,16 @@ create table if not exists settings (
   );
   create unique index if not exists color_palette_unique_idx on public.color_palette (category, shade);
   create index if not exists color_palette_sort_idx on public.color_palette (sort_order);
+
+create table if not exists site_faqs (
+  id uuid primary key default gen_random_uuid(),
+  question text not null,
+  answer_html text not null,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists site_faqs_sort_idx on public.site_faqs (sort_order);
 
 create table if not exists premade_candies (
   id uuid primary key default gen_random_uuid(),
@@ -215,6 +227,7 @@ alter table label_types enable row level security;
   alter table label_ranges enable row level security;
   alter table settings enable row level security;
   alter table color_palette enable row level security;
+  alter table site_faqs enable row level security;
   alter table premade_candies enable row level security;
   alter table orders enable row level security;
 alter table production_slots enable row level security;
@@ -232,6 +245,7 @@ create policy "label_ranges_select_public" on label_ranges for select using (tru
 create policy "quote_blocks_select_public" on quote_blocks for select using (true);
   create policy "settings_select_public" on settings for select using (true);
   create policy "color_palette_select_public" on color_palette for select using (true);
+  create policy "site_faqs_select_public" on site_faqs for select using (true);
   create policy "premade_candies_select_public" on premade_candies for select using (true);
 
 create policy "categories_admin_write" on categories for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
@@ -241,6 +255,7 @@ create policy "packaging_images_admin_write" on packaging_option_images for all 
   create policy "label_ranges_admin_write" on label_ranges for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "settings_admin_write" on settings for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "color_palette_admin_write" on color_palette for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
+  create policy "site_faqs_admin_write" on site_faqs for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "premade_candies_admin_write" on premade_candies for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "orders_admin_access" on orders for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "slots_admin_access" on production_slots for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
@@ -311,7 +326,10 @@ insert into settings (
     jacket_pinstripe,
     max_total_kg,
     labels_supplier_shipping,
-    labels_markup_multiplier
+    labels_markup_multiplier,
+    labels_max_bulk,
+    ingredient_label_price,
+    ingredient_label_type_id
   )
   values (
     1,
@@ -331,7 +349,10 @@ insert into settings (
     30,
     8,
     0,
-    1.0
+    1.0,
+    1000,
+    0,
+    null
   )
   on conflict (id) do update set
     lead_time_days = excluded.lead_time_days,
@@ -351,7 +372,9 @@ insert into settings (
     max_total_kg = excluded.max_total_kg,
     labels_supplier_shipping = excluded.labels_supplier_shipping,
     labels_markup_multiplier = excluded.labels_markup_multiplier,
-    labels_max_bulk = coalesce(settings.labels_max_bulk, excluded.labels_max_bulk);
+    labels_max_bulk = coalesce(settings.labels_max_bulk, excluded.labels_max_bulk),
+    ingredient_label_price = coalesce(settings.ingredient_label_price, excluded.ingredient_label_price),
+    ingredient_label_type_id = coalesce(settings.ingredient_label_type_id, excluded.ingredient_label_type_id);
 
   insert into color_palette (category, shade, hex, sort_order)
   values

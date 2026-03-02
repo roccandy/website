@@ -10,7 +10,6 @@ import {
   type LabelRange,
   type WeightTier,
 } from "@/lib/data";
-import { getManagedLabelSettings } from "@/lib/labelSettings";
 
 type PackagingSelection = {
   optionId: string;
@@ -49,7 +48,6 @@ export type PricingContext = {
   packagingOptions: PackagingOption[];
   labelRanges: LabelRange[];
   settings: SettingsRow;
-  ingredientLabelPrice: number;
 };
 
 function findTierForWeight(tiers: WeightTier[], weightKg: number) {
@@ -71,26 +69,18 @@ export async function calculatePricing(input: PricingInput): Promise<PricingBrea
 }
 
 export async function buildPricingContext(): Promise<PricingContext> {
-  const [categories, tiers, packagingOptions, labelRanges, settings, managedLabelSettings] = await Promise.all([
+  const [categories, tiers, packagingOptions, labelRanges, settings] = await Promise.all([
     getCategories(),
     getWeightTiers(),
     getPackagingOptions(),
     getLabelRanges(),
     getSettings(),
-    getManagedLabelSettings(),
   ]);
-  return {
-    categories,
-    tiers,
-    packagingOptions,
-    labelRanges,
-    settings,
-    ingredientLabelPrice: Number(managedLabelSettings.ingredientLabelPrice ?? 0),
-  };
+  return { categories, tiers, packagingOptions, labelRanges, settings };
 }
 
 export function calculatePricingWithContext(input: PricingInput, context: PricingContext): PricingBreakdown {
-  const { categories, tiers, packagingOptions, labelRanges, settings, ingredientLabelPrice } = context;
+  const { categories, tiers, packagingOptions, labelRanges, settings } = context;
   const category = categories.find((c) => c.id === input.categoryId);
   if (!category) {
     throw new Error("Invalid category");
@@ -162,6 +152,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
   }
 
   const ingredientLabelsCount = Math.max(0, Number(input.ingredientLabelsCount ?? 0));
+  const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const ingredientLabelsPrice =
     ingredientLabelsCount > 0 && ingredientLabelPrice > 0
       ? ingredientLabelsCount * ingredientLabelPrice

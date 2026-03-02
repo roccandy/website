@@ -12,7 +12,6 @@ import type {
   PackagingOptionImage,
   SettingsRow,
 } from "@/lib/data";
-import type { ManagedLabelSettings } from "@/lib/labelSettings";
 import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart } from "@/components/CartProvider";
@@ -27,7 +26,6 @@ type Props = {
   flavors: Flavor[];
   palette: ColorPaletteRow[];
   labelTypes: LabelType[];
-  ingredientLabelSettings: ManagedLabelSettings;
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
 };
@@ -411,7 +409,6 @@ export function QuoteBuilder({
   flavors,
   palette,
   labelTypes,
-  ingredientLabelSettings,
   minBasePrices,
   initialOrderType,
 }: Props) {
@@ -421,9 +418,12 @@ export function QuoteBuilder({
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
   const ingredientLabelType = useMemo(() => {
-    const id = ingredientLabelSettings.ingredientLabelTypeId;
+    const id = settings.ingredient_label_type_id;
     return id ? labelTypeById.get(id) ?? null : null;
-  }, [ingredientLabelSettings.ingredientLabelTypeId, labelTypeById]);
+  }, [settings.ingredient_label_type_id, labelTypeById]);
+  const ingredientLabelPrice = Number.isFinite(Number(settings.ingredient_label_price))
+    ? Number(settings.ingredient_label_price)
+    : 0;
   const [flavorCacheBust, setFlavorCacheBust] = useState(0);
   useEffect(() => {
     setFlavorCacheBust(Date.now());
@@ -1657,9 +1657,9 @@ export function QuoteBuilder({
                       <span className="block text-xs text-zinc-500">
                         {ingredientLabelType ? formatLabelTypeLabel(ingredientLabelType) : "Circle 30mm"}
                       </span>
-                      {ingredientLabelSettings.ingredientLabelPrice > 0 && (
+                      {ingredientLabelPrice > 0 && (
                         <span className="block text-xs text-zinc-500">
-                          +${ingredientLabelSettings.ingredientLabelPrice.toFixed(2)} each
+                          +${ingredientLabelPrice.toFixed(2)} each
                         </span>
                       )}
                     </span>

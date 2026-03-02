@@ -3,7 +3,6 @@ import { LabelsTable } from "./LabelsTable";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getManagedLabelSettings } from "@/lib/labelSettings";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -15,11 +14,10 @@ export default async function LabelsPage() {
     redirect("/admin/login");
   }
 
-  const [ranges, settings, labelTypes, managedLabelSettings] = await Promise.all([
+  const [ranges, settings, labelTypes] = await Promise.all([
     getLabelRanges(),
     getSettings(),
     getLabelTypes(),
-    getManagedLabelSettings(),
   ]);
 
   return (
@@ -34,7 +32,6 @@ export default async function LabelsPage() {
         ranges={ranges}
         settings={settings}
         labelTypes={labelTypes}
-        managedLabelSettings={managedLabelSettings}
       />
     </section>
   );
