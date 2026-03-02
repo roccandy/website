@@ -1569,7 +1569,7 @@ export function QuoteBuilder({
                                   type="button"
                                   onClick={() => setLabelTypeId(labelType.id)}
                                   aria-pressed={isActive}
-                                  className={`inline-flex w-full items-center justify-between rounded-full border bg-white px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition ${
+                                  className={`inline-flex w-full items-center justify-between rounded-full border bg-white px-3 py-2 text-left text-[11px] font-semibold normal-case tracking-[0.08em] shadow-sm transition ${
                                     isActive
                                       ? "border-[#e91e63] bg-[#fbd6e3] text-[#e91e63]"
                                       : "border-zinc-300 text-zinc-700 hover:border-zinc-400"
@@ -1593,7 +1593,7 @@ export function QuoteBuilder({
                             max={settings.labels_max_bulk}
                             value={labelCountOverride}
                             onChange={(e) => setLabelCountOverride(Number(e.target.value))}
-                            className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
+                            className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
                           />
                         </label>
                       )}
@@ -1611,7 +1611,7 @@ export function QuoteBuilder({
                           />
                           <label
                             htmlFor="label-artwork-upload"
-                            className="inline-flex items-center rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-700 shadow-sm transition hover:border-zinc-400"
+                            className="inline-flex items-center rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition hover:border-zinc-400"
                           >
                             {labelFileName ? "Change file" : "Choose file"}
                           </label>
@@ -1621,7 +1621,7 @@ export function QuoteBuilder({
                             </span>
                           )}
                           {labelImageUrl && (
-                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
                               Ready
                             </span>
                           )}
