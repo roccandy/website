@@ -68,7 +68,7 @@ export default async function PremadePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Shop</p>
             <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">Pre-made candy</h1>
             <p className="text-base text-zinc-600">
-              Ready-to-order packs with handcrafted rock candy. Contact us to place an order.
+              Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery
             </p>
           </section>
 
