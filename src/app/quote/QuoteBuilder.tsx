@@ -1874,7 +1874,7 @@ export function QuoteBuilder({
             </div>
           </div>
           <div className="mt-4">
-            <details ref={flavorDetailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
+            <details ref={flavorDetailsRef} className="px-0 py-0">
               <summary className="flex cursor-pointer items-center gap-3 text-xs font-semibold text-zinc-700">
                 <span className="uppercase tracking-[0.2em] text-zinc-500">Candy flavor*</span>
                 <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
