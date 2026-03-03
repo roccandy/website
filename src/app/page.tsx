@@ -139,12 +139,25 @@ export default async function Home() {
               <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you're planning a
                 wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
-                made to impress. From wedding candy tailored to your big day, to custom text candy that celebrates
-                life&apos;s milestones, we turn your words and designs into delicious works of art - all made with
-                premium ingredients right here in Australia. Explore our full range, including branded candy that
-                showcases your logo in every bite, and our colourful selection of pre-made candy ready to enjoy
-                anytime. Whether it&apos;s for a party, corporate gift, or just because, Roc Candy makes every occasion
-                a little sweeter.
+                made to impress. From{" "}
+                <a href="/design?type=weddings" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                  wedding candy
+                </a>{" "}
+                tailored to your big day, to{" "}
+                <a href="/design?type=text" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                  custom text candy
+                </a>{" "}
+                that celebrates life&apos;s milestones, we turn your words and designs into delicious works of art -
+                all made with premium ingredients right here in Australia. Explore our full range, including{" "}
+                <a href="/design?type=branded" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                  branded candy
+                </a>{" "}
+                that showcases your logo in every bite, and our colourful selection of{" "}
+                <a href="/pre-made-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                  pre-made candy
+                </a>{" "}
+                ready to enjoy anytime. Whether it&apos;s for a party, corporate gift, or just because, Roc Candy
+                makes every occasion a little sweeter.
               </p>
             </article>
 
