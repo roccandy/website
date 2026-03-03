@@ -462,7 +462,6 @@ export function QuoteBuilder({
   const priceSectionRef = useRef<HTMLDivElement | null>(null);
   const priceWrapRef = useRef<HTMLDivElement | null>(null);
   const priceStickyRef = useRef<HTMLDivElement | null>(null);
-  const flavorDetailsRef = useRef<HTMLDetailsElement | null>(null);
   const hasManualSubtypeRef = useRef(false);
 
   const capturePreviewSvg = () => {
@@ -1768,28 +1767,6 @@ export function QuoteBuilder({
                     Jacket type & colors
                   </p>
                 <div className="mt-2 flex flex-col gap-2 text-sm">
-                  {!rainbowJacket && (
-                    <div className="mt-1 space-y-3">
-                      <PalettePicker
-                        label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
-                        value={jacketColorOne}
-                        onChange={setJacketColorOne}
-                        groups={paletteGroups}
-                        onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
-                        placeholderSwatch={defaultJacketColor}
-                      />
-                      {showColourTwo && (
-                        <PalettePicker
-                          label="Jacket Colour 2"
-                          value={jacketColorTwo}
-                          onChange={setJacketColorTwo}
-                          groups={paletteGroups}
-                          onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
-                          placeholderSwatch={defaultJacketColor}
-                        />
-                      )}
-                    </div>
-                  )}
                   <label
                     className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
                       rainbowDisabled && !rainbowJacket
@@ -1841,6 +1818,28 @@ export function QuoteBuilder({
                       2 Colour Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_two_colour)}</span>
                     </span>
                   </label>
+                  {!rainbowJacket && (
+                    <div className="mt-1 space-y-3">
+                      <PalettePicker
+                        label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
+                        value={jacketColorOne}
+                        onChange={setJacketColorOne}
+                        groups={paletteGroups}
+                        onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
+                        placeholderSwatch={defaultJacketColor}
+                      />
+                      {showColourTwo && (
+                        <PalettePicker
+                          label="Jacket Colour 2"
+                          value={jacketColorTwo}
+                          onChange={setJacketColorTwo}
+                          groups={paletteGroups}
+                          onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
+                          placeholderSwatch={defaultJacketColor}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               {isBranded && (
@@ -1870,48 +1869,38 @@ export function QuoteBuilder({
             </div>
           </div>
           <div className="mt-4">
-            <details ref={flavorDetailsRef} className="px-0 py-0">
-              <summary className="flex cursor-pointer items-center gap-3 text-xs font-semibold text-zinc-700">
-                <span className="uppercase tracking-[0.2em] text-zinc-500">Candy flavor*</span>
-                <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
-                  <span>{flavor ? toTitleCase(flavor) : "Select flavor"}</span>
-                </span>
-              </summary>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {flavors.map((f) => {
-                  const isActive = flavor === f.name;
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      data-plain-button
-                      onClick={() => {
-                        setFlavor(f.name);
-                        if (flavorDetailsRef.current) {
-                          flavorDetailsRef.current.open = false;
-                        }
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Candy flavor*</p>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {flavors.map((f) => {
+                const isActive = flavor === f.name;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    data-plain-button
+                    onClick={() => {
+                      setFlavor(f.name);
+                    }}
+                    aria-pressed={isActive}
+                    className="w-full"
+                  >
+                    <span
+                      className="inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                      style={{
+                        backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        borderColor: "rgb(239,232,239)",
+                        borderWidth: "0.5px",
+                        borderStyle: "solid",
+                        color: "rgb(124,121,131)",
+                        fontFamily: "var(--font-body), sans-serif",
                       }}
-                      aria-pressed={isActive}
-                      className="w-full"
                     >
-                      <span
-                        className="inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
-                        style={{
-                          backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                          borderColor: "rgb(239,232,239)",
-                          borderWidth: "0.5px",
-                          borderStyle: "solid",
-                          color: "rgb(124,121,131)",
-                          fontFamily: "var(--font-body), sans-serif",
-                        }}
-                      >
-                        <span>{toTitleCase(f.name)}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </details>
+                      <span>{toTitleCase(f.name)}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
