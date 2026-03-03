@@ -1140,6 +1140,7 @@ export function QuoteBuilder({
     const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
     const topGap = 16;
     let raf = 0;
+    let lockedWidth = 0;
 
     const reset = () => {
       stickyEl.style.position = "static";
@@ -1149,6 +1150,32 @@ export function QuoteBuilder({
       stickyEl.style.zIndex = "";
       wrap.style.height = "";
       wrap.style.width = "";
+    };
+
+    const measureRestingWidth = () => {
+      const prev = {
+        position: stickyEl.style.position,
+        top: stickyEl.style.top,
+        left: stickyEl.style.left,
+        width: stickyEl.style.width,
+        zIndex: stickyEl.style.zIndex,
+        wrapHeight: wrap.style.height,
+        wrapWidth: wrap.style.width,
+      };
+
+      reset();
+      const measured = Math.ceil(Math.max(wrap.getBoundingClientRect().width, stickyEl.getBoundingClientRect().width, 220)) + 2;
+      const viewportMax = Math.max(220, window.innerWidth - 16);
+
+      stickyEl.style.position = prev.position;
+      stickyEl.style.top = prev.top;
+      stickyEl.style.left = prev.left;
+      stickyEl.style.width = prev.width;
+      stickyEl.style.zIndex = prev.zIndex;
+      wrap.style.height = prev.wrapHeight;
+      wrap.style.width = prev.wrapWidth;
+
+      return Math.min(measured, viewportMax);
     };
 
     const update = () => {
@@ -1166,23 +1193,18 @@ export function QuoteBuilder({
 
       if (scrollY < start) {
         reset();
+        lockedWidth = measureRestingWidth();
         return;
       }
 
-      // Measure natural width without current sticky inline widths to avoid self-expanding feedback while scrolling.
-      const prevWrapWidth = wrap.style.width;
-      const prevStickyWidth = stickyEl.style.width;
-      wrap.style.width = "";
-      stickyEl.style.width = "";
-      const naturalWidth = Math.ceil(Math.max(wrap.getBoundingClientRect().width, 220));
-      wrap.style.width = prevWrapWidth;
-      stickyEl.style.width = prevStickyWidth;
-
-      // Small safety buffer and viewport clamp.
-      const width = Math.min(naturalWidth + 2, Math.max(220, window.innerWidth - 16));
+      if (!lockedWidth) {
+        lockedWidth = measureRestingWidth();
+      }
+      const width = Math.min(lockedWidth, Math.max(220, window.innerWidth - 16));
       wrap.style.height = `${stickyHeight}px`;
       wrap.style.width = `${width}px`;
-      const left = Math.min(Math.max(Math.round(wrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
+      const currentWrapRect = wrap.getBoundingClientRect();
+      const left = Math.min(Math.max(Math.round(currentWrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
 
       if (scrollY <= end) {
         stickyEl.style.position = "fixed";
