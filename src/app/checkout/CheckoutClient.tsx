@@ -1380,7 +1380,7 @@ export function CheckoutClient({
 
           <section className="space-y-4">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#ff6f95]">
                 Before you check out, you may also like...
               </p>
             </div>
@@ -1390,18 +1390,51 @@ export function CheckoutClient({
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold text-zinc-900">Date & delivery</h3>
             <div className="mt-3 space-y-3">
-              <div className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
-                <p>Date required</p>
-                <div className="mt-2">
-                  <CheckoutDatePicker
-                    value={dueDate}
-                    onChange={setDueDate}
-                    blocks={quoteBlocks}
-                    urgencyFeePercent={urgencyFeePercent}
-                    urgencyPeriodDays={urgencyPeriodDays}
-                    showUrgencyNotice={hasCustomItems}
-                  />
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-[280px] flex-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  <p>Date required</p>
+                  <div className="mt-2">
+                    <CheckoutDatePicker
+                      value={dueDate}
+                      onChange={setDueDate}
+                      blocks={quoteBlocks}
+                      urgencyFeePercent={urgencyFeePercent}
+                      urgencyPeriodDays={urgencyPeriodDays}
+                      showUrgencyNotice={hasCustomItems}
+                    />
+                  </div>
                 </div>
+                <div className="text-xs text-zinc-500">
+                  <p className="mb-2 uppercase tracking-[0.2em]">Delivery method</p>
+                  <div className="inline-flex rounded-full border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setPickup(false)}
+                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                      style={{
+                        backgroundColor: !pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        color: "rgb(124,121,131)",
+                        fontFamily: "var(--font-body), sans-serif",
+                      }}
+                    >
+                      Delivery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickup(true)}
+                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                      style={{
+                        backgroundColor: pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        color: "rgb(124,121,131)",
+                        fontFamily: "var(--font-body), sans-serif",
+                      }}
+                    >
+                      Pickup
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 {dueDate && isUrgencyWindow && !isDueDateBlocked && (
                   <span className="mt-1 block text-xs text-amber-600">
                     {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge if needed within ${urgencyPeriodDays} day${
@@ -1414,29 +1447,6 @@ export function CheckoutClient({
                     This date is unavailable. Please choose another.
                   </span>
                 )}
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pickup or delivery</p>
-                <div className="flex w-full overflow-hidden rounded-full border border-[#e91e63] bg-[#fedae1] divide-x divide-[#e91e63]">
-                  <button
-                    type="button"
-                    data-segmented
-                    data-active={!pickup ? "true" : "false"}
-                    onClick={() => setPickup(false)}
-                    className="flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
-                  >
-                    Delivery
-                  </button>
-                  <button
-                    type="button"
-                    data-segmented
-                    data-active={pickup ? "true" : "false"}
-                    onClick={() => setPickup(true)}
-                    className="flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition"
-                  >
-                    Pickup
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -70,6 +70,18 @@ export default function HeaderMenu() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  useEffect(() => {
+    items.forEach((item) => {
+      if (item.type !== "custom") return;
+      const maxPackages = Number(item.maxPackages);
+      if (!Number.isFinite(maxPackages) || maxPackages <= 0) return;
+      const maxInt = Math.floor(maxPackages);
+      if (item.quantity > maxInt) {
+        updateQuantity(item.id, maxInt);
+      }
+    });
+  }, [items, updateQuantity]);
+
   return (
     <div className="relative">
       <button
@@ -132,6 +144,17 @@ export default function HeaderMenu() {
                                 item.packagingLabel
                               )}${title ? ` (${title})` : ""}`
                             : "";
+                          const customMaxPackages = !isPremade
+                            ? (() => {
+                                const raw = Number(item.maxPackages);
+                                return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : null;
+                              })()
+                            : null;
+                          const clampCustomQty = (next: number) => {
+                            const safeNext = Math.max(1, next);
+                            if (!customMaxPackages) return safeNext;
+                            return Math.min(safeNext, customMaxPackages);
+                          };
                           return (
                             <li
                               key={item.id}
@@ -176,7 +199,38 @@ export default function HeaderMenu() {
                                       +
                                     </button>
                                   </>
-                                ) : null}
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(item.id, clampCustomQty(item.quantity - 1))}
+                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={customMaxPackages ?? undefined}
+                                      value={item.quantity}
+                                      onChange={(event) => {
+                                        const next = Number(event.target.value);
+                                        if (Number.isNaN(next)) return;
+                                        updateQuantity(item.id, clampCustomQty(next));
+                                      }}
+                                      className="h-7 w-14 rounded border border-zinc-200 text-center text-xs font-semibold text-zinc-700"
+                                      aria-label={`Package quantity for ${title || "custom order"}`}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => updateQuantity(item.id, clampCustomQty(item.quantity + 1))}
+                                      disabled={Boolean(customMaxPackages && item.quantity >= customMaxPackages)}
+                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      +
+                                    </button>
+                                  </>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => {
