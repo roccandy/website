@@ -116,17 +116,25 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         </div>
 
         <div className="relative mx-auto max-w-7xl px-6 pb-16">
-          <QuoteBuilder
-            categories={categories}
-            packagingOptions={packagingOptions}
-            packagingImages={packagingImages}
-            settings={settings}
-            flavors={flavors}
-            palette={palette}
-            labelTypes={labelTypes}
-            minBasePrices={minBasePrices}
-            initialOrderType={initialOrderType}
-          />
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-0 flex justify-center">
+            <div
+              className="h-[300px] w-full max-w-[1400px] bg-top bg-no-repeat bg-contain opacity-95 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]"
+              style={{ backgroundImage: "url('/landing/design-top.webp')" }}
+            />
+          </div>
+          <div className="relative z-10">
+            <QuoteBuilder
+              categories={categories}
+              packagingOptions={packagingOptions}
+              packagingImages={packagingImages}
+              settings={settings}
+              flavors={flavors}
+              palette={palette}
+              labelTypes={labelTypes}
+              minBasePrices={minBasePrices}
+              initialOrderType={initialOrderType}
+            />
+          </div>
         </div>
       </div>
     </main>
