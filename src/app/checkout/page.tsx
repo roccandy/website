@@ -10,6 +10,7 @@ import {
   getQuoteBlocks,
   getSettings,
 } from "@/lib/data";
+import { getActiveProductionBlockoutMessage } from "@/lib/productionBlockout";
 import { CheckoutClient } from "./CheckoutClient";
 
 export const revalidate = 0;
@@ -35,13 +36,14 @@ function formatWeight(weight_g: number) {
 }
 
 export default async function CheckoutPage() {
-  const [premade, palette, quoteBlocks, settings, labelTypes, packagingOptions] = await Promise.all([
+  const [premade, palette, quoteBlocks, settings, labelTypes, packagingOptions, productionBlockoutMessage] = await Promise.all([
     getPremadeCandies(),
     getColorPalette(),
     getQuoteBlocks(),
     getSettings(),
     getLabelTypes(),
     getPackagingOptions(),
+    getActiveProductionBlockoutMessage(),
   ]);
   const suggestions = premade
     .filter((item) => item.is_active)
@@ -117,6 +119,7 @@ export default async function CheckoutPage() {
             urgencyFeePercent={Number(settings?.urgency_fee ?? 0)}
             urgencyPeriodDays={Number(settings?.lead_time_days ?? 0)}
             transactionFeePercent={Number(settings?.transaction_fee_percent ?? 0)}
+            productionBlockoutMessage={productionBlockoutMessage}
           />
         </div>
       </div>

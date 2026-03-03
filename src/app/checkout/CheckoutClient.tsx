@@ -41,6 +41,7 @@ type Props = {
   urgencyFeePercent: number;
   urgencyPeriodDays: number;
   transactionFeePercent: number;
+  productionBlockoutMessage?: string | null;
 };
 
 const AU_STATES = [
@@ -1001,6 +1002,7 @@ export function CheckoutClient({
   urgencyFeePercent,
   urgencyPeriodDays,
   transactionFeePercent,
+  productionBlockoutMessage,
 }: Props) {
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const paletteMap = useMemo(() => buildPaletteLabelMap(palette), [palette]);
@@ -1424,6 +1426,9 @@ export function CheckoutClient({
           <div className="flex justify-center">
             <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold normal-case text-zinc-900">Date & delivery</h3>
+            {productionBlockoutMessage ? (
+              <p className="mt-2 text-sm font-semibold normal-case text-[#b23b67]">{productionBlockoutMessage}</p>
+            ) : null}
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap items-end gap-3">
                 <div className="text-xs text-zinc-500">
