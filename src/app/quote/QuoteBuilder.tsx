@@ -1169,15 +1169,20 @@ export function QuoteBuilder({
         return;
       }
 
-      const liveWidth = stickyEl.getBoundingClientRect().width;
-      const stickyScrollWidth = stickyEl.scrollWidth;
-      const innerContentWidth =
-        stickyEl.firstElementChild instanceof HTMLElement ? stickyEl.firstElementChild.scrollWidth : 0;
-      // Round up and add a tiny safety buffer so content never overhangs by sub-pixel drift while scrolling.
-      const width = Math.ceil(Math.max(wrapRect.width, liveWidth, stickyScrollWidth, innerContentWidth, 220)) + 2;
+      // Measure natural width without current sticky inline widths to avoid self-expanding feedback while scrolling.
+      const prevWrapWidth = wrap.style.width;
+      const prevStickyWidth = stickyEl.style.width;
+      wrap.style.width = "";
+      stickyEl.style.width = "";
+      const naturalWidth = Math.ceil(Math.max(wrap.getBoundingClientRect().width, 220));
+      wrap.style.width = prevWrapWidth;
+      stickyEl.style.width = prevStickyWidth;
+
+      // Small safety buffer and viewport clamp.
+      const width = Math.min(naturalWidth + 2, Math.max(220, window.innerWidth - 16));
       wrap.style.height = `${stickyHeight}px`;
       wrap.style.width = `${width}px`;
-      const left = Math.round(wrapRect.left);
+      const left = Math.min(Math.max(Math.round(wrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
 
       if (scrollY <= end) {
         stickyEl.style.position = "fixed";
@@ -1191,7 +1196,7 @@ export function QuoteBuilder({
       const absoluteTop = container.clientHeight - stickyHeight;
       stickyEl.style.position = "absolute";
       stickyEl.style.top = `${absoluteTop}px`;
-      stickyEl.style.left = `${Math.round(wrapRect.left - containerRect.left)}px`;
+      stickyEl.style.left = `${Math.round(left - containerRect.left)}px`;
       stickyEl.style.width = `${width}px`;
       stickyEl.style.zIndex = "1";
     };
