@@ -712,10 +712,10 @@ function CartItemRow({
       <div className="mt-3 grid grid-cols-2 gap-4">
         <div className="space-y-2 text-xs text-zinc-600">
           <div className="mb-1">
-            <div className="inline-flex w-fit max-w-full flex-col gap-0.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-left text-[11px] leading-tight text-zinc-800">
-              <span className="font-semibold">{summaryLineOne}</span>
-              <span className="font-semibold">{summaryLineTwo}</span>
-              <span className="font-semibold">{summaryLineThree}</span>
+            <div className="inline-flex w-fit max-w-full flex-col gap-0.5 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-left text-[11px] leading-tight text-zinc-800">
+              <span className="whitespace-nowrap font-semibold">{summaryLineOne}</span>
+              <span className="whitespace-nowrap font-semibold">{summaryLineTwo}</span>
+              <span className="whitespace-nowrap font-semibold">{summaryLineThree}</span>
             </div>
           </div>
           {detailRows.map((detail) => (

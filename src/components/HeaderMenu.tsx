@@ -168,10 +168,10 @@ export default function HeaderMenu() {
                                     {title}
                                   </>
                                 ) : (
-                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-center text-[11px] leading-tight">
-                                    <span>{customLineOne}</span>
-                                    <span>{customLineTwo}</span>
-                                    <span>{customLineThree}</span>
+                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-center text-[11px] leading-tight">
+                                    <span className="whitespace-nowrap">{customLineOne}</span>
+                                    <span className="whitespace-nowrap">{customLineTwo}</span>
+                                    <span className="whitespace-nowrap">{customLineThree}</span>
                                   </span>
                                 )}
                               </span>
