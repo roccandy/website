@@ -162,11 +162,9 @@ export default function HeaderMenu() {
                               key={item.id}
                               className="flex items-center justify-between gap-2 rounded-lg border border-zinc-100 p-2"
                             >
-                              <span className={`flex-1 text-xs font-semibold ${isPremade ? "text-[#ff6f95]" : "text-zinc-800"}`}>
+                              <span className="flex flex-1 flex-col items-center justify-center text-center font-[var(--font-heading)] text-[12px] font-medium text-zinc-700">
                                 <span
-                                  className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.06em] ${
-                                    isPremade ? "bg-[#fde4ec] text-[#ff6f95]" : "bg-zinc-100 text-zinc-600"
-                                  }`}
+                                  className="mb-1 inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.06em] text-zinc-600"
                                 >
                                   {itemTypeLabel}
                                 </span>
@@ -176,7 +174,7 @@ export default function HeaderMenu() {
                                     {title}
                                   </>
                                 ) : (
-                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 overflow-x-auto rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-center text-[11px] leading-tight">
+                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 overflow-x-auto px-1 py-0 text-center text-[12px] leading-tight">
                                     <span className="whitespace-nowrap">{customLineOne}</span>
                                     <span className="whitespace-nowrap">{customLineTwo}</span>
                                     <span className="whitespace-nowrap">{customLineThree}</span>
