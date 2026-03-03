@@ -55,6 +55,7 @@ export type SettingsRow = {
   lead_time_days: number;
   urgency_fee: number;
   transaction_fee_percent: number;
+  quote_blockout_months: number | null;
   production_slots_per_day: number;
   no_production_mon: boolean;
   no_production_tue: boolean;
@@ -255,15 +256,81 @@ export async function getProductionBlocks() {
 
 export async function getQuoteBlocks() {
   const client = supabaseServerClient;
-  const { data, error } = await client.from("quote_blocks").select("*");
-  if (error) {
-    const message = error.message?.toLowerCase() ?? "";
-    if (message.includes("quote_blocks") || message.includes("schema cache")) {
-      return [];
+  const [quoteResult, productionResult, settingsResult] = await Promise.all([
+    client.from("quote_blocks").select("*"),
+    client.from("production_blocks").select("*"),
+    client.from("settings").select("quote_blockout_months").eq("id", 1).maybeSingle(),
+  ]);
+
+  let quoteBlocks: QuoteBlock[] = [];
+  if (quoteResult.error) {
+    const message = quoteResult.error.message?.toLowerCase() ?? "";
+    if (!message.includes("quote_blocks") && !message.includes("schema cache")) {
+      throw new Error(quoteResult.error.message);
     }
-    throw new Error(error.message);
+  } else {
+    quoteBlocks = quoteResult.data as QuoteBlock[];
   }
-  return data as QuoteBlock[];
+
+  if (productionResult.error) {
+    throw new Error(productionResult.error.message);
+  }
+
+  const visibilityMonthsRaw = Number(settingsResult.data?.quote_blockout_months ?? 3);
+  const visibilityMonths = Number.isFinite(visibilityMonthsRaw)
+    ? Math.min(12, Math.max(1, Math.floor(visibilityMonthsRaw)))
+    : 3;
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const cutoff = new Date(startOfToday);
+  cutoff.setMonth(cutoff.getMonth() + visibilityMonths);
+
+  const isOpenOverrideReason = (reason: string | null | undefined) =>
+    (reason ?? "").trim().toLowerCase() === "open override";
+
+  const formatOrdinalDay = (day: number) => {
+    const mod100 = day % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${day}th`;
+    const mod10 = day % 10;
+    if (mod10 === 1) return `${day}st`;
+    if (mod10 === 2) return `${day}nd`;
+    if (mod10 === 3) return `${day}rd`;
+    return `${day}th`;
+  };
+
+  const formatDisplayDate = (isoDate: string) => {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    if (!year || !month || !day) return isoDate;
+    const parsed = new Date(year, month - 1, day);
+    const monthName = parsed.toLocaleString("en-AU", { month: "long" });
+    return `${formatOrdinalDay(day)} ${monthName} ${year}`;
+  };
+
+  const derivedBlocks: QuoteBlock[] = (productionResult.data ?? [])
+    .filter((block) => !isOpenOverrideReason(block.reason))
+    .filter((block) => {
+      const start = new Date(`${block.start_date}T00:00:00`);
+      if (Number.isNaN(start.getTime())) return false;
+      return start <= cutoff;
+    })
+    .map((block) => ({
+      id: `production-${block.id}`,
+      start_date: block.start_date,
+      end_date: block.end_date,
+      reason: `Production full between ${formatDisplayDate(block.start_date)} and ${formatDisplayDate(block.end_date)}`,
+      created_at: block.created_at,
+    }));
+
+  const deduped = new Map<string, QuoteBlock>();
+  for (const block of derivedBlocks) {
+    deduped.set(`${block.start_date}:${block.end_date}`, block);
+  }
+  for (const block of quoteBlocks) {
+    deduped.set(`${block.start_date}:${block.end_date}`, block);
+  }
+
+  return Array.from(deduped.values());
 }
 
 export async function getColorPalette() {

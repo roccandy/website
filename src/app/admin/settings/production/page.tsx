@@ -41,6 +41,29 @@ async function updateProductionSettings(formData: FormData) {
   redirect("/admin/settings/production");
 }
 
+async function updateBlockoutVisibilityWindow(formData: FormData) {
+  "use server";
+
+  const monthsRaw = Number(formData.get("quote_blockout_months"));
+  const quote_blockout_months = Number.isFinite(monthsRaw)
+    ? Math.min(12, Math.max(1, Math.floor(monthsRaw)))
+    : 3;
+
+  const client = supabaseServerClient;
+  const { error } = await client
+    .from("settings")
+    .update({
+      quote_blockout_months,
+    })
+    .eq("id", 1);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  redirect("/admin/settings/production");
+}
+
 async function updateDefaultNoProduction(formData: FormData) {
   "use server";
 
@@ -158,6 +181,10 @@ export default async function SettingsProductionPage() {
   }
 
   const [settings, blocks] = await Promise.all([getSettings(), getProductionBlocks()]);
+  const quoteBlockoutMonthsRaw = Number(settings.quote_blockout_months ?? 3);
+  const quoteBlockoutMonths = Number.isFinite(quoteBlockoutMonthsRaw)
+    ? Math.min(12, Math.max(1, Math.floor(quoteBlockoutMonthsRaw)))
+    : 3;
 
   return (
     <section className="space-y-6">
@@ -244,9 +271,41 @@ export default async function SettingsProductionPage() {
 
         <div className="space-y-3">
           <div>
-            <h4 className="text-sm font-semibold text-zinc-900">No-production overrides</h4>
-            <p className="text-xs text-zinc-500">Block single dates or date ranges with a reason.</p>
+            <h4 className="text-sm font-semibold text-zinc-900">No-production blockouts</h4>
+            <p className="text-xs text-zinc-500">
+              Block dates for holidays etc. Any dates blocked here will show up on the website as
+              {" "}
+              <span className="font-semibold text-zinc-700">&quot;Production full between A and B&quot;</span>.
+              {" "}
+              This will appear on the website X months before the blocked period starts.
+            </p>
+            <p className="text-xs text-zinc-500">
+              Date format example: <span className="font-semibold text-zinc-700">8th March 2025</span>.
+            </p>
           </div>
+          <form action={updateBlockoutVisibilityWindow} className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              X months
+              <input
+                type="number"
+                name="quote_blockout_months"
+                min={1}
+                max={12}
+                defaultValue={quoteBlockoutMonths}
+                className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-sm"
+                required
+              />
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+              >
+                Save website window
+              </button>
+              <p className="text-xs text-zinc-500">Current value: {quoteBlockoutMonths} month{quoteBlockoutMonths === 1 ? "" : "s"}.</p>
+            </div>
+          </form>
           <form action={addBlock} className="grid gap-3 md:grid-cols-4">
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
               Start date
