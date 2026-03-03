@@ -2,6 +2,7 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
+import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
 
@@ -68,6 +69,7 @@ export default async function Home() {
             </div>
           </div>
         </div>
+        <ProductionBlockoutBanner />
 
         <div className="landing-bg -mt-8 pt-8">
           <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
