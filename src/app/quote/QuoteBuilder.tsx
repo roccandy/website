@@ -233,7 +233,7 @@ function PalettePicker({
   return (
     <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
       <summary className="flex cursor-pointer list-none items-center gap-3 text-xs font-semibold text-zinc-700">
-        <span className="uppercase tracking-[0.2em] text-zinc-500">{label}</span>
+        <span className="normal-case tracking-[0.04em] text-zinc-500">{label}</span>
         <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
           <span>{selectedLabel}</span>
           <span
@@ -1339,12 +1339,12 @@ export function QuoteBuilder({
 
         <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
-          <div className="space-y-3">
+          <div className="mt-4 w-full border-t border-zinc-200 pt-4 space-y-3">
             <div className="grid items-start gap-4 lg:grid-cols-2">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold normal-case text-zinc-900">Select Packaging</h3>
+                    <h3 className="text-lg font-semibold normal-case text-zinc-900">Packaging</h3>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1629,13 +1629,13 @@ export function QuoteBuilder({
             </div>
           </div>
 
-          {/* Step 4: Candy design & flavor */}
+          {/* Step 4: Design */}
           <div
             ref={designSectionRef}
-            className="relative overflow-visible"
+            className="mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible"
           >
           <div>
-            <h3 className="text-lg font-semibold normal-case text-zinc-900">Candy Design & Flavor</h3>
+            <h3 className="text-lg font-semibold normal-case text-zinc-900">Design</h3>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
@@ -1763,7 +1763,7 @@ export function QuoteBuilder({
                   </div>
                 )}
               <div className="md:col-span-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-900">
+                  <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-900">
                     Jacket type & colors
                   </p>
                 <div className="mt-2 flex flex-col gap-2 text-sm">
@@ -1868,8 +1868,9 @@ export function QuoteBuilder({
             </div>
             </div>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Candy flavor*</p>
+        </div>
+          <div className="mt-4 w-full border-t border-zinc-200 pt-4">
+            <h3 className="text-lg font-semibold normal-case text-zinc-900">Flavour</h3>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {flavors.map((f) => {
                 const isActive = flavor === f.name;
@@ -1902,7 +1903,6 @@ export function QuoteBuilder({
               })}
             </div>
           </div>
-        </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="text-lg font-semibold text-zinc-900">Ready to continue?</h3>
