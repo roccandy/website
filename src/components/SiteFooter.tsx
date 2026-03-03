@@ -24,7 +24,13 @@ const LEGAL_LINKS: FooterLink[] = [
   { label: "Terms and Conditions", href: "/terms-and-conditions" },
 ];
 
-const PAYMENT_BADGES = ["PayPal", "American Express", "Apple Pay", "Mastercard", "Visa"];
+const PAYMENT_BADGES: Array<{ label: string; src: string; iconClassName?: string }> = [
+  { label: "PayPal", src: "/payment-logos/paypal.svg" },
+  { label: "American Express", src: "/payment-logos/american-express.svg" },
+  { label: "Apple Pay", src: "/payment-logos/apple-pay.svg", iconClassName: "h-4" },
+  { label: "Mastercard", src: "/payment-logos/mastercard.svg" },
+  { label: "Visa", src: "/payment-logos/visa.svg" },
+];
 
 function IconButton({
   href,
@@ -143,18 +149,25 @@ export default function SiteFooter() {
             </nav>
           </div>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             {PAYMENT_BADGES.map((badge) => (
               <span
-                key={badge}
-                className="rounded-sm border border-[#bcbcb4] bg-[#d5d5d0] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#7a7a75]"
+                key={badge.label}
+                className="inline-flex h-8 min-w-[56px] items-center justify-center rounded-sm border border-[#bcbcb4] bg-[#d5d5d0] px-2"
+                title={badge.label}
+                aria-label={badge.label}
               >
-                {badge}
+                <img
+                  src={badge.src}
+                  alt={badge.label}
+                  className={`h-3.5 w-auto object-contain ${badge.iconClassName ?? ""}`}
+                  loading="lazy"
+                />
               </span>
             ))}
           </div>
 
-          <p className="mt-3 text-center normal-case text-[36px] text-[#6f6f6f]">© roccandy.com.au</p>
+          <p className="mt-3 text-center normal-case text-[18px] text-[#6f6f6f]">© roccandy.com.au</p>
         </div>
       </div>
     </footer>
