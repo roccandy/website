@@ -330,7 +330,6 @@ const SUBTITLE_BY_CATEGORY: Record<string, string> = {
 };
 
 const PACKAGING_IMAGE_BUCKET = "packaging-images";
-const FLAVOR_IMAGE_BUCKET = "flavor-images";
 const LID_COLOR_SWATCH: Record<string, string> = {
   black: "#1f1f1f",
   silver: "#d7d7d7",
@@ -350,24 +349,6 @@ function buildPublicImageUrl(imagePath: string | null | undefined) {
   return `${base}/storage/v1/object/public/${PACKAGING_IMAGE_BUCKET}/${encoded}`;
 }
 
-function normalizeFlavorFileName(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function buildFlavorImageUrl(name: string, cacheBust?: number) {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base || !name) return "";
-  const fileName = `${normalizeFlavorFileName(name)}.png`;
-  const encoded = encodeURIComponent(fileName);
-  const suffix = cacheBust ? `?v=${cacheBust}` : "";
-  return `${base}/storage/v1/object/public/${FLAVOR_IMAGE_BUCKET}/${encoded}${suffix}`;
-}
-
 function formatLabelTypeLabel(labelType: LabelType) {
   const shape = LABEL_SHAPE_LABELS[labelType.shape] ?? labelType.shape;
   const dimension = (labelType.dimensions || "").trim();
@@ -376,29 +357,6 @@ function formatLabelTypeLabel(labelType: LabelType) {
 
 function toTitleCase(value: string) {
   return value.replace(/\w\S*/g, (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
-}
-
-function FlavorIcon({
-  name,
-  cacheBust,
-  className,
-}: {
-  name: string;
-  cacheBust: number;
-  className: string;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const src = buildFlavorImageUrl(name, cacheBust);
-  if (!src || hasError) return null;
-  return (
-    <img
-      src={src}
-      alt={`${name} icon`}
-      className={className}
-      loading="lazy"
-      onError={() => setHasError(true)}
-    />
-  );
 }
 
 export function QuoteBuilder({
@@ -424,10 +382,6 @@ export function QuoteBuilder({
   const ingredientLabelPrice = Number.isFinite(Number(settings.ingredient_label_price))
     ? Number(settings.ingredient_label_price)
     : 0;
-  const [flavorCacheBust, setFlavorCacheBust] = useState(0);
-  useEffect(() => {
-    setFlavorCacheBust(Date.now());
-  }, [flavors]);
   const defaultJacketColor = useMemo(
     () => getPaletteHex(palette, "grey", "light", "#d1d5db"),
     [palette],
@@ -1924,16 +1878,7 @@ export function QuoteBuilder({
               <summary className="flex cursor-pointer items-center gap-3 text-xs font-semibold text-zinc-700">
                 <span className="uppercase tracking-[0.2em] text-zinc-500">Candy flavor*</span>
                 <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
-                  <span>{flavor || "Select flavor"}</span>
-                  {flavor ? (
-                    <span className="inline-flex h-6 w-6 p-0 text-sm text-zinc-600">
-                      <FlavorIcon
-                        name={flavor}
-                        cacheBust={flavorCacheBust}
-                        className="h-6 w-6 object-contain"
-                      />
-                    </span>
-                  ) : null}
+                  <span>{flavor ? toTitleCase(flavor) : "Select flavor"}</span>
                 </span>
               </summary>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -1951,23 +1896,20 @@ export function QuoteBuilder({
                         }
                       }}
                       aria-pressed={isActive}
-                      className="w-full text-left"
+                      className="w-full"
                     >
                       <span
-                        className={`flex items-center justify-between rounded-full border bg-white px-3 py-0 text-[11px] font-semibold uppercase tracking-[0.2em] transition ${
-                          isActive
-                            ? "border-zinc-900 text-zinc-900 ring-2 ring-zinc-900 ring-offset-1"
-                            : "border-zinc-200 text-zinc-600 hover:border-zinc-300"
-                        }`}
+                        className="inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                        style={{
+                          backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                          borderColor: "rgb(239,232,239)",
+                          borderWidth: "0.5px",
+                          borderStyle: "solid",
+                          color: "rgb(124,121,131)",
+                          fontFamily: "var(--font-body), sans-serif",
+                        }}
                       >
-                        <span>{f.name}</span>
-                        <span className="ml-3 inline-flex h-12 w-12 items-center justify-center text-sm text-zinc-600">
-                          <FlavorIcon
-                            name={f.name}
-                            cacheBust={flavorCacheBust}
-                            className="h-full w-full object-contain"
-                          />
-                        </span>
+                        <span>{toTitleCase(f.name)}</span>
                       </span>
                     </button>
                   );

@@ -27,7 +27,7 @@ const sections = [
   },
   {
     title: "Catalog",
-    description: "Shop-facing items and flavour icons.",
+    description: "Shop-facing items and flavour options.",
     links: [
       {
         href: "/admin/premade",
@@ -95,7 +95,7 @@ const sections = [
       {
         href: "/admin/flavors",
         label: "Candy Flavours",
-        description: "Flavour list + symbols.",
+        description: "Flavour list.",
       },
     ],
   },
