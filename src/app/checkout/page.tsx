@@ -101,7 +101,7 @@ export default async function CheckoutPage() {
 
         <div className="relative mx-auto max-w-6xl space-y-10 px-6 py-10 md:py-14">
           <section className="space-y-3 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Checkout</p>
+            <p className="text-xs font-semibold normal-case tracking-[0.08em] text-zinc-500">Checkout</p>
             <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">Review your cart</h1>
             <p className="text-base text-zinc-600">Confirm your selections and add any last-minute extras.</p>
           </section>

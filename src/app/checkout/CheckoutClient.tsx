@@ -453,7 +453,7 @@ const isDateBlocked = (dateKey: string, blocks: QuoteBlock[]) => {
   return blocks.some((block) => dateKey >= block.start_date && dateKey <= block.end_date);
 };
 
-const dayLabelClass = "text-[10px] uppercase tracking-[0.2em] text-zinc-400";
+const dayLabelClass = "text-[10px] normal-case tracking-[0.08em] text-zinc-400";
 
 const buildDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -892,7 +892,7 @@ function CheckoutDatePicker({
           <div className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Select a date</p>
+                <p className="text-xs normal-case tracking-[0.08em] text-zinc-500">Select a date</p>
                 <h3 className="text-lg font-semibold text-zinc-900">Delivery or pickup date</h3>
               </div>
               <button
@@ -1404,18 +1404,19 @@ export function CheckoutClient({
 
           <section className="space-y-4">
             <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#ff6f95]">
+              <p className="text-xs font-semibold normal-case tracking-[0.08em] text-[#ff6f95]">
                 Before you check out, you may also like...
               </p>
             </div>
             <PremadeCarousel items={suggestions} />
           </section>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900">Date & delivery</h3>
+          <div className="flex justify-center">
+            <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h3 className="text-lg font-semibold normal-case text-zinc-900">Date & delivery</h3>
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[280px] flex-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <div className="min-w-[280px] flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500">
                   <p>Date required</p>
                   <div className="mt-2">
                     <CheckoutDatePicker
@@ -1429,7 +1430,7 @@ export function CheckoutClient({
                   </div>
                 </div>
                 <div className="text-xs text-zinc-500">
-                  <p className="mb-2 uppercase tracking-[0.2em]">Delivery method</p>
+                  <p className="mb-2 normal-case tracking-[0.08em]">Delivery method</p>
                   <div className="inline-flex rounded-full border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] p-0.5">
                     <button
                       type="button"
@@ -1458,7 +1459,7 @@ export function CheckoutClient({
                   </div>
                 </div>
               </div>
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <div className="text-xs normal-case tracking-[0.08em] text-zinc-500">
                 {dueDate && isUrgencyWindow && !isDueDateBlocked && (
                   <span className="mt-1 block text-xs text-amber-600">
                     {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge if needed within ${urgencyPeriodDays} day${
@@ -1473,13 +1474,14 @@ export function CheckoutClient({
                 )}
               </div>
             </div>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900">Your details</h3>
+            <h3 className="text-lg font-semibold normal-case text-zinc-900">Your details</h3>
             <div className="mt-3 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   First name*
                   <input
                     value={firstName}
@@ -1487,7 +1489,7 @@ export function CheckoutClient({
                     className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Surname*
                   <input
                     value={lastName}
@@ -1497,7 +1499,7 @@ export function CheckoutClient({
                 </label>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Email address*
                   <input
                     type="email"
@@ -1506,7 +1508,7 @@ export function CheckoutClient({
                     className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Phone number*
                   <input
                     type="tel"
@@ -1516,7 +1518,7 @@ export function CheckoutClient({
                   />
                 </label>
               </div>
-              <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Organisation name
                 <input
                   value={organizationName}
@@ -1524,7 +1526,7 @@ export function CheckoutClient({
                   className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
-              <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Address line 1*
                 <input
                   value={addressLine1}
@@ -1533,7 +1535,7 @@ export function CheckoutClient({
                   disabled={addressDisabled}
                 />
               </label>
-              <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Address line 2
                 <input
                   value={addressLine2}
@@ -1543,7 +1545,7 @@ export function CheckoutClient({
                 />
               </label>
               <div className="grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Suburb or town*
                   <input
                     value={suburb}
@@ -1552,7 +1554,7 @@ export function CheckoutClient({
                     disabled={addressDisabled}
                   />
                 </label>
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Postcode*
                   <input
                     value={postcode}
@@ -1561,7 +1563,7 @@ export function CheckoutClient({
                     disabled={addressDisabled}
                   />
                 </label>
-                <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   State*
                   <select
                     value={stateValue}
@@ -1583,8 +1585,8 @@ export function CheckoutClient({
 
           {!paymentSuccess ? (
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="text-lg font-semibold text-zinc-900">Payment method</h3>
-              <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+              <h3 className="text-lg font-semibold normal-case text-zinc-900">Payment method</h3>
+              <label className="mt-3 block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Select payment method
                 <select
                   value={selectedPaymentMethod}
@@ -1624,7 +1626,7 @@ export function CheckoutClient({
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-zinc-900">Order summary</h2>
+          <h2 className="text-lg font-semibold normal-case text-zinc-900">Order summary</h2>
           <div className="mt-4 space-y-2 text-sm text-zinc-600">
             <div className="flex items-center justify-between">
               <span>Items</span>
@@ -1638,7 +1640,7 @@ export function CheckoutClient({
           <button
             type="button"
             onClick={() => setShowBreakdown((current) => !current)}
-            className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
+            className="mt-3 text-xs font-semibold normal-case tracking-[0.08em] text-zinc-500"
           >
             {showBreakdown ? "Hide price breakdown" : "View price breakdown"}
           </button>
