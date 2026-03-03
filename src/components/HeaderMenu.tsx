@@ -161,7 +161,7 @@ export default function HeaderMenu() {
                               key={item.id}
                               className="flex items-center justify-between gap-2 rounded-lg border border-zinc-100 p-2"
                             >
-                              <span className="flex-1 text-xs font-semibold text-zinc-800">
+                              <span className={`flex-1 text-xs font-semibold ${isPremade ? "text-[#ff6f95]" : "text-zinc-800"}`}>
                                 {isPremade ? (
                                   <>
                                     {weightLabel ? `${weightLabel} ` : ""}

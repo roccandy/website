@@ -91,7 +91,7 @@ export default async function PremadePage() {
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
                       {item.great_value ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-[#ff6f95] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                        <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-[#ff6f95] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
                           Discounted
                         </span>
                       ) : null}
@@ -117,7 +117,7 @@ export default async function PremadePage() {
                       />
                     </div>
                     <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
-                      <a href={itemHref} className="text-sm font-bold text-[#e91e63] hover:underline">
+                      <a href={itemHref} className="text-sm font-bold text-[#ff6f95] hover:text-[#ff4f80] hover:underline">
                         {titleLine}
                       </a>
                       <p className="text-xl font-semibold text-zinc-900">{formatPremadeMoney(Number(item.price))}</p>

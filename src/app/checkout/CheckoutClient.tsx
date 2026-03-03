@@ -575,7 +575,7 @@ function CartItemRow({
           <div className="h-16 w-16 rounded-lg border border-zinc-200 bg-zinc-50" />
         )}
         <div className="flex-1">
-          <p className="text-sm font-semibold text-zinc-900">{item.name}</p>
+          <p className="text-sm font-semibold text-[#ff6f95]">{item.name}</p>
           <p className="text-xs text-zinc-500">{formatWeight(item.weight_g)}</p>
           <p className="text-sm font-semibold text-zinc-900">{formatMoney(item.price)}</p>
         </div>
@@ -813,7 +813,7 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
                     />
                   </div>
                   <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
-                    <p className="text-sm font-bold text-[#e91e63]">{`${item.weightLabel} ${item.name}`}</p>
+                    <p className="text-sm font-bold text-[#ff6f95]">{`${item.weightLabel} ${item.name}`}</p>
                     <p className="text-xl font-semibold text-zinc-900">{formatMoney(item.price)}</p>
                     <p className="text-sm text-zinc-500">{item.description}</p>
                     {item.approx_pcs ? (
