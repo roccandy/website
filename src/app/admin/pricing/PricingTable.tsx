@@ -114,25 +114,81 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
   };
 
   const addSegment = (catId: string) => {
-    const catTiers = ordered.filter((t) => t.category_id === catId);
-    const lastMax = catTiers.length ? Number(catTiers[catTiers.length - 1].max_kg) : START_KG;
-    if (lastMax >= maxTotalKg) return;
-    const start = Math.min(maxTotalKg, lastMax);
-    const end = Math.min(maxTotalKg, start + 1);
+    if (!Number.isFinite(maxTotalKg) || maxTotalKg <= START_KG) return;
+    const catTiers = ordered
+      .filter((t) => t.category_id === catId)
+      .sort((a, b) => Number(a.min_kg) - Number(b.min_kg) || Number(a.max_kg) - Number(b.max_kg));
+    const lastTier = catTiers[catTiers.length - 1];
+
+    if (!lastTier) {
+      const newId = crypto.randomUUID();
+      setDraft((prev) => [
+        ...prev,
+        {
+          id: newId,
+          category_id: catId,
+          min_kg: START_KG,
+          max_kg: Math.min(maxTotalKg, START_KG + 1),
+          price: 0,
+          per_kg: false,
+          notes: "",
+          isNew: true,
+        },
+      ]);
+      setEditMode(true);
+      return;
+    }
+
+    const isLastSavedTier = lastTierIdByCategory.get(catId) === lastTier.id;
+    const resolvedLastMax = isLastSavedTier ? maxTotalKg : Number(lastTier.max_kg);
+
+    // Normal append when the current tiers do not yet reach the configured max.
+    if (resolvedLastMax < maxTotalKg) {
+      const start = Math.min(maxTotalKg, resolvedLastMax);
+      const end = Math.min(maxTotalKg, start + 1);
+      const newId = crypto.randomUUID();
+      setDraft((prev) => [
+        ...prev,
+        {
+          id: newId,
+          category_id: catId,
+          min_kg: start,
+          max_kg: end,
+          price: 0,
+          per_kg: false,
+          notes: "",
+          isNew: true,
+        },
+      ]);
+      setEditMode(true);
+      return;
+    }
+
+    // If already at max coverage, split the current last tier into two ranges.
+    const lastMin = Number(lastTier.min_kg);
+    const span = resolvedLastMax - lastMin;
+    if (span <= 0) return;
+
+    let splitPoint = Number((lastMin + span / 2).toFixed(2));
+    if (splitPoint <= lastMin) splitPoint = Number((lastMin + 0.1).toFixed(2));
+    if (splitPoint >= resolvedLastMax) splitPoint = Number((resolvedLastMax - 0.1).toFixed(2));
+    if (splitPoint <= lastMin || splitPoint >= resolvedLastMax) return;
+
     const newId = crypto.randomUUID();
-    setDraft((prev) => [
-      ...prev,
-      {
-        id: newId,
-        category_id: catId,
-        min_kg: start,
-        max_kg: end,
-        price: 0,
-        per_kg: false,
-        notes: "",
-        isNew: true,
-      },
-    ]);
+    setDraft((prev) =>
+      prev
+        .map((tier) => (tier.id === lastTier.id ? { ...tier, max_kg: splitPoint } : tier))
+        .concat({
+          id: newId,
+          category_id: catId,
+          min_kg: splitPoint,
+          max_kg: resolvedLastMax,
+          price: Number(lastTier.price),
+          per_kg: Boolean(lastTier.per_kg),
+          notes: lastTier.notes ?? "",
+          isNew: true,
+        })
+    );
     setEditMode(true);
   };
 
@@ -403,5 +459,4 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
     </>
   );
 }
-
 
