@@ -884,20 +884,13 @@ function CheckoutDatePicker({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:border-zinc-300"
+          className="w-full max-w-[220px] rounded border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-900 hover:border-zinc-300"
           aria-haspopup="dialog"
           aria-expanded={open}
+          aria-label="Select required date"
         >
-          Choose date
+          {value || "Select date"}
         </button>
-        <input
-          type="text"
-          value={value}
-          readOnly
-          inputMode="none"
-          placeholder="YYYY-MM-DD"
-          className="w-full max-w-[220px] rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-        />
       </div>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
