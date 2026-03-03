@@ -279,9 +279,6 @@ export default async function SettingsProductionPage() {
               {" "}
               This will appear on the website X months before the blocked period starts.
             </p>
-            <p className="text-xs text-zinc-500">
-              Date format example: <span className="font-semibold text-zinc-700">8th March 2025</span>.
-            </p>
           </div>
           <form action={updateBlockoutVisibilityWindow} className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
