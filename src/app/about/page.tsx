@@ -2,7 +2,6 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
@@ -59,7 +58,6 @@ export default async function AboutPage() {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="about-bg">
           <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">

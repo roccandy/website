@@ -1,7 +1,6 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { CheckoutSuccessClient } from "./CheckoutSuccessClient";
 
 export const revalidate = 0;
@@ -51,7 +50,6 @@ export default function CheckoutSuccessPage() {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="relative mx-auto max-w-3xl px-6 py-16">
           <div className="rounded-3xl border border-zinc-200 bg-white/90 p-8 text-center shadow-lg">

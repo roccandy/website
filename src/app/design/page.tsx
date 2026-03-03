@@ -13,7 +13,6 @@ import {
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
 
 export const revalidate = 0;
@@ -115,7 +114,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="relative pb-16">
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 z-0 h-[300px] w-[1400px] max-w-full -translate-x-1/2 bg-top bg-no-repeat bg-contain opacity-95 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" style={{ backgroundImage: "url('/landing/design-top.webp')" }} />

@@ -69,7 +69,6 @@ export default async function Home() {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="landing-bg -mt-8 pt-8">
           <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
@@ -82,6 +81,7 @@ export default async function Home() {
                 >
                   Personalised Rock Candy
                 </h1>
+                <ProductionBlockoutBanner />
                 <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
                   Branded, Wedding and Text Lollies
                 </h2>

@@ -1,7 +1,6 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { formatPremadeFlavors } from "@/lib/premadeCatalog";
 import {
   getColorPalette,
@@ -101,7 +100,6 @@ export default async function CheckoutPage() {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="relative mx-auto max-w-6xl space-y-10 px-6 py-10 md:py-14">
           <section className="space-y-3 text-center">

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { getPremadeCandies, getPremadeCandyById } from "@/lib/data";
 import {
@@ -129,7 +128,6 @@ export default async function PremadeItemPage({ params }: PageProps) {
             </div>
           </div>
         </div>
-        <ProductionBlockoutBanner />
 
         <div className="relative mx-auto max-w-6xl space-y-8 px-6 py-10 md:py-14">
           <a href="/pre-made-candy" className="inline-block text-sm font-semibold text-zinc-500 hover:text-zinc-900">

@@ -77,11 +77,6 @@ export default async function ProductionBlockoutBanner() {
   if (!message) return null;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 pt-3">
-      <div className="rounded-xl border border-[#ffb4c7] bg-[#fff3f7] px-4 py-2 text-center text-sm font-semibold normal-case text-[#b23b67] shadow-sm">
-        {message}
-      </div>
-    </div>
+    <p className="normal-case text-sm font-semibold text-[#b23b67]">{message}</p>
   );
 }
-
