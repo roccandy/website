@@ -17,6 +17,7 @@ type Props = {
   heartColor?: string;
   isInitials?: boolean;
   dimensions?: { width: number; height: number };
+  zoom?: number;
 };
 
 const sora = Sora({
@@ -30,6 +31,7 @@ const RING_INNER_R = 445;
 const RING_STROKE_R = (RING_OUTER_R + RING_INNER_R) / 2;
 const RING_STROKE_WIDTH = RING_OUTER_R - RING_INNER_R;
 const CANVAS_WIDTH = 1772;
+const CANVAS_HEIGHT = 1300;
 
 export function CandyPreview({
   designText,
@@ -45,6 +47,7 @@ export function CandyPreview({
   heartColor,
   isInitials,
   dimensions,
+  zoom = 1,
 }: Props) {
   const baseColor = colorOne || "#b7b7b7";
   const accentColor = colorTwo || colorOne || "#b7b7b7";
@@ -179,6 +182,12 @@ export function CandyPreview({
   );
 
   const previewSize = dimensions ?? previewDimensions;
+  const clampedZoom = Number.isFinite(zoom) ? Math.min(2, Math.max(1, zoom)) : 1;
+  const zoomedWidth = CANVAS_WIDTH / clampedZoom;
+  const zoomedHeight = CANVAS_HEIGHT / clampedZoom;
+  const viewBoxX = (CANVAS_WIDTH - zoomedWidth) / 2;
+  const viewBoxY = (CANVAS_HEIGHT - zoomedHeight) / 2;
+  const viewBox = `${viewBoxX} ${viewBoxY} ${zoomedWidth} ${zoomedHeight}`;
 
   return (
     <div className={`${sora.className} flex w-full items-center justify-center bg-white p-[0.1rem]`}>
@@ -190,7 +199,7 @@ export function CandyPreview({
         }}
       >
         <svg
-          viewBox="0 0 1772 1300"
+          viewBox={viewBox}
           xmlns="http://www.w3.org/2000/svg"
           style={{ width: "100%", height: "100%", display: "block" }}
           role="img"
@@ -259,16 +268,17 @@ export function CandyPreview({
           </g>
         </svg>
         {/* Text / logo overlay */}
-        <OverlayText
-          logoUrl={logoUrl}
-          lineOne={lineOne}
-        lineTwo={lineTwo}
-        designText={designText}
-        showHeart={showHeart}
-        textColor={textColorValue}
-        heartColor={heartColorValue}
-        isInitials={isInitials}
-      />
+      <OverlayText
+        logoUrl={logoUrl}
+        lineOne={lineOne}
+          lineTwo={lineTwo}
+          designText={designText}
+          showHeart={showHeart}
+          textColor={textColorValue}
+          heartColor={heartColorValue}
+          isInitials={isInitials}
+          viewBox={viewBox}
+        />
       </div>
     </div>
   );
@@ -283,9 +293,20 @@ type OverlayProps = {
   textColor: string;
   heartColor: string;
   isInitials?: boolean;
+  viewBox: string;
 };
 
-function OverlayText({ logoUrl, lineOne, lineTwo, designText, showHeart, textColor, heartColor, isInitials }: OverlayProps) {
+function OverlayText({
+  logoUrl,
+  lineOne,
+  lineTwo,
+  designText,
+  showHeart,
+  textColor,
+  heartColor,
+  isInitials,
+  viewBox,
+}: OverlayProps) {
   // Match the inner circle center in the SVG paths.
   const cx = 544.367;
   const cy = 659.802;
@@ -321,7 +342,7 @@ function OverlayText({ logoUrl, lineOne, lineTwo, designText, showHeart, textCol
 
   if (showHeart && !hasAnyText && !logoUrl) {
     return (
-      <svg className="pointer-events-none absolute inset-0" viewBox="0 0 1772 1300" xmlns="http://www.w3.org/2000/svg">
+      <svg className="pointer-events-none absolute inset-0" viewBox={viewBox} xmlns="http://www.w3.org/2000/svg">
         <g transform={heartTransform()}>
           <path
             d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
@@ -335,7 +356,7 @@ function OverlayText({ logoUrl, lineOne, lineTwo, designText, showHeart, textCol
   return (
     <svg
       className="pointer-events-none absolute inset-0"
-      viewBox="0 0 1772 1300"
+      viewBox={viewBox}
       xmlns="http://www.w3.org/2000/svg"
       style={{ fontFamily }}
     >

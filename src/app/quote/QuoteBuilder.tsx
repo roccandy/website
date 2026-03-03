@@ -1677,6 +1677,7 @@ export function QuoteBuilder({
                   textColor={previewTextColor}
                   isInitials={isWeddingInitials}
                   dimensions={{ width: 420, height: 312 }}
+                  zoom={1.3}
                 />
               </div>
             </div>
