@@ -100,18 +100,29 @@ export default async function AboutPage() {
 
               <p>
                 Our personalised candy creations are a true testament to the limitless possibilities of customization.
-                With Roc Candy, you have the freedom to design your own candy, tailored to match your unique style and
-                event theme. Choose from an array of vibrant colors, enticing flavors, and captivating shapes to
-                create a candy masterpiece that will leave a lasting impression on your guests. We will also match your
-                colour theme or logo colours as close to as possible.
+                With Roc Candy, you have the freedom to{" "}
+                <a href="/design" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  design your own candy
+                </a>
+                , tailored to match your unique style and event theme. Choose from an array of vibrant colors,
+                enticing flavors, and captivating shapes to create a candy masterpiece that will leave a lasting
+                impression on your guests. We will also match your colour theme or logo colours as close to as
+                possible.
               </p>
 
               <p>
-                Whether you're looking for elegant wedding favors, eye-catching promotional items, or simply a sweet
-                treat to brighten someone's day, Roc Candy has got you covered. Our candies are not only a feast for
-                the taste buds but also a feast for the eyes, designed to captivate and delight. We take pride in our
-                ability to turn ordinary candies into extraordinary creations, infused with the essence of your vision
-                and personality.
+                Whether you're looking for elegant{" "}
+                <a href="/design?type=weddings" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  wedding favors
+                </a>
+                , eye-catching{" "}
+                <a href="/design?type=branded" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  promotional items
+                </a>
+                , or simply a sweet treat to brighten someone's day, Roc Candy has got you covered. Our candies are
+                not only a feast for the taste buds but also a feast for the eyes, designed to captivate and delight.
+                We take pride in our ability to turn ordinary candies into extraordinary creations, infused with the
+                essence of your vision and personality.
               </p>
 
               <p>
@@ -141,6 +152,13 @@ export default async function AboutPage() {
                   Text candy designer
                 </a>{" "}
                 and let the confectionery adventure begin!
+              </p>
+              <p>
+                You can also browse our{" "}
+                <a href="/pre-made-candy" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+                  pre-made candy range
+                </a>{" "}
+                for ready-to-order options.
               </p>
             </div>
           </div>
