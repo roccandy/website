@@ -1273,7 +1273,7 @@ export function QuoteBuilder({
               {needsSubtypeSelection ? (
                 <p className="text-sm text-zinc-500 text-center">Select your order type</p>
               ) : result ? (
-                <div className="space-y-2">
+                <div className="relative space-y-2">
                   {(() => {
                     const subtotal = Math.max(0, result.total - result.transactionFee);
                     return (
@@ -1304,7 +1304,7 @@ export function QuoteBuilder({
                     );
                   })()}
                   {showBreakdown && (
-                    <div className="space-y-1 text-sm text-zinc-700">
+                    <div className="absolute left-0 right-0 top-full z-40 mt-2 space-y-1 rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-700 shadow-lg">
                       {result.items.map((item: QuoteItem) => (
                         <div key={item.label} className="flex justify-between border-b border-zinc-100 pb-1">
                           <span>{item.label}</span>
@@ -1535,9 +1535,23 @@ export function QuoteBuilder({
                       type="checkbox"
                       checked={labelsOptIn}
                       onChange={(e) => setLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[rgb(247,228,236)] accent-[rgb(247,228,236)] focus:ring-[rgb(247,228,236)]"
-                      style={{ accentColor: "rgb(247,228,236)" }}
+                      className="peer sr-only"
                     />
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)]"
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        className="h-3 w-3 text-[rgb(124,121,131)] opacity-0 transition-opacity peer-checked:opacity-100"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </span>
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
                       <span className="block text-xs text-zinc-500">
@@ -1633,9 +1647,23 @@ export function QuoteBuilder({
                       type="checkbox"
                       checked={ingredientLabelsOptIn}
                       onChange={(e) => setIngredientLabelsOptIn(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 rounded border-zinc-300 text-[rgb(247,228,236)] accent-[rgb(247,228,236)] focus:ring-[rgb(247,228,236)]"
-                      style={{ accentColor: "rgb(247,228,236)" }}
+                      className="peer sr-only"
                     />
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)]"
+                    >
+                      <svg
+                        viewBox="0 0 20 20"
+                        className="h-3 w-3 text-[rgb(124,121,131)] opacity-0 transition-opacity peer-checked:opacity-100"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                    </span>
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
                       <span className="block text-xs text-zinc-500">
