@@ -5,7 +5,7 @@ import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { useCart, type CartItem, type CustomCartItem, type PremadeCartItem } from "@/components/CartProvider";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
-import type { ColorPaletteRow, LabelType, QuoteBlock } from "@/lib/data";
+import type { ColorPaletteRow, LabelType, PackagingOption, QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PremadeSuggestion = {
@@ -36,6 +36,7 @@ type Props = {
   palette: ColorPaletteRow[];
   quoteBlocks: QuoteBlock[];
   labelTypes: LabelType[];
+  packagingOptions: PackagingOption[];
   urgencyFeePercent: number;
   urgencyPeriodDays: number;
   transactionFeePercent: number;
@@ -533,6 +534,7 @@ function CartItemRow({
   dueDate,
   paletteMap,
   labelTypeMap,
+  maxPackages,
 }: {
   item: CartItem;
   onRemove: () => void;
@@ -541,6 +543,7 @@ function CartItemRow({
   dueDate?: string;
   paletteMap?: Map<string, string>;
   labelTypeMap?: Map<string, LabelType>;
+  maxPackages?: number | null;
 }) {
   if (item.type === "premade") {
     return (
@@ -643,7 +646,22 @@ function CartItemRow({
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-3">
-      <div className="flex items-start justify-end">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-zinc-500">
+            Packages
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={maxPackages ?? undefined}
+            value={item.quantity}
+            onChange={(event) => onQuantityChange?.(Number(event.target.value))}
+            className="w-20 rounded border border-zinc-200 px-2 py-1 text-sm"
+            aria-label={`Packages for ${item.title || "custom order"}`}
+          />
+          {maxPackages ? <span className="text-xs text-zinc-500">/ {maxPackages} max</span> : null}
+        </div>
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold text-zinc-900">
             {pricing?.total
@@ -948,6 +966,7 @@ export function CheckoutClient({
   palette,
   quoteBlocks,
   labelTypes,
+  packagingOptions,
   urgencyFeePercent,
   urgencyPeriodDays,
   transactionFeePercent,
@@ -955,6 +974,16 @@ export function CheckoutClient({
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const paletteMap = useMemo(() => buildPaletteLabelMap(palette), [palette]);
   const labelTypeMap = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
+  const packagingMaxByOptionId = useMemo(() => {
+    const map = new Map<string, number>();
+    packagingOptions.forEach((option) => {
+      const maxPackages = Number(option.max_packages);
+      if (option.id && Number.isFinite(maxPackages) && maxPackages > 0) {
+        map.set(option.id, Math.floor(maxPackages));
+      }
+    });
+    return map;
+  }, [packagingOptions]);
   const [dueDate, setDueDate] = useState("");
   const [pickup, setPickup] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -1012,6 +1041,26 @@ export function CheckoutClient({
     return [];
   };
 
+  const resolveCustomMaxPackages = (item: CustomCartItem) => {
+    const fromItem = Number(item.maxPackages);
+    if (Number.isFinite(fromItem) && fromItem > 0) return Math.floor(fromItem);
+    if (item.packagingOptionId) {
+      const fromOption = packagingMaxByOptionId.get(item.packagingOptionId);
+      if (fromOption && fromOption > 0) return fromOption;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    customItems.forEach((item) => {
+      const maxPackages = resolveCustomMaxPackages(item);
+      if (!maxPackages) return;
+      if (item.quantity > maxPackages) {
+        updateQuantity(item.id, maxPackages);
+      }
+    });
+  }, [customItems, updateQuantity, packagingMaxByOptionId]);
+
   const fetchPricing = async (item: CustomCartItem, date?: string) => {
     if (!item.categoryId || !item.packagingOptionId || !item.quantity) return null;
     const extras = buildExtrasForItem(item);
@@ -1036,11 +1085,7 @@ export function CheckoutClient({
 
   useEffect(() => {
     let active = true;
-    const needsReprice =
-      Boolean(dueDate) ||
-      customItems.some((item) => item.totalPrice == null || item.totalWeightKg == null);
-
-    if (!customItems.length || !needsReprice) {
+    if (!customItems.length) {
       setPricingOverrides({});
       setPricingError(null);
       setPricingLoading(false);
@@ -1314,9 +1359,19 @@ export function CheckoutClient({
                     pricing={pricingOverrides[item.id]}
                     dueDate={dueDate || undefined}
                     onRemove={() => removeItem(item.id)}
-                    onQuantityChange={(qty) => updateQuantity(item.id, qty)}
+                    onQuantityChange={(qty) => {
+                      const nextQtyRaw = Number.isFinite(qty) ? Math.floor(qty) : 1;
+                      const nextQty = Math.max(1, nextQtyRaw);
+                      if (item.type === "custom") {
+                        const maxPackages = resolveCustomMaxPackages(item);
+                        updateQuantity(item.id, maxPackages ? Math.min(nextQty, maxPackages) : nextQty);
+                        return;
+                      }
+                      updateQuantity(item.id, nextQty);
+                    }}
                     paletteMap={paletteMap}
                     labelTypeMap={labelTypeMap}
+                    maxPackages={item.type === "custom" ? resolveCustomMaxPackages(item) : null}
                   />
                 ))}
               </div>

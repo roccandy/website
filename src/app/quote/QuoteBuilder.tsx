@@ -1267,9 +1267,13 @@ export function QuoteBuilder({
 
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">
         {/* Price sidebar */}
-        <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full">
-          <div ref={priceStickyRef} className="w-fit max-w-full">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg">
+        <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
+          <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
+            <div
+              className={`relative border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg ${
+                showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
+              }`}
+            >
               {needsSubtypeSelection ? (
                 <p className="text-sm text-zinc-500 text-center">Select your order type</p>
               ) : result ? (
@@ -1303,23 +1307,6 @@ export function QuoteBuilder({
                       </div>
                     );
                   })()}
-                  {showBreakdown && (
-                    <div className="space-y-1 border-t border-zinc-200 pt-2 text-sm text-zinc-700">
-                      {result.items.map((item: QuoteItem) => (
-                        <div key={item.label} className="flex justify-between border-b border-zinc-100 pb-1">
-                          <span>{item.label}</span>
-                          <span>${item.amount.toFixed(2)}</span>
-                        </div>
-                      ))}
-                      <div className="mt-1 border-t border-zinc-200 pt-1 text-zinc-700">
-                        <p className="text-[11px] text-zinc-500">Subtotal excludes transaction fee.</p>
-                        <div className="flex justify-between text-xs">
-                          <span>Total with fee</span>
-                          <span>${result.total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <p className="text-sm text-zinc-500">
@@ -1328,6 +1315,25 @@ export function QuoteBuilder({
               )}
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
+            {result && showBreakdown && (
+              <div className="absolute left-0 right-0 top-[calc(100%-1px)] z-40 rounded-b-2xl border border-zinc-200 border-t-0 bg-white px-3 pb-3 pt-2 shadow-lg">
+                <div className="space-y-1 text-sm text-zinc-700">
+                  {result.items.map((item: QuoteItem) => (
+                    <div key={item.label} className="flex justify-between border-b border-zinc-100 pb-1">
+                      <span>{item.label}</span>
+                      <span>${item.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="mt-1 border-t border-zinc-200 pt-1 text-zinc-700">
+                    <p className="text-[11px] text-zinc-500">Subtotal excludes transaction fee.</p>
+                    <div className="flex justify-between text-xs">
+                      <span>Total with fee</span>
+                      <span>${result.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         {/* Step 1: Subtype */}
@@ -2039,6 +2045,7 @@ export function QuoteBuilder({
                       description,
                       categoryId,
                       packagingOptionId: selectedOptionId,
+                      maxPackages: selectedOption?.max_packages ?? null,
                       totalPrice: result?.total ?? null,
                       totalWeightKg,
                       quantity: selectionQty,

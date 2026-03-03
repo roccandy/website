@@ -46,6 +46,7 @@ export type CustomCartItem = {
   previewPngDataUrl?: string | null;
   designType?: string | null;
   designText?: string | null;
+  maxPackages?: number | null;
   jacketExtras?: { jacket: "rainbow" | "two_colour" | "pinstripe" }[];
 };
 
