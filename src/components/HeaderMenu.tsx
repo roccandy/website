@@ -38,6 +38,12 @@ function getOrderTypeLine(value?: string | null) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatPremadeFlavorLabel(value?: string | null) {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return "";
+  return trimmed.toLowerCase() === "mixed" ? "Mixed Flavours" : trimmed;
+}
+
 export default function HeaderMenu() {
   const { items, clearCart, updateQuantity, removeItem } = useCart();
   const [open, setOpen] = useState(false);
@@ -172,7 +178,7 @@ export default function HeaderMenu() {
                                   <>
                                     {weightLabel ? `${weightLabel} ` : ""}
                                     {title}
-                                    {item.flavor ? ` | ${item.flavor}` : ""}
+                                    {item.flavor ? ` | ${formatPremadeFlavorLabel(item.flavor)}` : ""}
                                   </>
                                 ) : (
                                   <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-0.5 px-1 py-0 text-left text-[12px] leading-tight">
