@@ -8,6 +8,7 @@ import { useCart } from "@/components/CartProvider";
 type PremadeInput = {
   premadeId: string;
   name: string;
+  flavor?: string;
   price: number;
   weight_g: number;
   imageUrl?: string;

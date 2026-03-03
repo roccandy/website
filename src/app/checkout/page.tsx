@@ -1,6 +1,7 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import { formatPremadeFlavors } from "@/lib/premadeCatalog";
 import {
   getColorPalette,
   getLabelTypes,
@@ -47,6 +48,7 @@ export default async function CheckoutPage() {
     .map((item) => ({
       id: item.id,
       name: item.name,
+      flavorLabel: formatPremadeFlavors(item.flavors ?? null),
       description: item.description,
       price: Number(item.price),
       weight_g: Number(item.weight_g),

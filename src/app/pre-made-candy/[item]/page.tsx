@@ -158,6 +158,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
                 item={{
                   premadeId: item.id,
                   name: item.name,
+                  flavor: flavorLabel || undefined,
                   price: Number(item.price),
                   weight_g: Number(item.weight_g),
                   imageUrl,

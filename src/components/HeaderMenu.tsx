@@ -172,6 +172,7 @@ export default function HeaderMenu() {
                                   <>
                                     {weightLabel ? `${weightLabel} ` : ""}
                                     {title}
+                                    {` | ${item.flavor || "Flavour"}`}
                                   </>
                                 ) : (
                                   <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 overflow-x-auto px-1 py-0 text-center text-[12px] leading-tight">

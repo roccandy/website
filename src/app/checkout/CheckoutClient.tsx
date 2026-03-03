@@ -11,6 +11,7 @@ import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 type PremadeSuggestion = {
   id: string;
   name: string;
+  flavorLabel?: string;
   description: string;
   price: number;
   weight_g: number;
@@ -806,6 +807,7 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
                       item={{
                         premadeId: item.id,
                         name: item.name,
+                        flavor: item.flavorLabel || undefined,
                         price: item.price,
                         weight_g: item.weight_g,
                         imageUrl: item.imageUrl,

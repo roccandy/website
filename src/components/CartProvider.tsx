@@ -9,6 +9,7 @@ export type PremadeCartItem = {
   type: "premade";
   premadeId: string;
   name: string;
+  flavor?: string;
   price: number;
   weight_g: number;
   imageUrl?: string;
@@ -113,6 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           type: "premade",
           premadeId: item.premadeId,
           name: item.name,
+          flavor: item.flavor,
           price: item.price,
           weight_g: item.weight_g,
           imageUrl: item.imageUrl,
