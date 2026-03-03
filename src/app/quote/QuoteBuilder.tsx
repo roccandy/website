@@ -1752,6 +1752,19 @@ export function QuoteBuilder({
                           >
                             {labelFileName ? "Change file" : "Choose file"}
                           </label>
+                          {labelImageUrl ? (
+                            labelImageUrl.startsWith("data:image/") ? (
+                              <img
+                                src={labelImageUrl}
+                                alt="Label preview"
+                                className="h-10 w-10 rounded border border-zinc-200 object-cover"
+                              />
+                            ) : labelImageUrl.startsWith("data:application/pdf") ? (
+                              <span className="inline-flex h-10 min-w-10 items-center justify-center rounded border border-zinc-200 bg-zinc-50 px-2 text-[10px] font-semibold text-zinc-600">
+                                PDF
+                              </span>
+                            ) : null
+                          ) : null}
                           {labelFileName && (
                             <span className="text-xs text-zinc-500" title={labelFileName}>
                               {labelFileName}
