@@ -162,7 +162,7 @@ export default function HeaderMenu() {
                               key={item.id}
                               className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 overflow-hidden rounded-lg border border-zinc-100 p-2"
                             >
-                              <span className="flex min-w-0 flex-col items-center justify-center text-center font-[var(--font-heading)] text-[12px] font-medium text-zinc-700">
+                              <span className="flex min-w-0 flex-col items-start justify-center text-left font-[var(--font-heading)] text-[12px] font-medium text-zinc-700">
                                 <span
                                   className="mb-1 inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.06em] text-zinc-600"
                                 >
@@ -175,14 +175,14 @@ export default function HeaderMenu() {
                                     {` | ${item.flavor || "Flavour"}`}
                                   </>
                                 ) : (
-                                  <span className="mx-auto inline-flex min-w-0 max-w-full flex-col items-center gap-0.5 px-1 py-0 text-center text-[12px] leading-tight">
+                                  <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-0.5 px-1 py-0 text-left text-[12px] leading-tight">
                                     <span className="block w-full truncate">{customLineOne}</span>
                                     <span className="block w-full truncate">{customLineTwo}</span>
                                     <span className="block w-full truncate">{customLineThree}</span>
                                   </span>
                                 )}
                               </span>
-                              <div className="flex max-w-[190px] shrink-0 flex-wrap items-center justify-end gap-2">
+                              <div className="flex max-w-[220px] shrink-0 items-center justify-end gap-1.5 whitespace-nowrap">
                                 {isPremade ? (
                                   <>
                                     <button
