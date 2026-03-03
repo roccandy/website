@@ -110,7 +110,7 @@ export default function HeaderMenu() {
                 onClick={closeDrawer}
               />
               <div
-                className={`absolute right-0 top-0 h-full w-[360px] max-w-[92vw] border-l border-zinc-200 bg-white shadow-2xl transition-transform duration-300 ${
+                className={`absolute right-0 top-0 h-full w-[420px] max-w-[96vw] border-l border-zinc-200 bg-white shadow-2xl transition-transform duration-300 ${
                   open ? "translate-x-0" : "translate-x-full"
                 }`}
               >
@@ -160,9 +160,9 @@ export default function HeaderMenu() {
                           return (
                             <li
                               key={item.id}
-                              className="flex items-center justify-between gap-2 rounded-lg border border-zinc-100 p-2"
+                              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 overflow-hidden rounded-lg border border-zinc-100 p-2"
                             >
-                              <span className="flex flex-1 flex-col items-center justify-center text-center font-[var(--font-heading)] text-[12px] font-medium text-zinc-700">
+                              <span className="flex min-w-0 flex-col items-center justify-center text-center font-[var(--font-heading)] text-[12px] font-medium text-zinc-700">
                                 <span
                                   className="mb-1 inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.06em] text-zinc-600"
                                 >
@@ -175,14 +175,14 @@ export default function HeaderMenu() {
                                     {` | ${item.flavor || "Flavour"}`}
                                   </>
                                 ) : (
-                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 overflow-x-auto px-1 py-0 text-center text-[12px] leading-tight">
-                                    <span className="whitespace-nowrap">{customLineOne}</span>
-                                    <span className="whitespace-nowrap">{customLineTwo}</span>
-                                    <span className="whitespace-nowrap">{customLineThree}</span>
+                                  <span className="mx-auto inline-flex min-w-0 max-w-full flex-col items-center gap-0.5 px-1 py-0 text-center text-[12px] leading-tight">
+                                    <span className="block w-full truncate">{customLineOne}</span>
+                                    <span className="block w-full truncate">{customLineTwo}</span>
+                                    <span className="block w-full truncate">{customLineThree}</span>
                                   </span>
                                 )}
                               </span>
-                              <div className="flex items-center gap-2">
+                              <div className="flex max-w-[190px] shrink-0 flex-wrap items-center justify-end gap-2">
                                 {isPremade ? (
                                   <>
                                     <button
