@@ -123,47 +123,43 @@ export default function SiteFooter() {
 
       <div className="border-t border-[#d8d8d1]">
         <div className="mx-auto max-w-6xl px-6 py-7">
-          <div className="grid gap-5 md:grid-cols-2 md:items-center">
-            <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 md:justify-start">
-              {infoLinks.map((link) => (
-                <a
-                  key={`info-${link.label}`}
-                  href={link.href}
-                  className="normal-case text-[16px] text-[#ff6f95] transition hover:text-[#ff4f80]"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-
-            <nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 md:justify-end">
-              {LEGAL_LINKS.map((link) => (
-                <a
-                  key={`legal-${link.label}`}
-                  href={link.href}
-                  className="normal-case text-[16px] text-[#ff6f95] transition hover:text-[#ff4f80]"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-          </div>
-
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            {PAYMENT_BADGES.map((badge) => (
-              <span
-                key={badge.label}
-                className="inline-flex h-8 min-w-[56px] items-center justify-center rounded-sm border border-[#bcbcb4] bg-[#d5d5d0] px-2"
-                title={badge.label}
-                aria-label={badge.label}
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {infoLinks.map((link) => (
+              <a
+                key={`info-${link.label}`}
+                href={link.href}
+                className="normal-case text-[16px] text-[#ff6f95] transition hover:text-[#ff4f80]"
               >
-                <img
-                  src={badge.src}
-                  alt={badge.label}
-                  className={`h-3.5 w-auto object-contain ${badge.iconClassName ?? ""}`}
-                  loading="lazy"
-                />
-              </span>
+                {link.label}
+              </a>
+            ))}
+
+            <div className="mx-1 flex flex-wrap items-center justify-center gap-2">
+              {PAYMENT_BADGES.map((badge) => (
+                <span
+                  key={badge.label}
+                  className="inline-flex h-8 min-w-[56px] items-center justify-center rounded-sm border border-[#bcbcb4] bg-[#d5d5d0] px-2"
+                  title={badge.label}
+                  aria-label={badge.label}
+                >
+                  <img
+                    src={badge.src}
+                    alt={badge.label}
+                    className={`h-3.5 w-auto object-contain ${badge.iconClassName ?? ""}`}
+                    loading="lazy"
+                  />
+                </span>
+              ))}
+            </div>
+
+            {LEGAL_LINKS.map((link) => (
+              <a
+                key={`legal-${link.label}`}
+                href={link.href}
+                className="normal-case text-[16px] text-[#ff6f95] transition hover:text-[#ff4f80]"
+              >
+                {link.label}
+              </a>
             ))}
           </div>
 
