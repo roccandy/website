@@ -543,6 +543,7 @@ function formatColorList(values: Array<string | null | undefined>, paletteMap?: 
 function CartItemRow({
   item,
   onRemove,
+  onEditCustom,
   onQuantityChange,
   pricing,
   dueDate,
@@ -552,6 +553,7 @@ function CartItemRow({
 }: {
   item: CartItem;
   onRemove: () => void;
+  onEditCustom?: () => void;
   onQuantityChange?: (qty: number) => void;
   pricing?: PricingBreakdown;
   dueDate?: string;
@@ -680,6 +682,16 @@ function CartItemRow({
           {maxPackages ? <span className="text-xs text-zinc-500">/ {maxPackages} max</span> : null}
         </div>
         <div className="flex items-center gap-2">
+          {item.type === "custom" ? (
+            <button
+              type="button"
+              data-neutral-button
+              onClick={onEditCustom}
+              className="rounded-md px-3 py-1 text-xs font-semibold"
+            >
+              Edit
+            </button>
+          ) : null}
           <p className="text-sm font-semibold text-zinc-900">
             {pricing?.total
               ? formatMoney(pricing.total)
@@ -1383,6 +1395,9 @@ export function CheckoutClient({
                     pricing={pricingOverrides[item.id]}
                     dueDate={dueDate || undefined}
                     onRemove={() => removeItem(item.id)}
+                    onEditCustom={
+                      item.type === "custom" ? () => window.location.assign(`/design?edit=${encodeURIComponent(item.id)}`) : undefined
+                    }
                     onQuantityChange={(qty) => {
                       const nextQtyRaw = Number.isFinite(qty) ? Math.floor(qty) : 1;
                       const nextQty = Math.max(1, nextQtyRaw);

@@ -14,7 +14,7 @@ import type {
 } from "@/lib/data";
 import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
-import { useCart } from "@/components/CartProvider";
+import { useCart, type CustomCartItem } from "@/components/CartProvider";
 
 type OrderTypeId = "weddings" | "text" | "branded";
 
@@ -81,6 +81,28 @@ function normalizeOrderType(value?: string | null): OrderTypeId | undefined {
     return value as OrderTypeId;
   }
   return undefined;
+}
+
+function inferOrderTypeFromCategory(value?: string | null): OrderTypeId | undefined {
+  if (!value) return undefined;
+  if (value === "weddings" || value.startsWith("weddings-")) return "weddings";
+  if (value === "text" || value.startsWith("custom-")) return "text";
+  if (value === "branded") return "branded";
+  return normalizeOrderType(value);
+}
+
+function splitWeddingDesign(value?: string | null) {
+  const safe = (value || "").trim();
+  if (!safe) return { lineOne: "", lineTwo: "" };
+  const heartSplit = safe.split(/\s*\u2764\uFE0F?\s*/);
+  if (heartSplit.length >= 2) {
+    return { lineOne: heartSplit[0].trim(), lineTwo: heartSplit.slice(1).join(" ").trim() };
+  }
+  const ampSplit = safe.split(/\s*&\s*/);
+  if (ampSplit.length >= 2) {
+    return { lineOne: ampSplit[0].trim(), lineTwo: ampSplit.slice(1).join(" ").trim() };
+  }
+  return { lineOne: safe, lineTwo: "" };
 }
 
 function getPaletteHex(
@@ -372,7 +394,17 @@ export function QuoteBuilder({
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { addCustomItem } = useCart();
+  const { items, addCustomItem, updateCustomItem } = useCart();
+  const editItemId = searchParams?.get("edit")?.trim() ?? "";
+  const editItem = useMemo(
+    () =>
+      editItemId
+        ? (items.find((item): item is CustomCartItem => item.type === "custom" && item.id === editItemId) ?? null)
+        : null,
+    [items, editItemId]
+  );
+  const isEditing = Boolean(editItemId && editItem);
+  const appliedEditRef = useRef<string | null>(null);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
   const ingredientLabelType = useMemo(() => {
@@ -575,6 +607,97 @@ export function QuoteBuilder({
       if (next) setRainbowJacket(false);
       return next;
     });
+
+  useEffect(() => {
+    if (!editItemId || !editItem) return;
+    if (appliedEditRef.current === editItemId) return;
+    appliedEditRef.current = editItemId;
+
+    const fallbackCategory =
+      (editItem.categoryId && categories.some((category) => category.id === editItem.categoryId)
+        ? editItem.categoryId
+        : null) ||
+      (editItem.designType && categories.some((category) => category.id === editItem.designType)
+        ? editItem.designType
+        : null) ||
+      "";
+    const nextOrderType = inferOrderTypeFromCategory(fallbackCategory || editItem.designType || orderType) ?? orderType;
+
+    hasManualSubtypeRef.current = true;
+    setOrderType(nextOrderType);
+    setCategoryId(nextOrderType === "branded" ? "branded" : fallbackCategory);
+
+    const matchedPackaging = editItem.packagingOptionId
+      ? packagingOptions.find((option) => option.id === editItem.packagingOptionId)
+      : null;
+    if (matchedPackaging) {
+      setSelectionType(matchedPackaging.type);
+      setSelectionSize(matchedPackaging.size);
+    }
+    setSelectionQtyInput(String(Math.max(1, editItem.quantity || 1)));
+    setJarLidColor(editItem.jarLidColor || "");
+
+    const labelsEnabled = Boolean((editItem.labelsCount ?? 0) > 0 || editItem.labelImageUrl || editItem.labelTypeId);
+    setLabelsOptIn(labelsEnabled);
+    setLabelTypeId(editItem.labelTypeId || "");
+    setLabelCountOverride(Math.max(0, editItem.labelsCount ?? 0));
+    setLabelImageUrl(editItem.labelImageUrl || "");
+    setLabelFileName("");
+    setLabelImageError(null);
+    setIngredientLabelsOptIn(Boolean(editItem.ingredientLabelsOptIn));
+
+    const hasJacketExtra = (name: "rainbow" | "two_colour" | "pinstripe") =>
+      Boolean(editItem.jacketExtras?.some((extra) => extra.jacket === name));
+    const jacketValue = editItem.jacket || "";
+    setRainbowJacket(jacketValue === "rainbow" || hasJacketExtra("rainbow"));
+    setTwoColourJacket(
+      jacketValue === "two_colour" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("two_colour")
+    );
+    setPinstripeJacket(
+      jacketValue === "pinstripe" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("pinstripe")
+    );
+    setJacketColorOne(editItem.jacketColorOne || "");
+    setJacketColorTwo(editItem.jacketColorTwo || "");
+    setTextColor(editItem.textColor || "");
+    setHeartColor(editItem.heartColor || "");
+    setFlavor(editItem.flavor || "");
+    setLogoUrl(editItem.logoUrl || "");
+    setLogoError(null);
+
+    const designSource = (editItem.designText || editItem.title || "").trim();
+    const parsedWedding = splitWeddingDesign(designSource);
+    if (nextOrderType === "weddings") {
+      const useInitials = fallbackCategory === "weddings-initials";
+      if (useInitials) {
+        setInitialOne(parsedWedding.lineOne.slice(0, 1).toUpperCase());
+        setInitialTwo(parsedWedding.lineTwo.slice(0, 1).toUpperCase());
+        setNameOne("");
+        setNameTwo("");
+      } else {
+        setNameOne(parsedWedding.lineOne.slice(0, 8).toUpperCase());
+        setNameTwo(parsedWedding.lineTwo.slice(0, 8).toUpperCase());
+        setInitialOne("");
+        setInitialTwo("");
+      }
+      setCustomText("");
+      setOrgName("");
+    } else if (nextOrderType === "text") {
+      setCustomText(designSource);
+      setInitialOne("");
+      setInitialTwo("");
+      setNameOne("");
+      setNameTwo("");
+      setOrgName("");
+    } else if (nextOrderType === "branded") {
+      setOrgName(designSource);
+      setCustomText("");
+      setInitialOne("");
+      setInitialTwo("");
+      setNameOne("");
+      setNameTwo("");
+    }
+  }, [categories, editItem, editItemId, orderType, packagingOptions]);
+
   useEffect(() => {
     const urlOrderType =
       typeof window !== "undefined"
@@ -2040,7 +2163,7 @@ export function QuoteBuilder({
                     const previewSvg = capturePreviewSvg();
                     const previewPngDataUrl = await capturePreviewPngDataUrl(previewSvg);
 
-                    addCustomItem({
+                    const customItemPayload: Omit<CustomCartItem, "id" | "type"> = {
                       title: title || mainTitle,
                       description,
                       categoryId,
@@ -2068,7 +2191,12 @@ export function QuoteBuilder({
                       designType: categoryId || orderType,
                       designText: title || mainTitle,
                       jacketExtras,
-                    });
+                    };
+                    if (isEditing && editItem) {
+                      updateCustomItem(editItem.id, customItemPayload);
+                    } else {
+                      addCustomItem(customItemPayload);
+                    }
                     router.push("/checkout");
                   } catch (addError) {
                     const message = addError instanceof Error ? addError.message : "Unable to add item to cart.";
@@ -2085,7 +2213,7 @@ export function QuoteBuilder({
                       : "border border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-zinc-300"
                 }`}
               >
-                {placing ? "Adding..." : "Continue to cart"}
+                {placing ? (isEditing ? "Updating..." : "Adding...") : isEditing ? "Update cart item" : "Continue to cart"}
               </button>
             </div>
             {placeError && <p className="mt-2 text-xs text-red-600">{placeError}</p>}

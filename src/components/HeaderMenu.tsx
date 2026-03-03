@@ -142,7 +142,9 @@ export default function HeaderMenu() {
                           const customLineTwo = !isPremade
                             ? `${item.quantity} x ${formatPackagingLabel(item.packagingLabel)}`
                             : "";
-                          const customLineThree = !isPremade ? title || "Custom Order" : "";
+                          const customLineThree = !isPremade
+                            ? `${title || "Custom Order"}${item.flavor ? ` | ${item.flavor}` : ""}`
+                            : "";
                           const customMaxPackages = !isPremade
                             ? (() => {
                                 const raw = Number(item.maxPackages);
@@ -166,7 +168,7 @@ export default function HeaderMenu() {
                                     {title}
                                   </>
                                 ) : (
-                                  <span className="inline-flex w-fit max-w-full flex-col gap-0.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-left text-[11px] leading-tight">
+                                  <span className="mx-auto inline-flex w-fit max-w-full flex-col items-center gap-0.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-center text-[11px] leading-tight">
                                     <span>{customLineOne}</span>
                                     <span>{customLineTwo}</span>
                                     <span>{customLineThree}</span>
@@ -234,6 +236,15 @@ export default function HeaderMenu() {
                                     </button>
                                   </>
                                 )}
+                                {!isPremade ? (
+                                  <a
+                                    href={`/design?edit=${encodeURIComponent(item.id)}`}
+                                    onClick={closeDrawer}
+                                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
+                                  >
+                                    Edit
+                                  </a>
+                                ) : null}
                                 <button
                                   type="button"
                                   onClick={() => {

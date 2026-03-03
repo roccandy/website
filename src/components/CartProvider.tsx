@@ -56,6 +56,7 @@ type CartContextValue = {
   items: CartItem[];
   addPremadeItem: (item: Omit<PremadeCartItem, "id" | "type" | "quantity"> & { quantity?: number }) => void;
   addCustomItem: (item: Omit<CustomCartItem, "id" | "type">) => void;
+  updateCustomItem: (id: string, updates: Partial<Omit<CustomCartItem, "id" | "type">>) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -134,6 +135,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, []);
 
+  const updateCustomItem = useCallback((id: string, updates: Partial<Omit<CustomCartItem, "id" | "type">>) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id || item.type !== "custom") return item;
+        return {
+          ...item,
+          ...updates,
+        };
+      })
+    );
+  }, []);
+
   const updateQuantity = useCallback((id: string, quantity: number) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item))
@@ -149,8 +162,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<CartContextValue>(
-    () => ({ items, addPremadeItem, addCustomItem, updateQuantity, removeItem, clearCart }),
-    [items, addPremadeItem, addCustomItem, updateQuantity, removeItem, clearCart]
+    () => ({ items, addPremadeItem, addCustomItem, updateCustomItem, updateQuantity, removeItem, clearCart }),
+    [items, addPremadeItem, addCustomItem, updateCustomItem, updateQuantity, removeItem, clearCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
