@@ -1511,7 +1511,7 @@ export function QuoteBuilder({
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
                       <span className="block text-xs text-zinc-500">
-                        Add printed labels to your packaging.
+                        Add a custom printed label or logo to your packaging.
                       </span>
                     </span>
                   </label>
@@ -1610,12 +1610,8 @@ export function QuoteBuilder({
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
                       <span className="block text-xs text-zinc-500">
                         {ingredientLabelType ? formatLabelTypeLabel(ingredientLabelType) : "Circle 30mm"}
+                        {ingredientLabelPrice > 0 ? ` • +$${ingredientLabelPrice.toFixed(2)} each` : ""}
                       </span>
-                      {ingredientLabelPrice > 0 && (
-                        <span className="block text-xs text-zinc-500">
-                          +${ingredientLabelPrice.toFixed(2)} each
-                        </span>
-                      )}
                     </span>
                   </label>
                   {!ingredientPreviewFailed && (
