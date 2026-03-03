@@ -156,12 +156,20 @@ export default function HeaderMenu() {
                             if (!customMaxPackages) return safeNext;
                             return Math.min(safeNext, customMaxPackages);
                           };
+                          const itemTypeLabel = isPremade ? "Premade" : "Custom order";
                           return (
                             <li
                               key={item.id}
                               className="flex items-center justify-between gap-2 rounded-lg border border-zinc-100 p-2"
                             >
                               <span className={`flex-1 text-xs font-semibold ${isPremade ? "text-[#ff6f95]" : "text-zinc-800"}`}>
+                                <span
+                                  className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.06em] ${
+                                    isPremade ? "bg-[#fde4ec] text-[#ff6f95]" : "bg-zinc-100 text-zinc-600"
+                                  }`}
+                                >
+                                  {itemTypeLabel}
+                                </span>
                                 {isPremade ? (
                                   <>
                                     {weightLabel ? `${weightLabel} ` : ""}
