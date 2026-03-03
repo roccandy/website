@@ -1424,19 +1424,6 @@ export function CheckoutClient({
             <h3 className="text-lg font-semibold normal-case text-zinc-900">Date & delivery</h3>
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-[280px] flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  <p>Date required</p>
-                  <div className="mt-2">
-                    <CheckoutDatePicker
-                      value={dueDate}
-                      onChange={setDueDate}
-                      blocks={quoteBlocks}
-                      urgencyFeePercent={urgencyFeePercent}
-                      urgencyPeriodDays={urgencyPeriodDays}
-                      showUrgencyNotice={hasCustomItems}
-                    />
-                  </div>
-                </div>
                 <div className="text-xs text-zinc-500">
                   <p className="mb-2 normal-case tracking-[0.08em]">Delivery method</p>
                   <div className="inline-flex rounded-full border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] p-0.5">
@@ -1464,6 +1451,22 @@ export function CheckoutClient({
                     >
                       Pickup
                     </button>
+                  </div>
+                  {pickup ? (
+                    <p className="mt-2 normal-case tracking-[0.08em] text-zinc-500">Pickup in North Perth</p>
+                  ) : null}
+                </div>
+                <div className="min-w-[280px] flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  <p>Date required</p>
+                  <div className="mt-2">
+                    <CheckoutDatePicker
+                      value={dueDate}
+                      onChange={setDueDate}
+                      blocks={quoteBlocks}
+                      urgencyFeePercent={urgencyFeePercent}
+                      urgencyPeriodDays={urgencyPeriodDays}
+                      showUrgencyNotice={hasCustomItems}
+                    />
                   </div>
                 </div>
               </div>
