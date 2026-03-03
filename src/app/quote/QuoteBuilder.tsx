@@ -1273,7 +1273,7 @@ export function QuoteBuilder({
               {needsSubtypeSelection ? (
                 <p className="text-sm text-zinc-500 text-center">Select your order type</p>
               ) : result ? (
-                <div className="relative space-y-2">
+                <div className="space-y-2">
                   {(() => {
                     const subtotal = Math.max(0, result.total - result.transactionFee);
                     return (
@@ -1304,7 +1304,7 @@ export function QuoteBuilder({
                     );
                   })()}
                   {showBreakdown && (
-                    <div className="absolute left-0 right-0 top-full z-40 mt-2 space-y-1 rounded-xl border border-zinc-200 bg-white p-3 text-sm text-zinc-700 shadow-lg">
+                    <div className="space-y-1 border-t border-zinc-200 pt-2 text-sm text-zinc-700">
                       {result.items.map((item: QuoteItem) => (
                         <div key={item.label} className="flex justify-between border-b border-zinc-100 pb-1">
                           <span>{item.label}</span>
