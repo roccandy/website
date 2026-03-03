@@ -7,6 +7,7 @@ import type {
   Category,
   ColorPaletteRow,
   Flavor,
+  LabelRange,
   LabelType,
   PackagingOption,
   PackagingOptionImage,
@@ -26,6 +27,7 @@ type Props = {
   flavors: Flavor[];
   palette: ColorPaletteRow[];
   labelTypes: LabelType[];
+  labelRanges: LabelRange[];
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
 };
@@ -389,6 +391,7 @@ export function QuoteBuilder({
   flavors,
   palette,
   labelTypes,
+  labelRanges,
   minBasePrices,
   initialOrderType,
 }: Props) {
@@ -407,6 +410,10 @@ export function QuoteBuilder({
   const appliedEditRef = useRef<string | null>(null);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
+  const sortedLabelRanges = useMemo(
+    () => [...labelRanges].sort((a, b) => Number(a.upper_bound) - Number(b.upper_bound)),
+    [labelRanges]
+  );
   const ingredientLabelType = useMemo(() => {
     const id = settings.ingredient_label_type_id;
     return id ? labelTypeById.get(id) ?? null : null;
@@ -913,6 +920,33 @@ export function QuoteBuilder({
     const opt = packagingOptions.find((p) => p.id === selectedOptionId);
     return !!opt && opt.type.toLowerCase() === "bulk" && selectionQty > 0;
   }, [packagingOptions, selectedOptionId, selectionQty]);
+  const effectiveCustomLabelCount = useMemo(() => {
+    if (totalPackages <= 0) return 0;
+    if (hasBulkSelection) {
+      const fallback = Math.min(totalPackages, settings.labels_max_bulk);
+      const requested = labelCountOverride > 0 ? labelCountOverride : fallback;
+      return Math.min(Math.max(0, requested), settings.labels_max_bulk);
+    }
+    return totalPackages;
+  }, [hasBulkSelection, labelCountOverride, settings.labels_max_bulk, totalPackages]);
+  const customLabelEachPrice = useMemo(() => {
+    if (effectiveCustomLabelCount <= 0 || sortedLabelRanges.length === 0) return 0;
+    const matchedRange =
+      sortedLabelRanges.find((range) => effectiveCustomLabelCount <= Number(range.upper_bound)) ??
+      sortedLabelRanges[sortedLabelRanges.length - 1];
+    if (!matchedRange) return 0;
+    const shipping = Number(settings.labels_supplier_shipping ?? 0);
+    const markup = Number(settings.labels_markup_multiplier ?? 1);
+    const base = effectiveCustomLabelCount * Number(matchedRange.range_cost) + shipping;
+    const total = base * markup;
+    const perLabel = total / effectiveCustomLabelCount;
+    return Number.isFinite(perLabel) ? perLabel : 0;
+  }, [
+    effectiveCustomLabelCount,
+    settings.labels_markup_multiplier,
+    settings.labels_supplier_shipping,
+    sortedLabelRanges,
+  ]);
 
   const totalWeightKg = useMemo(() => {
     const lookup = new Map(packagingOptions.map((p) => [p.id, p]));
@@ -1656,7 +1690,7 @@ export function QuoteBuilder({
             </div>
 
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-              <h3 className="text-lg font-semibold normal-case text-zinc-900">Labels</h3>
+              <h3 className="text-lg font-semibold normal-case text-zinc-900">Labels (optional)</h3>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
@@ -1685,6 +1719,9 @@ export function QuoteBuilder({
                       <span className="block text-sm font-semibold text-zinc-900">Custom Labels</span>
                       <span className="block text-xs text-zinc-500">
                         Add a custom printed label or logo to your packaging.
+                      </span>
+                      <span className="block text-xs text-zinc-500">
+                        {effectiveCustomLabelCount > 0 ? `+$${customLabelEachPrice.toFixed(2)} each` : "Select packaging to calculate"}
                       </span>
                     </span>
                   </label>
@@ -1809,12 +1846,32 @@ export function QuoteBuilder({
                     <span className="flex-1 space-y-0.5">
                       <span className="block text-sm font-semibold text-zinc-900">Ingredient Labels</span>
                       <span className="block text-xs text-zinc-500">
-                        {ingredientLabelType ? formatLabelTypeLabel(ingredientLabelType) : "Circle 30mm"}
-                        {ingredientLabelPrice > 0 ? ` • +$${ingredientLabelPrice.toFixed(2)} each` : ""}
+                        Add ingredient labels to your packaging
+                      </span>
+                      <span className="block text-xs text-zinc-500">
+                        {ingredientLabelPrice > 0 ? `+$${ingredientLabelPrice.toFixed(2)} each` : "+$0.00 each"}
                       </span>
                     </span>
                   </label>
-                  {!ingredientPreviewFailed && (
+                  <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700">
+                    <p className="text-[11px] font-semibold normal-case tracking-[0.1em] text-zinc-500">Label Type</p>
+                    <div className="mt-2">
+                      <span
+                        className="inline-flex items-center rounded-full px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em]"
+                        style={{
+                          backgroundColor: "rgb(250,243,247)",
+                          borderColor: "rgb(239,232,239)",
+                          borderWidth: "0.5px",
+                          borderStyle: "solid",
+                          color: "rgb(124,121,131)",
+                          fontFamily: "var(--font-body), sans-serif",
+                        }}
+                      >
+                        {ingredientLabelType ? formatLabelTypeLabel(ingredientLabelType) : "Circle 30mm"}
+                      </span>
+                    </div>
+                  </div>
+                  {ingredientLabelsOptIn && !ingredientPreviewFailed && (
                     <div className="w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white">
                       <img
                         src={INGREDIENT_LABEL_PREVIEW_SRC}

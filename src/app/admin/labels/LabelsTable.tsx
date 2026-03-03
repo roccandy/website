@@ -271,25 +271,29 @@ export function LabelsTable({ ranges, settings, labelTypes }: Props) {
           <thead>
             <tr className="text-left text-zinc-500">
               <th className="px-3 py-2">Upper bound</th>
+              <th className="px-3 py-2">Price each</th>
               {editMode && <th className="px-3 py-2 w-28">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {sorted.map((range) => {
-              const formId = `range-${range.id}`;
-              const recomputeRangeDirty = () => {
-                const form = document.getElementById(formId) as HTMLFormElement | null;
-                const original = originalRanges.get(range.id);
-                if (!form || !original) return;
-                const upper = Number(
-                  (form.elements.namedItem("upper_bound") as HTMLInputElement | null)?.value ?? 0
-                );
-                const isSame = Number(original.upper_bound) === upper;
-                setDirtyRangeIds((prev) => {
-                  const next = new Set(prev);
-                  if (isSame) next.delete(range.id);
-                  else next.add(range.id);
-                  return next;
+                const formId = `range-${range.id}`;
+                const recomputeRangeDirty = () => {
+                  const form = document.getElementById(formId) as HTMLFormElement | null;
+                  const original = originalRanges.get(range.id);
+                  if (!form || !original) return;
+                  const upper = Number(
+                    (form.elements.namedItem("upper_bound") as HTMLInputElement | null)?.value ?? 0
+                  );
+                  const rangeCost = Number(
+                    (form.elements.namedItem("range_cost") as HTMLInputElement | null)?.value ?? 0
+                  );
+                  const isSame = Number(original.upper_bound) === upper && Number(original.range_cost) === rangeCost;
+                  setDirtyRangeIds((prev) => {
+                    const next = new Set(prev);
+                    if (isSame) next.delete(range.id);
+                    else next.add(range.id);
+                    return next;
                 });
               };
 
@@ -310,6 +314,23 @@ export function LabelsTable({ ranges, settings, labelTypes }: Props) {
                       range.upper_bound
                     )}
                   </td>
+                  <td className="px-3 py-2">
+                    {editMode ? (
+                      <input
+                        form={formId}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        name="range_cost"
+                        defaultValue={range.range_cost}
+                        className="w-full rounded border border-zinc-200 px-2 py-1"
+                        onChange={recomputeRangeDirty}
+                        required
+                      />
+                    ) : (
+                      `$${Number(range.range_cost).toFixed(2)}`
+                    )}
+                  </td>
                   {editMode && (
                     <td className="px-3 py-2 space-y-1">
                       <form
@@ -321,7 +342,6 @@ export function LabelsTable({ ranges, settings, labelTypes }: Props) {
                         className="hidden"
                       >
                         <input type="hidden" name="id" value={range.id} />
-                        <input type="hidden" name="range_cost" value={range.range_cost} />
                       </form>
                       <form action={deleteLabelRange}>
                         <input type="hidden" name="id" value={range.id} />
