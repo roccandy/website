@@ -1170,10 +1170,14 @@ export function QuoteBuilder({
       }
 
       const liveWidth = stickyEl.getBoundingClientRect().width;
-      const width = Math.max(wrapRect.width, liveWidth, 220);
+      const stickyScrollWidth = stickyEl.scrollWidth;
+      const innerContentWidth =
+        stickyEl.firstElementChild instanceof HTMLElement ? stickyEl.firstElementChild.scrollWidth : 0;
+      // Round up and add a tiny safety buffer so content never overhangs by sub-pixel drift while scrolling.
+      const width = Math.ceil(Math.max(wrapRect.width, liveWidth, stickyScrollWidth, innerContentWidth, 220)) + 2;
       wrap.style.height = `${stickyHeight}px`;
       wrap.style.width = `${width}px`;
-      const left = wrapRect.left;
+      const left = Math.round(wrapRect.left);
 
       if (scrollY <= end) {
         stickyEl.style.position = "fixed";
@@ -1187,7 +1191,7 @@ export function QuoteBuilder({
       const absoluteTop = container.clientHeight - stickyHeight;
       stickyEl.style.position = "absolute";
       stickyEl.style.top = `${absoluteTop}px`;
-      stickyEl.style.left = `${wrapRect.left - containerRect.left}px`;
+      stickyEl.style.left = `${Math.round(wrapRect.left - containerRect.left)}px`;
       stickyEl.style.width = `${width}px`;
       stickyEl.style.zIndex = "1";
     };
@@ -1216,7 +1220,7 @@ export function QuoteBuilder({
       observer.disconnect();
       reset();
     };
-  }, []);
+  }, [showBreakdown, loading, error, needsSubtypeSelection, result?.total, result?.transactionFee, result?.items.length]);
 
 
   return (
