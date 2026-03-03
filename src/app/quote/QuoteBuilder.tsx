@@ -1689,7 +1689,7 @@ export function QuoteBuilder({
               <div className="grid gap-3 md:grid-cols-2">
               {isWedding && (
                 <>
-                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-900">
+                    <label className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-900">
                       First {isWeddingInitials ? "initial" : "name"}
                       <input
                         type="text"
@@ -1708,7 +1708,7 @@ export function QuoteBuilder({
                       <div className="mt-1 text-right text-[11px] text-zinc-500">{`${(nameOne || "").length}/8`}</div>
                     )}
                   </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-900">
+                    <label className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-900">
                       Second {isWeddingInitials ? "initial" : "name"}
                       <input
                         type="text"
@@ -1730,7 +1730,7 @@ export function QuoteBuilder({
                 </>
               )}
               {isText && (
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                <label className="text-xs normal-case tracking-[0.04em] text-zinc-500 md:col-span-2">
                   Custom text
                   <input
                     type="text"
@@ -1849,7 +1849,7 @@ export function QuoteBuilder({
               </div>
               {isBranded && (
                 <div>
-                  <label htmlFor="logo-upload" className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  <label htmlFor="logo-upload" className="text-xs normal-case tracking-[0.04em] text-zinc-500">
                     Upload Your Design
                   </label>
                   <div className="mt-1">
