@@ -76,7 +76,7 @@ export default async function Home() {
             <div className="space-y-6">
               <div className="space-y-1 text-center">
                 <h1
-                  className={`${montserratLight.className} mb-3 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
+                  className={`${montserratLight.className} mb-4 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
                 >
                   Personalised Rock Candy
                 </h1>

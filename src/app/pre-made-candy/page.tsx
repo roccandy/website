@@ -66,7 +66,7 @@ export default async function PremadePage() {
         <div className="relative mx-auto max-w-6xl space-y-10 px-6 py-10 md:py-14">
           <section className="space-y-3 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Shop</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-zinc-900 sm:text-5xl">Pre-made candy</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[#ff6f95] sm:text-5xl">Pre-made candy</h1>
             <p className="text-base text-zinc-600">
               Ready-to-order packs with handcrafted rock candy. Contact us to place an order.
             </p>

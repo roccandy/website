@@ -625,7 +625,7 @@ export function QuoteBuilder({
     SUBTITLE_BY_CATEGORY[categoryId] ?? categories.find((category) => category.id === categoryId)?.name ?? "";
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
-  const subtitle = subtitleLabel && hasBasePrice ? `${subtitleLabel} - price from ${formatMoney(basePrice)}` : subtitleLabel;
+  const subtitle = subtitleLabel && hasBasePrice ? `${subtitleLabel} - base ${formatMoney(basePrice)}` : subtitleLabel;
   const handleLogoUpload = (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
@@ -1539,11 +1539,11 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)]"
+                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)]"
                     >
                       <svg
                         viewBox="0 0 20 20"
-                        className="h-3 w-3 text-[rgb(124,121,131)] opacity-0 transition-opacity peer-checked:opacity-100"
+                        className="h-3 w-3"
                         aria-hidden="true"
                       >
                         <path
@@ -1651,11 +1651,11 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)]"
+                      className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)]"
                     >
                       <svg
                         viewBox="0 0 20 20"
-                        className="h-3 w-3 text-[rgb(124,121,131)] opacity-0 transition-opacity peer-checked:opacity-100"
+                        className="h-3 w-3"
                         aria-hidden="true"
                       >
                         <path
@@ -1839,7 +1839,16 @@ export function QuoteBuilder({
                       checked={rainbowJacket}
                       onChange={toggleRainbow}
                       disabled={rainbowDisabled && !rainbowJacket}
+                      className="peer sr-only"
                     />
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                    >
+                      <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
+                        <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
+                      </svg>
+                    </span>
                     <span>
                       Rainbow Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_rainbow)}</span>
                     </span>
@@ -1856,7 +1865,16 @@ export function QuoteBuilder({
                       checked={pinstripeJacket}
                       onChange={togglePinstripe}
                       disabled={pinstripeDisabled && !pinstripeJacket}
+                      className="peer sr-only"
                     />
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                    >
+                      <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
+                        <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
+                      </svg>
+                    </span>
                     <span>
                       Pin Stripe Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_pinstripe)}</span>
                     </span>
@@ -1873,7 +1891,16 @@ export function QuoteBuilder({
                       checked={twoColourJacket}
                       onChange={toggleTwoColour}
                       disabled={twoColourDisabled && !twoColourJacket}
+                      className="peer sr-only"
                     />
+                    <span
+                      aria-hidden="true"
+                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                    >
+                      <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
+                        <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
+                      </svg>
+                    </span>
                     <span>
                       2 Colour Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_two_colour)}</span>
                     </span>
