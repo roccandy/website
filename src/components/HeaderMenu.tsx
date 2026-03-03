@@ -17,16 +17,6 @@ function formatWeight(weight_g: number) {
   return `${weight_g}g`;
 }
 
-const ORDER_TYPE_LABELS: Record<string, string> = {
-  weddings: "Weddings",
-  "weddings-initials": "Weddings (initials)",
-  "weddings-both-names": "Weddings (both names)",
-  text: "Custom text",
-  "custom-1-6": "Custom text (1-6 letters)",
-  "custom-7-14": "Custom text (7-14 letters)",
-  branded: "Branded",
-};
-
 function formatPackagingLabel(label?: string | null) {
   if (!label) return "Packaging";
   const parts = label.split(/\s+-\s+/).map((part) => part.trim()).filter(Boolean);
@@ -34,9 +24,18 @@ function formatPackagingLabel(label?: string | null) {
   return label.replace(/\s+/g, " ").trim();
 }
 
-function getOrderTypeLabel(value?: string | null) {
+function getOrderTypeLine(value?: string | null) {
   if (!value) return "Order";
-  return ORDER_TYPE_LABELS[value] ?? value;
+  if (value === "weddings-initials") return "Weddings | Initials";
+  if (value === "weddings-both-names") return "Weddings | Both Names";
+  if (value === "weddings") return "Weddings";
+  if (value === "custom-1-6") return "Custom Text | 1-6 Letters";
+  if (value === "custom-7-14") return "Custom Text | 7-14 Letters";
+  if (value === "text") return "Custom Text";
+  if (value === "branded") return "Branded";
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function HeaderMenu() {
@@ -139,11 +138,11 @@ export default function HeaderMenu() {
                               : item.totalWeightKg
                                 ? formatWeight(item.totalWeightKg * 1000)
                                 : "";
-                          const customSummary = !isPremade
-                            ? `${getOrderTypeLabel(item.categoryId || item.designType)}: ${item.quantity} x ${formatPackagingLabel(
-                                item.packagingLabel
-                              )}${title ? ` (${title})` : ""}`
+                          const customLineOne = !isPremade ? getOrderTypeLine(item.categoryId || item.designType) : "";
+                          const customLineTwo = !isPremade
+                            ? `${item.quantity} x ${formatPackagingLabel(item.packagingLabel)}`
                             : "";
+                          const customLineThree = !isPremade ? title || "Custom Order" : "";
                           const customMaxPackages = !isPremade
                             ? (() => {
                                 const raw = Number(item.maxPackages);
@@ -167,7 +166,11 @@ export default function HeaderMenu() {
                                     {title}
                                   </>
                                 ) : (
-                                  customSummary
+                                  <span className="inline-flex w-fit max-w-full flex-col gap-0.5 rounded-md border border-zinc-200 bg-zinc-50 px-2 py-1 text-left text-[11px] leading-tight">
+                                    <span>{customLineOne}</span>
+                                    <span>{customLineTwo}</span>
+                                    <span>{customLineThree}</span>
+                                  </span>
                                 )}
                               </span>
                               <div className="flex items-center gap-2">

@@ -496,6 +496,20 @@ function formatJacketLabel(item: CustomCartItem) {
   return jacketValue.replace(/_/g, " ");
 }
 
+function getCustomOrderTypeLine(value?: string | null) {
+  if (!value) return "Order";
+  if (value === "weddings-initials") return "Weddings | Initials";
+  if (value === "weddings-both-names") return "Weddings | Both Names";
+  if (value === "weddings") return "Weddings";
+  if (value === "custom-1-6") return "Custom Text | 1-6 Letters";
+  if (value === "custom-7-14") return "Custom Text | 7-14 Letters";
+  if (value === "text") return "Custom Text";
+  if (value === "branded") return "Branded";
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function splitWeddingNames(value?: string | null) {
   const safe = (value || "").trim();
   if (!safe) return { lineOne: "", lineTwo: "" };
@@ -588,6 +602,9 @@ function CartItemRow({
   const packagingLine = item.packagingLabel
     ? `${item.quantity} x ${formatPackagingLabel(item.packagingLabel)}`
     : `Qty ${item.quantity}`;
+  const summaryLineOne = getCustomOrderTypeLine(item.categoryId || item.designType);
+  const summaryLineTwo = packagingLine;
+  const summaryLineThree = item.title || "Custom Order";
   const designKey = item.categoryId || item.designType || "";
   const isWeddingInitials = designKey === "weddings-initials";
   const isWeddingNames = designKey === "weddings-both-names";
@@ -682,6 +699,13 @@ function CartItemRow({
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4">
         <div className="space-y-2 text-xs text-zinc-600">
+          <div className="mb-1">
+            <div className="inline-flex w-fit max-w-full flex-col gap-0.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-left text-[11px] leading-tight text-zinc-800">
+              <span className="font-semibold">{summaryLineOne}</span>
+              <span className="font-semibold">{summaryLineTwo}</span>
+              <span className="font-semibold">{summaryLineThree}</span>
+            </div>
+          </div>
           {detailRows.map((detail) => (
             <div key={detail.label} className="flex items-start justify-between gap-3">
               <span className="text-zinc-500">{detail.label}</span>
