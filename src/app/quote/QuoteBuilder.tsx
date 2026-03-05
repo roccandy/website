@@ -946,9 +946,7 @@ export function QuoteBuilder({
   ]);
   const packageTypeLabel = useMemo(() => {
     if (!selectedOption) return "package";
-    const typeLabel = toTitleCase((selectedOption.type || "").trim() || "package");
-    const sizeLabel = (selectedOption.size || "").trim();
-    return sizeLabel ? `${typeLabel} ${sizeLabel}` : typeLabel;
+    return ((selectedOption.type || "").trim().toLowerCase() || "package");
   }, [selectedOption]);
 
   const totalWeightKg = useMemo(() => {
