@@ -82,6 +82,7 @@ export type Flavor = {
   id: string;
   name: string;
   is_active?: boolean | null;
+  sort_order?: number | null;
 };
 
 export type PremadeCandy = {
@@ -349,7 +350,22 @@ export async function getOrderSlots() {
 }
 
 export async function getFlavors() {
-  return fetchTable<Flavor>("flavors");
+  const client = supabaseServerClient;
+  const ordered = await client
+    .from("flavors")
+    .select("*")
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+  if (!ordered.error) return ordered.data as Flavor[];
+
+  const message = ordered.error.message?.toLowerCase() ?? "";
+  if (!message.includes("sort_order")) {
+    throw new Error(ordered.error.message);
+  }
+
+  const fallback = await client.from("flavors").select("*").order("name", { ascending: true });
+  if (fallback.error) throw new Error(fallback.error.message);
+  return fallback.data as Flavor[];
 }
 
 export async function getPremadeCandies() {
