@@ -920,33 +920,36 @@ export function QuoteBuilder({
     const opt = packagingOptions.find((p) => p.id === selectedOptionId);
     return !!opt && opt.type.toLowerCase() === "bulk" && selectionQty > 0;
   }, [packagingOptions, selectedOptionId, selectionQty]);
-  const effectiveCustomLabelCount = useMemo(() => {
-    if (totalPackages <= 0) return 0;
-    if (hasBulkSelection) {
-      const fallback = Math.min(totalPackages, settings.labels_max_bulk);
-      const requested = labelCountOverride > 0 ? labelCountOverride : fallback;
-      return Math.min(Math.max(0, requested), settings.labels_max_bulk);
-    }
-    return totalPackages;
-  }, [hasBulkSelection, labelCountOverride, settings.labels_max_bulk, totalPackages]);
-  const customLabelEachPrice = useMemo(() => {
-    if (effectiveCustomLabelCount <= 0 || sortedLabelRanges.length === 0) return 0;
+  const maxCustomLabelCountForPricing = useMemo(() => {
+    if (!selectedOption) return 0;
+    const maxPackages = Number(selectedOption.max_packages ?? 0);
+    if (!Number.isFinite(maxPackages) || maxPackages <= 0) return 0;
+    return Math.max(0, Math.min(Math.floor(maxPackages), settings.labels_max_bulk));
+  }, [selectedOption, settings.labels_max_bulk]);
+  const customLabelFromEachPrice = useMemo(() => {
+    if (maxCustomLabelCountForPricing <= 0 || sortedLabelRanges.length === 0) return 0;
     const matchedRange =
-      sortedLabelRanges.find((range) => effectiveCustomLabelCount <= Number(range.upper_bound)) ??
+      sortedLabelRanges.find((range) => maxCustomLabelCountForPricing <= Number(range.upper_bound)) ??
       sortedLabelRanges[sortedLabelRanges.length - 1];
     if (!matchedRange) return 0;
     const shipping = Number(settings.labels_supplier_shipping ?? 0);
     const markup = Number(settings.labels_markup_multiplier ?? 1);
-    const base = effectiveCustomLabelCount * Number(matchedRange.range_cost) + shipping;
+    const base = maxCustomLabelCountForPricing * Number(matchedRange.range_cost) + shipping;
     const total = base * markup;
-    const perLabel = total / effectiveCustomLabelCount;
+    const perLabel = total / maxCustomLabelCountForPricing;
     return Number.isFinite(perLabel) ? perLabel : 0;
   }, [
-    effectiveCustomLabelCount,
+    maxCustomLabelCountForPricing,
     settings.labels_markup_multiplier,
     settings.labels_supplier_shipping,
     sortedLabelRanges,
   ]);
+  const packageTypeLabel = useMemo(() => {
+    if (!selectedOption) return "package";
+    const typeLabel = toTitleCase((selectedOption.type || "").trim() || "package");
+    const sizeLabel = (selectedOption.size || "").trim();
+    return sizeLabel ? `${typeLabel} ${sizeLabel}` : typeLabel;
+  }, [selectedOption]);
 
   const totalWeightKg = useMemo(() => {
     const lookup = new Map(packagingOptions.map((p) => [p.id, p]));
@@ -1721,7 +1724,9 @@ export function QuoteBuilder({
                         Add a custom printed label or logo to your packaging.
                       </span>
                       <span className="block text-xs text-zinc-500">
-                        {effectiveCustomLabelCount > 0 ? `+$${customLabelEachPrice.toFixed(2)} each` : "Select packaging to calculate"}
+                        {maxCustomLabelCountForPricing > 0
+                          ? `from $${customLabelFromEachPrice.toFixed(2)} per ${packageTypeLabel}`
+                          : "Select packaging to calculate"}
                       </span>
                     </span>
                   </label>
@@ -1849,7 +1854,7 @@ export function QuoteBuilder({
                         Add ingredient labels to your packaging
                       </span>
                       <span className="block text-xs text-zinc-500">
-                        {ingredientLabelPrice > 0 ? `+$${ingredientLabelPrice.toFixed(2)} each` : "+$0.00 each"}
+                        {`+$${ingredientLabelPrice.toFixed(2)} per ${packageTypeLabel}`}
                       </span>
                     </span>
                   </label>
