@@ -23,3 +23,15 @@ export async function deleteFlavor(formData: FormData) {
   if (error) throw new Error(error.message);
   redirect(PATH);
 }
+
+export async function toggleFlavorActive(formData: FormData) {
+  const id = formData.get("id")?.toString();
+  if (!id) throw new Error("Missing id");
+  const nextActiveRaw = formData.get("next_active")?.toString().trim().toLowerCase();
+  const nextActive = nextActiveRaw === "true";
+
+  const client = supabaseServerClient;
+  const { error } = await client.from("flavors").update({ is_active: nextActive }).eq("id", id);
+  if (error) throw new Error(error.message);
+  redirect(PATH);
+}

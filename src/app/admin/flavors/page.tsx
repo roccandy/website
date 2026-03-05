@@ -2,7 +2,7 @@ import { getFlavors } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { deleteFlavor } from "./actions";
+import { deleteFlavor, toggleFlavorActive } from "./actions";
 import { AddFlavorForm } from "./AddFlavorForm";
 
 export const revalidate = 0;
@@ -29,10 +29,31 @@ export default async function FlavorsPage() {
           <div className="mt-3 divide-y divide-zinc-100">
             {flavors.length === 0 && <p className="text-sm text-zinc-500">No flavors yet.</p>}
             {flavors.map((flavor) => {
+              const isActive = flavor.is_active !== false;
               return (
                 <div key={flavor.id} className="flex items-center justify-between py-2">
-                <span className="text-sm font-semibold text-zinc-900">{flavor.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-zinc-900">{flavor.name}</span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      isActive ? "bg-emerald-100 text-emerald-700" : "bg-zinc-200 text-zinc-600"
+                    }`}
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
                 <div className="flex items-center gap-4">
+                  <form action={toggleFlavorActive}>
+                    <input type="hidden" name="id" value={flavor.id} />
+                    <input type="hidden" name="next_active" value={isActive ? "false" : "true"} />
+                    <button
+                      type="submit"
+                      data-neutral-button
+                      className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold text-zinc-700 hover:text-zinc-900"
+                    >
+                      {isActive ? "Deactivate" : "Activate"}
+                    </button>
+                  </form>
                   <form action={deleteFlavor}>
                     <input type="hidden" name="id" value={flavor.id} />
                     <button

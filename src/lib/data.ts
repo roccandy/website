@@ -81,6 +81,7 @@ export type SettingsRow = {
 export type Flavor = {
   id: string;
   name: string;
+  is_active?: boolean | null;
 };
 
 export type PremadeCandy = {

@@ -70,6 +70,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const minBasePrices = buildMinBasePrices(categories, tiers);
+  const activeFlavors = flavors.filter((flavor) => flavor.is_active !== false);
   const resolvedSearchParams = await searchParams;
   const typeParam = resolvedSearchParams?.type;
   const initialOrderType =
@@ -125,7 +126,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
               packagingOptions={packagingOptions}
               packagingImages={packagingImages}
               settings={settings}
-              flavors={flavors}
+              flavors={activeFlavors}
               palette={palette}
               labelTypes={labelTypes}
               labelRanges={labelRanges}
