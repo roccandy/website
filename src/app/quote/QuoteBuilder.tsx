@@ -1669,7 +1669,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="flex h-full items-start justify-center">
-                <div className="aspect-square w-[500px] max-w-full rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="aspect-square w-[375px] max-w-full rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   {packagingImageUrl && !packagingImageFailed ? (
                     <img
                       src={packagingImageUrl}
