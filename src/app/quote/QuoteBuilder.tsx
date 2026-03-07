@@ -934,24 +934,6 @@ export function QuoteBuilder({
     if (!Number.isFinite(maxPackages) || maxPackages <= 0) return 0;
     return Math.max(0, Math.min(Math.floor(maxPackages), settings.labels_max_bulk));
   }, [selectedOption, settings.labels_max_bulk]);
-  const customLabelFromEachPrice = useMemo(() => {
-    if (maxCustomLabelCountForPricing <= 0 || sortedLabelRanges.length === 0) return 0;
-    const matchedRange =
-      sortedLabelRanges.find((range) => maxCustomLabelCountForPricing <= Number(range.upper_bound)) ??
-      sortedLabelRanges[sortedLabelRanges.length - 1];
-    if (!matchedRange) return 0;
-    const shipping = Number(settings.labels_supplier_shipping ?? 0);
-    const markup = Number(settings.labels_markup_multiplier ?? 1);
-    const base = maxCustomLabelCountForPricing * Number(matchedRange.range_cost) + shipping;
-    const total = base * markup;
-    const perLabel = total / maxCustomLabelCountForPricing;
-    return Number.isFinite(perLabel) ? perLabel : 0;
-  }, [
-    maxCustomLabelCountForPricing,
-    settings.labels_markup_multiplier,
-    settings.labels_supplier_shipping,
-    sortedLabelRanges,
-  ]);
   const packageTypeLabel = useMemo(() => {
     if (!selectedOption) return "package";
     return ((selectedOption.type || "").trim().toLowerCase() || "package");
@@ -1729,11 +1711,9 @@ export function QuoteBuilder({
                       <span className="block text-xs text-zinc-500">
                         Add a custom printed label or logo to your packaging.
                       </span>
-      <span className="block text-xs text-zinc-500">
+                      <span className="block text-xs text-zinc-500">
                         {maxCustomLabelCountForPricing > 0
-                          ? packageTypeLabel === "jar"
-                            ? "price varies based on packaging quantity"
-                            : `from $${customLabelFromEachPrice.toFixed(2)} per ${packageTypeLabel}`
+                          ? "price varies based on packaging quantity"
                           : "Select packaging to calculate"}
                       </span>
                     </span>
