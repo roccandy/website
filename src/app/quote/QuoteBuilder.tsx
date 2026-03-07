@@ -838,6 +838,7 @@ export function QuoteBuilder({
 
   const sizesForType = useMemo(() => {
     if (!selectionType) return [];
+    const isJarType = selectionType.toLowerCase().includes("jar");
     const extractLeadingNumber = (value: string) => {
       const match = value.trim().match(/^(\d+)/);
       return match ? Number(match[1]) : null;
@@ -846,6 +847,13 @@ export function QuoteBuilder({
       .filter((p) => p.type === selectionType)
       .map((opt, index) => ({ opt, index }))
       .sort((a, b) => {
+        if (isJarType) {
+          const aWeight = Number(a.opt.candy_weight_g);
+          const bWeight = Number(b.opt.candy_weight_g);
+          if (Number.isFinite(aWeight) && Number.isFinite(bWeight) && aWeight !== bWeight) {
+            return aWeight - bWeight;
+          }
+        }
         const aNum = extractLeadingNumber(a.opt.size);
         const bNum = extractLeadingNumber(b.opt.size);
         if (aNum !== null && bNum !== null) {
@@ -1721,9 +1729,11 @@ export function QuoteBuilder({
                       <span className="block text-xs text-zinc-500">
                         Add a custom printed label or logo to your packaging.
                       </span>
-                      <span className="block text-xs text-zinc-500">
+      <span className="block text-xs text-zinc-500">
                         {maxCustomLabelCountForPricing > 0
-                          ? `from $${customLabelFromEachPrice.toFixed(2)} per ${packageTypeLabel}`
+                          ? packageTypeLabel === "jar"
+                            ? "price varies based on packaging quantity"
+                            : `from $${customLabelFromEachPrice.toFixed(2)} per ${packageTypeLabel}`
                           : "Select packaging to calculate"}
                       </span>
                     </span>
