@@ -38,15 +38,16 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
         const entry = entries[0];
         if (!entry) return;
 
-        isVisibleRef.current = entry.isIntersecting;
-        setIsInView(entry.isIntersecting);
-        if (entry.isIntersecting) {
+        const shouldPlay = entry.isIntersecting && entry.intersectionRatio > 0;
+        isVisibleRef.current = shouldPlay;
+        setIsInView(shouldPlay);
+        if (shouldPlay) {
           tryPlay();
         } else {
           node.pause();
         }
       },
-      { threshold: 0.2 }
+      { threshold: [0, 0.1], rootMargin: "120px 0px 120px 0px" }
     );
 
     const preloadObserver = new IntersectionObserver(
@@ -71,6 +72,12 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     const handlePlaying = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setIsPlaying(false);
+    const handleEnded = () => {
+      // Some browsers can intermittently miss seamless loop on autoplay videos.
+      if (!isVisibleRef.current) return;
+      node.currentTime = 0;
+      tryPlay();
+    };
 
     const retryTimer = window.setInterval(() => {
       if (isVisibleRef.current && node.paused) {
@@ -83,6 +90,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     node.addEventListener("playing", handlePlaying);
     node.addEventListener("pause", handlePause);
     node.addEventListener("waiting", handleWaiting);
+    node.addEventListener("ended", handleEnded);
     playObserver.observe(node);
     preloadObserver.observe(node);
 
@@ -93,6 +101,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       node.removeEventListener("playing", handlePlaying);
       node.removeEventListener("pause", handlePause);
       node.removeEventListener("waiting", handleWaiting);
+      node.removeEventListener("ended", handleEnded);
       playObserver.disconnect();
       preloadObserver.disconnect();
     };
