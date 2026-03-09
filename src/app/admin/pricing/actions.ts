@@ -1,10 +1,12 @@
 "use server";
 
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 
 export async function upsertTier(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString() || undefined;
   const category_id = formData.get("category_id")?.toString();
   const min_kg = Number(formData.get("min_kg"));
@@ -36,6 +38,7 @@ export async function upsertTier(formData: FormData) {
 }
 
 export async function deleteTier(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;

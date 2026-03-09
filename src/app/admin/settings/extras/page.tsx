@@ -1,7 +1,6 @@
 import { getSettings } from "@/lib/data";
+import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const revalidate = 0;
@@ -10,6 +9,7 @@ export const fetchCache = "force-no-store";
 
 async function updateExtrasPricing(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const lead_time_days = Number(formData.get("lead_time_days"));
   const urgency_fee = Number(formData.get("urgency_fee"));
@@ -39,10 +39,7 @@ async function updateExtrasPricing(formData: FormData) {
 }
 
 export default async function SettingsExtrasPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/admin/login");
-  }
+  await requireAdminSession();
 
   const settings = await getSettings();
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAdminSession } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { updateWooOrder } from "@/lib/woo";
@@ -12,6 +13,14 @@ type RefundRequest = {
 
 export async function POST(request: Request) {
   try {
+    const session = await getAdminSession();
+    if (!session) {
+      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    }
+    if (!session.user.canWrite) {
+      return NextResponse.json({ error: "Read-only users cannot process refunds." }, { status: 403 });
+    }
+
     const body = (await request.json()) as RefundRequest;
     if (!body?.orderId) {
       return NextResponse.json({ error: "Order id is required." }, { status: 400 });

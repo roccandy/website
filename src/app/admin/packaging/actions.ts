@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -76,6 +77,7 @@ function buildComboKey(type: string, size: string, categoryId: string, lidColor:
 }
 
 export async function upsertPackaging(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString() || undefined;
   const type = formData.get("type")?.toString();
   const size = formData.get("size")?.toString();
@@ -127,6 +129,7 @@ export async function upsertPackaging(formData: FormData) {
 }
 
 export async function deletePackaging(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;
@@ -136,6 +139,7 @@ export async function deletePackaging(formData: FormData) {
 }
 
 export async function uploadPackagingImage(formData: FormData) {
+  await requireAdminWriteAccess();
   const packagingOptionId = formData.get("packaging_option_id")?.toString();
   const categoryId = formData.get("category_id")?.toString();
   const lidColor = formData.get("lid_color")?.toString() ?? "";

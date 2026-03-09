@@ -1,7 +1,6 @@
 import { getProductionBlocks, getSettings } from "@/lib/data";
+import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -21,6 +20,7 @@ const DEFAULT_NO_PRODUCTION_DAYS = [
 
 async function updateProductionSettings(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const production_slots_per_day = Number(formData.get("production_slots_per_day"));
   const max_total_kg = Number(formData.get("max_total_kg"));
@@ -43,6 +43,7 @@ async function updateProductionSettings(formData: FormData) {
 
 async function updateBlockoutVisibilityWindow(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const monthsRaw = Number(formData.get("quote_blockout_months"));
   const quote_blockout_months = Number.isFinite(monthsRaw)
@@ -66,6 +67,7 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
 
 async function updateDefaultNoProduction(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const no_production_mon = formData.get("no_production_mon") === "on";
   const no_production_tue = formData.get("no_production_tue") === "on";
@@ -98,6 +100,7 @@ async function updateDefaultNoProduction(formData: FormData) {
 
 async function addBlock(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const start_date = formData.get("start_date")?.toString();
   const end_date = formData.get("end_date")?.toString();
@@ -125,6 +128,7 @@ async function addBlock(formData: FormData) {
 
 async function deleteBlock(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const id = formData.get("id")?.toString();
   if (!id) {
@@ -142,6 +146,7 @@ async function deleteBlock(formData: FormData) {
 
 async function updateBlock(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const id = formData.get("id")?.toString();
   const start_date = formData.get("start_date")?.toString();
@@ -175,10 +180,7 @@ async function updateBlock(formData: FormData) {
 }
 
 export default async function SettingsProductionPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/admin/login");
-  }
+  await requireAdminSession();
 
   const [settings, blocks] = await Promise.all([getSettings(), getProductionBlocks()]);
   const quoteBlockoutMonthsRaw = Number(settings.quote_blockout_months ?? 3);

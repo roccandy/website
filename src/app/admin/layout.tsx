@@ -4,8 +4,9 @@ import { ToastProvider } from "@/components/Toast";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
+import { requireAdminSession } from "@/lib/adminAuth";
 
-const navSections = [
+const baseNavSections = [
   {
     label: "Orders",
     items: [
@@ -51,6 +52,18 @@ const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const session = await requireAdminSession();
+  const signedInEmail = session?.user?.email?.trim() || "Signed in";
+  const navSections = session.user.canManageUsers
+    ? [
+        ...baseNavSections,
+        {
+          label: "Users",
+          items: [{ label: "Admin Users", href: "/admin/settings/users" }],
+        },
+      ]
+    : baseNavSections;
+
   return (
     <ToastProvider>
       <AdminBodyAttributes />
@@ -61,13 +74,26 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               Home
             </Link>
             <AdminNav sections={navSections} />
-            <LogoutButton />
+            <div className="flex items-center gap-3">
+              <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-right leading-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signed in</p>
+                <p className="text-xs font-medium normal-case text-zinc-700">{signedInEmail}</p>
+              </div>
+              <LogoutButton />
+            </div>
           </div>
         </header>
         {PAYMENTS_SANDBOX_MODE ? (
           <div className="border-b border-amber-300 bg-amber-50">
             <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">
               Sandbox mode active: payments are test-only in this environment
+            </div>
+          </div>
+        ) : null}
+        {!session.user.canWrite ? (
+          <div className="border-b border-sky-300 bg-sky-50">
+            <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800">
+              Read-only access: this user can view admin pages but cannot make changes
             </div>
           </div>
         ) : null}

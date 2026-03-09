@@ -1,6 +1,7 @@
 "use server";
 
 import type { PremadeCandy } from "@/lib/data";
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import {
   DEFAULT_GOOGLE_PRODUCT_CATEGORY,
   DEFAULT_PREMADE_BRAND,
@@ -108,6 +109,7 @@ export type PremadeUploadUrlResponse = {
 };
 
 export async function createPremadeUploadUrl(name: string, extension: string): Promise<PremadeUploadUrlResponse> {
+  await requireAdminWriteAccess();
   const trimmed = name?.toString().trim();
   const normalizedExt = normalizeExtension(extension);
   if (!trimmed) {
@@ -148,6 +150,7 @@ export async function insertPremadeCandy(payload: {
   product_condition?: string | null;
   sale_price?: number | null;
 }): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   const name = payload.name?.toString().trim();
   const description = payload.description?.toString().trim() ?? "";
   if (!name) return { error: "Name is required." };
@@ -228,6 +231,7 @@ export async function updatePremadeCandy(payload: {
   product_condition?: string | null;
   sale_price?: number | null;
 }): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!payload.id) return { error: "Missing item id." };
   const name = payload.name?.toString().trim();
   const description = payload.description?.toString().trim() ?? "";
@@ -296,6 +300,7 @@ export async function updatePremadeCandy(payload: {
 }
 
 export async function setPremadeActive(id: string, is_active: boolean): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data, error } = await client
@@ -314,6 +319,7 @@ export async function setPremadeActive(id: string, is_active: boolean): Promise<
 export async function updatePremadeOrder(
   updates: { id: string; sort_order: number }[]
 ): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!updates.length) return { error: null };
   const client = supabaseServerClient;
   for (const update of updates) {
@@ -327,6 +333,7 @@ export async function updatePremadeOrder(
 }
 
 export async function syncPremadeToWoo(id: string): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).single();
@@ -341,6 +348,7 @@ export async function syncAllPremadeToWoo(): Promise<{
   failed: number;
   total: number;
 }> {
+  await requireAdminWriteAccess();
   const client = supabaseServerClient;
   const { data, error } = await client.from("premade_candies").select("*");
   if (error) {
@@ -363,6 +371,7 @@ export async function syncAllPremadeToWoo(): Promise<{
 }
 
 export async function deletePremadeCandy(id: string): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data: existing, error: readError } = await client

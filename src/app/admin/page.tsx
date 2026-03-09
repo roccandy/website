@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireAdminSession } from "@/lib/adminAuth";
 
-const sections = [
+const baseSections = [
   {
     title: "Orders",
     description: "Track active orders and archive history.",
@@ -112,10 +110,23 @@ const sections = [
 ];
 
 export default async function AdminHome() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/admin/login");
-  }
+  const session = await requireAdminSession();
+  const sections = session.user.canManageUsers
+    ? [
+        ...baseSections,
+        {
+          title: "Users",
+          description: "Admin access and permissions.",
+          links: [
+            {
+              href: "/admin/settings/users",
+              label: "Admin Users",
+              description: "Emails, passwords, roles and active status.",
+            },
+          ],
+        },
+      ]
+    : baseSections;
 
   return (
     <section className="space-y-10">
@@ -124,6 +135,12 @@ export default async function AdminHome() {
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Admin</p>
             <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">Roc Candy Console</h1>
+            <p className="text-sm text-zinc-500">
+              Signed in as {session.user.email}
+              {" · "}
+              {session.user.role}
+              {session.user.isBootstrap ? " · bootstrap" : ""}
+            </p>
           </div>
         </div>
       </div>

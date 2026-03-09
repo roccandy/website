@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { getManagedFaqItems, saveManagedFaqItems, type ManagedFaqItem } from "@/lib/faqs";
 
 const FAQ_SETTINGS_PATH = "/admin/settings/faqs";
@@ -14,6 +15,7 @@ function reindex(items: ManagedFaqItem[]): ManagedFaqItem[] {
 }
 
 export async function addFaq(formData: FormData) {
+  await requireAdminWriteAccess();
   const question = normalizeField(formData.get("question"));
   const answerHtml = normalizeField(formData.get("answerHtml"));
 
@@ -32,6 +34,7 @@ export async function addFaq(formData: FormData) {
 }
 
 export async function updateFaq(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -58,6 +61,7 @@ export async function updateFaq(formData: FormData) {
 }
 
 export async function deleteFaq(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -68,6 +72,7 @@ export async function deleteFaq(formData: FormData) {
 }
 
 export async function moveFaqUp(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -84,6 +89,7 @@ export async function moveFaqUp(formData: FormData) {
 }
 
 export async function moveFaqDown(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -102,6 +108,7 @@ export async function moveFaqDown(formData: FormData) {
 export async function updateFaqOrder(
   updates: { id: string; sortOrder: number }[]
 ): Promise<{ error: string | null }> {
+  await requireAdminWriteAccess();
   if (!Array.isArray(updates) || updates.length === 0) {
     return { error: null };
   }

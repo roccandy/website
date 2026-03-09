@@ -1,9 +1,11 @@
 "use server";
 
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export async function upsertLabelRange(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString() || undefined;
   const upper_bound = Number(formData.get("upper_bound"));
   const range_cost_raw = formData.get("range_cost");
@@ -38,6 +40,7 @@ export async function upsertLabelRange(formData: FormData) {
 }
 
 export async function deleteLabelRange(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;
@@ -47,6 +50,7 @@ export async function deleteLabelRange(formData: FormData) {
 }
 
 export async function updateLabelSettings(formData: FormData) {
+  await requireAdminWriteAccess();
   const labels_supplier_shipping = Number(formData.get("labels_supplier_shipping"));
   const labels_markup_multiplier = Number(formData.get("labels_markup_multiplier"));
   const labels_max_bulk = Number(formData.get("labels_max_bulk"));
@@ -60,6 +64,7 @@ export async function updateLabelSettings(formData: FormData) {
 }
 
 export async function updateIngredientLabelSettings(formData: FormData) {
+  await requireAdminWriteAccess();
   const ingredientLabelPrice = Number(formData.get("ingredient_label_price"));
   const ingredientLabelTypeIdRaw = formData.get("ingredient_label_type_id")?.toString().trim() ?? "";
   const client = supabaseServerClient;

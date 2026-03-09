@@ -1,11 +1,13 @@
 "use server";
 
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 const SHAPES = new Set(["square", "rectangular", "circle"]);
 
 export async function upsertLabelType(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString() || undefined;
   const shape = formData.get("shape")?.toString() ?? "";
   const dimensions = formData.get("dimensions")?.toString() ?? "";
@@ -32,6 +34,7 @@ export async function upsertLabelType(formData: FormData) {
 }
 
 export async function deleteLabelType(formData: FormData) {
+  await requireAdminWriteAccess();
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;

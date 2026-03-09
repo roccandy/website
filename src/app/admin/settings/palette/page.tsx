@@ -1,7 +1,6 @@
 import { getColorPalette } from "@/lib/data";
+import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ColorPaletteEditor } from "@/app/admin/settings/ColorPaletteEditor";
 import { paletteSections } from "@/app/admin/settings/palette";
@@ -27,6 +26,7 @@ function normalizeHex(value: FormDataEntryValue | null, fallback: string) {
 
 async function updateColorPalette(formData: FormData) {
   "use server";
+  await requireAdminWriteAccess();
 
   const client = supabaseServerClient;
   const rows = paletteSections.flatMap((section, sectionIndex) =>
@@ -49,10 +49,7 @@ async function updateColorPalette(formData: FormData) {
 }
 
 export default async function SettingsPalettePage() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    redirect("/admin/login");
-  }
+  await requireAdminSession();
 
   const palette = await getColorPalette();
   const paletteLookup = new Map(palette.map((row) => [`${row.category}:${row.shade}`, row.hex]));

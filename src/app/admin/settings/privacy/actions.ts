@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { saveManagedSitePage } from "@/lib/sitePages";
 
 const PRIVACY_ADMIN_PATH = "/admin/settings/privacy";
@@ -11,6 +12,7 @@ function normalizeField(value: FormDataEntryValue | null) {
 }
 
 export async function savePrivacyPage(formData: FormData) {
+  await requireAdminWriteAccess();
   const title = normalizeField(formData.get("title"));
   const bodyHtml = normalizeField(formData.get("bodyHtml"));
 
