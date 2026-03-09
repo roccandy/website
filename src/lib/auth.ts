@@ -17,7 +17,11 @@ if (!nextAuthSecret) {
 
 export const authOptions: NextAuthOptions = {
   secret: nextAuthSecret,
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
   providers: [
     Credentials({
       name: "Admin",
