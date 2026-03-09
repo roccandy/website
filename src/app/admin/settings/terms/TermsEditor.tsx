@@ -16,6 +16,31 @@ type Props = {
 
 type EditorNode = ManagedTermsNode;
 
+function composeContent(node: EditorNode) {
+  return [node.title.trim(), node.body.trim()].filter(Boolean).join("\n\n");
+}
+
+function splitContent(value: string) {
+  const normalized = value.replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return { title: "", body: "" };
+  }
+
+  const parts = normalized
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    return { title: "", body: normalized };
+  }
+
+  return {
+    title: parts[0] ?? "",
+    body: parts.slice(1).join("\n\n"),
+  };
+}
+
 function createNode(parent: EditorNode | null, siblingCount: number): EditorNode {
   return {
     id: crypto.randomUUID(),
@@ -104,74 +129,68 @@ function SortableTermCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const contentValue = composeContent(item);
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`rounded-xl border border-zinc-200 bg-white p-4 shadow-sm ${isDragging ? "opacity-80" : ""}`}
+      className={`rounded-lg border border-zinc-200 bg-white p-3 shadow-sm ${isDragging ? "opacity-80" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-          {depth === 0 ? `Section ${index + 1}` : depth === 1 ? `Sub item ${index + 1}` : `Nested item ${index + 1}`}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          {depth === 0 ? `Number ${index + 1}` : depth === 1 ? `Subnumber ${index + 1}` : depth === 2 ? `Section ${index + 1}` : `Subsection ${index + 1}`}
         </p>
-        <button
-          type="button"
-          className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
-          aria-label="Drag to reorder"
-          {...attributes}
-          {...listeners}
-        >
-          Drag
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onAddChild(item.id)}
+            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+          >
+            Add child
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(item.id)}
+            className="rounded-md border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
+            aria-label="Drag to reorder"
+            {...attributes}
+            {...listeners}
+          >
+            Drag
+          </button>
+        </div>
       </div>
 
-      <div className="mt-3 grid gap-3 md:grid-cols-[150px_1fr]">
-        <div className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Marker</span>
-          <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
-            {marker}
-          </div>
+      <div className="mt-3 flex items-center gap-3">
+        <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+          {marker}
         </div>
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Title</span>
-          <input
-            type="text"
-            value={item.title}
-            onChange={(event) => onFieldChange(item.id, "title", event.target.value)}
-            placeholder="Section heading"
-            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-          />
-        </label>
+        <p className="text-xs text-zinc-500">
+          Add the clause text here. If you want a heading, put it first, then a blank line, then the body text.
+        </p>
       </div>
 
       <label className="mt-3 block space-y-1 text-sm text-zinc-700">
-        <span className="text-xs text-zinc-500">Body</span>
+        <span className="text-xs text-zinc-500">Text</span>
         <textarea
-          value={item.body}
-          onChange={(event) => onFieldChange(item.id, "body", event.target.value)}
-          rows={depth === 0 ? 5 : 3}
-          placeholder="Term text"
+          value={contentValue}
+          onChange={(event) => {
+            const parsed = splitContent(event.target.value);
+            onFieldChange(item.id, "title", parsed.title);
+            onFieldChange(item.id, "body", parsed.body);
+          }}
+          rows={depth === 0 ? 4 : 3}
+          placeholder="Clause text"
           className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
         />
       </label>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onAddChild(item.id)}
-          className="rounded-md border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-        >
-          Add child
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(item.id)}
-          className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-        >
-          Delete
-        </button>
-      </div>
 
       {item.children.length > 0 ? (
         <div className="mt-4 border-l border-zinc-200 pl-4">
@@ -298,7 +317,7 @@ export default function TermsEditor({ items }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-xs text-zinc-500">Add, edit, nest, and drag to reorder terms items.</p>
+          <p className="text-xs text-zinc-500">Add items, nest them, and drag to reorder. Numbering is automatic.</p>
           {isPending ? <p className="text-xs text-zinc-500">Saving terms...</p> : null}
           {error ? <p className="text-xs text-red-600">{error}</p> : null}
         </div>
@@ -308,7 +327,7 @@ export default function TermsEditor({ items }: Props) {
             onClick={addRoot}
             className="rounded-md border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
           >
-            Add top-level section
+            Add numbered item
           </button>
           <button
             type="button"
