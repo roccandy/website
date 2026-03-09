@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -16,29 +16,41 @@ type Props = {
 
 type EditorNode = ManagedTermsNode;
 
-function composeContent(node: EditorNode) {
-  return [node.title.trim(), node.body.trim()].filter(Boolean).join("\n\n");
+function AutoResizeTextarea({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.style.height = "0px";
+    node.style.height = `${node.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      rows={1}
+      className={className}
+      style={{ overflow: "hidden", resize: "none" }}
+    />
+  );
 }
 
-function splitContent(value: string) {
-  const normalized = value.replace(/\r\n/g, "\n").trim();
-  if (!normalized) {
-    return { title: "", body: "" };
-  }
-
-  const parts = normalized
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) {
-    return { title: "", body: normalized };
-  }
-
-  return {
-    title: parts[0] ?? "",
-    body: parts.slice(1).join("\n\n"),
-  };
+function composeContent(node: EditorNode) {
+  return [node.title.trim(), node.body.trim()].filter(Boolean).join("\n\n");
 }
 
 function createNode(parent: EditorNode | null, siblingCount: number): EditorNode {
@@ -171,8 +183,8 @@ function SortableTermCard({
 
       {isTopLevel ? (
         <>
-          <div className="mt-3 flex items-start gap-3">
-            <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex shrink-0 self-stretch items-center rounded border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">
               {marker}
             </div>
             <label className="min-w-0 flex-1 space-y-1 text-sm text-zinc-700">
@@ -188,29 +200,27 @@ function SortableTermCard({
           </div>
           <label className="mt-3 block space-y-1 text-sm text-zinc-700">
             <span className="text-xs text-zinc-500">Body</span>
-            <textarea
+            <AutoResizeTextarea
               value={item.body}
-              onChange={(event) => onFieldChange(item.id, "body", event.target.value)}
-              rows={4}
+              onChange={(value) => onFieldChange(item.id, "body", value)}
               placeholder="Section text"
               className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
           </label>
         </>
       ) : (
-        <div className="mt-3 flex items-start gap-3">
-          <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex shrink-0 self-stretch items-center rounded border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">
             {marker}
           </div>
           <label className="min-w-0 flex-1 space-y-1 text-sm text-zinc-700">
             <span className="text-xs text-zinc-500">Text</span>
-            <textarea
+            <AutoResizeTextarea
               value={contentValue}
-              onChange={(event) => {
+              onChange={(value) => {
                 onFieldChange(item.id, "title", "");
-                onFieldChange(item.id, "body", event.target.value.replace(/\r\n/g, "\n"));
+                onFieldChange(item.id, "body", value.replace(/\r\n/g, "\n"));
               }}
-              rows={2}
               placeholder="Clause text"
               className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
