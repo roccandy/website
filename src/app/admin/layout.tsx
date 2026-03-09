@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/Toast";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
-import { requireAdminSession } from "@/lib/adminAuth";
+import { getAdminSession } from "@/lib/adminAuth";
 
 const baseNavSections = [
   {
@@ -52,8 +52,18 @@ const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const session = await requireAdminSession();
-  const signedInEmail = session?.user?.email?.trim() || "Signed in";
+  const session = await getAdminSession();
+
+  if (!session) {
+    return (
+      <ToastProvider>
+        <AdminBodyAttributes />
+        <div className="min-h-screen bg-white text-zinc-900">{children}</div>
+      </ToastProvider>
+    );
+  }
+
+  const signedInEmail = session.user.email?.trim() || "Signed in";
   const navSections = session.user.canManageUsers
     ? [
         ...baseNavSections,
