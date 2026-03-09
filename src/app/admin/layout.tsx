@@ -63,7 +63,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     );
   }
 
-  const signedInEmail = session.user.email?.trim() || "Signed in";
+  const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
   const navSections = session.user.canManageUsers
     ? [
         ...baseNavSections,
@@ -87,7 +87,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <div className="flex items-center gap-3">
               <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-right leading-tight">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signed in</p>
-                <p className="text-xs font-medium normal-case text-zinc-700">{signedInEmail}</p>
+                <p className="text-xs font-medium normal-case text-zinc-700">{signedInDisplay}</p>
               </div>
               <LogoutButton />
             </div>

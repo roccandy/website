@@ -127,6 +127,7 @@ export default async function AdminHome() {
         },
       ]
     : baseSections;
+  const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
 
   return (
     <section className="space-y-10">
@@ -136,7 +137,7 @@ export default async function AdminHome() {
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Admin</p>
             <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">Roc Candy Console</h1>
             <p className="text-sm text-zinc-500">
-              Signed in as {session.user.email}
+              Signed in as {signedInDisplay}
               {" · "}
               {session.user.role}
               {session.user.isBootstrap ? " · bootstrap" : ""}
