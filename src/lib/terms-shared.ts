@@ -30,6 +30,53 @@ export function normalizeTermsItems(items: ManagedTermsItem[]): ManagedTermsItem
   }));
 }
 
+function toRoman(value: number) {
+  const numerals = [
+    [1000, "m"],
+    [900, "cm"],
+    [500, "d"],
+    [400, "cd"],
+    [100, "c"],
+    [90, "xc"],
+    [50, "l"],
+    [40, "xl"],
+    [10, "x"],
+    [9, "ix"],
+    [5, "v"],
+    [4, "iv"],
+    [1, "i"],
+  ] as const;
+  let remaining = Math.max(1, value);
+  let result = "";
+  for (const [amount, symbol] of numerals) {
+    while (remaining >= amount) {
+      result += symbol;
+      remaining -= amount;
+    }
+  }
+  return result;
+}
+
+export function computeTermsMarker(path: number[]) {
+  if (path.length === 0) return "";
+  if (path.length === 1) return String(path[0] + 1);
+  if (path.length === 2) return `${path[0] + 1}.${path[1] + 1}`;
+  if (path.length === 3) return String.fromCharCode(97 + (path[2] % 26));
+  return toRoman(path[path.length - 1] + 1);
+}
+
+export function assignTermsMarkers(nodes: ManagedTermsNode[], path: number[] = []): ManagedTermsNode[] {
+  return nodes.map((node, index) => {
+    const nextPath = [...path, index];
+    return {
+      ...node,
+      sortOrder: index,
+      marker: computeTermsMarker(nextPath),
+      children: assignTermsMarkers(node.children, nextPath),
+    };
+  });
+}
+
 export function buildTermsTree(items: ManagedTermsItem[]): ManagedTermsNode[] {
   const normalized = normalizeTermsItems(items);
   const childrenByParent = new Map<string | null, ManagedTermsItem[]>();
@@ -48,19 +95,24 @@ export function buildTermsTree(items: ManagedTermsItem[]): ManagedTermsNode[] {
         children: buildNodes(item.id),
       }));
 
-  return buildNodes(null);
+  return assignTermsMarkers(buildNodes(null));
 }
 
-export function flattenTermsTree(nodes: ManagedTermsNode[], parentId: string | null = null): ManagedTermsItem[] {
+export function flattenTermsTree(
+  nodes: ManagedTermsNode[],
+  parentId: string | null = null,
+  path: number[] = []
+): ManagedTermsItem[] {
   return nodes.flatMap((node, index) => {
+    const nextPath = [...path, index];
     const current: ManagedTermsItem = {
       id: isUuid(node.id) ? node.id : crypto.randomUUID(),
       parentId,
-      marker: normalizeText(node.marker),
+      marker: computeTermsMarker(nextPath),
       title: normalizeText(node.title),
       body: normalizeText(node.body),
       sortOrder: index,
     };
-    return [current, ...flattenTermsTree(node.children ?? [], current.id)];
+    return [current, ...flattenTermsTree(node.children ?? [], current.id, nextPath)];
   });
 }

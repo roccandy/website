@@ -7,7 +7,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ManagedTermsItem, ManagedTermsNode } from "@/lib/terms-shared";
-import { flattenTermsTree } from "@/lib/terms-shared";
+import { computeTermsMarker, flattenTermsTree } from "@/lib/terms-shared";
 import { saveTermsTree } from "./actions";
 
 type Props = {
@@ -16,47 +16,11 @@ type Props = {
 
 type EditorNode = ManagedTermsNode;
 
-function toRoman(value: number) {
-  const numerals = [
-    [10, "x"],
-    [9, "ix"],
-    [5, "v"],
-    [4, "iv"],
-    [1, "i"],
-  ] as const;
-  let remaining = Math.max(1, value);
-  let result = "";
-  for (const [amount, symbol] of numerals) {
-    while (remaining >= amount) {
-      result += symbol;
-      remaining -= amount;
-    }
-  }
-  return result;
-}
-
-function nextMarkerFor(parent: EditorNode | null, siblingCount: number) {
-  const nextIndex = siblingCount + 1;
-  if (!parent) return `${nextIndex}.`;
-
-  const parentMarker = parent.marker.trim();
-  if (/^\d+\.$/.test(parentMarker) || /^\d+$/.test(parentMarker)) {
-    return `${parentMarker.replace(/\.$/, "")}.${nextIndex}`;
-  }
-  if (/^\d+\.\d+$/.test(parentMarker)) {
-    return `${String.fromCharCode(96 + Math.min(nextIndex, 26))})`;
-  }
-  if (/^[a-z]\)$/i.test(parentMarker)) {
-    return `${toRoman(nextIndex)}.)`;
-  }
-  return "";
-}
-
 function createNode(parent: EditorNode | null, siblingCount: number): EditorNode {
   return {
     id: crypto.randomUUID(),
     parentId: parent?.id ?? null,
-    marker: nextMarkerFor(parent, siblingCount),
+    marker: "",
     title: "",
     body: "",
     sortOrder: siblingCount,
@@ -116,17 +80,21 @@ function reindexTree(nodes: EditorNode[], parentId: string | null = null): Edito
 
 function SortableTermCard({
   item,
+  marker,
   depth,
   index,
+  path,
   onFieldChange,
   onAddChild,
   onDelete,
   onReorderChildren,
 }: {
   item: EditorNode;
+  marker: string;
   depth: number;
   index: number;
-  onFieldChange: (id: string, field: "marker" | "title" | "body", value: string) => void;
+  path: number[];
+  onFieldChange: (id: string, field: "title" | "body", value: string) => void;
   onAddChild: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderChildren: (parentId: string | null, activeId: string, overId: string) => void;
@@ -159,16 +127,12 @@ function SortableTermCard({
       </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-[150px_1fr]">
-        <label className="space-y-1 text-sm text-zinc-700">
+        <div className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Marker</span>
-          <input
-            type="text"
-            value={item.marker}
-            onChange={(event) => onFieldChange(item.id, "marker", event.target.value)}
-            placeholder="e.g. 1. or 3.1 or a)"
-            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-          />
-        </label>
+          <div className="rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+            {marker}
+          </div>
+        </div>
         <label className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Title</span>
           <input
@@ -215,6 +179,7 @@ function SortableTermCard({
             items={item.children}
             parentId={item.id}
             depth={depth + 1}
+            path={[...path, index]}
             onFieldChange={onFieldChange}
             onAddChild={onAddChild}
             onDelete={onDelete}
@@ -230,6 +195,7 @@ function SortableTermsList({
   items,
   parentId,
   depth,
+  path,
   onFieldChange,
   onAddChild,
   onDelete,
@@ -238,7 +204,8 @@ function SortableTermsList({
   items: EditorNode[];
   parentId: string | null;
   depth: number;
-  onFieldChange: (id: string, field: "marker" | "title" | "body", value: string) => void;
+  path: number[];
+  onFieldChange: (id: string, field: "title" | "body", value: string) => void;
   onAddChild: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderChildren: (parentId: string | null, activeId: string, overId: string) => void;
@@ -263,8 +230,10 @@ function SortableTermsList({
             <SortableTermCard
               key={item.id}
               item={item}
+              marker={computeTermsMarker([...path, index])}
               depth={depth}
               index={index}
+              path={path}
               onFieldChange={onFieldChange}
               onAddChild={onAddChild}
               onDelete={onDelete}
@@ -287,7 +256,7 @@ export default function TermsEditor({ items }: Props) {
     setTree(items);
   }, [items]);
 
-  const updateField = (id: string, field: "marker" | "title" | "body", value: string) => {
+  const updateField = (id: string, field: "title" | "body", value: string) => {
     setTree((current) => updateNode(current, id, (node) => ({ ...node, [field]: value })));
   };
 
@@ -360,6 +329,7 @@ export default function TermsEditor({ items }: Props) {
           items={tree}
           parentId={null}
           depth={0}
+          path={[]}
           onFieldChange={updateField}
           onAddChild={addChild}
           onDelete={remove}
