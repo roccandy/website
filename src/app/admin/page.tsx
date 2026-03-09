@@ -93,6 +93,11 @@ const sections = [
         description: "Public FAQ list and order.",
       },
       {
+        href: "/admin/settings/privacy",
+        label: "Privacy Policy",
+        description: "Public privacy page content.",
+      },
+      {
         href: "/admin/settings/terms",
         label: "Terms and Conditions",
         description: "Public terms tree and order.",
