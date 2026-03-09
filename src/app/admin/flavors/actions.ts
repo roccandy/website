@@ -7,7 +7,11 @@ import { redirect } from "next/navigation";
 const PATH = "/admin/flavors";
 
 export async function insertFlavor(name: string): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to add flavor." };
+  }
   const trimmed = name?.toString().trim();
   if (!trimmed) return { error: "Flavor name required." };
 
@@ -28,7 +32,7 @@ export async function insertFlavor(name: string): Promise<{ error: string | null
 }
 
 export async function deleteFlavor(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: PATH });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;
@@ -38,7 +42,7 @@ export async function deleteFlavor(formData: FormData) {
 }
 
 export async function toggleFlavorActive(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: PATH });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const nextActiveRaw = formData.get("next_active")?.toString().trim().toLowerCase();
@@ -53,7 +57,11 @@ export async function toggleFlavorActive(formData: FormData) {
 export async function updateFlavorOrder(
   updates: { id: string; sortOrder: number }[]
 ): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save flavor order." };
+  }
   if (!Array.isArray(updates) || updates.length === 0) return { error: null };
 
   const client = supabaseServerClient;

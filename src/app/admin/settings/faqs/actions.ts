@@ -15,7 +15,7 @@ function reindex(items: ManagedFaqItem[]): ManagedFaqItem[] {
 }
 
 export async function addFaq(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const question = normalizeField(formData.get("question"));
   const answerHtml = normalizeField(formData.get("answerHtml"));
 
@@ -34,7 +34,7 @@ export async function addFaq(formData: FormData) {
 }
 
 export async function updateFaq(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -61,7 +61,7 @@ export async function updateFaq(formData: FormData) {
 }
 
 export async function deleteFaq(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -72,7 +72,7 @@ export async function deleteFaq(formData: FormData) {
 }
 
 export async function moveFaqUp(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -89,7 +89,7 @@ export async function moveFaqUp(formData: FormData) {
 }
 
 export async function moveFaqDown(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const id = normalizeField(formData.get("id"));
   if (!id) throw new Error("FAQ id is required.");
 
@@ -108,7 +108,11 @@ export async function moveFaqDown(formData: FormData) {
 export async function updateFaqOrder(
   updates: { id: string; sortOrder: number }[]
 ): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save FAQ order." };
+  }
   if (!Array.isArray(updates) || updates.length === 0) {
     return { error: null };
   }

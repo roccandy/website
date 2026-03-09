@@ -26,7 +26,7 @@ function normalizeHex(value: FormDataEntryValue | null, fallback: string) {
 
 async function updateColorPalette(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/palette" });
 
   const client = supabaseServerClient;
   const rows = paletteSections.flatMap((section, sectionIndex) =>

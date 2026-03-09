@@ -8,7 +8,11 @@ import type { ManagedTermsItem } from "@/lib/terms-shared";
 const TERMS_PATHS = ["/terms-and-conditions", "/admin/settings/terms"];
 
 export async function saveTermsTree(items: ManagedTermsItem[]): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save terms." };
+  }
   try {
     await saveManagedTermsItems(items);
     for (const path of TERMS_PATHS) {

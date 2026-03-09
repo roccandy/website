@@ -12,7 +12,7 @@ function normalizeField(value: FormDataEntryValue | null) {
 }
 
 export async function savePrivacyPage(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: PRIVACY_ADMIN_PATH });
   const title = normalizeField(formData.get("title"));
   const bodyHtml = normalizeField(formData.get("bodyHtml"));
 

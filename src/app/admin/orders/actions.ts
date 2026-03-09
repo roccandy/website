@@ -40,7 +40,7 @@ const formatPremadeWeight = (weightG: number) => {
 };
 
 export async function upsertOrder(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const toastSuccess = formData.get("toast_success")?.toString() || null;
   const toastError = formData.get("toast_error")?.toString() || null;
@@ -339,7 +339,7 @@ export async function upsertOrder(formData: FormData) {
 }
 
 export async function refundOrder(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const id = formData.get("id")?.toString() || null;
   const refundReasonRaw = formData.get("refund_reason")?.toString() || null;
   const refundReason = refundReasonRaw ? refundReasonRaw.trim().slice(0, 255) : null;
@@ -421,7 +421,7 @@ export async function refundOrder(formData: FormData) {
 }
 
 export async function upsertSlot(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const id = formData.get("id")?.toString() || undefined;
   const slot_date = formData.get("slot_date")?.toString() || null;
   const capacity_kg = Number(formData.get("capacity_kg") || 0);
@@ -457,7 +457,7 @@ export async function upsertSlot(formData: FormData) {
 }
 
 export async function assignOrderToSlot(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   try {
     const assignmentId = formData.get("assignment_id")?.toString() || undefined;
     const order_id = formData.get("order_id")?.toString();
@@ -633,7 +633,7 @@ export async function assignOrderToSlot(formData: FormData) {
 }
 
 export async function deleteAssignment(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   try {
     const assignmentId = formData.get("assignment_id")?.toString();
     if (!assignmentId) throw new Error("Missing assignment id");
@@ -665,7 +665,7 @@ export async function deleteAssignment(formData: FormData) {
 }
 
 export async function archiveOrder(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
@@ -677,7 +677,7 @@ export async function archiveOrder(formData: FormData) {
 }
 
 export async function unarchiveOrder(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
@@ -689,7 +689,7 @@ export async function unarchiveOrder(formData: FormData) {
 }
 
 export async function markAdditionalItemShipped(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
@@ -711,7 +711,7 @@ export async function markAdditionalItemShipped(formData: FormData) {
 }
 
 export async function markAdditionalItemsShipped(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderIdsRaw = formData.get("order_ids")?.toString() || "";
   const orderIds = orderIdsRaw
     .split(",")
@@ -739,7 +739,7 @@ export async function markAdditionalItemsShipped(formData: FormData) {
 }
 
 export async function markAdditionalItemsPending(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderIdsRaw = formData.get("order_ids")?.toString() || "";
   const orderIds = orderIdsRaw
     .split(",")
@@ -767,7 +767,7 @@ export async function markAdditionalItemsPending(formData: FormData) {
 }
 
 export async function addOpenOverride(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
@@ -794,7 +794,7 @@ export async function addOpenOverride(formData: FormData) {
 }
 
 export async function addManualBlock(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
@@ -829,7 +829,7 @@ export async function addManualBlock(formData: FormData) {
 }
 
 export async function removeManualBlock(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
@@ -846,7 +846,7 @@ export async function removeManualBlock(formData: FormData) {
 }
 
 export async function addQuoteBlock(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const start_date = formData.get("start_date")?.toString();
   const end_date = formData.get("end_date")?.toString();
   if (!start_date) throw new Error("Start date is required.");
@@ -864,7 +864,7 @@ export async function addQuoteBlock(formData: FormData) {
 }
 
 export async function removeQuoteBlock(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect" });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Block id is required.");
 

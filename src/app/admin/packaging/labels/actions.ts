@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 const SHAPES = new Set(["square", "rectangular", "circle"]);
 
 export async function upsertLabelType(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging/labels" });
   const id = formData.get("id")?.toString() || undefined;
   const shape = formData.get("shape")?.toString() ?? "";
   const dimensions = formData.get("dimensions")?.toString() ?? "";
@@ -34,7 +34,7 @@ export async function upsertLabelType(formData: FormData) {
 }
 
 export async function deleteLabelType(formData: FormData) {
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging/labels" });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseServerClient;

@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/Toast";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
+import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { getAdminSession } from "@/lib/adminAuth";
 
 const baseNavSections = [
@@ -58,6 +59,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     return (
       <ToastProvider>
         <AdminBodyAttributes />
+        <AdminQueryToast />
         <div className="min-h-screen bg-white text-zinc-900">{children}</div>
       </ToastProvider>
     );
@@ -77,6 +79,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <ToastProvider>
       <AdminBodyAttributes />
+      <AdminQueryToast />
       <div className="min-h-screen bg-white text-zinc-900">
         <header className="border-b border-zinc-200">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">

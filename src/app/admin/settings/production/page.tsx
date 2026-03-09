@@ -20,7 +20,7 @@ const DEFAULT_NO_PRODUCTION_DAYS = [
 
 async function updateProductionSettings(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const production_slots_per_day = Number(formData.get("production_slots_per_day"));
   const max_total_kg = Number(formData.get("max_total_kg"));
@@ -43,7 +43,7 @@ async function updateProductionSettings(formData: FormData) {
 
 async function updateBlockoutVisibilityWindow(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const monthsRaw = Number(formData.get("quote_blockout_months"));
   const quote_blockout_months = Number.isFinite(monthsRaw)
@@ -67,7 +67,7 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
 
 async function updateDefaultNoProduction(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const no_production_mon = formData.get("no_production_mon") === "on";
   const no_production_tue = formData.get("no_production_tue") === "on";
@@ -100,7 +100,7 @@ async function updateDefaultNoProduction(formData: FormData) {
 
 async function addBlock(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const start_date = formData.get("start_date")?.toString();
   const end_date = formData.get("end_date")?.toString();
@@ -128,7 +128,7 @@ async function addBlock(formData: FormData) {
 
 async function deleteBlock(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const id = formData.get("id")?.toString();
   if (!id) {
@@ -146,7 +146,7 @@ async function deleteBlock(formData: FormData) {
 
 async function updateBlock(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
   const id = formData.get("id")?.toString();
   const start_date = formData.get("start_date")?.toString();

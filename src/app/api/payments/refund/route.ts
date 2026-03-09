@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/adminAuth";
+import { getAdminSession, READ_ONLY_MESSAGE } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { updateWooOrder } from "@/lib/woo";
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Authentication required." }, { status: 401 });
     }
     if (!session.user.canWrite) {
-      return NextResponse.json({ error: "Read-only users cannot process refunds." }, { status: 403 });
+      return NextResponse.json({ error: READ_ONLY_MESSAGE }, { status: 403 });
     }
 
     const body = (await request.json()) as RefundRequest;

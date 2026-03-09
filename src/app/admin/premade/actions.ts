@@ -109,7 +109,11 @@ export type PremadeUploadUrlResponse = {
 };
 
 export async function createPremadeUploadUrl(name: string, extension: string): Promise<PremadeUploadUrlResponse> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : "Unable to prepare upload." };
+  }
   const trimmed = name?.toString().trim();
   const normalizedExt = normalizeExtension(extension);
   if (!trimmed) {
@@ -150,7 +154,11 @@ export async function insertPremadeCandy(payload: {
   product_condition?: string | null;
   sale_price?: number | null;
 }): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to create pre-made item." };
+  }
   const name = payload.name?.toString().trim();
   const description = payload.description?.toString().trim() ?? "";
   if (!name) return { error: "Name is required." };
@@ -231,7 +239,11 @@ export async function updatePremadeCandy(payload: {
   product_condition?: string | null;
   sale_price?: number | null;
 }): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to update pre-made item." };
+  }
   if (!payload.id) return { error: "Missing item id." };
   const name = payload.name?.toString().trim();
   const description = payload.description?.toString().trim() ?? "";
@@ -300,7 +312,11 @@ export async function updatePremadeCandy(payload: {
 }
 
 export async function setPremadeActive(id: string, is_active: boolean): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to update pre-made item." };
+  }
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data, error } = await client
@@ -319,7 +335,11 @@ export async function setPremadeActive(id: string, is_active: boolean): Promise<
 export async function updatePremadeOrder(
   updates: { id: string; sort_order: number }[]
 ): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save pre-made order." };
+  }
   if (!updates.length) return { error: null };
   const client = supabaseServerClient;
   for (const update of updates) {
@@ -333,7 +353,11 @@ export async function updatePremadeOrder(
 }
 
 export async function syncPremadeToWoo(id: string): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to sync pre-made item." };
+  }
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).single();
@@ -348,7 +372,16 @@ export async function syncAllPremadeToWoo(): Promise<{
   failed: number;
   total: number;
 }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Unable to sync pre-made items.",
+      synced: 0,
+      failed: 0,
+      total: 0,
+    };
+  }
   const client = supabaseServerClient;
   const { data, error } = await client.from("premade_candies").select("*");
   if (error) {
@@ -371,7 +404,11 @@ export async function syncAllPremadeToWoo(): Promise<{
 }
 
 export async function deletePremadeCandy(id: string): Promise<{ error: string | null }> {
-  await requireAdminWriteAccess();
+  try {
+    await requireAdminWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to delete pre-made item." };
+  }
   if (!id) return { error: "Missing item id." };
   const client = supabaseServerClient;
   const { data: existing, error: readError } = await client

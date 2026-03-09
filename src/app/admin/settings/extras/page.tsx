@@ -9,7 +9,7 @@ export const fetchCache = "force-no-store";
 
 async function updateExtrasPricing(formData: FormData) {
   "use server";
-  await requireAdminWriteAccess();
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/extras" });
 
   const lead_time_days = Number(formData.get("lead_time_days"));
   const urgency_fee = Number(formData.get("urgency_fee"));

@@ -1,7 +1,15 @@
 import { getServerSession } from "next-auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import type { AdminRole } from "@/types/next-auth";
+
+export const READ_ONLY_MESSAGE = "User is read only. Contact admin@roccandy.com.au for permission.";
+
+type WriteAccessOptions = {
+  onDenied?: "throw" | "redirect";
+  redirectTo?: string;
+};
 
 export async function getAdminSession() {
   return getServerSession(authOptions);
@@ -15,10 +23,40 @@ export async function requireAdminSession() {
   return session;
 }
 
-export async function requireAdminWriteAccess() {
+export function appendAdminToast(target: string, tone: "success" | "error", message: string) {
+  const url = new URL(target, "http://admin.local");
+  url.searchParams.set("toast", tone);
+  url.searchParams.set("message", message);
+  const path = `${url.pathname}${url.search}${url.hash}`;
+  return path.startsWith("/") ? path : `/${path}`;
+}
+
+async function resolveAdminRedirectTarget(explicitTarget?: string) {
+  if (explicitTarget) {
+    return explicitTarget;
+  }
+
+  const headerStore = await headers();
+  const referer = headerStore.get("referer");
+  if (!referer) {
+    return "/admin";
+  }
+
+  try {
+    const url = new URL(referer);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/admin";
+  }
+}
+
+export async function requireAdminWriteAccess(options: WriteAccessOptions = {}) {
   const session = await requireAdminSession();
   if (!session.user.canWrite) {
-    throw new Error("Read-only users cannot make changes.");
+    if (options.onDenied === "redirect") {
+      redirect(appendAdminToast(await resolveAdminRedirectTarget(options.redirectTo), "error", READ_ONLY_MESSAGE));
+    }
+    throw new Error(READ_ONLY_MESSAGE);
   }
   return session;
 }
