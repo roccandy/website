@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { saveManagedSitePage } from "@/lib/sitePages";
 
 const PRIVACY_ADMIN_PATH = "/admin/settings/privacy";
@@ -21,4 +22,5 @@ export async function savePrivacyPage(formData: FormData) {
 
   revalidatePath("/privacy");
   revalidatePath(PRIVACY_ADMIN_PATH);
+  redirect(`${PRIVACY_ADMIN_PATH}?updated=1`);
 }

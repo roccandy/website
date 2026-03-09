@@ -9,13 +9,17 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export default async function AdminPrivacySettingsPage() {
+type SearchParams = { updated?: string } | Promise<{ updated?: string }>;
+
+export default async function AdminPrivacySettingsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     redirect("/admin/login");
   }
 
+  const resolvedSearchParams = await Promise.resolve(searchParams);
   const privacyPage = await getManagedSitePage("privacy");
+  const wasUpdated = resolvedSearchParams?.updated === "1";
 
   return (
     <section className="space-y-6">
@@ -34,6 +38,12 @@ export default async function AdminPrivacySettingsPage() {
           View public privacy page
         </Link>
       </div>
+
+      {wasUpdated ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Privacy policy updated on site.
+        </div>
+      ) : null}
 
       <form action={savePrivacyPage} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
         <label className="block space-y-1 text-sm text-zinc-700">
