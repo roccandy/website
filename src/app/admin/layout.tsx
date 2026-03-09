@@ -39,6 +39,7 @@ const navSections = [
       { label: "Colour Palette", href: "/admin/settings/palette" },
       { label: "Production Settings", href: "/admin/settings/production" },
       { label: "FAQs", href: "/admin/settings/faqs" },
+      { label: "Terms and Conditions", href: "/admin/settings/terms" },
       { label: "Candy Flavours", href: "/admin/flavors" },
     ],
   },

@@ -93,6 +93,11 @@ const sections = [
         description: "Public FAQ list and order.",
       },
       {
+        href: "/admin/settings/terms",
+        label: "Terms and Conditions",
+        description: "Public terms tree and order.",
+      },
+      {
         href: "/admin/flavors",
         label: "Candy Flavours",
         description: "Flavour list.",
