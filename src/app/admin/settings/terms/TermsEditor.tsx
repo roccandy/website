@@ -169,27 +169,23 @@ function SortableTermCard({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-3">
-        <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
-          {marker}
-        </div>
-        <p className="text-xs text-zinc-500">
-          {isTopLevel ? "Top-level numbered items use a title and body." : "Sub-items are single text entries."}
-        </p>
-      </div>
-
       {isTopLevel ? (
         <>
-          <label className="mt-3 block space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Title</span>
-            <input
-              type="text"
-              value={item.title}
-              onChange={(event) => onFieldChange(item.id, "title", event.target.value)}
-              placeholder="Section heading"
-              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-            />
-          </label>
+          <div className="mt-3 flex items-start gap-3">
+            <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+              {marker}
+            </div>
+            <label className="min-w-0 flex-1 space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Title</span>
+              <input
+                type="text"
+                value={item.title}
+                onChange={(event) => onFieldChange(item.id, "title", event.target.value)}
+                placeholder="Section heading"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
           <label className="mt-3 block space-y-1 text-sm text-zinc-700">
             <span className="text-xs text-zinc-500">Body</span>
             <textarea
@@ -202,19 +198,24 @@ function SortableTermCard({
           </label>
         </>
       ) : (
-        <label className="mt-3 block space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Text</span>
-          <textarea
-            value={contentValue}
-            onChange={(event) => {
-              onFieldChange(item.id, "title", "");
-              onFieldChange(item.id, "body", event.target.value.replace(/\r\n/g, "\n"));
-            }}
-            rows={3}
-            placeholder="Clause text"
-            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-          />
-        </label>
+        <div className="mt-3 flex items-start gap-3">
+          <div className="shrink-0 rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold text-zinc-700">
+            {marker}
+          </div>
+          <label className="min-w-0 flex-1 space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Text</span>
+            <textarea
+              value={contentValue}
+              onChange={(event) => {
+                onFieldChange(item.id, "title", "");
+                onFieldChange(item.id, "body", event.target.value.replace(/\r\n/g, "\n"));
+              }}
+              rows={2}
+              placeholder="Clause text"
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
       )}
 
       {item.children.length > 0 ? (
