@@ -130,6 +130,7 @@ function SortableTermCard({
     transition,
   };
   const contentValue = composeContent(item);
+  const isTopLevel = depth === 0;
 
   return (
     <article
@@ -173,24 +174,48 @@ function SortableTermCard({
           {marker}
         </div>
         <p className="text-xs text-zinc-500">
-          Add the clause text here. If you want a heading, put it first, then a blank line, then the body text.
+          {isTopLevel ? "Top-level numbered items use a title and body." : "Sub-items are single text entries."}
         </p>
       </div>
 
-      <label className="mt-3 block space-y-1 text-sm text-zinc-700">
-        <span className="text-xs text-zinc-500">Text</span>
-        <textarea
-          value={contentValue}
-          onChange={(event) => {
-            const parsed = splitContent(event.target.value);
-            onFieldChange(item.id, "title", parsed.title);
-            onFieldChange(item.id, "body", parsed.body);
-          }}
-          rows={depth === 0 ? 4 : 3}
-          placeholder="Clause text"
-          className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-        />
-      </label>
+      {isTopLevel ? (
+        <>
+          <label className="mt-3 block space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Title</span>
+            <input
+              type="text"
+              value={item.title}
+              onChange={(event) => onFieldChange(item.id, "title", event.target.value)}
+              placeholder="Section heading"
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="mt-3 block space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Body</span>
+            <textarea
+              value={item.body}
+              onChange={(event) => onFieldChange(item.id, "body", event.target.value)}
+              rows={4}
+              placeholder="Section text"
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+        </>
+      ) : (
+        <label className="mt-3 block space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">Text</span>
+          <textarea
+            value={contentValue}
+            onChange={(event) => {
+              onFieldChange(item.id, "title", "");
+              onFieldChange(item.id, "body", event.target.value.replace(/\r\n/g, "\n"));
+            }}
+            rows={3}
+            placeholder="Clause text"
+            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+          />
+        </label>
+      )}
 
       {item.children.length > 0 ? (
         <div className="mt-4 border-l border-zinc-200 pl-4">
