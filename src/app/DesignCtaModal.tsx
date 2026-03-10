@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+
 const OPTIONS = [
   { label: "Wedding Candy", href: "/design?type=weddings" },
   { label: "Text Candy", href: "/design?type=text" },
@@ -56,15 +58,15 @@ export function DesignCtaModal() {
         >
           <div className="bg-transparent text-center">
             <div>
-            {OPTIONS.map((option) => (
-              <a
-                key={option.href}
-                href={option.href}
-                className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
-              >
-                {option.label}
-              </a>
-            ))}
+              {OPTIONS.map((option) => (
+                <Link
+                  key={option.href}
+                  href={option.href}
+                  className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
+                >
+                  {option.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>

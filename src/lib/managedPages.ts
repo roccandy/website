@@ -192,6 +192,8 @@ function buildDefaultManagedPages(): ManagedPage[] {
 <p>Roc Candy creates personalised wedding rock candy for bonbonniere, wedding favours, table styling, and custom guest gifts. Choose from initials, both names, colours, and packaging options to match your wedding theme.</p>
 <h2>Personalised wedding rock candy</h2>
 <p>Our wedding candy can be made with initials, names, and colour combinations designed to suit your event. Whether you want elegant classic styling or something bright and playful, we can help create a personalised result that fits your day.</p>
+<h2>Why couples order wedding candy</h2>
+<p>Wedding candy works well when you want a favour that feels personal, looks polished in photos, and ties into the broader styling of the event. It can sit on place settings, be packed into bonbonniere, or be added to gift bags for guests and bridal party members.</p>
 <h2>Popular uses</h2>
 <ul>
   <li>Wedding favours and bonbonniere</li>
@@ -199,6 +201,17 @@ function buildDefaultManagedPages(): ManagedPage[] {
   <li>Bridal shower and engagement events</li>
   <li>Gift boxes and welcome bags</li>
 </ul>
+<h2>How the process works</h2>
+<ol>
+  <li>Choose a wedding style in the designer.</li>
+  <li>Select your preferred text, colours, and packaging.</li>
+  <li>Review pricing and submit the order details.</li>
+  <li>We produce the candy and arrange dispatch for your required date.</li>
+</ol>
+<h2>Wedding candy FAQs</h2>
+<p><strong>Can I order initials or both names?</strong><br />Yes. The wedding designer includes initials and both-names options so you can choose the format that suits your event.</p>
+<p><strong>Can the colours match my wedding palette?</strong><br />Yes. We aim to match your chosen colours as closely as possible for a cohesive finish.</p>
+<p><strong>Do you deliver across Australia?</strong><br />Yes. Roc Candy offers Australia-wide delivery, but custom orders should allow enough lead time for production and shipping.</p>
 <p><a href="/design?type=weddings&subtype=weddings-initials">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
       `,
       ogImageUrl: "/quote/subtypes/weddings-initials.jpg",
@@ -219,6 +232,8 @@ function buildDefaultManagedPages(): ManagedPage[] {
 <p>Branded logo candy is a memorable way to promote your business, campaign, product launch, or event. Roc Candy creates custom rock candy that showcases your brand in a colourful, edible format.</p>
 <h2>Branded candy for events and campaigns</h2>
 <p>Our branded rock candy is suitable for expos, conferences, client gifting, retail promotions, and event activations. We can help you match colours as closely as possible and choose packaging that suits the occasion.</p>
+<h2>Why branded candy works</h2>
+<p>Branded candy is tactile, easy to hand out, and highly memorable compared with generic promotional merchandise. It suits launches, conferences, hospitality gifting, and client thank-you packs where you want a product that feels distinctive rather than disposable.</p>
 <h2>Common branded uses</h2>
 <ul>
   <li>Corporate events and trade shows</li>
@@ -226,6 +241,17 @@ function buildDefaultManagedPages(): ManagedPage[] {
   <li>Product launches and activations</li>
   <li>Retail promotions and hospitality events</li>
 </ul>
+<h2>What to prepare before ordering</h2>
+<ul>
+  <li>Your preferred event date or delivery window</li>
+  <li>Your logo or artwork direction</li>
+  <li>Brand colours or reference materials</li>
+  <li>An estimate of the quantity required</li>
+</ul>
+<h2>Branded candy FAQs</h2>
+<p><strong>Is branded candy suitable for corporate events?</strong><br />Yes. It is commonly used for activations, conferences, launches, hospitality, and gifting.</p>
+<p><strong>Can you match brand colours?</strong><br />We aim to match brand colours as closely as possible and can advise on the best approach for production.</p>
+<p><strong>What if I need help before ordering?</strong><br />Use the contact page if you need advice on quantities, timing, or whether your branding concept is suitable.</p>
 <p><a href="/design?type=branded">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
       `,
       ogImageUrl: "/quote/subtypes/branded.jpg",
@@ -246,6 +272,8 @@ function buildDefaultManagedPages(): ManagedPage[] {
 <p>Custom text candy is a simple way to personalise a celebration, gift, or event. Roc Candy can create rock candy with names, short words, initials, and customised colour combinations.</p>
 <h2>Personalised candy with your text</h2>
 <p>Custom text candy is popular for birthdays, baby showers, hens parties, thank-you gifts, event favours, and special occasions where you want something more memorable than standard sweets.</p>
+<h2>When custom text candy makes sense</h2>
+<p>These products work well when you want a personalised item without needing a full logo or large corporate brief. They are a good fit for names, short words, nicknames, and simple event messages that feel tailored to the person or celebration.</p>
 <h2>Popular custom text uses</h2>
 <ul>
   <li>Birthdays and milestone parties</li>
@@ -253,6 +281,12 @@ function buildDefaultManagedPages(): ManagedPage[] {
   <li>Thank-you gifts and favours</li>
   <li>Small runs for special events</li>
 </ul>
+<h2>Choosing the right text option</h2>
+<p>If your wording is short, start with the 1 to 6 letter option. Longer names or phrases can be configured in the designer as you move through the product setup.</p>
+<h2>Custom text candy FAQs</h2>
+<p><strong>Can I use names or initials?</strong><br />Yes. This is one of the most common uses for custom text candy.</p>
+<p><strong>Is it suitable for baby showers and birthdays?</strong><br />Yes. Custom text candy is frequently ordered for milestone events and gift-style occasions.</p>
+<p><strong>Can I choose the colours?</strong><br />Yes. The designer lets you select colour combinations that suit the event or theme.</p>
 <p><a href="/design?type=text&subtype=custom-1-6">Start a custom text candy design</a> or <a href="/contact">contact us</a> if you need help choosing the best option.</p>
       `,
       ogImageUrl: "/quote/subtypes/custom-1-6.jpg",

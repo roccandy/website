@@ -1,13 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const WEDDING_LINKS = [
+  { label: "Wedding overview", href: "/design/wedding-candy" },
   { label: "Initials", href: "/design?type=weddings&subtype=weddings-initials" },
   { label: "Both names", href: "/design?type=weddings&subtype=weddings-both-names" },
 ];
 
 const TEXT_LINKS = [
+  { label: "Text overview", href: "/design/custom-text-candy" },
   { label: "1-6 letters", href: "/design?type=text&subtype=custom-1-6" },
   { label: "7-14 letters", href: "/design?type=text&subtype=custom-7-14" },
 ];
@@ -42,9 +45,9 @@ export default function HeaderNav() {
       ref={navRef}
       className="order-3 flex w-full flex-nowrap items-center justify-start gap-5 overflow-x-auto overflow-y-visible whitespace-nowrap px-1 pb-1 text-[15px] font-semibold normal-case tracking-normal text-[#ff6f95] md:order-none md:flex-1 md:flex-wrap md:justify-center md:gap-17 md:overflow-visible md:whitespace-normal md:px-0 md:pb-0 md:text-[17px]"
     >
-      <a href="/design?type=branded" className="leading-none transition-colors hover:text-[#ff4f80]">
+      <Link href="/design/branded-logo-candy" className="leading-none transition-colors hover:text-[#ff4f80]">
         Branded
-      </a>
+      </Link>
       <div className="relative">
         <button
           type="button"
@@ -66,14 +69,14 @@ export default function HeaderNav() {
         {openDropdown === "wedding" ? (
           <div className="absolute left-1/2 top-full z-40 mt-3 min-w-[180px] -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white px-2 py-2 text-xs normal-case tracking-[0.16em] shadow-lg">
             {WEDDING_LINKS.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 onClick={closeDropdown}
                 className="block rounded-xl px-3 py-2 text-[#ff6f95] transition-colors hover:bg-[#fedae1]/60 hover:text-[#ff4f80]"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
         ) : null}
@@ -99,24 +102,24 @@ export default function HeaderNav() {
         {openDropdown === "text" ? (
           <div className="absolute left-1/2 top-full z-40 mt-3 min-w-[180px] -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white px-2 py-2 text-xs normal-case tracking-[0.16em] shadow-lg">
             {TEXT_LINKS.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 onClick={closeDropdown}
                 className="block rounded-xl px-3 py-2 text-[#ff6f95] transition-colors hover:bg-[#fedae1]/60 hover:text-[#ff4f80]"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
         ) : null}
       </div>
-      <a href="/pre-made-candy" className="leading-none transition-colors hover:text-[#ff4f80]">
+      <Link href="/pre-made-candy" className="leading-none transition-colors hover:text-[#ff4f80]">
         Pre-Made
-      </a>
-      <a href="/#gallery" className="leading-none transition-colors hover:text-[#ff4f80]">
+      </Link>
+      <Link href="/#gallery" className="leading-none transition-colors hover:text-[#ff4f80]">
         Gallery
-      </a>
+      </Link>
     </div>
   );
 }

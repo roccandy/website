@@ -1,3 +1,4 @@
+import Link from "next/link";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
@@ -27,6 +28,11 @@ const montserratLight = Montserrat({
 });
 
 const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
+const LANDING_LINKS = [
+  { label: "Wedding Candy", href: "/design/wedding-candy" },
+  { label: "Branded Logo Candy", href: "/design/branded-logo-candy" },
+  { label: "Custom Text Candy", href: "/design/custom-text-candy" },
+];
 const CANDY_OPTIONS = [
   { label: "Branded", href: "/design?type=branded", image: "/quote/subtypes/branded.jpg" },
   { label: "Both Names", href: "/design?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
@@ -56,9 +62,9 @@ export default async function Home() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -122,12 +128,23 @@ export default async function Home() {
 
               <div id="design" className="pt-6">
                 <DesignCtaModal />
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {LANDING_LINKS.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="rounded-full border border-zinc-200 bg-white/80 px-4 py-2 text-xs font-semibold text-[#ff6f95] shadow-sm transition hover:border-zinc-300 hover:text-[#ff4f80]"
+                    >
+                      Learn about {link.label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               {CANDY_OPTIONS.map((option) => (
-                <a
+                <Link
                   key={option.label}
                   href={option.href}
                   className="group flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300"
@@ -141,7 +158,7 @@ export default async function Home() {
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white/90" />
                   </div>
                   <div className="px-2 py-2 text-xs font-semibold text-[rgb(114,112,111)]">{option.label}</div>
-                </a>
+                </Link>
               ))}
             </div>
           </section>
@@ -160,25 +177,25 @@ export default async function Home() {
                 Custom Rock Candy
               </p>
               <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
-                At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you're planning a
+                At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you&apos;re planning a
                 wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
                 made to impress. From{" "}
-                <a href="/design?type=weddings" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                <Link href="/design/wedding-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
                   wedding candy
-                </a>{" "}
+                </Link>{" "}
                 tailored to your big day, to{" "}
-                <a href="/design?type=text" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                <Link href="/design/custom-text-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
                   custom text candy
-                </a>{" "}
+                </Link>{" "}
                 that celebrates life&apos;s milestones, we turn your words and designs into delicious works of art -
                 all made with premium ingredients right here in Australia. Explore our full range, including{" "}
-                <a href="/design?type=branded" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                <Link href="/design/branded-logo-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
                   branded candy
-                </a>{" "}
+                </Link>{" "}
                 that showcases your logo in every bite, and our colourful selection of{" "}
-                <a href="/pre-made-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                <Link href="/pre-made-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
                   pre-made candy
-                </a>{" "}
+                </Link>{" "}
                 ready to enjoy anytime. Whether it&apos;s for a party, corporate gift, or just because, Roc Candy
                 makes every occasion a little sweeter.
               </p>

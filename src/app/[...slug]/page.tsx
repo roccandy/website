@@ -16,6 +16,64 @@ import {
 } from "@/lib/seo";
 import { buildManagedPageHref, getManagedPageByPath } from "@/lib/managedPages";
 
+type LandingPageConfig = {
+  eyebrow: string;
+  imageSrc: string;
+  imageAlt: string;
+  highlights: string[];
+  primaryCta: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
+  footerCtaText?: string;
+};
+
+const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
+  "design/wedding-candy": {
+    eyebrow: "Wedding Landing Page",
+    imageSrc: "/quote/subtypes/weddings-initials.jpg",
+    imageAlt: "Wedding candy by Roc Candy",
+    highlights: ["Personalised names or initials", "Colour-matched to your event", "Australia-wide delivery"],
+    primaryCta: {
+      label: "Start Wedding Candy Design",
+      href: "/design?type=weddings&subtype=weddings-initials",
+    },
+    secondaryCta: {
+      label: "Contact Roc Candy",
+      href: "/contact",
+    },
+    footerCtaText: "Need both names instead? You can switch options once the designer opens.",
+  },
+  "design/branded-logo-candy": {
+    eyebrow: "Branded Landing Page",
+    imageSrc: "/quote/subtypes/branded.jpg",
+    imageAlt: "Branded logo candy by Roc Candy",
+    highlights: ["Great for launches and events", "Brand colour matching", "Designed for gifts and activations"],
+    primaryCta: {
+      label: "Start Branded Candy Design",
+      href: "/design?type=branded",
+    },
+    secondaryCta: {
+      label: "Contact Roc Candy",
+      href: "/contact",
+    },
+    footerCtaText: "If you have artwork or branding requirements, contact us before ordering.",
+  },
+  "design/custom-text-candy": {
+    eyebrow: "Custom Text Landing Page",
+    imageSrc: "/quote/subtypes/custom-1-6.jpg",
+    imageAlt: "Custom text candy by Roc Candy",
+    highlights: ["Names, initials, and short words", "Ideal for gifts and parties", "Fast path into the designer"],
+    primaryCta: {
+      label: "Start Custom Text Candy Design",
+      href: "/design?type=text&subtype=custom-1-6",
+    },
+    secondaryCta: {
+      label: "Contact Roc Candy",
+      href: "/contact",
+    },
+    footerCtaText: "Longer text options are available once you enter the designer.",
+  },
+};
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -87,6 +145,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
     page.metaDescription ||
     truncateText(stripHtml(page.bodyHtml), 160) ||
     page.title;
+  const landingConfig = LANDING_PAGE_CONFIG[page.slugPath] ?? null;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
@@ -147,13 +206,66 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
         </div>
 
         <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
-          <section className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Roc Candy</p>
-            <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
-              {page.title}
-            </h1>
-            {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
-          </section>
+          {landingConfig ? (
+            <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-[linear-gradient(180deg,rgba(255,248,251,0.98),rgba(255,255,255,1))] shadow-sm">
+              <div className="grid gap-6 p-6 md:grid-cols-[1.1fr,0.9fr] md:p-8">
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
+                  <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+                    {page.title}
+                  </h1>
+                  {pageDescription ? <p className="max-w-2xl text-base text-zinc-600">{pageDescription}</p> : null}
+                  <div className="flex flex-wrap gap-2">
+                    {landingConfig.highlights.map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full border border-[#ffd3df] bg-white px-3 py-1 text-xs font-semibold text-[#ff6f95]"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Link
+                      href={landingConfig.primaryCta.href}
+                      className="rounded-full bg-[#ff6f95] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#ff4f80]"
+                    >
+                      {landingConfig.primaryCta.label}
+                    </Link>
+                    {landingConfig.secondaryCta ? (
+                      <Link
+                        href={landingConfig.secondaryCta.href}
+                        className="rounded-full border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300"
+                      >
+                        {landingConfig.secondaryCta.label}
+                      </Link>
+                    ) : null}
+                  </div>
+                  {landingConfig.footerCtaText ? (
+                    <p className="text-sm text-zinc-500">{landingConfig.footerCtaText}</p>
+                  ) : null}
+                </div>
+                <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+                  <Image
+                    src={landingConfig.imageSrc}
+                    alt={landingConfig.imageAlt}
+                    width={900}
+                    height={700}
+                    className="h-full w-full object-cover"
+                    priority
+                  />
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Roc Candy</p>
+              <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+                {page.title}
+              </h1>
+              {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
+            </section>
+          )}
           <article
             className="
               max-w-none space-y-4 text-base leading-relaxed text-zinc-700
@@ -168,6 +280,35 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
             "
             dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
           />
+          {landingConfig ? (
+            <section className="rounded-3xl border border-zinc-200 bg-zinc-900 p-6 text-white shadow-sm">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">Ready to order?</p>
+                  <h2 className="text-2xl font-semibold">Move from research to design</h2>
+                  <p className="text-sm text-white/75">
+                    Use the designer to choose colours, text, packaging, and pricing for this type of candy.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href={landingConfig.primaryCta.href}
+                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100"
+                  >
+                    {landingConfig.primaryCta.label}
+                  </Link>
+                  {landingConfig.secondaryCta ? (
+                    <Link
+                      href={landingConfig.secondaryCta.href}
+                      className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                    >
+                      {landingConfig.secondaryCta.label}
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
     </main>

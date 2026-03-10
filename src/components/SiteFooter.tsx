@@ -1,12 +1,14 @@
+import Link from "next/link";
+
 type FooterLink = {
   label: string;
   href: string;
 };
 
 const CATEGORY_LINKS: FooterLink[] = [
-  { label: "Branded", href: "/design?type=branded" },
-  { label: "Wedding", href: "/design?type=weddings" },
-  { label: "Text", href: "/design?type=text" },
+  { label: "Branded", href: "/design/branded-logo-candy" },
+  { label: "Wedding", href: "/design/wedding-candy" },
+  { label: "Text", href: "/design/custom-text-candy" },
   { label: "Design Your Own", href: "/design" },
   { label: "Pre-Made", href: "/pre-made-candy" },
   { label: "Gallery", href: "/#gallery" },
@@ -63,9 +65,9 @@ export default function SiteFooter() {
     <footer className="site-footer mt-10 border-t border-[#d8d8d1] bg-[#efefeb] text-[#8e8e88]">
       <div className="mx-auto max-w-6xl px-6 py-7">
         <div className="flex flex-col items-center gap-3 text-center">
-          <a href="/" aria-label="Roc Candy home">
+          <Link href="/" aria-label="Roc Candy home">
             <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-16 w-auto" />
-          </a>
+          </Link>
           <p className="max-w-4xl normal-case text-[14px] text-[#9f9f99]">
             53 View St, North Perth (not open to the public)
           </p>
@@ -109,13 +111,13 @@ export default function SiteFooter() {
 
           <nav className="mt-1 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {CATEGORY_LINKS.map((link) => (
-              <a
+              <Link
                 key={`category-${link.label}`}
                 href={link.href}
                 className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
         </div>
@@ -125,13 +127,23 @@ export default function SiteFooter() {
         <div className="mx-auto max-w-6xl px-6 py-4">
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {infoLinks.map((link) => (
-              <a
-                key={`info-${link.label}`}
-                href={link.href}
-                className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
-              >
-                {link.label}
-              </a>
+              link.href.startsWith("mailto:") ? (
+                <a
+                  key={`info-${link.label}`}
+                  href={link.href}
+                  className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
+                >
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  key={`info-${link.label}`}
+                  href={link.href}
+                  className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
+                >
+                  {link.label}
+                </Link>
+              )
             ))}
 
             <div className="mx-1 flex flex-wrap items-center justify-center gap-1.5">
@@ -153,13 +165,13 @@ export default function SiteFooter() {
             </div>
 
             {LEGAL_LINKS.map((link) => (
-              <a
+              <Link
                 key={`legal-${link.label}`}
                 href={link.href}
                 className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
