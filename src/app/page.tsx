@@ -5,22 +5,42 @@ import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { JsonLd } from "@/components/JsonLd";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
+import { getManagedSitePage } from "@/lib/sitePages";
+import type { Metadata } from "next";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export const metadata = buildMetadata({
-  title: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
-  description:
-    "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
-  path: "/",
-  imagePath: "/landing/home-feature-poster.png",
-  imageAlt: "Roc Candy personalised rock candy",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const homePage = await getManagedSitePage("home");
+  const description =
+    homePage.metaDescription ||
+    truncateText(stripHtml(homePage.bodyHtml), 160) ||
+    "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.";
+
+  const metadata = buildMetadata({
+    title: homePage.seoTitle || "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
+    description,
+    path: "/",
+    imagePath: homePage.ogImageUrl || "/landing/home-feature-poster.png",
+    imageAlt: homePage.title || "Roc Candy personalised rock candy",
+  });
+
+  if (homePage.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(homePage.canonicalUrl) ? homePage.canonicalUrl : buildAbsoluteUrl(homePage.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -38,17 +58,21 @@ const CANDY_OPTIONS = [
 ];
 
 export default async function Home() {
+  const homePage = await getManagedSitePage("home");
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const homeDescription =
+    homePage.metaDescription ||
+    truncateText(stripHtml(homePage.bodyHtml), 160) ||
+    "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.";
   return (
     <main className="min-h-screen text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: "/",
-            name: "Personalised Rock Candy Australia",
-            description:
-              "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.",
+            name: homePage.title || "Personalised Rock Candy Australia",
+            description: homeDescription,
           }),
         ])}
       />
@@ -101,13 +125,15 @@ export default async function Home() {
                 <h1
                   className={`${montserratLight.className} mb-4 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
                 >
-                  Personalised Rock Candy
+                  {homePage.title || "Personalised Rock Candy"}
                 </h1>
                 <ProductionBlockoutBanner />
-                <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
-                  Branded, Wedding and Text Lollies
-                </h2>
-                <p className="text-xl font-medium text-[rgb(130,130,140)]">Artisan Handmade Candy</p>
+                {homePage.bodyHtml ? (
+                  <article
+                    className="mx-auto max-w-3xl space-y-2 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[28px] [&_h2]:font-medium [&_h2]:leading-tight [&_p]:text-xl [&_p]:font-medium"
+                    dangerouslySetInnerHTML={{ __html: homePage.bodyHtml }}
+                  />
+                ) : null}
               </div>
 
               <div className="flex justify-center">

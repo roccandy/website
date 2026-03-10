@@ -32,9 +32,20 @@ type SitePageRow = {
   canonical_url?: string | null;
 };
 
-export const CORE_SITE_PAGE_SLUGS = ["about", "faq", "design", "pre-made-candy"] as const;
+export const CORE_SITE_PAGE_SLUGS = ["home", "about", "faq", "design", "pre-made-candy"] as const;
 
 const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
+  home: {
+    slug: "home",
+    title: "Personalised Rock Candy",
+    bodyHtml:
+      "<h2>Branded, Wedding and Text Lollies</h2><p>Artisan handmade candy made in Australia for weddings, branded campaigns, gifts, and celebrations.</p>",
+    seoTitle: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
+    metaDescription:
+      "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
+    ogImageUrl: "/landing/home-feature-poster.png",
+    canonicalUrl: null,
+  },
   about: {
     slug: "about",
     title: "A Little About Us",

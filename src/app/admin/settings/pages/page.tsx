@@ -3,8 +3,19 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { buildManagedPageHref, getManagedPages } from "@/lib/managedPages";
+import { listSeoLibraryImages } from "@/lib/seoAssets";
+import { listSiteRedirects } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, CORE_SITE_PAGE_SLUGS, getManagedSitePages } from "@/lib/sitePages";
-import { createManagedPageAction, deleteManagedPageAction, updateManagedPageAction, updateSitePageAction } from "./actions";
+import {
+  createManagedPageAction,
+  deleteSiteRedirectAction,
+  deleteManagedPageAction,
+  saveSiteRedirectAction,
+  updateManagedPageAction,
+  updateSitePageAction,
+  uploadSeoLibraryImageAction,
+} from "./actions";
+import { HtmlEditorField } from "./HtmlEditorField";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -95,6 +106,201 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
       <a href={imageUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-zinc-600 underline-offset-2 hover:underline">
         Open image
       </a>
+    </div>
+  );
+}
+
+function SeoLibrarySection({
+  canWriteSeo,
+  images,
+}: {
+  canWriteSeo: boolean;
+  images: Awaited<ReturnType<typeof listSeoLibraryImages>>;
+}) {
+  return (
+    <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-zinc-900">SEO Media Library</h2>
+        <p className="text-sm text-zinc-600">
+          Upload reusable images here for page bodies or social share images. Copy the public URL into any editable SEO field.
+        </p>
+      </div>
+
+      {canWriteSeo ? (
+        <form action={uploadSeoLibraryImageAction} className="flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Upload image</span>
+            <input type="file" name="libraryImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
+          </label>
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+          >
+            Upload to library
+          </button>
+        </form>
+      ) : null}
+
+      {images.length === 0 ? (
+        <p className="text-sm text-zinc-500">No library images uploaded yet.</p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {images.map((image) => (
+            <div key={image.path} className="rounded-xl border border-zinc-200 p-3">
+              <div
+                className="mb-3 h-32 w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+                style={{ backgroundImage: `url("${image.publicUrl}")` }}
+              />
+              <p className="text-xs font-semibold text-zinc-900">{image.name}</p>
+              <input
+                readOnly
+                value={image.publicUrl}
+                className="mt-2 w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RedirectsSection({
+  canWriteSeo,
+  redirects,
+}: {
+  canWriteSeo: boolean;
+  redirects: Awaited<ReturnType<typeof listSiteRedirects>>;
+}) {
+  return (
+    <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-zinc-900">Launch Redirects</h2>
+        <p className="text-sm text-zinc-600">
+          Use redirects to preserve old landing page URLs for SEO, ads, and backlinks when the new site goes live.
+        </p>
+        <p className="text-xs text-zinc-500">
+          Example: <span className="font-mono">/product/wedding-candy</span> to{" "}
+          <span className="font-mono">/design/wedding-candy</span> or directly into a designer URL.
+        </p>
+      </div>
+
+      {canWriteSeo ? (
+        <form action={saveSiteRedirectAction} className="grid gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[1.4fr,1.6fr,120px,auto] md:items-end">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Old URL path</span>
+            <input
+              type="text"
+              name="sourcePath"
+              placeholder="/product/wedding-candy"
+              className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-mono"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">New destination</span>
+            <input
+              type="text"
+              name="destinationPath"
+              placeholder="/design/wedding-candy"
+              className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-mono"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Status</span>
+            <select name="statusCode" defaultValue="301" className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm">
+              <option value="301">301</option>
+              <option value="302">302</option>
+            </select>
+          </label>
+          <div className="space-y-3">
+            <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4" />
+              Active
+            </label>
+            <button
+              type="submit"
+              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Save redirect
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      {redirects.length === 0 ? (
+        <p className="text-sm text-zinc-500">No redirects added yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {redirects.map((redirect) => (
+            <div key={redirect.sourcePath} className="rounded-xl border border-zinc-200 p-4">
+              <form action={saveSiteRedirectAction} className="grid gap-3 md:grid-cols-[1.2fr,1.4fr,120px,auto,auto] md:items-end">
+                <label className="space-y-1 text-sm text-zinc-700">
+                  <span className="text-xs text-zinc-500">Old URL path</span>
+                  <input
+                    type="text"
+                    name="sourcePath"
+                    defaultValue={redirect.sourcePath}
+                    readOnly={!canWriteSeo}
+                    className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
+                  />
+                </label>
+                <label className="space-y-1 text-sm text-zinc-700">
+                  <span className="text-xs text-zinc-500">New destination</span>
+                  <input
+                    type="text"
+                    name="destinationPath"
+                    defaultValue={redirect.destinationPath}
+                    readOnly={!canWriteSeo}
+                    className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
+                  />
+                </label>
+                <label className="space-y-1 text-sm text-zinc-700">
+                  <span className="text-xs text-zinc-500">Status</span>
+                  <select
+                    name="statusCode"
+                    defaultValue={String(redirect.statusCode)}
+                    disabled={!canWriteSeo}
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="301">301</option>
+                    <option value="302">302</option>
+                  </select>
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-zinc-700 md:pb-2">
+                  <input type="checkbox" name="isActive" defaultChecked={redirect.isActive} disabled={!canWriteSeo} className="h-4 w-4" />
+                  Active
+                </label>
+                {canWriteSeo ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : null}
+              </form>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-zinc-500">
+                  Updated: {redirect.updatedAt ? new Date(redirect.updatedAt).toLocaleString("en-AU") : "Not recorded"}
+                </p>
+                {canWriteSeo ? (
+                  <form action={deleteSiteRedirectAction}>
+                    <input type="hidden" name="sourcePath" value={redirect.sourcePath} />
+                    <button
+                      type="submit"
+                      className="rounded border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -196,12 +402,12 @@ function SitePageCard({
           <div className="space-y-2">
             <label className="block space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Intro / page content (HTML allowed)</span>
-              <textarea
+              <HtmlEditorField
                 name="bodyHtml"
                 defaultValue={page.bodyHtml}
                 rows={12}
                 readOnly={!canWriteSeo}
-                className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
+                placeholder="<p>Start writing the page content here.</p>"
               />
             </label>
             <PageBodyHint />
@@ -347,12 +553,12 @@ function ManagedPageCard({
         <div className="space-y-2">
           <label className="block space-y-1 text-sm text-zinc-700">
             <span className="text-xs text-zinc-500">Page body (HTML allowed)</span>
-            <textarea
+            <HtmlEditorField
               name="bodyHtml"
               defaultValue={page.bodyHtml}
               rows={14}
               readOnly={!canWriteSeo}
-              className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
+              placeholder="<p>Start writing the page content here.</p>"
             />
           </label>
           <PageBodyHint />
@@ -394,6 +600,8 @@ export default async function AdminManagedPagesPage() {
 
   const pages = await getManagedPages();
   const corePages = await getManagedSitePages(CORE_SITE_PAGE_SLUGS);
+  const seoLibraryImages = await listSeoLibraryImages();
+  const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
 
   return (
@@ -412,6 +620,8 @@ export default async function AdminManagedPagesPage() {
 
       <PathHint />
       <SeoEditorHelp />
+      <SeoLibrarySection canWriteSeo={canWriteSeo} images={seoLibraryImages} />
+      <RedirectsSection canWriteSeo={canWriteSeo} redirects={redirects} />
 
       <div className="space-y-4">
         <div className="space-y-1">
@@ -507,11 +717,11 @@ export default async function AdminManagedPagesPage() {
           <div className="space-y-2">
             <label className="block space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Page body (HTML allowed)</span>
-              <textarea
+              <HtmlEditorField
                 name="bodyHtml"
+                defaultValue=""
                 rows={12}
                 placeholder="<p>Start writing the page content here.</p>"
-                className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
               />
             </label>
             <PageBodyHint />

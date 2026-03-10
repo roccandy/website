@@ -10,6 +10,7 @@ import {
   saveManagedPage,
 } from "@/lib/managedPages";
 import { uploadSeoImage } from "@/lib/seoAssets";
+import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
@@ -139,4 +140,51 @@ export async function updateSitePageAction(formData: FormData) {
 
   await revalidateSitePagePath(slug);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Built-in page saved."));
+}
+
+export async function uploadSeoLibraryImageAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  const file = formData.get("libraryImageFile");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Choose an image to upload."));
+  }
+
+  try {
+    await uploadSeoImage(file, "library");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to upload the SEO image.";
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
+  }
+  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "SEO library image uploaded."));
+}
+
+export async function saveSiteRedirectAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  try {
+    await saveSiteRedirect({
+      sourcePath: normalizeField(formData.get("sourcePath")),
+      destinationPath: normalizeField(formData.get("destinationPath")),
+      statusCode: normalizeField(formData.get("statusCode")),
+      isActive: readCheckbox(formData, "isActive"),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save the redirect.";
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
+  }
+
+  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Redirect saved."));
+}
+
+export async function deleteSiteRedirectAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  try {
+    await deleteSiteRedirect(normalizeField(formData.get("sourcePath")));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete the redirect.";
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
+  }
+  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Redirect deleted."));
 }

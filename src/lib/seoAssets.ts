@@ -91,3 +91,28 @@ export async function uploadSeoImage(file: File, slugPath: string) {
     publicUrl: data.publicUrl,
   };
 }
+
+export async function listSeoLibraryImages() {
+  await ensureSeoImageBucket();
+  const { data, error } = await supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).list("library", {
+    limit: 100,
+    sortBy: { column: "name", order: "desc" },
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .filter((item) => item.name && item.id)
+    .map((item) => {
+      const path = `library/${item.name}`;
+      const { data: publicData } = supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).getPublicUrl(path);
+      return {
+        name: item.name,
+        path,
+        publicUrl: publicData.publicUrl,
+        updatedAt: item.updated_at ?? null,
+      };
+    });
+}
