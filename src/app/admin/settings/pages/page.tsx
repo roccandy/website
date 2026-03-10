@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { buildManagedPageHref, getManagedPages } from "@/lib/managedPages";
-import { createManagedPageAction, deleteManagedPageAction, updateManagedPageAction } from "./actions";
+import { buildManagedSitePageHref, CORE_SITE_PAGE_SLUGS, getManagedSitePages } from "@/lib/sitePages";
+import { createManagedPageAction, deleteManagedPageAction, updateManagedPageAction, updateSitePageAction } from "./actions";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -95,6 +96,132 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
         Open image
       </a>
     </div>
+  );
+}
+
+function SitePageCard({
+  page,
+  canWriteSeo,
+}: {
+  page: Awaited<ReturnType<typeof getManagedSitePages>>[number];
+  canWriteSeo: boolean;
+}) {
+  return (
+    <article className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Built-in public page</p>
+          <p className="text-lg font-semibold text-zinc-900">{page.title}</p>
+          <p className="text-xs text-zinc-500">
+            Public URL: <span className="font-mono">{buildManagedSitePageHref(page.slug)}</span>
+          </p>
+        </div>
+        <Link
+          href={buildManagedSitePageHref(page.slug)}
+          target="_blank"
+          className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+        >
+          View page
+        </Link>
+      </div>
+
+      <form action={updateSitePageAction} className="space-y-4">
+        <input type="hidden" name="slug" value={page.slug} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">On-page title (H1)</span>
+            <input
+              type="text"
+              name="title"
+              defaultValue={page.title}
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">SEO title ({(page.seoTitle ?? "").length} chars)</span>
+            <input
+              type="text"
+              name="seoTitle"
+              defaultValue={page.seoTitle ?? ""}
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Meta description ({(page.metaDescription ?? "").length} chars)</span>
+            <textarea
+              name="metaDescription"
+              defaultValue={page.metaDescription ?? ""}
+              rows={3}
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Canonical URL (optional)</span>
+            <input
+              type="text"
+              name="canonicalUrl"
+              defaultValue={page.canonicalUrl ?? ""}
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Social share image URL</span>
+              <input
+                type="text"
+                name="ogImageUrl"
+                defaultValue={page.ogImageUrl ?? ""}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            {canWriteSeo ? (
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Upload new social image</span>
+                <input type="file" name="ogImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
+              </label>
+            ) : null}
+            <ImagePreview imageUrl={page.ogImageUrl} />
+          </div>
+          <div className="space-y-2">
+            <label className="block space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Intro / page content (HTML allowed)</span>
+              <textarea
+                name="bodyHtml"
+                defaultValue={page.bodyHtml}
+                rows={12}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
+              />
+            </label>
+            <PageBodyHint />
+          </div>
+        </div>
+
+        {canWriteSeo ? (
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Save built-in page
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
+        )}
+      </form>
+    </article>
   );
 }
 
@@ -266,6 +393,7 @@ export default async function AdminManagedPagesPage() {
   }
 
   const pages = await getManagedPages();
+  const corePages = await getManagedSitePages(CORE_SITE_PAGE_SLUGS);
   const canWriteSeo = session.user.canWriteSeo;
 
   return (
@@ -284,6 +412,18 @@ export default async function AdminManagedPagesPage() {
 
       <PathHint />
       <SeoEditorHelp />
+
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold text-zinc-900">Built-in Public Pages</h2>
+          <p className="text-sm text-zinc-600">
+            These routes already exist in the app. Edit their SEO fields and intro content here without changing the route structure.
+          </p>
+        </div>
+        {corePages.map((page) => (
+          <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} />
+        ))}
+      </div>
 
       {canWriteSeo ? (
         <form action={createManagedPageAction} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -404,6 +544,12 @@ export default async function AdminManagedPagesPage() {
       )}
 
       <div className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold text-zinc-900">Managed Landing Pages</h2>
+          <p className="text-sm text-zinc-600">
+            Create new indexable landing pages such as location pages, occasion pages, or campaign pages.
+          </p>
+        </div>
         {pages.map((page) => (
           <ManagedPageCard key={page.id} page={page} canWriteSeo={canWriteSeo} />
         ))}

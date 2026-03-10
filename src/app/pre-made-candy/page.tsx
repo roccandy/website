@@ -11,26 +11,52 @@ import {
   formatPremadeMoney,
   formatPremadeWeight,
 } from "@/lib/premadeCatalog";
-import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export const metadata = buildMetadata({
-  title: "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",
-  description:
-    "Browse Roc Candy's pre-made rock candy collection with ready-to-order flavours, pack sizes, and Australia-wide delivery.",
-  path: "/pre-made-candy",
-  imagePath: "/quote/subtypes/premade.jpg",
-  imageAlt: "Roc Candy pre-made rock candy collection",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getManagedSitePage("pre-made-candy");
+  const description =
+    page.metaDescription ||
+    truncateText(stripHtml(page.bodyHtml), 160) ||
+    "Browse Roc Candy's pre-made rock candy collection with ready-to-order flavours, pack sizes, and Australia-wide delivery.";
+
+  const metadata = buildMetadata({
+    title: page.seoTitle || "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",
+    description,
+    path: "/pre-made-candy",
+    imagePath: page.ogImageUrl || "/quote/subtypes/premade.jpg",
+    imageAlt: page.title || "Roc Candy pre-made rock candy collection",
+  });
+
+  if (page.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(page.canonicalUrl) ? page.canonicalUrl : buildAbsoluteUrl(page.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
 
 export default async function PremadePage() {
+  const page = await getManagedSitePage("pre-made-candy");
   const candies = await getPremadeCandies();
   const visible = candies.filter((item) => item.is_active);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const description =
+    page.metaDescription ||
+    truncateText(stripHtml(page.bodyHtml), 160) ||
+    "Ready-to-order pre-made rock candy with multiple pack sizes, flavours, and Australia-wide delivery.";
   const itemList = visible.map((item, index) => ({
     "@type": "ListItem",
     position: index + 1,
@@ -44,16 +70,14 @@ export default async function PremadePage() {
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: "/pre-made-candy",
-            name: "Pre-Made Rock Candy",
-            description:
-              "Ready-to-order pre-made rock candy with multiple pack sizes, flavours, and Australia-wide delivery.",
+            name: page.title || "Pre-Made Rock Candy",
+            description,
           }),
           {
             "@type": "CollectionPage",
             "@id": `${buildAbsoluteUrl("/pre-made-candy")}#collection`,
-            name: "Pre-Made Rock Candy",
-            description:
-              "Ready-to-order pre-made rock candy with multiple pack sizes, flavours, and Australia-wide delivery.",
+            name: page.title || "Pre-Made Rock Candy",
+            description,
             hasPart: {
               "@type": "ItemList",
               itemListElement: itemList,
@@ -66,9 +90,9 @@ export default async function PremadePage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -104,10 +128,13 @@ export default async function PremadePage() {
         <div className="relative mx-auto max-w-6xl space-y-10 px-6 py-10 md:py-14">
           <section className="space-y-3 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Shop</p>
-            <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">Pre-made candy</h1>
-            <p className="text-base text-zinc-600">
-              Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery
-            </p>
+            <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{page.title || "Pre-made candy"}</h1>
+            {page.bodyHtml ? (
+              <article
+                className="mx-auto max-w-3xl text-base leading-relaxed text-zinc-600 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+                dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
+              />
+            ) : null}
           </section>
 
           {visible.length === 0 ? (

@@ -5,28 +5,56 @@ import FaqAccordion from "@/components/FaqAccordion";
 import { JsonLd } from "@/components/JsonLd";
 import { getFaqContentItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
 import { Montserrat } from "next/font/google";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
-export const metadata = buildMetadata({
-  title: "FAQ | Personalised Rock Candy Questions | Roc Candy",
-  description:
-    "Answers to common questions about Roc Candy personalised rock candy, including ordering, delivery, ingredients, lead times, and custom designs.",
-  path: "/faq",
-});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
   weight: ["300"],
 });
 
+export async function generateMetadata(): Promise<Metadata> {
+  const faqPage = await getManagedSitePage("faq");
+  const description =
+    faqPage.metaDescription ||
+    truncateText(stripHtml(faqPage.bodyHtml), 160) ||
+    "Answers to common questions about Roc Candy personalised rock candy.";
+
+  const metadata = buildMetadata({
+    title: faqPage.seoTitle || "FAQ | Personalised Rock Candy Questions | Roc Candy",
+    description,
+    path: "/faq",
+    imagePath: faqPage.ogImageUrl || undefined,
+    imageAlt: faqPage.title || "Frequently Asked Questions",
+  });
+
+  if (faqPage.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(faqPage.canonicalUrl) ? faqPage.canonicalUrl : buildAbsoluteUrl(faqPage.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
+
 export default async function FaqPage() {
+  const faqPage = await getManagedSitePage("faq");
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const faqItems = await getFaqContentItems();
+  const description =
+    faqPage.metaDescription ||
+    truncateText(stripHtml(faqPage.bodyHtml), 160) ||
+    "Answers to common questions about ordering, delivery, ingredients, lead times, and custom rock candy designs.";
   const faqSchemaItems = faqItems.map((item) => ({
     "@type": "Question",
     name: item.question,
@@ -42,9 +70,8 @@ export default async function FaqPage() {
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: "/faq",
-            name: "Frequently Asked Questions",
-            description:
-              "Answers to common questions about ordering, delivery, ingredients, lead times, and custom rock candy designs.",
+            name: faqPage.title || "Frequently Asked Questions",
+            description,
           }),
           {
             "@type": "FAQPage",
@@ -58,9 +85,9 @@ export default async function FaqPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -98,9 +125,15 @@ export default async function FaqPage() {
             <h1
               className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
             >
-              Frequently Asked Questions
+              {faqPage.title || "Frequently Asked Questions"}
             </h1>
           </section>
+          {faqPage.bodyHtml ? (
+            <article
+              className="max-w-none text-base leading-relaxed text-zinc-700 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+              dangerouslySetInnerHTML={{ __html: faqPage.bodyHtml }}
+            />
+          ) : null}
           <FaqAccordion items={faqItems} />
         </div>
       </div>

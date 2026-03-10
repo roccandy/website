@@ -5,6 +5,10 @@ create table if not exists public.site_pages (
   slug text primary key,
   title text not null default '',
   body_html text not null default '',
+  seo_title text,
+  meta_description text,
+  og_image_url text,
+  canonical_url text,
   updated_at timestamptz not null default now()
 );
 

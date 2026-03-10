@@ -17,7 +17,9 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
-import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -92,10 +94,35 @@ function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
 export async function generateMetadata({ searchParams }: QuotePageProps): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
   const typeParam = resolvedSearchParams?.type;
-  const variant =
-    typeParam === "branded" || typeParam === "weddings" || typeParam === "text"
-      ? DESIGN_VARIANTS[typeParam]
-      : DESIGN_VARIANTS.default;
+  const isVariant = typeParam === "branded" || typeParam === "weddings" || typeParam === "text";
+  const variant = isVariant ? DESIGN_VARIANTS[typeParam] : DESIGN_VARIANTS.default;
+
+  if (!isVariant) {
+    const page = await getManagedSitePage("design");
+    const description =
+      page.metaDescription ||
+      truncateText(stripHtml(page.bodyHtml), 160) ||
+      DESIGN_VARIANTS.default.description;
+
+    const metadata = buildMetadata({
+      title: page.seoTitle || variant.title,
+      description,
+      path: variant.path,
+      imagePath: page.ogImageUrl || "/landing/design-top.webp",
+      imageAlt: page.title || variant.name,
+    });
+
+    if (page.canonicalUrl) {
+      return {
+        ...metadata,
+        alternates: {
+          canonical: /^https?:\/\//i.test(page.canonicalUrl) ? page.canonicalUrl : buildAbsoluteUrl(page.canonicalUrl),
+        },
+      };
+    }
+
+    return metadata;
+  }
 
   return buildMetadata({
     title: variant.title,
@@ -107,6 +134,7 @@ export async function generateMetadata({ searchParams }: QuotePageProps): Promis
 }
 
 export default async function QuotePage({ searchParams }: QuotePageProps) {
+  const designPage = await getManagedSitePage("design");
   const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
@@ -130,6 +158,10 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
     initialOrderType && initialOrderType in DESIGN_VARIANTS
       ? DESIGN_VARIANTS[initialOrderType]
       : DESIGN_VARIANTS.default;
+  const defaultDescription =
+    designPage.metaDescription ||
+    truncateText(stripHtml(designPage.bodyHtml), 160) ||
+    DESIGN_VARIANTS.default.description;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
@@ -137,13 +169,13 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: seoVariant.path,
-            name: seoVariant.name,
-            description: seoVariant.description,
+            name: !initialOrderType ? designPage.title || seoVariant.name : seoVariant.name,
+            description: !initialOrderType ? defaultDescription : seoVariant.description,
           }),
           {
             "@type": "Service",
-            name: seoVariant.name,
-            description: seoVariant.description,
+            name: !initialOrderType ? designPage.title || seoVariant.name : seoVariant.name,
+            description: !initialOrderType ? defaultDescription : seoVariant.description,
             areaServed: {
               "@type": "Country",
               name: "Australia",
@@ -160,9 +192,9 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -198,6 +230,20 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         <div className="relative pb-16">
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 z-0 h-[300px] w-[1400px] max-w-full -translate-x-1/2 bg-top bg-no-repeat bg-contain opacity-95 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" style={{ backgroundImage: "url('/landing/design-top.webp')" }} />
           <div className="relative z-10 mx-auto max-w-7xl px-6">
+            {!initialOrderType ? (
+              <section className="mx-auto mb-8 max-w-4xl space-y-3 rounded-3xl border border-zinc-200 bg-white/90 p-6 text-center shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Designer</p>
+                <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+                  {designPage.title || "Design Your Candy"}
+                </h1>
+                {designPage.bodyHtml ? (
+                  <article
+                    className="mx-auto max-w-3xl text-base leading-relaxed text-zinc-600 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+                    dangerouslySetInnerHTML={{ __html: designPage.bodyHtml }}
+                  />
+                ) : null}
+              </section>
+            ) : null}
             <QuoteBuilder
               categories={categories}
               packagingOptions={packagingOptions}

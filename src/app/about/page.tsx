@@ -3,30 +3,56 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
 import { JsonLd } from "@/components/JsonLd";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
 import { Montserrat } from "next/font/google";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
-export const metadata = buildMetadata({
-  title: "About Roc Candy | Handmade Personalised Rock Candy Since 1999",
-  description:
-    "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy for weddings, events, gifts, and branded campaigns since 1999.",
-  path: "/about",
-  imagePath: "/about-carousel/about-1.jpg",
-  imageAlt: "About Roc Candy handmade personalised rock candy",
-});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
   weight: ["300"],
 });
 
+export async function generateMetadata(): Promise<Metadata> {
+  const aboutPage = await getManagedSitePage("about");
+  const description =
+    aboutPage.metaDescription ||
+    truncateText(stripHtml(aboutPage.bodyHtml), 160) ||
+    "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy.";
+
+  const metadata = buildMetadata({
+    title: aboutPage.seoTitle || "About Roc Candy | Handmade Personalised Rock Candy Since 1999",
+    description,
+    path: "/about",
+    imagePath: aboutPage.ogImageUrl || "/about-carousel/about-1.jpg",
+    imageAlt: aboutPage.title || "About Roc Candy handmade personalised rock candy",
+  });
+
+  if (aboutPage.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(aboutPage.canonicalUrl) ? aboutPage.canonicalUrl : buildAbsoluteUrl(aboutPage.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
+
 export default async function AboutPage() {
+  const aboutPage = await getManagedSitePage("about");
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const description =
+    aboutPage.metaDescription ||
+    truncateText(stripHtml(aboutPage.bodyHtml), 160) ||
+    "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy.";
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
@@ -34,9 +60,8 @@ export default async function AboutPage() {
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: "/about",
-            name: "About Roc Candy",
-            description:
-              "Australian artisan confectioners creating handmade personalised rock candy for weddings, branded events, gifts, and celebrations since 1999.",
+            name: aboutPage.title || "About Roc Candy",
+            description,
           }),
         ])}
       />
@@ -45,9 +70,9 @@ export default async function AboutPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -85,103 +110,24 @@ export default async function AboutPage() {
             <h1
               className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
             >
-              A Little About Us
+              {aboutPage.title || "A Little About Us"}
             </h1>
 
             <AboutPhotoCarousel />
-
-            <p className="normal-case text-2xl font-semibold leading-tight text-[#ff6f95] md:text-3xl">
-              Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!
-            </p>
-
-            <p className="normal-case text-lg font-medium text-zinc-700">
-              Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays,
-              christenings, and 'special event' days such as NAIDOC, Pride, Idahobit, R U OK? to name a few.
-            </p>
-
-            <div className="space-y-5 text-base leading-relaxed text-zinc-700">
-              <p>
-                At Roc Candy, we believe in the power of sweetness and the joy it brings to people's lives in a visual
-                and tasty way. Our passion for crafting delectable handmade candies is matched only by our dedication
-                to creating personalised treats that are as unique as the individuals who savor them.
-              </p>
-
-              <p>
-                With our roots deeply embedded in the art of traditional candy-making, Roc Candy has evolved into a
-                modern confectionery brand, combining time-honored techniques with innovative flavors and custom
-                designs, we are here to make your celebrations truly unforgettable.
-              </p>
-
-              <p>
-                What sets Roc Candy apart is our commitment to quality. We handcraft each and every piece of candy
-                with meticulous attention to detail, using only the finest ingredients sourced from trusted suppliers
-                of which 98% is Australian. Every step of our candy-making process is carefully executed to ensure
-                that every bite delivers an explosion of flavor and a delightful experience.
-              </p>
-
-              <p>
-                Our personalised candy creations are a true testament to the limitless possibilities of customization.
-                With Roc Candy, you have the freedom to{" "}
-                <a href="/design" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  design your own candy
-                </a>
-                , tailored to match your unique style and event theme. Choose from an array of vibrant colors,
-                enticing flavors, and captivating shapes to create a candy masterpiece that will leave a lasting
-                impression on your guests. We will also match your colour theme or logo colours as close to as
-                possible.
-              </p>
-
-              <p>
-                Whether you're looking for elegant{" "}
-                <a href="/design?type=weddings" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  wedding favors
-                </a>
-                , eye-catching{" "}
-                <a href="/design?type=branded" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  promotional items
-                </a>
-                , or simply a sweet treat to brighten someone's day, Roc Candy has got you covered. Our candies are
-                not only a feast for the taste buds but also a feast for the eyes, designed to captivate and delight.
-                We take pride in our ability to turn ordinary candies into extraordinary creations, infused with the
-                essence of your vision and personality.
-              </p>
-
-              <p>
-                At Roc Candy, we understand that customer satisfaction is the cornerstone of our success. We strive to
-                provide exceptional service, from the moment you visit our user-friendly website to the prompt delivery
-                of your custom-made candies. With our seamless ordering process, you can easily navigate through our
-                extensive range of options, select your preferences, and watch as we bring your candy dreams to life.
-                We also understand that sometimes events come up quickly so please ask us about our Urgent Order
-                process and how we can accommodate. We believe in personal customer service with efficiency to deliver
-                a high end product.
-              </p>
-
-              <p>
-                We ship Australia-wide, delivering our delicious rock candy to all major cities, including Sydney,
-                Melbourne, Brisbane, Perth, Adelaide, and beyond!
-              </p>
-
-              <p>
-                Join us on this mouthwatering journey and indulge in the magic of personalised handmade candy.
-                Discover the sweetness that sets Roc Candy apart and make your next celebration an extraordinary
-                affair. Check out our{" "}
-                <a href="/design?type=weddings" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  Wedding candy designer
-                </a>{" "}
-                or{" "}
-                <a href="/design?type=text" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  Text candy designer
-                </a>{" "}
-                and let the confectionery adventure begin!
-              </p>
-              <p>
-                You can also browse our{" "}
-                <a href="/pre-made-candy" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
-                  pre-made candy range
-                </a>{" "}
-                for ready-to-order options.
-              </p>
-            </div>
+            <article
+              className="
+                max-w-none space-y-5 text-base leading-relaxed text-zinc-700
+                [&_p]:my-0
+                [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
+                [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
+                [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
+                [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
+                [&_li]:my-1
+                [&_strong]:font-semibold [&_strong]:text-zinc-900
+                [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]
+              "
+              dangerouslySetInnerHTML={{ __html: aboutPage.bodyHtml }}
+            />
           </div>
         </div>
       </div>

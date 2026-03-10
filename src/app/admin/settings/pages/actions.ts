@@ -10,6 +10,7 @@ import {
   saveManagedPage,
 } from "@/lib/managedPages";
 import { uploadSeoImage } from "@/lib/seoAssets";
+import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
 
@@ -27,6 +28,12 @@ async function revalidateManagedPagePaths(paths: Array<string | null | undefined
     if (!normalized) continue;
     revalidatePath(buildManagedPageHref(normalized));
   }
+  revalidatePath("/sitemap.xml");
+}
+
+async function revalidateSitePagePath(slug: string) {
+  revalidatePath(buildManagedSitePageHref(slug));
+  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   revalidatePath("/sitemap.xml");
 }
 
@@ -107,4 +114,29 @@ export async function deleteManagedPageAction(formData: FormData) {
   await revalidateManagedPagePaths([path || result.page.slugPath]);
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Managed page deleted."));
+}
+
+export async function updateSitePageAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  const slug = normalizeField(formData.get("slug"));
+  if (!slug) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Page slug is required."));
+  }
+
+  const ogImageFile = formData.get("ogImageFile");
+  const uploadedOgImage =
+    ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, slug) : null;
+
+  await saveManagedSitePage({
+    slug,
+    title: normalizeField(formData.get("title")),
+    bodyHtml: normalizeField(formData.get("bodyHtml")),
+    seoTitle: normalizeField(formData.get("seoTitle")) || null,
+    metaDescription: normalizeField(formData.get("metaDescription")) || null,
+    ogImageUrl: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
+    canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
+  });
+
+  await revalidateSitePagePath(slug);
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Built-in page saved."));
 }
