@@ -17,26 +17,25 @@ import {
   uploadSeoLibraryImageAction,
 } from "./actions";
 import { HtmlEditorField } from "./HtmlEditorField";
+import { SeoAdminWorkspace } from "./SeoAdminWorkspace";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 function AdminSection({
-  id,
   eyebrow,
   title,
   description,
   children,
 }: {
-  id: string;
   eyebrow: string;
   title: string;
   description: string;
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-28 space-y-4">
+    <section className="space-y-4">
       <div className="space-y-1">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{eyebrow}</p>
         <h2 className="text-2xl font-semibold text-zinc-900">{title}</h2>
@@ -44,47 +43,6 @@ function AdminSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function PageAdminNav({
-  builtInCount,
-  managedCount,
-  redirectCount,
-  imageCount,
-  canWriteSeo,
-}: {
-  builtInCount: number;
-  managedCount: number;
-  redirectCount: number;
-  imageCount: number;
-  canWriteSeo: boolean;
-}) {
-  const items = [
-    { href: "#overview", label: "Overview", meta: "Guide" },
-    { href: "#built-in-pages", label: "Built-in Pages", meta: `${builtInCount} pages` },
-    { href: "#new-page", label: "Create Page", meta: canWriteSeo ? "Writable" : "Read-only" },
-    { href: "#managed-pages", label: "Managed Pages", meta: `${managedCount} pages` },
-    { href: "#redirects", label: "Redirects", meta: `${redirectCount} rules` },
-    { href: "#media-library", label: "Media Library", meta: `${imageCount} images` },
-  ];
-
-  return (
-    <aside className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-24">
-      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">On this page</p>
-      <div className="mt-4 space-y-2">
-        {items.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className="flex items-center justify-between rounded-xl border border-zinc-200 px-3 py-3 text-sm text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
-          >
-            <span className="font-semibold text-zinc-900">{item.label}</span>
-            <span className="text-xs text-zinc-500">{item.meta}</span>
-          </a>
-        ))}
-      </div>
-    </aside>
   );
 }
 
@@ -678,6 +636,190 @@ export default async function AdminManagedPagesPage() {
   const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
 
+  const overviewSection = (
+    <AdminSection
+      eyebrow="Overview"
+      title="SEO Editor Guide"
+      description="Start here for path examples, field guidance, and how to handle HTML and images."
+    >
+      <PathHint />
+      <SeoEditorHelp />
+    </AdminSection>
+  );
+
+  const builtInSection = (
+    <AdminSection
+      eyebrow="Built-in"
+      title="Built-in Public Pages"
+      description="These routes already exist in the app. Edit their SEO fields and intro content here without changing the route structure."
+    >
+      <div className="space-y-3">
+        {corePages.map((page, index) => (
+          <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} defaultOpen={index === 0} />
+        ))}
+      </div>
+    </AdminSection>
+  );
+
+  const newPageSection = (
+    <AdminSection
+      eyebrow="Create"
+      title="Create a New Landing Page"
+      description="Use this for new indexable landing pages such as contact, locations, occasions, or campaign pages."
+    >
+      {canWriteSeo ? (
+        <form action={createManagedPageAction} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-zinc-900">New page details</p>
+            <p className="text-xs text-zinc-500">
+              New pages appear immediately at the path you choose. Use HTML in the body for headings, lists, links, and formatted content.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Page path</span>
+              <input
+                type="text"
+                name="slugPath"
+                placeholder="design/wedding-candy"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
+              />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">On-page title (H1)</span>
+              <input
+                type="text"
+                name="title"
+                placeholder="Wedding Candy"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">SEO title</span>
+              <input
+                type="text"
+                name="seoTitle"
+                placeholder="Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Canonical URL (optional)</span>
+              <input
+                type="text"
+                name="canonicalUrl"
+                placeholder="https://www.roccandy.com.au/design/wedding-candy"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Meta description</span>
+              <textarea
+                name="metaDescription"
+                rows={3}
+                placeholder="Create personalised wedding rock candy with names, initials, colours, and packaging for wedding favours."
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <div className="space-y-3">
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Social share image URL</span>
+                <input
+                  type="text"
+                  name="ogImageUrl"
+                  placeholder="/quote/subtypes/weddings-initials.jpg"
+                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Upload social image</span>
+                <input type="file" name="ogImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Page body (HTML allowed)</span>
+              <HtmlEditorField
+                name="bodyHtml"
+                defaultValue=""
+                rows={12}
+                placeholder="<p>Start writing the page content here.</p>"
+              />
+            </label>
+            <PageBodyHint />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="isPublished" defaultChecked className="h-4 w-4" />
+              Published on site
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+              <input type="checkbox" name="isIndexable" defaultChecked className="h-4 w-4" />
+              Allow search engines to index
+            </label>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Create page
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-600">
+          This user can view SEO pages here but cannot create new ones.
+        </div>
+      )}
+    </AdminSection>
+  );
+
+  const managedSection = (
+    <AdminSection
+      eyebrow="Managed"
+      title="Managed Landing Pages"
+      description="Create and edit indexable landing pages such as location pages, occasion pages, or campaign pages."
+    >
+      <div className="space-y-3">
+        {pages.map((page, index) => (
+          <ManagedPageCard key={page.id} page={page} canWriteSeo={canWriteSeo} defaultOpen={index === 0} />
+        ))}
+      </div>
+    </AdminSection>
+  );
+
+  const redirectsSection = (
+    <AdminSection
+      eyebrow="Launch"
+      title="Redirects"
+      description="Preserve old URLs here before launch so Google Ads, backlinks, and indexed pages keep working."
+    >
+      <RedirectsSection canWriteSeo={canWriteSeo} redirects={redirects} />
+    </AdminSection>
+  );
+
+  const mediaLibrarySection = (
+    <AdminSection
+      eyebrow="Assets"
+      title="SEO Media Library"
+      description="Upload reusable images here for page bodies and social share images."
+    >
+      <SeoLibrarySection canWriteSeo={canWriteSeo} images={seoLibraryImages} />
+    </AdminSection>
+  );
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -692,195 +834,19 @@ export default async function AdminManagedPagesPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[280px,minmax(0,1fr)]">
-        <PageAdminNav
+      <SeoAdminWorkspace
           builtInCount={corePages.length}
           managedCount={pages.length}
           redirectCount={redirects.length}
           imageCount={seoLibraryImages.length}
           canWriteSeo={canWriteSeo}
-        />
-
-        <div className="space-y-8">
-          <AdminSection
-            id="overview"
-            eyebrow="Overview"
-            title="SEO Editor Guide"
-            description="Start here for path examples, field guidance, and how to handle HTML and images."
-          >
-            <PathHint />
-            <SeoEditorHelp />
-          </AdminSection>
-
-          <AdminSection
-            id="built-in-pages"
-            eyebrow="Built-in"
-            title="Built-in Public Pages"
-            description="These routes already exist in the app. Edit their SEO fields and intro content here without changing the route structure."
-          >
-            <div className="space-y-3">
-              {corePages.map((page, index) => (
-                <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} defaultOpen={index === 0} />
-              ))}
-            </div>
-          </AdminSection>
-
-          <AdminSection
-            id="new-page"
-            eyebrow="Create"
-            title="Create a New Landing Page"
-            description="Use this for new indexable landing pages such as contact, locations, occasions, or campaign pages."
-          >
-            {canWriteSeo ? (
-              <form action={createManagedPageAction} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-zinc-900">New page details</p>
-                  <p className="text-xs text-zinc-500">
-                    New pages appear immediately at the path you choose. Use HTML in the body for headings, lists, links, and formatted content.
-                  </p>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">Page path</span>
-                    <input
-                      type="text"
-                      name="slugPath"
-                      placeholder="design/wedding-candy"
-                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">On-page title (H1)</span>
-                    <input
-                      type="text"
-                      name="title"
-                      placeholder="Wedding Candy"
-                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">SEO title</span>
-                    <input
-                      type="text"
-                      name="seoTitle"
-                      placeholder="Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy"
-                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">Canonical URL (optional)</span>
-                    <input
-                      type="text"
-                      name="canonicalUrl"
-                      placeholder="https://www.roccandy.com.au/design/wedding-candy"
-                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">Meta description</span>
-                    <textarea
-                      name="metaDescription"
-                      rows={3}
-                      placeholder="Create personalised wedding rock candy with names, initials, colours, and packaging for wedding favours."
-                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <div className="space-y-3">
-                    <label className="space-y-1 text-sm text-zinc-700">
-                      <span className="text-xs text-zinc-500">Social share image URL</span>
-                      <input
-                        type="text"
-                        name="ogImageUrl"
-                        placeholder="/quote/subtypes/weddings-initials.jpg"
-                        className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                      />
-                    </label>
-                    <label className="space-y-1 text-sm text-zinc-700">
-                      <span className="text-xs text-zinc-500">Upload social image</span>
-                      <input type="file" name="ogImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">Page body (HTML allowed)</span>
-                    <HtmlEditorField
-                      name="bodyHtml"
-                      defaultValue=""
-                      rows={12}
-                      placeholder="<p>Start writing the page content here.</p>"
-                    />
-                  </label>
-                  <PageBodyHint />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
-                    <input type="checkbox" name="isPublished" defaultChecked className="h-4 w-4" />
-                    Published on site
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
-                    <input type="checkbox" name="isIndexable" defaultChecked className="h-4 w-4" />
-                    Allow search engines to index
-                  </label>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-                  >
-                    Create page
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-600">
-                This user can view SEO pages here but cannot create new ones.
-              </div>
-            )}
-          </AdminSection>
-
-          <AdminSection
-            id="managed-pages"
-            eyebrow="Managed"
-            title="Managed Landing Pages"
-            description="Create and edit indexable landing pages such as location pages, occasion pages, or campaign pages."
-          >
-            <div className="space-y-3">
-              {pages.map((page, index) => (
-                <ManagedPageCard key={page.id} page={page} canWriteSeo={canWriteSeo} defaultOpen={index === 0} />
-              ))}
-            </div>
-          </AdminSection>
-
-          <AdminSection
-            id="redirects"
-            eyebrow="Launch"
-            title="Redirects"
-            description="Preserve old URLs here before launch so Google Ads, backlinks, and indexed pages keep working."
-          >
-            <RedirectsSection canWriteSeo={canWriteSeo} redirects={redirects} />
-          </AdminSection>
-
-          <AdminSection
-            id="media-library"
-            eyebrow="Assets"
-            title="SEO Media Library"
-            description="Upload reusable images here for page bodies and social share images."
-          >
-            <SeoLibrarySection canWriteSeo={canWriteSeo} images={seoLibraryImages} />
-          </AdminSection>
-        </div>
-      </div>
+          overview={overviewSection}
+          builtIn={builtInSection}
+          newPage={newPageSection}
+          managed={managedSection}
+          redirects={redirectsSection}
+          mediaLibrary={mediaLibrarySection}
+      />
     </section>
   );
 }
