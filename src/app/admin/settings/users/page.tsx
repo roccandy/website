@@ -24,7 +24,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Site settings</p>
         <h1 className="text-3xl font-semibold text-zinc-900">Admin users</h1>
-        <p className="text-sm text-zinc-600">Give each person their own password and assign read-only or read-write access.</p>
+        <p className="text-sm text-zinc-600">Give each person their own password and assign viewer, SEO, editor, or admin access.</p>
       </div>
 
       {session.user.isBootstrap ? (
@@ -56,6 +56,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           <span className="text-xs text-zinc-500">Role</span>
           <select name="role" defaultValue="editor" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm">
             <option value="viewer">Viewer</option>
+            <option value="seo">SEO</option>
             <option value="editor">Editor</option>
             <option value="admin">Admin</option>
           </select>
@@ -89,6 +90,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                 <span className="text-xs text-zinc-500">Role</span>
                 <select name="role" defaultValue={user.role} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm">
                   <option value="viewer">Viewer</option>
+                  <option value="seo">SEO</option>
                   <option value="editor">Editor</option>
                   <option value="admin">Admin</option>
                 </select>

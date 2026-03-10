@@ -16,6 +16,7 @@ export default async function AdminTermsSettingsPage() {
   }
 
   const termsItems = await getManagedTermsTree();
+  const canWriteSeo = session.user.canWriteSeo;
 
   return (
     <section className="space-y-6">
@@ -36,7 +37,7 @@ export default async function AdminTermsSettingsPage() {
         </Link>
       </div>
 
-      <TermsEditor items={termsItems} />
+      <TermsEditor items={termsItems} canWriteSeo={canWriteSeo} />
     </section>
   );
 }

@@ -49,6 +49,7 @@ export const authOptions: NextAuthOptions = {
             name: matchedUser.display_name,
             role: matchedUser.role,
             canWrite: permissions.canWrite,
+            canWriteSeo: permissions.canWriteSeo,
             canManageUsers: permissions.canManageUsers,
             isBootstrap: false,
           };
@@ -67,6 +68,7 @@ export const authOptions: NextAuthOptions = {
               name: "Bootstrap admin",
               role,
               canWrite: permissions.canWrite,
+              canWriteSeo: permissions.canWriteSeo,
               canManageUsers: permissions.canManageUsers,
               isBootstrap: true,
             };
@@ -88,6 +90,7 @@ export const authOptions: NextAuthOptions = {
         token.name = user.name;
         token.role = user.role;
         token.canWrite = user.canWrite;
+        token.canWriteSeo = user.canWriteSeo;
         token.canManageUsers = user.canManageUsers;
         token.isBootstrap = user.isBootstrap;
       }
@@ -103,6 +106,7 @@ export const authOptions: NextAuthOptions = {
         name: token.name ?? session.user?.name ?? null,
         role,
         canWrite: token.canWrite ?? permissions.canWrite,
+        canWriteSeo: token.canWriteSeo ?? permissions.canWriteSeo,
         canManageUsers: token.canManageUsers ?? permissions.canManageUsers,
         isBootstrap: Boolean(token.isBootstrap),
       };

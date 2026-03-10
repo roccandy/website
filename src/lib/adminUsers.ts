@@ -19,6 +19,7 @@ export type AdminUserRecord = {
 export function getRolePermissions(role: AdminRole) {
   return {
     canWrite: role === "editor" || role === "admin",
+    canWriteSeo: role === "seo" || role === "editor" || role === "admin",
     canManageUsers: role === "admin",
   };
 }

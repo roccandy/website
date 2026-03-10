@@ -114,6 +114,15 @@ const baseSections = [
   },
 ];
 
+function isSeoEditableHref(href: string) {
+  return (
+    href === "/admin/settings/pages" ||
+    href === "/admin/settings/faqs" ||
+    href === "/admin/settings/privacy" ||
+    href === "/admin/settings/terms"
+  );
+}
+
 export default async function AdminHome() {
   const session = await requireAdminSession();
   const sections = session.user.canManageUsers
@@ -172,7 +181,11 @@ export default async function AdminHome() {
                       <p className="text-xs text-zinc-500">{item.description}</p>
                     </div>
                     <span className="text-xs font-semibold text-zinc-400 transition group-hover:text-zinc-600">
-                      View
+                      {session.user.canWrite
+                        ? "Edit"
+                        : session.user.canWriteSeo && isSeoEditableHref(item.href)
+                          ? "Edit"
+                          : "View"}
                     </span>
                   </div>
                 </Link>

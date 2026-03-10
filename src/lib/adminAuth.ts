@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import type { AdminRole } from "@/types/next-auth";
 
 export const READ_ONLY_MESSAGE = "User is read only. Contact admin@roccandy.com.au for permission.";
+export const SEO_READ_ONLY_MESSAGE = "User can only edit SEO content. Other admin areas are read only.";
 
 type WriteAccessOptions = {
   onDenied?: "throw" | "redirect";
@@ -53,6 +54,17 @@ async function resolveAdminRedirectTarget(explicitTarget?: string) {
 export async function requireAdminWriteAccess(options: WriteAccessOptions = {}) {
   const session = await requireAdminSession();
   if (!session.user.canWrite) {
+    if (options.onDenied === "redirect") {
+      redirect(appendAdminToast(await resolveAdminRedirectTarget(options.redirectTo), "error", READ_ONLY_MESSAGE));
+    }
+    throw new Error(READ_ONLY_MESSAGE);
+  }
+  return session;
+}
+
+export async function requireAdminSeoWriteAccess(options: WriteAccessOptions = {}) {
+  const session = await requireAdminSession();
+  if (!session.user.canWriteSeo) {
     if (options.onDenied === "redirect") {
       redirect(appendAdminToast(await resolveAdminRedirectTarget(options.redirectTo), "error", READ_ONLY_MESSAGE));
     }

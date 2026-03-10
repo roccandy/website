@@ -12,6 +12,7 @@ import { saveTermsTree } from "./actions";
 
 type Props = {
   items: ManagedTermsNode[];
+  canWriteSeo: boolean;
 };
 
 type EditorNode = ManagedTermsNode;
@@ -21,11 +22,13 @@ function AutoResizeTextarea({
   onChange,
   placeholder,
   className,
+  readOnly = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   className: string;
+  readOnly?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
@@ -43,6 +46,7 @@ function AutoResizeTextarea({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       rows={1}
+      readOnly={readOnly}
       className={className}
       style={{ overflow: "hidden", resize: "none" }}
     />
@@ -125,6 +129,7 @@ function SortableTermCard({
   onAddChild,
   onDelete,
   onReorderChildren,
+  canWriteSeo,
 }: {
   item: EditorNode;
   marker: string;
@@ -135,6 +140,7 @@ function SortableTermCard({
   onAddChild: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderChildren: (parentId: string | null, activeId: string, overId: string) => void;
+  canWriteSeo: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
@@ -154,31 +160,33 @@ function SortableTermCard({
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           {depth === 0 ? `Number ${index + 1}` : depth === 1 ? `Subnumber ${index + 1}` : depth === 2 ? `Section ${index + 1}` : `Subsection ${index + 1}`}
         </p>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onAddChild(item.id)}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
-          >
-            Add child
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(item.id)}
-            className="rounded-md border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
-            aria-label="Drag to reorder"
-            {...attributes}
-            {...listeners}
-          >
-            Drag
-          </button>
-        </div>
+        {canWriteSeo ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onAddChild(item.id)}
+              className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Add child
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item.id)}
+              className="rounded-md border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
+              aria-label="Drag to reorder"
+              {...attributes}
+              {...listeners}
+            >
+              Drag
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {isTopLevel ? (
@@ -194,6 +202,7 @@ function SortableTermCard({
                 value={item.title}
                 onChange={(event) => onFieldChange(item.id, "title", event.target.value)}
                 placeholder="Section heading"
+                readOnly={!canWriteSeo}
                 className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
               />
             </label>
@@ -204,6 +213,7 @@ function SortableTermCard({
               value={item.body}
               onChange={(value) => onFieldChange(item.id, "body", value)}
               placeholder="Section text"
+              readOnly={!canWriteSeo}
               className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
           </label>
@@ -222,6 +232,7 @@ function SortableTermCard({
                 onFieldChange(item.id, "body", value.replace(/\r\n/g, "\n"));
               }}
               placeholder="Clause text"
+              readOnly={!canWriteSeo}
               className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
           </label>
@@ -239,6 +250,7 @@ function SortableTermCard({
             onAddChild={onAddChild}
             onDelete={onDelete}
             onReorderChildren={onReorderChildren}
+            canWriteSeo={canWriteSeo}
           />
         </div>
       ) : null}
@@ -255,6 +267,7 @@ function SortableTermsList({
   onAddChild,
   onDelete,
   onReorderChildren,
+  canWriteSeo,
 }: {
   items: EditorNode[];
   parentId: string | null;
@@ -264,11 +277,13 @@ function SortableTermsList({
   onAddChild: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderChildren: (parentId: string | null, activeId: string, overId: string) => void;
+  canWriteSeo: boolean;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const ids = useMemo(() => items.map((item) => item.id), [items]);
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!canWriteSeo) return;
     const { active, over } = event;
     if (!over) return;
     const activeId = String(active.id);
@@ -277,31 +292,40 @@ function SortableTermsList({
     onReorderChildren(parentId, activeId, overId);
   };
 
+  const list = (
+    <div className="space-y-3">
+      {items.map((item, index) => (
+        <SortableTermCard
+          key={item.id}
+          item={item}
+          marker={computeTermsMarker([...path, index])}
+          depth={depth}
+          index={index}
+          path={path}
+          onFieldChange={onFieldChange}
+          onAddChild={onAddChild}
+          onDelete={onDelete}
+          onReorderChildren={onReorderChildren}
+          canWriteSeo={canWriteSeo}
+        />
+      ))}
+    </div>
+  );
+
+  if (!canWriteSeo) {
+    return list;
+  }
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-        <div className="space-y-3">
-          {items.map((item, index) => (
-            <SortableTermCard
-              key={item.id}
-              item={item}
-              marker={computeTermsMarker([...path, index])}
-              depth={depth}
-              index={index}
-              path={path}
-              onFieldChange={onFieldChange}
-              onAddChild={onAddChild}
-              onDelete={onDelete}
-              onReorderChildren={onReorderChildren}
-            />
-          ))}
-        </div>
+        {list}
       </SortableContext>
     </DndContext>
   );
 }
 
-export default function TermsEditor({ items }: Props) {
+export default function TermsEditor({ items, canWriteSeo }: Props) {
   const router = useRouter();
   const [tree, setTree] = useState<EditorNode[]>(items);
   const [error, setError] = useState<string | null>(null);
@@ -312,14 +336,17 @@ export default function TermsEditor({ items }: Props) {
   }, [items]);
 
   const updateField = (id: string, field: "title" | "body", value: string) => {
+    if (!canWriteSeo) return;
     setTree((current) => updateNode(current, id, (node) => ({ ...node, [field]: value })));
   };
 
   const addRoot = () => {
+    if (!canWriteSeo) return;
     setTree((current) => [...current, createNode(null, current.length)]);
   };
 
   const addChild = (id: string) => {
+    if (!canWriteSeo) return;
     setTree((current) =>
       updateNode(current, id, (node) => ({
         ...node,
@@ -329,14 +356,17 @@ export default function TermsEditor({ items }: Props) {
   };
 
   const remove = (id: string) => {
+    if (!canWriteSeo) return;
     setTree((current) => deleteNode(current, id));
   };
 
   const reorder = (parentId: string | null, activeId: string, overId: string) => {
+    if (!canWriteSeo) return;
     setTree((current) => reorderSiblings(current, parentId, activeId, overId));
   };
 
   const handleSave = () => {
+    if (!canWriteSeo) return;
     setError(null);
     const payload: ManagedTermsItem[] = flattenTermsTree(reindexTree(tree));
     startTransition(async () => {
@@ -353,26 +383,30 @@ export default function TermsEditor({ items }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-xs text-zinc-500">Add items, nest them, and drag to reorder. Numbering is automatic.</p>
+          <p className="text-xs text-zinc-500">
+            {canWriteSeo ? "Add items, nest them, and drag to reorder. Numbering is automatic." : "Read-only terms view."}
+          </p>
           {isPending ? <p className="text-xs text-zinc-500">Saving terms...</p> : null}
           {error ? <p className="text-xs text-red-600">{error}</p> : null}
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={addRoot}
-            className="rounded-md border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
-          >
-            Add numbered item
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-          >
-            Save all changes
-          </button>
-        </div>
+        {canWriteSeo ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={addRoot}
+              className="rounded-md border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:bg-zinc-50"
+            >
+              Add numbered item
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+            >
+              Save all changes
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {tree.length === 0 ? (
@@ -389,6 +423,7 @@ export default function TermsEditor({ items }: Props) {
           onAddChild={addChild}
           onDelete={remove}
           onReorderChildren={reorder}
+          canWriteSeo={canWriteSeo}
         />
       )}
     </div>

@@ -6,7 +6,7 @@ create table if not exists public.admin_users (
   email text not null unique,
   display_name text,
   password_hash text not null,
-  role text not null check (role in ('viewer', 'editor', 'admin')),
+  role text not null check (role in ('viewer', 'seo', 'editor', 'admin')),
   is_active boolean not null default true,
   last_login_at timestamptz,
   created_at timestamptz not null default now(),

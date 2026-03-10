@@ -1,7 +1,7 @@
 import "next-auth";
 import "next-auth/jwt";
 
-export type AdminRole = "viewer" | "editor" | "admin";
+export type AdminRole = "viewer" | "seo" | "editor" | "admin";
 
 declare module "next-auth" {
   interface Session {
@@ -11,6 +11,7 @@ declare module "next-auth" {
       name?: string | null;
       role: AdminRole;
       canWrite: boolean;
+      canWriteSeo: boolean;
       canManageUsers: boolean;
       isBootstrap?: boolean;
     };
@@ -22,6 +23,7 @@ declare module "next-auth" {
     name?: string | null;
     role: AdminRole;
     canWrite: boolean;
+    canWriteSeo: boolean;
     canManageUsers: boolean;
     isBootstrap?: boolean;
   }
@@ -34,6 +36,7 @@ declare module "next-auth/jwt" {
     name?: string | null;
     role?: AdminRole;
     canWrite?: boolean;
+    canWriteSeo?: boolean;
     canManageUsers?: boolean;
     isBootstrap?: boolean;
   }

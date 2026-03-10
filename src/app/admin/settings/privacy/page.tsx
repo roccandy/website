@@ -20,6 +20,7 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const privacyPage = await getManagedSitePage("privacy");
   const wasUpdated = resolvedSearchParams?.updated === "1";
+  const canWriteSeo = session.user.canWriteSeo;
 
   return (
     <section className="space-y-6">
@@ -52,6 +53,7 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
             type="text"
             name="title"
             defaultValue={privacyPage.title}
+            readOnly={!canWriteSeo}
             className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
           />
         </label>
@@ -62,18 +64,23 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
             name="bodyHtml"
             defaultValue={privacyPage.bodyHtml}
             rows={20}
+            readOnly={!canWriteSeo}
             className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
           />
         </label>
 
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            Save privacy page
-          </button>
-        </div>
+        {canWriteSeo ? (
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            >
+              Save privacy page
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
+        )}
       </form>
     </section>
   );
