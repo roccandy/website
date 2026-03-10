@@ -28,11 +28,6 @@ const montserratLight = Montserrat({
 });
 
 const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
-const LANDING_LINKS = [
-  { label: "Wedding Candy", href: "/design/wedding-candy" },
-  { label: "Branded Logo Candy", href: "/design/branded-logo-candy" },
-  { label: "Custom Text Candy", href: "/design/custom-text-candy" },
-];
 const CANDY_OPTIONS = [
   { label: "Branded", href: "/design?type=branded", image: "/quote/subtypes/branded.jpg" },
   { label: "Both Names", href: "/design?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
@@ -128,17 +123,6 @@ export default async function Home() {
 
               <div id="design" className="pt-6">
                 <DesignCtaModal />
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {LANDING_LINKS.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="rounded-full border border-zinc-200 bg-white/80 px-4 py-2 text-xs font-semibold text-[#ff6f95] shadow-sm transition hover:border-zinc-300 hover:text-[#ff4f80]"
-                    >
-                      Learn about {link.label}
-                    </Link>
-                  ))}
-                </div>
               </div>
             </div>
 
