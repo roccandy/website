@@ -4,8 +4,9 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
 import { getManagedSitePage } from "@/lib/sitePages";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { Montserrat } from "next/font/google";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -19,14 +20,28 @@ const montserratLight = Montserrat({
 export async function generateMetadata(): Promise<Metadata> {
   const privacyPage = await getManagedSitePage("privacy");
   const description =
+    privacyPage.metaDescription ||
     truncateText(stripHtml(privacyPage.bodyHtml), 160) ||
     "Read Roc Candy's privacy policy covering personal information, enquiries, orders, and website use.";
 
-  return buildMetadata({
-    title: `${privacyPage.title || "Privacy Policy"} | Roc Candy`,
+  const metadata = buildMetadata({
+    title: privacyPage.seoTitle || `${privacyPage.title || "Privacy Policy"} | Roc Candy`,
     description,
     path: "/privacy",
+    imagePath: privacyPage.ogImageUrl || undefined,
+    imageAlt: privacyPage.title || "Privacy Policy",
   });
+
+  if (privacyPage.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(privacyPage.canonicalUrl) ? privacyPage.canonicalUrl : buildAbsoluteUrl(privacyPage.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
 }
 
 export default async function PrivacyPage() {
@@ -53,9 +68,9 @@ export default async function PrivacyPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a

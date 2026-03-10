@@ -2,60 +2,46 @@
 
 import { useState, type ReactNode } from "react";
 
-type TabId = "overview" | "builtIn" | "newPage" | "managed" | "redirects" | "mediaLibrary";
+type TabId = "overview" | "pages" | "redirects" | "mediaLibrary";
 
 type Props = {
-  builtInCount: number;
-  managedCount: number;
+  pageCount: number;
   redirectCount: number;
   imageCount: number;
-  canWriteSeo: boolean;
   overview: ReactNode;
-  builtIn: ReactNode;
-  newPage: ReactNode;
-  managed: ReactNode;
+  pages: ReactNode;
   redirects: ReactNode;
   mediaLibrary: ReactNode;
 };
 
 const TAB_ORDER: Array<{ id: TabId; label: string }> = [
   { id: "overview", label: "Overview" },
-  { id: "builtIn", label: "Built-in Pages" },
-  { id: "newPage", label: "Create Page" },
-  { id: "managed", label: "Managed Pages" },
+  { id: "pages", label: "Site Pages" },
   { id: "redirects", label: "Redirects" },
   { id: "mediaLibrary", label: "Media Library" },
 ];
 
 export function SeoAdminWorkspace({
-  builtInCount,
-  managedCount,
+  pageCount,
   redirectCount,
   imageCount,
-  canWriteSeo,
   overview,
-  builtIn,
-  newPage,
-  managed,
+  pages,
   redirects,
   mediaLibrary,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("builtIn");
+  const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const metaByTab: Record<TabId, string> = {
     overview: "Guide",
-    builtIn: `${builtInCount} pages`,
-    newPage: canWriteSeo ? "Writable" : "Read-only",
-    managed: `${managedCount} pages`,
+    pages: `${pageCount} pages`,
     redirects: `${redirectCount} rules`,
     mediaLibrary: `${imageCount} images`,
   };
 
   const panelByTab: Record<TabId, ReactNode> = {
     overview,
-    builtIn,
-    newPage,
-    managed,
+    pages,
     redirects,
     mediaLibrary,
   };

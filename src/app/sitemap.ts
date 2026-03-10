@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { getPremadeCandies } from "@/lib/data";
-import { buildManagedPageHref, getManagedPages } from "@/lib/managedPages";
 import { buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { getSiteBaseUrl } from "@/lib/siteUrl";
 
@@ -16,6 +15,11 @@ const STATIC_ROUTES: Array<{
   { path: "/faq", changeFrequency: "weekly", priority: 0.7 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms-and-conditions", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/shipping-and-returns", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/design/wedding-candy", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/design/custom-text-candy", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/design/branded-logo-candy", changeFrequency: "monthly", priority: 0.8 },
 ];
 
 function toDate(value: string | null | undefined) {
@@ -36,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   try {
-    const [premadeItems, managedPages] = await Promise.all([getPremadeCandies(), getManagedPages()]);
+    const premadeItems = await getPremadeCandies();
     const premadeEntries: MetadataRoute.Sitemap = premadeItems
       .filter((item) => item.is_active)
       .map((item) => ({
@@ -45,16 +49,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly",
         priority: 0.8,
       }));
-    const managedEntries: MetadataRoute.Sitemap = managedPages
-      .filter((page) => page.isPublished && page.isIndexable)
-      .map((page) => ({
-        url: `${baseUrl}${buildManagedPageHref(page.slugPath)}`,
-        lastModified: toDate(page.updatedAt) ?? now,
-        changeFrequency: "monthly",
-        priority: page.slugPath.startsWith("design/") ? 0.8 : 0.7,
-      }));
 
-    return [...staticEntries, ...managedEntries, ...premadeEntries];
+    return [...staticEntries, ...premadeEntries];
   } catch {
     return staticEntries;
   }

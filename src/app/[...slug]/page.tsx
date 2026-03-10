@@ -14,7 +14,11 @@ import {
   stripHtml,
   truncateText,
 } from "@/lib/seo";
-import { buildManagedPageHref, getManagedPageByPath } from "@/lib/managedPages";
+import {
+  buildManagedSitePageHref,
+  CATCH_ALL_SITE_PAGE_SLUGS,
+  getManagedSitePage,
+} from "@/lib/sitePages";
 
 type LandingPageConfig = {
   eyebrow: string;
@@ -92,9 +96,10 @@ async function loadManagedPage(params: ManagedPageProps["params"]) {
   const resolved = await params;
   const path = Array.isArray(resolved?.slug) ? resolved.slug.join("/") : "";
   if (!path) return null;
-  const page = await getManagedPageByPath(path);
-  if (!page || !page.isPublished) return null;
-  return page;
+  if (!CATCH_ALL_SITE_PAGE_SLUGS.includes(path as (typeof CATCH_ALL_SITE_PAGE_SLUGS)[number])) {
+    return null;
+  }
+  return getManagedSitePage(path);
 }
 
 export async function generateMetadata({ params }: ManagedPageProps): Promise<Metadata> {
@@ -114,10 +119,9 @@ export async function generateMetadata({ params }: ManagedPageProps): Promise<Me
   const metadata = buildMetadata({
     title: page.seoTitle || `${page.title} | Roc Candy`,
     description,
-    path: buildManagedPageHref(page.slugPath),
+    path: buildManagedSitePageHref(page.slug),
     imagePath: page.ogImageUrl || "/landing/home-feature-poster.png",
     imageAlt: page.title,
-    noIndex: !page.isIndexable,
   });
 
   if (page.canonicalUrl) {
@@ -140,12 +144,12 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
 
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
-  const pageHref = buildManagedPageHref(page.slugPath);
+  const pageHref = buildManagedSitePageHref(page.slug);
   const pageDescription =
     page.metaDescription ||
     truncateText(stripHtml(page.bodyHtml), 160) ||
     page.title;
-  const landingConfig = LANDING_PAGE_CONFIG[page.slugPath] ?? null;
+  const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">

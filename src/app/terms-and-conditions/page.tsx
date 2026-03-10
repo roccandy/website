@@ -3,30 +3,51 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
 import TermsTree from "@/components/TermsTree";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 import { getManagedTermsTree } from "@/lib/terms";
 import { Montserrat } from "next/font/google";
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
-export const metadata = buildMetadata({
-  title: "Terms and Conditions | Roc Candy",
-  description:
-    "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
-  path: "/terms-and-conditions",
-});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
   weight: ["300"],
 });
 
+export async function generateMetadata(): Promise<Metadata> {
+  const termsPage = await getManagedSitePage("terms-and-conditions");
+  const metadata = buildMetadata({
+    title: termsPage.seoTitle || "Terms and Conditions | Roc Candy",
+    description:
+      termsPage.metaDescription ||
+      "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
+    path: "/terms-and-conditions",
+    imagePath: termsPage.ogImageUrl || undefined,
+    imageAlt: termsPage.title || "Terms and Conditions",
+  });
+
+  if (termsPage.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(termsPage.canonicalUrl) ? termsPage.canonicalUrl : buildAbsoluteUrl(termsPage.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
+
 export default async function TermsPage() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const termsItems = await getManagedTermsTree();
+  const termsPage = await getManagedSitePage("terms-and-conditions");
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
@@ -34,8 +55,9 @@ export default async function TermsPage() {
         data={buildSchemaGraph([
           buildWebPageSchema({
             path: "/terms-and-conditions",
-            name: "Terms and Conditions",
+            name: termsPage.title || "Terms and Conditions",
             description:
+              termsPage.metaDescription ||
               "Roc Candy terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
           }),
         ])}
@@ -45,9 +67,9 @@ export default async function TermsPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -85,7 +107,7 @@ export default async function TermsPage() {
             <h1
               className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
             >
-              Terms & Conditions
+              {termsPage.title || "Terms & Conditions"}
             </h1>
           </section>
           <TermsTree items={termsItems} />

@@ -32,7 +32,28 @@ type SitePageRow = {
   canonical_url?: string | null;
 };
 
-export const CORE_SITE_PAGE_SLUGS = ["home", "about", "faq", "design", "pre-made-candy"] as const;
+export const EDITABLE_SITE_PAGE_SLUGS = [
+  "home",
+  "about",
+  "faq",
+  "design",
+  "design/wedding-candy",
+  "design/custom-text-candy",
+  "design/branded-logo-candy",
+  "pre-made-candy",
+  "contact",
+  "shipping-and-returns",
+  "privacy",
+  "terms-and-conditions",
+] as const;
+
+export const CATCH_ALL_SITE_PAGE_SLUGS = [
+  "contact",
+  "shipping-and-returns",
+  "design/wedding-candy",
+  "design/custom-text-candy",
+  "design/branded-logo-candy",
+] as const;
 
 const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   home: {
@@ -87,6 +108,90 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     ogImageUrl: "/landing/design-top.webp",
     canonicalUrl: null,
   },
+  "design/wedding-candy": {
+    slug: "design/wedding-candy",
+    title: "Wedding Candy",
+    bodyHtml: `
+<p>Roc Candy creates personalised wedding rock candy for bonbonniere, wedding favours, table styling, and custom guest gifts. Choose from initials, both names, colours, and packaging options to match your wedding theme.</p>
+<h2>Personalised wedding rock candy</h2>
+<p>Our wedding candy can be made with initials, names, and colour combinations designed to suit your event. Whether you want elegant classic styling or something bright and playful, we can help create a personalised result that fits your day.</p>
+<h2>Why couples order wedding candy</h2>
+<p>Wedding candy works well when you want a favour that feels personal, looks polished in photos, and ties into the broader styling of the event. It can sit on place settings, be packed into bonbonniere, or be added to gift bags for guests and bridal party members.</p>
+<h2>Popular uses</h2>
+<ul>
+  <li>Wedding favours and bonbonniere</li>
+  <li>Place settings and table styling</li>
+  <li>Bridal shower and engagement events</li>
+  <li>Gift boxes and welcome bags</li>
+</ul>
+<h2>Wedding candy FAQs</h2>
+<p><strong>Can I order initials or both names?</strong><br />Yes. The wedding designer includes initials and both-names options so you can choose the format that suits your event.</p>
+<p><strong>Can the colours match my wedding palette?</strong><br />Yes. We aim to match your chosen colours as closely as possible for a cohesive finish.</p>
+<p><strong>Do you deliver across Australia?</strong><br />Yes. Roc Candy offers Australia-wide delivery, but custom orders should allow enough lead time for production and shipping.</p>
+<p><a href="/design?type=weddings&subtype=weddings-initials">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
+    `,
+    seoTitle: "Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy",
+    metaDescription:
+      "Create personalised wedding rock candy in Australia with names, initials, colours, and packaging for bonbonniere, favours, and wedding tables.",
+    ogImageUrl: "/quote/subtypes/weddings-initials.jpg",
+    canonicalUrl: null,
+  },
+  "design/custom-text-candy": {
+    slug: "design/custom-text-candy",
+    title: "Custom Text Candy",
+    bodyHtml: `
+<p>Custom text rock candy is ideal for names, initials, short words, event details, and fun personalised gifts. Roc Candy creates handmade text candy for parties, weddings, milestones, and branded events across Australia.</p>
+<h2>Personalised text candy for events and gifts</h2>
+<p>Whether you want a name, short phrase, initials, or a special message, custom text candy creates something highly personal and memorable. It suits both private events and larger celebrations where custom details matter.</p>
+<h2>Popular custom text uses</h2>
+<ul>
+  <li>Birthday parties and milestone celebrations</li>
+  <li>Wedding welcome gifts and bonbonniere</li>
+  <li>Baby showers and christenings</li>
+  <li>Event favours and personalised gift boxes</li>
+</ul>
+<h2>Choosing the right text option</h2>
+<p>The designer includes different options depending on the length of text you want to use. Shorter text is usually the best option for visual clarity, but longer word ranges are also available.</p>
+<h2>Custom text candy FAQs</h2>
+<p><strong>Can I create candy with a name or short message?</strong><br />Yes. Roc Candy offers custom text options for names, initials, and short words.</p>
+<p><strong>Can I choose colours and packaging too?</strong><br />Yes. You can select colours, packaging, and other presentation details within the designer.</p>
+<p><strong>Is this available Australia-wide?</strong><br />Yes. Roc Candy delivers across Australia, but lead times should be checked for custom orders.</p>
+<p><a href="/design?type=text&subtype=custom-1-6">Start a custom text design</a> or <a href="/contact">contact us</a> if you want help choosing the right format.</p>
+    `,
+    seoTitle: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
+    metaDescription:
+      "Create personalised text rock candy with names, words, initials, and custom colours for gifts, parties, weddings, and events across Australia.",
+    ogImageUrl: "/quote/subtypes/custom-1-6.jpg",
+    canonicalUrl: null,
+  },
+  "design/branded-logo-candy": {
+    slug: "design/branded-logo-candy",
+    title: "Branded Logo Candy",
+    bodyHtml: `
+<p>Branded logo candy is a memorable way to promote your business, campaign, product launch, or event. Roc Candy creates custom rock candy that showcases your brand in a colourful, edible format.</p>
+<h2>Branded candy for events and campaigns</h2>
+<p>Our branded rock candy is suitable for expos, conferences, client gifting, retail promotions, and event activations. We can help you match colours as closely as possible and choose packaging that suits the occasion.</p>
+<h2>Why branded candy works</h2>
+<p>Branded candy is tactile, easy to hand out, and highly memorable compared with generic promotional merchandise. It suits launches, conferences, hospitality gifting, and client thank-you packs where you want a product that feels distinctive rather than disposable.</p>
+<h2>Common branded uses</h2>
+<ul>
+  <li>Corporate events and trade shows</li>
+  <li>Client gifts and welcome packs</li>
+  <li>Product launches and activations</li>
+  <li>Retail promotions and hospitality events</li>
+</ul>
+<h2>Branded candy FAQs</h2>
+<p><strong>Is branded candy suitable for corporate events?</strong><br />Yes. It is commonly used for activations, conferences, launches, hospitality, and gifting.</p>
+<p><strong>Can you match brand colours?</strong><br />We aim to match brand colours as closely as possible and can advise on the best approach for production.</p>
+<p><strong>What if I need help before ordering?</strong><br />Use the contact page if you need advice on quantities, timing, or whether your branding concept is suitable.</p>
+<p><a href="/design?type=branded">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
+    `,
+    seoTitle: "Branded Logo Candy Australia | Custom Rock Candy for Events | Roc Candy",
+    metaDescription:
+      "Order branded logo candy in Australia for promotions, launches, client gifts, and events. Custom rock candy designed with your branding.",
+    ogImageUrl: "/quote/subtypes/branded.jpg",
+    canonicalUrl: null,
+  },
   "pre-made-candy": {
     slug: "pre-made-candy",
     title: "Pre-made candy",
@@ -98,12 +203,66 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     ogImageUrl: "/quote/subtypes/premade.jpg",
     canonicalUrl: null,
   },
+  contact: {
+    slug: "contact",
+    title: "Contact Roc Candy",
+    bodyHtml: `
+<p>Need help choosing the right personalised rock candy for your event, campaign, or celebration? Contact Roc Candy for advice on colours, flavours, packaging, delivery timing, and order quantities.</p>
+<h2>Get in touch</h2>
+<p><strong>Email:</strong> <a href="mailto:enquiries@roccandy.com.au">enquiries@roccandy.com.au</a></p>
+<p><strong>Phone:</strong> <a href="tel:0414519211">0414 519 211</a></p>
+<p><strong>Location:</strong> Australia-wide delivery from North Perth, Western Australia.</p>
+<h2>What we can help with</h2>
+<ul>
+  <li>Wedding candy and bomboniere ideas</li>
+  <li>Branded / logo candy for events and promotions</li>
+  <li>Custom text candy for parties and gifts</li>
+  <li>Delivery timing, lead times, and urgent orders</li>
+  <li>Pre-made candy product questions</li>
+</ul>
+<p>If you already know what you need, you can also <a href="/design">start your custom candy order online</a> or browse our <a href="/pre-made-candy">pre-made candy range</a>.</p>
+    `,
+    seoTitle: "Contact Roc Candy | Personalised Rock Candy Australia",
+    metaDescription:
+      "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
+    ogImageUrl: "/landing/home-feature-poster.png",
+    canonicalUrl: null,
+  },
+  "shipping-and-returns": {
+    slug: "shipping-and-returns",
+    title: "Shipping and Returns",
+    bodyHtml: `
+<p>Roc Candy ships across Australia. Delivery timing depends on the type of order, production volume, and your required date.</p>
+<h2>Shipping</h2>
+<p>Pre-made candy orders are packed and dispatched as ready-to-order products. Custom personalised candy orders are produced to order and should be booked with enough time for production and delivery.</p>
+<p>For urgent requirements, contact us before ordering so we can confirm whether your date can be accommodated.</p>
+<h2>Returns</h2>
+<p>Because personalised candy is made to order, returns are generally not available for change-of-mind purchases once production has started. If there is an issue with your order, contact us as soon as possible so we can review the matter and help.</p>
+<h2>Need help before ordering?</h2>
+<p>If you are unsure about lead times, shipping options, or the best product for your event, <a href="/contact">contact us</a> and we will help you plan the order properly.</p>
+    `,
+    seoTitle: "Shipping and Returns | Roc Candy Australia",
+    metaDescription:
+      "Read Roc Candy shipping and returns information for personalised and pre-made rock candy orders across Australia.",
+    ogImageUrl: "/landing/home-feature-poster.png",
+    canonicalUrl: null,
+  },
   privacy: {
     slug: "privacy",
     title: "Privacy Policy",
     bodyHtml: "<p>Add privacy policy content in admin.</p>",
     seoTitle: null,
     metaDescription: null,
+    ogImageUrl: null,
+    canonicalUrl: null,
+  },
+  "terms-and-conditions": {
+    slug: "terms-and-conditions",
+    title: "Terms & Conditions",
+    bodyHtml: "<p>Terms and conditions content is managed separately. Use this SEO entry to control the page title and metadata.</p>",
+    seoTitle: "Terms and Conditions | Roc Candy",
+    metaDescription:
+      "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
     ogImageUrl: null,
     canonicalUrl: null,
   },
