@@ -1,50 +1,101 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
-import { getManagedSitePage } from "@/lib/sitePages";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { Montserrat } from "next/font/google";
+import {
+  buildAbsoluteUrl,
+  buildMetadata,
+  buildSchemaGraph,
+  buildWebPageSchema,
+  stripHtml,
+  truncateText,
+} from "@/lib/seo";
+import { buildManagedPageHref, getManagedPageByPath } from "@/lib/managedPages";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["300"],
-});
+type ManagedPageProps = {
+  params:
+    | Promise<{
+        slug?: string[];
+      }>
+    | {
+        slug?: string[];
+      };
+};
 
-export async function generateMetadata(): Promise<Metadata> {
-  const privacyPage = await getManagedSitePage("privacy");
-  const description =
-    truncateText(stripHtml(privacyPage.bodyHtml), 160) ||
-    "Read Roc Candy's privacy policy covering personal information, enquiries, orders, and website use.";
-
-  return buildMetadata({
-    title: `${privacyPage.title || "Privacy Policy"} | Roc Candy`,
-    description,
-    path: "/privacy",
-  });
+async function loadManagedPage(params: ManagedPageProps["params"]) {
+  const resolved = await params;
+  const path = Array.isArray(resolved?.slug) ? resolved.slug.join("/") : "";
+  if (!path) return null;
+  const page = await getManagedPageByPath(path);
+  if (!page || !page.isPublished) return null;
+  return page;
 }
 
-export default async function PrivacyPage() {
-  const privacyPage = await getManagedSitePage("privacy");
+export async function generateMetadata({ params }: ManagedPageProps): Promise<Metadata> {
+  const page = await loadManagedPage(params);
+  if (!page) {
+    return buildMetadata({
+      title: "Page Not Found | Roc Candy",
+      description: "The page you were looking for could not be found.",
+      noIndex: true,
+    });
+  }
+
+  const description =
+    page.metaDescription ||
+    truncateText(stripHtml(page.bodyHtml), 160) ||
+    "Read more on Roc Candy.";
+  const metadata = buildMetadata({
+    title: page.seoTitle || `${page.title} | Roc Candy`,
+    description,
+    path: buildManagedPageHref(page.slugPath),
+    imagePath: page.ogImageUrl || "/landing/home-feature-poster.png",
+    imageAlt: page.title,
+    noIndex: !page.isIndexable,
+  });
+
+  if (page.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(page.canonicalUrl)
+          ? page.canonicalUrl
+          : buildAbsoluteUrl(page.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
+
+export default async function ManagedContentPage({ params }: ManagedPageProps) {
+  const page = await loadManagedPage(params);
+  if (!page) notFound();
+
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
-  const description =
-    truncateText(stripHtml(privacyPage.bodyHtml), 160) ||
-    "Read Roc Candy's privacy policy covering personal information, enquiries, orders, and website use.";
+  const pageHref = buildManagedPageHref(page.slugPath);
+  const pageDescription =
+    page.metaDescription ||
+    truncateText(stripHtml(page.bodyHtml), 160) ||
+    page.title;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
-            path: "/privacy",
-            name: privacyPage.title || "Privacy Policy",
-            description,
+            path: pageHref,
+            name: page.title,
+            description: pageDescription,
           }),
         ])}
       />
@@ -53,9 +104,16 @@ export default async function PrivacyPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              <Link href="/" className="shrink-0">
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                />
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -89,14 +147,16 @@ export default async function PrivacyPage() {
         </div>
 
         <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
-          <h1
-            className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
-          >
-            {privacyPage.title || "Privacy Policy"}
-          </h1>
+          <section className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Roc Candy</p>
+            <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+              {page.title}
+            </h1>
+            {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
+          </section>
           <article
             className="
-              max-w-none space-y-4 text-sm leading-relaxed text-zinc-700
+              max-w-none space-y-4 text-base leading-relaxed text-zinc-700
               [&_p]:my-0
               [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
               [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
@@ -106,7 +166,7 @@ export default async function PrivacyPage() {
               [&_strong]:font-semibold [&_strong]:text-zinc-900
               [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
             "
-            dangerouslySetInnerHTML={{ __html: privacyPage.bodyHtml || "<p>Add privacy policy content in admin.</p>" }}
+            dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
           />
         </div>
       </div>

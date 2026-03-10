@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
+import { buildMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildMetadata({
+  title: "Pre-Made Rock Candy | Roc Candy",
+  description: "Redirecting to Roc Candy pre-made rock candy collection.",
+  path: "/pre-made-candy",
+  noIndex: true,
+});
 
 type PremadeRedirectPageProps = {
   searchParams?: Record<string, string | string[] | undefined>;

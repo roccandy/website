@@ -4,6 +4,7 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
+import { JsonLd } from "@/components/JsonLd";
 import { getPremadeCandies, getPremadeCandyById } from "@/lib/data";
 import {
   buildPremadeImageUrl,
@@ -13,6 +14,14 @@ import {
   formatPremadeMoney,
   formatPremadeWeight,
 } from "@/lib/premadeCatalog";
+import {
+  buildAbsoluteUrl,
+  buildMetadata,
+  buildSchemaGraph,
+  buildWebPageSchema,
+  mapAvailabilityToSchema,
+  toOpenGraphImage,
+} from "@/lib/seo";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -49,10 +58,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const itemParam = await resolveItemParam(params);
   const item = itemParam ? await loadItemFromParams(itemParam) : null;
   if (!item) {
-    return {
-      title: "Pre-made candy | Roc Candy",
-      description: "Browse pre-made rock candy products.",
-    };
+    return buildMetadata({
+      title: "Pre-Made Rock Candy | Roc Candy",
+      description: "Browse Roc Candy pre-made rock candy products.",
+      path: "/pre-made-candy",
+    });
   }
   const weightLabel = formatPremadeWeight(Number(item.weight_g));
   const titlePrefix = weightLabel ? `${weightLabel} ${item.name}` : item.name;
@@ -61,14 +71,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     item.description?.trim() ||
     `Buy ${item.name} pre-made rock candy from Roc Candy.`;
   const image = buildPremadeImageUrl(item.image_path);
-  return {
-    title: `${titlePrefix} | Pre-made candy | Roc Candy`,
+  const path = buildPremadeItemPath(item);
+  const metadata = buildMetadata({
+    title: `${titlePrefix} | Pre-Made Rock Candy | Roc Candy`,
     description,
+    path,
+    imagePath: image || "/quote/subtypes/premade.jpg",
+    imageAlt: item.name,
+  });
+
+  return {
+    ...metadata,
     openGraph: {
-      title: `${titlePrefix} | Roc Candy`,
-      description,
-      images: image ? [{ url: image, alt: item.name }] : undefined,
-      type: "website",
+      ...metadata.openGraph,
+      images: image ? [toOpenGraphImage(image, item.name)] : metadata.openGraph?.images,
     },
   };
 }
@@ -86,9 +102,42 @@ export default async function PremadeItemPage({ params }: PageProps) {
   const related = (await getPremadeCandies())
     .filter((candidate) => candidate.is_active && candidate.id !== item.id)
     .slice(0, 4);
+  const productUrl = buildAbsoluteUrl(buildPremadeItemPath(item));
+  const effectivePrice =
+    item.sale_price != null && Number(item.sale_price) > 0 ? Number(item.sale_price) : Number(item.price);
 
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: buildPremadeItemPath(item),
+            name: item.name,
+            description: item.short_description?.trim() || item.description?.trim() || item.name,
+          }),
+          {
+            "@type": "Product",
+            "@id": `${productUrl}#product`,
+            name: item.name,
+            description: item.short_description?.trim() || item.description?.trim() || item.name,
+            image: imageUrl ? [imageUrl] : undefined,
+            sku: item.sku ?? undefined,
+            brand: {
+              "@type": "Brand",
+              name: item.brand?.trim() || "Roc Candy",
+            },
+            itemCondition: "https://schema.org/NewCondition",
+            category: item.google_product_category ?? undefined,
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "AUD",
+              price: effectivePrice.toFixed(2),
+              availability: mapAvailabilityToSchema(item.availability),
+              url: productUrl,
+            },
+          },
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
           <LandingTopLinksBar />

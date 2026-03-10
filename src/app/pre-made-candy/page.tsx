@@ -2,6 +2,7 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
+import { JsonLd } from "@/components/JsonLd";
 import { getPremadeCandies } from "@/lib/data";
 import {
   buildPremadeImageUrl,
@@ -10,19 +11,56 @@ import {
   formatPremadeMoney,
   formatPremadeWeight,
 } from "@/lib/premadeCatalog";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata = buildMetadata({
+  title: "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",
+  description:
+    "Browse Roc Candy's pre-made rock candy collection with ready-to-order flavours, pack sizes, and Australia-wide delivery.",
+  path: "/pre-made-candy",
+  imagePath: "/quote/subtypes/premade.jpg",
+  imageAlt: "Roc Candy pre-made rock candy collection",
+});
 
 export default async function PremadePage() {
   const candies = await getPremadeCandies();
   const visible = candies.filter((item) => item.is_active);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const itemList = visible.map((item, index) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    url: buildAbsoluteUrl(buildPremadeItemPath(item)),
+    name: item.name,
+  }));
 
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: "/pre-made-candy",
+            name: "Pre-Made Rock Candy",
+            description:
+              "Ready-to-order pre-made rock candy with multiple pack sizes, flavours, and Australia-wide delivery.",
+          }),
+          {
+            "@type": "CollectionPage",
+            "@id": `${buildAbsoluteUrl("/pre-made-candy")}#collection`,
+            name: "Pre-Made Rock Candy",
+            description:
+              "Ready-to-order pre-made rock candy with multiple pack sizes, flavours, and Australia-wide delivery.",
+            hasPart: {
+              "@type": "ItemList",
+              itemListElement: itemList,
+            },
+          },
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
           <LandingTopLinksBar />

@@ -2,11 +2,22 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
+import { JsonLd } from "@/components/JsonLd";
+import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata = buildMetadata({
+  title: "About Roc Candy | Handmade Personalised Rock Candy Since 1999",
+  description:
+    "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy for weddings, events, gifts, and branded campaigns since 1999.",
+  path: "/about",
+  imagePath: "/about-carousel/about-1.jpg",
+  imageAlt: "About Roc Candy handmade personalised rock candy",
+});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -19,6 +30,16 @@ export default async function AboutPage() {
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: "/about",
+            name: "About Roc Candy",
+            description:
+              "Australian artisan confectioners creating handmade personalised rock candy for weddings, branded events, gifts, and celebrations since 1999.",
+          }),
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]">
           <LandingTopLinksBar />

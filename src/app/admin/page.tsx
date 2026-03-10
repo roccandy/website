@@ -101,6 +101,11 @@ const baseSections = [
         description: "Public terms tree and order.",
       },
       {
+        href: "/admin/settings/pages",
+        label: "Content & SEO Pages",
+        description: "Landing pages, contact pages, and editable SEO content.",
+      },
+      {
         href: "/admin/flavors",
         label: "Candy Flavours",
         description: "Flavour list.",

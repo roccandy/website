@@ -3,12 +3,23 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
+import { JsonLd } from "@/components/JsonLd";
+import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata = buildMetadata({
+  title: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
+  description:
+    "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
+  path: "/",
+  imagePath: "/landing/home-feature-poster.png",
+  imageAlt: "Roc Candy personalised rock candy",
+});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -30,6 +41,16 @@ export default async function Home() {
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   return (
     <main className="min-h-screen text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: "/",
+            name: "Personalised Rock Candy Australia",
+            description:
+              "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.",
+          }),
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]">
           <LandingTopLinksBar />

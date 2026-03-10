@@ -2,12 +2,21 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import FaqAccordion from "@/components/FaqAccordion";
+import { JsonLd } from "@/components/JsonLd";
 import { getFaqContentItems } from "@/lib/faqs";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata = buildMetadata({
+  title: "FAQ | Personalised Rock Candy Questions | Roc Candy",
+  description:
+    "Answers to common questions about Roc Candy personalised rock candy, including ordering, delivery, ingredients, lead times, and custom designs.",
+  path: "/faq",
+});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -18,9 +27,32 @@ export default async function FaqPage() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const faqItems = await getFaqContentItems();
+  const faqSchemaItems = faqItems.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: truncateText(stripHtml(item.answerHtml), 5000),
+    },
+  }));
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: "/faq",
+            name: "Frequently Asked Questions",
+            description:
+              "Answers to common questions about ordering, delivery, ingredients, lead times, and custom rock candy designs.",
+          }),
+          {
+            "@type": "FAQPage",
+            "@id": `${buildAbsoluteUrl("/faq")}#faq`,
+            mainEntity: faqSchemaItems,
+          },
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]">
           <LandingTopLinksBar />

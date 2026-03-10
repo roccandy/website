@@ -1,9 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@/components/Analytics";
 import { CartProvider } from "@/components/CartProvider";
+import { JsonLd } from "@/components/JsonLd";
 import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 import SiteFooter from "@/components/SiteFooter";
+import {
+  buildMetadata,
+  buildOrganizationSchema,
+  buildSchemaGraph,
+  buildSearchConsoleVerification,
+  buildWebsiteSchema,
+  getSiteBaseMetadata,
+} from "@/lib/seo";
 
 const headingFont = Montserrat({
   variable: "--font-heading",
@@ -19,9 +29,13 @@ const bodyFont = Open_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
+const { baseUrl } = getSiteBaseMetadata();
+
 export const metadata: Metadata = {
-  title: "Roc Candy",
-  description: "Roc Candy storefront and admin workspace.",
+  ...buildMetadata(),
+  metadataBase: new URL(baseUrl),
+  manifest: "/manifest.webmanifest",
+  verification: buildSearchConsoleVerification(),
   icons: {
     icon: [
       { url: "/branding/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -37,6 +51,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#ff6f95",
 };
 
 export default function RootLayout({
@@ -44,11 +59,30 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gtmId = process.env.NEXT_PUBLIC_GTM_ID?.trim();
+
   return (
     <html lang="en">
       <body
         className={`${headingFont.variable} ${bodyFont.variable} antialiased`}
       >
+        {gtmId ? (
+          <noscript>
+            <iframe
+              src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+            />
+          </noscript>
+        ) : null}
+        <Analytics />
+        <JsonLd
+          data={buildSchemaGraph([
+            buildOrganizationSchema(),
+            buildWebsiteSchema(),
+          ])}
+        />
         <MobileHeaderShrinkOnScroll />
         <CartProvider>
           <div className="flex min-h-screen flex-col">

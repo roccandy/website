@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/Toast";
@@ -43,6 +44,7 @@ const baseNavSections = [
       { label: "FAQs", href: "/admin/settings/faqs" },
       { label: "Privacy Policy", href: "/admin/settings/privacy" },
       { label: "Terms and Conditions", href: "/admin/settings/terms" },
+      { label: "Content & SEO Pages", href: "/admin/settings/pages" },
       { label: "Candy Flavours", href: "/admin/flavors" },
     ],
   },
@@ -51,6 +53,19 @@ const baseNavSections = [
 const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_SQUARE_ENV ?? "production").toLowerCase() === "sandbox" ||
   (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getAdminSession();

@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
+import { buildMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildMetadata({
+  title: "Design Personalised Rock Candy | Roc Candy",
+  description: "Redirecting to Roc Candy personalised rock candy designer.",
+  path: "/design",
+  noIndex: true,
+});
 
 type QuoteRedirectPageProps = {
   searchParams?: Record<string, string | string[] | undefined> | Promise<Record<string, string | string[] | undefined>>;

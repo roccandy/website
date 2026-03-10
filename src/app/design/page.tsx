@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   getCategories,
   getLabelRanges,
@@ -14,7 +15,9 @@ import {
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import { JsonLd } from "@/components/JsonLd";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -23,6 +26,37 @@ export const fetchCache = "force-no-store";
 type QuotePageProps = {
   searchParams?: { type?: string } | Promise<{ type?: string }>;
 };
+
+const DESIGN_VARIANTS = {
+  branded: {
+    title: "Branded Rock Candy Australia | Custom Logo Candy | Roc Candy",
+    description:
+      "Design branded rock candy with your logo or artwork for events, promotions, gifts, and corporate campaigns across Australia.",
+    path: "/design?type=branded",
+    name: "Branded Rock Candy Designer",
+  },
+  weddings: {
+    title: "Wedding Rock Candy Australia | Personalised Wedding Candy | Roc Candy",
+    description:
+      "Create personalised wedding rock candy with names, initials, colours, and custom styling for favours, bomboniere, and wedding tables.",
+    path: "/design?type=weddings",
+    name: "Wedding Rock Candy Designer",
+  },
+  text: {
+    title: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
+    description:
+      "Create personalised text rock candy with names, words, initials, and custom colours for gifts, parties, weddings, and events.",
+    path: "/design?type=text",
+    name: "Custom Text Rock Candy Designer",
+  },
+  default: {
+    title: "Design Personalised Rock Candy | Wedding, Branded & Text Candy | Roc Candy",
+    description:
+      "Design personalised rock candy for weddings, branded events, gifts, and custom text orders. Choose colours, flavours, packaging, and styling online.",
+    path: "/design",
+    name: "Personalised Rock Candy Designer",
+  },
+} as const;
 
 function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
   const result: Record<string, number> = {};
@@ -55,6 +89,23 @@ function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
   return result;
 }
 
+export async function generateMetadata({ searchParams }: QuotePageProps): Promise<Metadata> {
+  const resolvedSearchParams = await searchParams;
+  const typeParam = resolvedSearchParams?.type;
+  const variant =
+    typeParam === "branded" || typeParam === "weddings" || typeParam === "text"
+      ? DESIGN_VARIANTS[typeParam]
+      : DESIGN_VARIANTS.default;
+
+  return buildMetadata({
+    title: variant.title,
+    description: variant.description,
+    path: variant.path,
+    imagePath: "/landing/design-top.webp",
+    imageAlt: variant.name,
+  });
+}
+
 export default async function QuotePage({ searchParams }: QuotePageProps) {
   const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
@@ -75,9 +126,35 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   const typeParam = resolvedSearchParams?.type;
   const initialOrderType =
     typeParam === "weddings" || typeParam === "text" || typeParam === "branded" ? typeParam : undefined;
+  const seoVariant =
+    initialOrderType && initialOrderType in DESIGN_VARIANTS
+      ? DESIGN_VARIANTS[initialOrderType]
+      : DESIGN_VARIANTS.default;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: seoVariant.path,
+            name: seoVariant.name,
+            description: seoVariant.description,
+          }),
+          {
+            "@type": "Service",
+            name: seoVariant.name,
+            description: seoVariant.description,
+            areaServed: {
+              "@type": "Country",
+              name: "Australia",
+            },
+            provider: {
+              "@id": `${buildAbsoluteUrl()}/#organization`,
+            },
+            url: buildAbsoluteUrl(seoVariant.path),
+          },
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]" data-quote-header>
           <LandingTopLinksBar />

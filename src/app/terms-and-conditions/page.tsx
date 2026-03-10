@@ -1,13 +1,22 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import { JsonLd } from "@/components/JsonLd";
 import TermsTree from "@/components/TermsTree";
+import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 import { getManagedTermsTree } from "@/lib/terms";
 import { Montserrat } from "next/font/google";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata = buildMetadata({
+  title: "Terms and Conditions | Roc Candy",
+  description:
+    "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
+  path: "/terms-and-conditions",
+});
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -21,6 +30,16 @@ export default async function TermsPage() {
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
+      <JsonLd
+        data={buildSchemaGraph([
+          buildWebPageSchema({
+            path: "/terms-and-conditions",
+            name: "Terms and Conditions",
+            description:
+              "Roc Candy terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
+          }),
+        ])}
+      />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]">
           <LandingTopLinksBar />

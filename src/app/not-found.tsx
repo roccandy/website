@@ -1,4 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { buildMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildMetadata({
+  title: "Page Not Found | Roc Candy",
+  description: "The page you were looking for could not be found.",
+  path: "/404",
+  noIndex: true,
+});
 
 const QUICK_LINKS = [
   {
