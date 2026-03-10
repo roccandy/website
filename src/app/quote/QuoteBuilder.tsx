@@ -16,6 +16,7 @@ import type {
 import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart, type CustomCartItem } from "@/components/CartProvider";
+import { trackAddToCart } from "@/lib/analyticsEvents";
 
 type OrderTypeId = "weddings" | "text" | "branded";
 
@@ -2261,6 +2262,21 @@ export function QuoteBuilder({
                       updateCustomItem(editItem.id, customItemPayload);
                     } else {
                       addCustomItem(customItemPayload);
+                      trackAddToCart({
+                        currency: "AUD",
+                        value: result?.total ?? undefined,
+                        items: [
+                          {
+                            item_id: categoryId || orderType || "custom-candy",
+                            item_name: title || mainTitle || "Custom candy order",
+                            item_category: orderType || "custom",
+                            item_variant: categoryId || undefined,
+                            item_brand: "Roc Candy",
+                            price: result?.total ?? undefined,
+                            quantity: selectionQty,
+                          },
+                        ],
+                      });
                     }
                     router.push("/checkout");
                   } catch (addError) {

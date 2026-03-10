@@ -7,6 +7,7 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { ColorPaletteRow, LabelType, PackagingOption, QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
+import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
 
 type PremadeSuggestion = {
   id: string;
@@ -112,6 +113,35 @@ function formatLabelTypeLabel(labelType?: LabelType | null) {
   return dimension ? `${shape} ${dimension}` : shape;
 }
 
+function buildAnalyticsItems(
+  items: CartItem[],
+  pricingOverrides: Record<string, PricingBreakdown>
+): AnalyticsItem[] {
+  return items.map((item) => {
+    if (item.type === "premade") {
+      return {
+        item_id: item.premadeId,
+        item_name: item.name,
+        item_category: "pre-made-candy",
+        item_variant: item.flavor,
+        item_brand: "Roc Candy",
+        price: item.price,
+        quantity: item.quantity,
+      };
+    }
+
+    return {
+      item_id: item.categoryId || item.designType || item.id,
+      item_name: item.title || item.designText || "Custom candy order",
+      item_category: item.designType || "custom",
+      item_variant: item.categoryId || undefined,
+      item_brand: "Roc Candy",
+      price: pricingOverrides[item.id]?.total ?? item.totalPrice ?? undefined,
+      quantity: item.quantity,
+    };
+  });
+}
+
 function SquarePayment({
   amount,
   canPay,
@@ -125,7 +155,7 @@ function SquarePayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (adminEmailWarning?: string | null) => void;
+  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null }) => void;
   onError: (stage: string, message: string) => void;
   selectedMethod: "apple_pay" | "credit_card";
 }) {
@@ -175,8 +205,14 @@ function SquarePayment({
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Payment failed.");
       }
-      const payload = (await response.json().catch(() => ({}))) as { adminEmailWarning?: string | null };
-      onSuccess(payload.adminEmailWarning ?? null);
+      const payload = (await response.json().catch(() => ({}))) as {
+        adminEmailWarning?: string | null;
+        wooOrderId?: string | number | null;
+      };
+      onSuccess({
+        adminEmailWarning: payload.adminEmailWarning ?? null,
+        wooOrderId: payload.wooOrderId ?? null,
+      });
     } catch (error) {
       onError("charge", error instanceof Error ? error.message : "Payment failed.");
     } finally {
@@ -317,7 +353,7 @@ function PayPalPayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (adminEmailWarning?: string | null) => void;
+  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null }) => void;
   onError: (stage: string, message: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -397,11 +433,15 @@ function PayPalPayment({
                 ok?: boolean;
                 error?: string;
                 adminEmailWarning?: string | null;
+                wooOrderId?: string | number | null;
               };
               if (!response.ok || !payload.ok) {
                 throw new Error(payload.error || "PayPal capture failed.");
               }
-              onSuccess(payload.adminEmailWarning ?? null);
+              onSuccess({
+                adminEmailWarning: payload.adminEmailWarning ?? null,
+                wooOrderId: payload.wooOrderId ?? null,
+              });
             },
             onError: (err: unknown) => {
               const message = err instanceof Error ? err.message : "PayPal failed.";
@@ -1062,6 +1102,7 @@ export function CheckoutClient({
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const trackedBeginCheckoutRef = useRef(false);
 
   const buildExtrasForItem = (item: CustomCartItem) => {
     if (item.jacketExtras?.length) return item.jacketExtras;
@@ -1218,6 +1259,19 @@ export function CheckoutClient({
     return { total, count, itemLines, urgencyTotal, transactionTotal, hasPending };
   }, [items, pricingOverrides, transactionFeePercent]);
 
+  const analyticsItems = useMemo(() => buildAnalyticsItems(items, pricingOverrides), [items, pricingOverrides]);
+
+  useEffect(() => {
+    if (!items.length || paymentSuccess || trackedBeginCheckoutRef.current) return;
+    trackedBeginCheckoutRef.current = true;
+
+    trackBeginCheckout({
+      currency: "AUD",
+      value: cartPricing.total,
+      items: analyticsItems,
+    });
+  }, [analyticsItems, cartPricing.total, items, paymentSuccess]);
+
   const addressDisabled = pickup;
   const addressInputClass = `mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm ${
     addressDisabled ? "bg-zinc-50 text-zinc-400" : "bg-white text-zinc-900"
@@ -1299,7 +1353,21 @@ export function CheckoutClient({
     premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
   });
 
-  const handlePaymentSuccess = (warning?: string | null) => {
+  const handlePaymentSuccess = ({
+    adminEmailWarning: warning,
+    wooOrderId,
+  }: {
+    adminEmailWarning?: string | null;
+    wooOrderId?: string | number | null;
+  }) => {
+    if (wooOrderId) {
+      trackPurchaseOnce({
+        transactionId: String(wooOrderId),
+        currency: "AUD",
+        value: cartPricing.total,
+        items: analyticsItems,
+      });
+    }
     setPaymentSuccess(true);
     setPaymentError(null);
     setAdminEmailWarning(warning === "Admin email not wired up." ? warning : null);

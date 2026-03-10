@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "@mdi/react";
 import { mdiCartArrowDown } from "@mdi/js";
 import { useCart } from "@/components/CartProvider";
+import { trackAddToCart } from "@/lib/analyticsEvents";
 
 type PremadeInput = {
   premadeId: string;
@@ -38,6 +39,21 @@ export function AddPremadeToCartButton({ item, className = "" }: Props) {
 
   const handleClick = () => {
     addPremadeItem({ ...item, quantity: 1 });
+    trackAddToCart({
+      currency: "AUD",
+      value: item.price,
+      items: [
+        {
+          item_id: item.premadeId,
+          item_name: item.name,
+          item_category: "pre-made-candy",
+          item_variant: item.flavor,
+          item_brand: "Roc Candy",
+          price: item.price,
+          quantity: 1,
+        },
+      ],
+    });
     const weightLabel = formatWeight(item.weight_g);
     const message = `${weightLabel ? `${weightLabel} ` : ""}${item.name} added to cart`;
     setToastMessage(message);
