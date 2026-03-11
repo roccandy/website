@@ -26,6 +26,7 @@ create table if not exists weight_tiers (
 create table if not exists packaging_options (
   id uuid primary key default gen_random_uuid(),
   type text not null,
+  type_sort_order integer not null default 0,
   size text not null,
   candy_weight_g numeric(10,2) not null,
   allowed_categories text[] not null,
@@ -284,21 +285,21 @@ insert into weight_tiers (category_id, min_kg, max_kg, price, per_kg, notes) val
   ('branded', 0, 8, 615, false, 'Flat')
 on conflict do nothing;
 
-insert into packaging_options (type, size, candy_weight_g, allowed_categories, lid_colors, unit_price, max_packages) values
-  ('Clear Bag','3-5pc',10,'{custom-1-6,custom-7-14,branded}','{}',0.37,800),
-  ('Clear Bag','5-7pc',15,'{custom-1-6,custom-7-14,branded}','{}',0.55,500),
-  ('Clear Bag','8-10pc',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.60,320),
-  ('Clear Bag','12-15pc',34,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.60,230),
-  ('Clear Bag','25-30pc',66,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.65,120),
-  ('Bulk','1kg',1000,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.00,8),
-  ('Zip Bag','8-10pc',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,320),
-  ('Zip Bag','12-15pc',34,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,230),
-  ('Zip Bag','25-30pc',66,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,120),
-  ('Jar','Mini 23g',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',1.70,350),
-  ('Jar','Small 75g',75,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',1.70,110),
-  ('Jar','Medium 125g',125,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',2.75,65),
-  ('Cone','12-15pc',34,'{weddings-initials,weddings-both-names}','{}',0.70,230),
-  ('Cone','25-30pc',60,'{weddings-initials,weddings-both-names}','{}',0.70,120)
+insert into packaging_options (type, type_sort_order, size, candy_weight_g, allowed_categories, lid_colors, unit_price, max_packages) values
+  ('Clear Bag',0,'3-5pc',10,'{custom-1-6,custom-7-14,branded}','{}',0.37,800),
+  ('Clear Bag',0,'5-7pc',15,'{custom-1-6,custom-7-14,branded}','{}',0.55,500),
+  ('Clear Bag',0,'8-10pc',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.60,320),
+  ('Clear Bag',0,'12-15pc',34,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.60,230),
+  ('Clear Bag',0,'25-30pc',66,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.65,120),
+  ('Zip Bag',1,'8-10pc',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,320),
+  ('Zip Bag',1,'12-15pc',34,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,230),
+  ('Zip Bag',1,'25-30pc',66,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.70,120),
+  ('Jar',2,'Mini 23g',23,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',1.70,350),
+  ('Jar',2,'Small 75g',75,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',1.70,110),
+  ('Jar',2,'Medium 125g',125,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{black,silver,gold}',2.75,65),
+  ('Cone',3,'12-15pc',34,'{weddings-initials,weddings-both-names}','{}',0.70,230),
+  ('Cone',3,'25-30pc',60,'{weddings-initials,weddings-both-names}','{}',0.70,120),
+  ('Bulk',4,'1kg',1000,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.00,8)
 on conflict do nothing;
 
 insert into label_ranges (upper_bound, range_cost) values

@@ -18,6 +18,7 @@ export type WeightTier = {
 export type PackagingOption = {
   id: string;
   type: string;
+  type_sort_order?: number | null;
   size: string;
   candy_weight_g: number;
   allowed_categories: string[];

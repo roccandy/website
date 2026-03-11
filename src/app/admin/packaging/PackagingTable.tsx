@@ -1,8 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Category, LabelType, PackagingOption, PackagingOptionImage } from "@/lib/data";
-import { deletePackaging, upsertPackaging, uploadPackagingImage } from "./actions";
+import {
+  comparePackagingTypes,
+  getPackagingTypeSortOrder,
+  sortPackagingOptions,
+  sortPackagingTypes,
+} from "@/lib/packaging";
+import { deletePackaging, updatePackagingTypeOrder, upsertPackaging, uploadPackagingImage } from "./actions";
 
 type Props = {
   options: PackagingOption[];
@@ -109,6 +116,9 @@ function buildComboKey(type: string, size: string, categoryId: string, lidColor:
 export function PackagingTable({ options, categories, images, maxTotalKg, labelTypes }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [comboSort, setComboSort] = useState<{ key: ComboSortKey; direction: SortDirection } | null>(null);
+  const [orderedTypes, setOrderedTypes] = useState<string[]>([]);
+  const [draggedType, setDraggedType] = useState<string | null>(null);
+  const [dragTargetType, setDragTargetType] = useState<string | null>(null);
   const [allowedSelections, setAllowedSelections] = useState<Record<string, string[]>>({});
   const [newAllowed, setNewAllowed] = useState<string[]>([]);
   const [lidSelections, setLidSelections] = useState<Record<string, string[]>>({});
@@ -126,12 +136,17 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [focusMaxPackagesId, setFocusMaxPackagesId] = useState<string | null>(null);
   const hasDirty = dirtyIds.size > 0;
+  const uniqueTypesFromOptions = useMemo(
+    () => sortPackagingTypes(Array.from(new Set(options.map((opt) => opt.type).filter(Boolean))), options),
+    [options]
+  );
+  const hasTypeOrderChanges = orderedTypes.join("|||") !== uniqueTypesFromOptions.join("|||");
   const typeOptions = useMemo(() => {
     const unique = new Set<string>(DEFAULT_TYPES);
     options.forEach((opt) => {
       if (opt.type) unique.add(opt.type);
     });
-    return Array.from(unique);
+    return sortPackagingTypes(Array.from(unique), options);
   }, [options]);
   const sizeOptionsByType = useMemo(() => {
     const map = new Map<string, string[]>();
@@ -164,14 +179,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     });
     return map;
   }, [images]);
-  const sortedOptions = useMemo(() => {
-    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
-    return [...options].sort((a, b) => {
-      const typeCompare = collator.compare(a.type ?? "", b.type ?? "");
-      if (typeCompare !== 0) return typeCompare;
-      return collator.compare(a.size ?? "", b.size ?? "");
-    });
-  }, [options]);
+  const sortedOptions = useMemo(() => sortPackagingOptions(options), [options]);
+  const typeSortOrderByType = useMemo(() => {
+    const map = new Map<string, number>();
+    orderedTypes.forEach((type, index) => map.set(type, index));
+    return map;
+  }, [orderedTypes]);
   const comboRows = useMemo(() => {
     const rows = options.flatMap((opt) => {
       const isJar = opt.type.toLowerCase().includes("jar");
@@ -190,9 +203,8 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
       const catA = (categoryNameById.get(a.categoryId) ?? a.categoryId).toLowerCase();
       const catB = (categoryNameById.get(b.categoryId) ?? b.categoryId).toLowerCase();
       if (catA !== catB) return catA.localeCompare(catB);
-      const typeA = a.packagingOption.type.toLowerCase();
-      const typeB = b.packagingOption.type.toLowerCase();
-      if (typeA !== typeB) return typeA.localeCompare(typeB);
+      const typeCompare = comparePackagingTypes(a.packagingOption.type, b.packagingOption.type, options);
+      if (typeCompare !== 0) return typeCompare;
       const sizeA = a.packagingOption.size.toLowerCase();
       const sizeB = b.packagingOption.size.toLowerCase();
       if (sizeA !== sizeB) return sizeA.localeCompare(sizeB);
@@ -270,7 +282,6 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
       initialSizeCustom[opt.id] = sizesForType.length === 0 || !sizesForType.includes(opt.size);
     });
     // Reset selections when options refresh.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllowedSelections(initial);
     setLidSelections(initialLids);
     setLabelSelections(initialLabels);
@@ -287,6 +298,10 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     setNewSizeCustom(false);
     setDirtyIds(new Set());
   }, [options, sizeOptionsByType, typeOptions]);
+
+  useEffect(() => {
+    setOrderedTypes(uniqueTypesFromOptions);
+  }, [uniqueTypesFromOptions]);
 
   useEffect(() => {
     if (!editMode || !focusMaxPackagesId) return;
@@ -454,6 +469,19 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(2)} Kg`;
   };
 
+  const moveType = (sourceType: string, targetType: string) => {
+    if (!sourceType || !targetType || sourceType === targetType) return;
+    setOrderedTypes((prev) => {
+      const next = [...prev];
+      const sourceIndex = next.indexOf(sourceType);
+      const targetIndex = next.indexOf(targetType);
+      if (sourceIndex < 0 || targetIndex < 0) return prev;
+      next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, sourceType);
+      return next;
+    });
+  };
+
   return (
     <>
       {missingCombos.length > 0 && (
@@ -503,6 +531,82 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
             </button>
           </>
         )}
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Website package type order</p>
+            <h3 className="text-lg font-semibold text-zinc-900">Packaging types</h3>
+            <p className="text-sm text-zinc-600">
+              These are the unique package types shown on the design page. Drag them into the order you want customers
+              to see.
+            </p>
+          </div>
+          <form action={updatePackagingTypeOrder} className="shrink-0">
+            <input type="hidden" name="ordered_types" value={JSON.stringify(orderedTypes)} readOnly />
+            <button
+              type="submit"
+              disabled={!hasTypeOrderChanges}
+              className={`inline-flex items-center rounded-md px-3 py-2 text-xs font-semibold ${
+                hasTypeOrderChanges
+                  ? "bg-zinc-900 text-white hover:bg-zinc-800"
+                  : "bg-zinc-100 text-zinc-500"
+              }`}
+            >
+              Save type order
+            </button>
+          </form>
+        </div>
+        <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {orderedTypes.map((type, index) => {
+            const isDragged = draggedType === type;
+            const isTarget = dragTargetType === type && draggedType !== type;
+            return (
+              <div
+                key={type}
+                draggable
+                onDragStart={() => {
+                  setDraggedType(type);
+                  setDragTargetType(type);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (draggedType && draggedType !== type) {
+                    setDragTargetType(type);
+                  }
+                }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (draggedType) {
+                    moveType(draggedType, type);
+                  }
+                  setDraggedType(null);
+                  setDragTargetType(null);
+                }}
+                onDragEnd={() => {
+                  setDraggedType(null);
+                  setDragTargetType(null);
+                }}
+                className={`rounded-xl border px-3 py-3 transition ${
+                  isDragged
+                    ? "border-zinc-900 bg-zinc-100 shadow-sm"
+                    : isTarget
+                      ? "border-zinc-500 bg-zinc-50"
+                      : "border-zinc-200 bg-zinc-50/70"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-zinc-400">Position {index + 1}</p>
+                    <p className="text-sm font-semibold text-zinc-900">{type}</p>
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Drag</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -685,6 +789,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                             className="hidden"
                           >
                             <input type="hidden" name="id" value={opt.id} />
+                            <input
+                              type="hidden"
+                              name="type_sort_order"
+                              value={typeSortOrderByType.get(typeValue) ?? getPackagingTypeSortOrder(typeValue, options) ?? 0}
+                              readOnly
+                            />
                           </form>
                           <form action={deletePackaging} className="absolute right-2 top-2">
                             <input type="hidden" name="id" value={opt.id} />
@@ -897,12 +1007,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                                 max packages
                               </button>{" "}
                               OR increase{" "}
-                              <a
+                              <Link
                                 href="/admin/settings/production"
                                 className="font-semibold underline underline-offset-2"
                               >
                                 weight limit
-                              </a>
+                              </Link>
                               .
                             </div>
                           )}
@@ -1061,7 +1171,18 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                       data-new="true"
                       action={upsertPackaging}
                       className="hidden"
-                    />
+                    >
+                      <input
+                        type="hidden"
+                        name="type_sort_order"
+                        value={
+                          typeSortOrderByType.get(newTypeValue || (typeOptions[0] ?? "")) ??
+                          getPackagingTypeSortOrder(newTypeValue || (typeOptions[0] ?? ""), options) ??
+                          orderedTypes.length
+                        }
+                        readOnly
+                      />
+                    </form>
                   </td>
                   <td className="px-3 py-2">
                     <input

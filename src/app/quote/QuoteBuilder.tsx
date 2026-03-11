@@ -17,6 +17,7 @@ import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart, type CustomCartItem } from "@/components/CartProvider";
 import { trackAddToCart } from "@/lib/analyticsEvents";
+import { sortPackagingTypes } from "@/lib/packaging";
 
 type OrderTypeId = "weddings" | "text" | "branded";
 
@@ -455,7 +456,7 @@ export function QuoteBuilder({
 
   const [selectionType, setSelectionType] = useState<string>("");
   const [selectionSize, setSelectionSize] = useState<string>("");
-  const [selectionQtyInput, setSelectionQtyInput] = useState("1");
+  const [selectionQtyInput, setSelectionQtyInput] = useState("");
   const [jarLidColor, setJarLidColor] = useState("");
   const [packagingImageFailed, setPackagingImageFailed] = useState(false);
 
@@ -820,7 +821,7 @@ export function QuoteBuilder({
   );
 
   const packagingTypes = useMemo(
-    () => Array.from(new Set(filteredPackaging.map((p) => p.type))),
+    () => sortPackagingTypes(Array.from(new Set(filteredPackaging.map((p) => p.type))), filteredPackaging),
     [filteredPackaging]
   );
 
@@ -1457,6 +1458,18 @@ export function QuoteBuilder({
                     );
                   })()}
                 </div>
+              ) : hasBasePrice ? (
+                <div className="space-y-2 text-center">
+                  <p
+                    className="text-2xl font-semibold leading-none"
+                    style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
+                  >
+                    {formatMoney(basePrice)}
+                  </p>
+                  <p className="text-sm text-zinc-500">
+                    {loading ? "Calculating..." : "Base price only. Select packaging quantity to add packaging cost."}
+                  </p>
+                </div>
               ) : (
                 <p className="text-sm text-zinc-500">
                   {loading ? "Calculating..." : "Select packaging to see price"}
@@ -1651,6 +1664,7 @@ export function QuoteBuilder({
                         max={selectedOption?.max_packages}
                         value={selectionQtyInput}
                         onChange={(e) => setSelectionQtyInput(e.target.value)}
+                        placeholder="Enter quantity"
                         aria-label="Quantity"
                         className="w-full px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />

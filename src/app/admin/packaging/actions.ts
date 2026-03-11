@@ -2,6 +2,7 @@
 
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const PACKAGING_IMAGE_BUCKET = "packaging-images";
@@ -87,6 +88,7 @@ export async function upsertPackaging(formData: FormData) {
   const label_type_ids = parseList(formData.get("label_type_ids")?.toString() ?? "");
   const unit_price = Number(formData.get("unit_price"));
   const max_packages = Number(formData.get("max_packages"));
+  const type_sort_order = Number(formData.get("type_sort_order"));
 
   if (!type || !size) throw new Error("Missing type or size");
   const isJar = type.toLowerCase().includes("jar");
@@ -106,6 +108,7 @@ export async function upsertPackaging(formData: FormData) {
         label_type_ids,
         unit_price,
         max_packages,
+        type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
@@ -121,10 +124,52 @@ export async function upsertPackaging(formData: FormData) {
         label_type_ids,
         unit_price,
         max_packages,
+        type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
       });
     if (error) throw new Error(error.message);
   }
 
+  redirect("/admin/packaging");
+}
+
+export async function updatePackagingTypeOrder(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+
+  const orderedTypesRaw = formData.get("ordered_types")?.toString() ?? "[]";
+  let orderedTypes: string[] = [];
+
+  try {
+    const parsed = JSON.parse(orderedTypesRaw);
+    if (Array.isArray(parsed)) {
+      orderedTypes = parsed.map((value) => String(value).trim()).filter(Boolean);
+    }
+  } catch {
+    throw new Error("Invalid packaging type order payload");
+  }
+
+  if (orderedTypes.length === 0) {
+    redirect("/admin/packaging");
+  }
+
+  const client = supabaseServerClient;
+  const { data: existing, error: existingError } = await client.from("packaging_options").select("type");
+  if (existingError) throw new Error(existingError.message);
+
+  const remainingTypes = Array.from(
+    new Set((existing ?? []).map((row) => row.type).filter((value): value is string => Boolean(value)))
+  ).filter((type) => !orderedTypes.includes(type));
+
+  const finalOrder = [...orderedTypes, ...remainingTypes];
+
+  for (const [index, type] of finalOrder.entries()) {
+    const { error } = await client
+      .from("packaging_options")
+      .update({ type_sort_order: index })
+      .eq("type", type);
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/packaging");
   redirect("/admin/packaging");
 }
 
