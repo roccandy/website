@@ -22,25 +22,26 @@ import {
 
 type LandingPageConfig = {
   eyebrow: string;
-  imageCards: Array<{
-    src: string;
-    alt: string;
-  }>;
+  intro: string;
+  detail: string;
+  defaultGalleryImageUrls: string[];
   primaryCta: { label: string; href: string };
 };
+
+const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   "design/wedding-candy": {
     eyebrow: "Wedding Candy",
-    imageCards: [
-      {
-        src: "/quote/subtypes/weddings-both-names.jpg",
-        alt: "Wedding candy with both names",
-      },
-      {
-        src: "/quote/subtypes/weddings-initials.jpg",
-        alt: "Wedding candy with initials",
-      },
+    intro: "Create wedding rock candy",
+    detail: "customise colours and packaging",
+    defaultGalleryImageUrls: [
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
     ],
     primaryCta: {
       label: "Design & Pricing",
@@ -49,11 +50,15 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   },
   "design/branded-logo-candy": {
     eyebrow: "Branded Candy",
-    imageCards: [
-      {
-        src: "/quote/subtypes/branded.jpg",
-        alt: "Branded logo candy",
-      },
+    intro: "Create branded rock candy",
+    detail: "customise colours and packaging",
+    defaultGalleryImageUrls: [
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
     ],
     primaryCta: {
       label: "Design & Pricing",
@@ -62,15 +67,15 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   },
   "design/custom-text-candy": {
     eyebrow: "Custom Text Candy",
-    imageCards: [
-      {
-        src: "/quote/subtypes/custom-1-6.jpg",
-        alt: "Custom text candy example",
-      },
-      {
-        src: "/quote/subtypes/custom-7-14.jpeg",
-        alt: "Longer custom text candy example",
-      },
+    intro: "Create text rock candy",
+    detail: "customise colours and packaging",
+    defaultGalleryImageUrls: [
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
     ],
     primaryCta: {
       label: "Design & Pricing",
@@ -78,6 +83,18 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     },
   },
 };
+
+function resolveGalleryImages(primary: string[], fallback: string[]) {
+  const base = primary.length > 0 ? primary : fallback;
+  if (base.length === 0) return [];
+
+  const resolved = [...base];
+  while (resolved.length < 6) {
+    resolved.push(base[resolved.length % base.length]);
+  }
+
+  return resolved.slice(0, 6);
+}
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -151,6 +168,10 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
     truncateText(stripHtml(page.bodyHtml), 160) ||
     page.title;
   const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
+  const landingGalleryImages = landingConfig
+    ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls)
+    : [];
+  const landingGalleryRows = landingGalleryImages.length > 0 ? [landingGalleryImages.slice(0, 3), landingGalleryImages.slice(3, 6)] : [];
 
   return (
     <main className="landing-bg min-h-screen bg-white text-zinc-900">
@@ -212,50 +233,76 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
 
         <div className="mx-auto max-w-5xl space-y-6 px-6 py-10 md:py-14">
           {landingConfig ? (
-            <section className="space-y-6 text-center">
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
-                <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
-                  {page.title}
-                </h1>
+            <section className="space-y-10 text-center">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
+                  <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(146,146,177)] md:text-6xl">
+                    {page.title}
+                  </h1>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="inline-flex rounded-full border border-white/45 bg-white/45 px-4 py-2 text-center text-xs font-medium tracking-[0.08em] text-zinc-500 shadow-sm backdrop-blur">
+                    <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
+                    <span className="sm:hidden">
+                      {FEATURE_LABELS.slice(0, 3).join(" | ")}
+                      <br />
+                      {FEATURE_LABELS.slice(3).join(" | ")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <p className="text-xl leading-tight text-[rgb(169,168,198)] md:text-[40px]">
+                    <span className="block">{landingConfig.intro}</span>
+                    <span className="block">{landingConfig.detail}</span>
+                  </p>
+                  <div>
+                    <Link
+                      href={landingConfig.primaryCta.href}
+                      className="inline-flex rounded-full bg-[#ff6f95] px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                    >
+                      {landingConfig.primaryCta.label}
+                    </Link>
+                  </div>
+                </div>
               </div>
 
-              <div
-                className={
-                  landingConfig.imageCards.length === 1
-                    ? "mx-auto max-w-3xl"
-                    : "grid gap-4 sm:grid-cols-2"
-                }
-              >
-                {landingConfig.imageCards.map((card, index) => (
-                  <Link
-                    key={card.src}
-                    href={landingConfig.primaryCta.href}
-                    aria-label={`${landingConfig.primaryCta.label}: ${page.title} example ${index + 1}`}
-                    className="group block overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300"
-                  >
-                    <div className="relative aspect-[3/2] w-full overflow-hidden bg-zinc-100">
-                      <Image
-                        src={card.src}
-                        alt={card.alt}
-                        width={900}
-                        height={600}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                        priority={index === 0}
-                      />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white/90" />
+              <div className="space-y-6 overflow-hidden px-1">
+                {landingGalleryRows.map((row, rowIndex) => (
+                  <div key={`gallery-row-${rowIndex}`} className="overflow-hidden py-2">
+                    <div
+                      className={`flex w-max gap-6 ${rowIndex === 0 ? "animate-marquee" : "animate-marquee"}`}
+                      style={{
+                        animationDuration: rowIndex === 0 ? "34s" : "38s",
+                        animationDirection: rowIndex === 0 ? "normal" : "reverse",
+                      }}
+                    >
+                      {[...row, ...row].map((imageUrl, imageIndex) => (
+                        <Link
+                          key={`${imageUrl}-${rowIndex}-${imageIndex}`}
+                          href={landingConfig.primaryCta.href}
+                          aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
+                          className={`block shrink-0 rounded-[2rem] border border-white/80 bg-white/90 p-4 shadow-[0_22px_45px_rgba(225,193,206,0.34)] transition hover:-translate-y-1 hover:shadow-[0_28px_60px_rgba(225,193,206,0.42)] ${
+                            rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
+                          } w-[240px]`}
+                        >
+                          <div className="overflow-hidden rounded-[1.5rem] bg-white">
+                            <Image
+                              src={imageUrl}
+                              alt={`${page.title} gallery image ${imageIndex + 1}`}
+                              width={660}
+                              height={520}
+                              className="h-auto w-full object-cover"
+                              priority={rowIndex === 0 && imageIndex < row.length}
+                            />
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
+                  </div>
                 ))}
-              </div>
-
-              <div className="pt-2">
-                <Link
-                  href={landingConfig.primaryCta.href}
-                  className="inline-flex rounded-full bg-[#ff6f95] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#ff4f80]"
-                >
-                  {landingConfig.primaryCta.label}
-                </Link>
               </div>
             </section>
           ) : (

@@ -9,6 +9,7 @@ import {
   buildManagedSitePageHref,
   EDITABLE_SITE_PAGE_SLUGS,
   getManagedSitePages,
+  LANDING_GALLERY_PAGE_SLUGS,
 } from "@/lib/sitePages";
 import {
   deleteSiteRedirectAction,
@@ -108,6 +109,62 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
       <a href={imageUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-zinc-600 underline-offset-2 hover:underline">
         Open image
       </a>
+    </div>
+  );
+}
+
+function LandingGalleryEditor({
+  slug,
+  imageUrls,
+  readOnly,
+}: {
+  slug: string;
+  imageUrls: string[];
+  readOnly: boolean;
+}) {
+  const values = Array.from({ length: 6 }, (_, index) => imageUrls[index] ?? "");
+
+  return (
+    <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-zinc-900">Landing page mini gallery</p>
+        <p className="text-xs text-zinc-600">
+          Best place for these images is here in the page record itself. Upload images to the media library below, then
+          paste up to 6 image URLs for this landing page.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {values.map((value, index) => (
+          <label key={`${slug}-gallery-${index}`} className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Gallery image {index + 1}</span>
+            <input
+              type="text"
+              name="galleryImageUrls"
+              defaultValue={value}
+              readOnly={readOnly}
+              className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+              placeholder="https://... or /path/to/image.jpg"
+            />
+          </label>
+        ))}
+      </div>
+
+      {imageUrls.length > 0 ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          {imageUrls.map((imageUrl, index) => (
+            <div key={`${slug}-gallery-preview-${index}`} className="rounded-xl border border-zinc-200 bg-white p-3">
+              <div
+                className="aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+                style={{ backgroundImage: `url("${imageUrl}")` }}
+              />
+              <p className="mt-2 text-xs text-zinc-500">Image {index + 1}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-zinc-500">No gallery images set yet.</p>
+      )}
     </div>
   );
 }
@@ -312,6 +369,10 @@ function SitePageCard({
   canWriteSeo: boolean;
   defaultOpen?: boolean;
 }) {
+  const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
+    page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number],
+  );
+
   return (
     <details open={defaultOpen} className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4">
@@ -418,6 +479,14 @@ function SitePageCard({
               <PageBodyHint />
             </div>
           </div>
+
+          {hasLandingGallery ? (
+            <LandingGalleryEditor
+              slug={page.slug}
+              imageUrls={page.galleryImageUrls}
+              readOnly={!canWriteSeo}
+            />
+          ) : null}
 
           {canWriteSeo ? (
             <div className="flex justify-end">

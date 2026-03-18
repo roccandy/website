@@ -10,6 +10,7 @@ export type ManagedSitePage = {
   metaDescription: string | null;
   ogImageUrl: string | null;
   canonicalUrl: string | null;
+  galleryImageUrls: string[];
 };
 
 export type ManagedSitePageInput = {
@@ -20,6 +21,7 @@ export type ManagedSitePageInput = {
   metaDescription?: string | null;
   ogImageUrl?: string | null;
   canonicalUrl?: string | null;
+  galleryImageUrls?: string[];
 };
 
 type SitePageRow = {
@@ -30,7 +32,14 @@ type SitePageRow = {
   meta_description?: string | null;
   og_image_url?: string | null;
   canonical_url?: string | null;
+  gallery_image_urls?: string[] | null;
 };
+
+export const LANDING_GALLERY_PAGE_SLUGS = [
+  "design/wedding-candy",
+  "design/custom-text-candy",
+  "design/branded-logo-candy",
+] as const;
 
 export const EDITABLE_SITE_PAGE_SLUGS = [
   "home",
@@ -66,6 +75,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
     ogImageUrl: "/landing/home-feature-poster.png",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   about: {
     slug: "about",
@@ -86,6 +96,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy for weddings, events, gifts, and branded campaigns since 1999.",
     ogImageUrl: "/about-carousel/about-1.jpg",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   faq: {
     slug: "faq",
@@ -96,6 +107,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Answers to common questions about Roc Candy personalised rock candy, including ordering, delivery, ingredients, lead times, and custom designs.",
     ogImageUrl: null,
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   design: {
     slug: "design",
@@ -107,6 +119,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Design personalised rock candy for weddings, branded events, gifts, and custom text orders. Choose colours, flavours, packaging, and styling online.",
     ogImageUrl: "/landing/design-top.webp",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   "design/wedding-candy": {
     slug: "design/wedding-candy",
@@ -135,6 +148,14 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Create personalised wedding rock candy in Australia with names, initials, colours, and packaging for bonbonniere, favours, and wedding tables.",
     ogImageUrl: "/quote/subtypes/weddings-initials.jpg",
     canonicalUrl: null,
+    galleryImageUrls: [
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
+      "/quote/subtypes/weddings-both-names.jpg",
+      "/quote/subtypes/weddings-initials.jpg",
+    ],
   },
   "design/custom-text-candy": {
     slug: "design/custom-text-candy",
@@ -163,6 +184,14 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Create personalised text rock candy with names, words, initials, and custom colours for gifts, parties, weddings, and events across Australia.",
     ogImageUrl: "/quote/subtypes/custom-1-6.jpg",
     canonicalUrl: null,
+    galleryImageUrls: [
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
+      "/quote/subtypes/custom-1-6.jpg",
+      "/quote/subtypes/custom-7-14.jpeg",
+    ],
   },
   "design/branded-logo-candy": {
     slug: "design/branded-logo-candy",
@@ -191,6 +220,14 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Order branded logo candy in Australia for promotions, launches, client gifts, and events. Custom rock candy designed with your branding.",
     ogImageUrl: "/quote/subtypes/branded.jpg",
     canonicalUrl: null,
+    galleryImageUrls: [
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+      "/quote/subtypes/branded.jpg",
+    ],
   },
   "pre-made-candy": {
     slug: "pre-made-candy",
@@ -202,6 +239,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Browse Roc Candy's pre-made rock candy collection with ready-to-order flavours, pack sizes, and Australia-wide delivery.",
     ogImageUrl: "/quote/subtypes/premade.jpg",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   contact: {
     slug: "contact",
@@ -227,6 +265,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
     ogImageUrl: "/landing/home-feature-poster.png",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   "shipping-and-returns": {
     slug: "shipping-and-returns",
@@ -246,6 +285,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Read Roc Candy shipping and returns information for personalised and pre-made rock candy orders across Australia.",
     ogImageUrl: "/landing/home-feature-poster.png",
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   privacy: {
     slug: "privacy",
@@ -255,6 +295,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     metaDescription: null,
     ogImageUrl: null,
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
   "terms-and-conditions": {
     slug: "terms-and-conditions",
@@ -265,6 +306,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
     ogImageUrl: null,
     canonicalUrl: null,
+    galleryImageUrls: [],
   },
 };
 
@@ -277,8 +319,19 @@ function normalizeOptionalText(value: string | null | undefined) {
   return normalized || null;
 }
 
+function normalizeGalleryImageUrls(values: string[] | null | undefined) {
+  return (values ?? [])
+    .map((value) => normalizeText(value))
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
 function isMissingTableError(message: string) {
   return message.includes("site_pages") || message.includes("relation") || message.includes("schema cache");
+}
+
+function isMissingGalleryColumnError(message: string) {
+  return message.includes("gallery_image_urls") || message.includes("schema cache");
 }
 
 function normalizeRow(row: SitePageRow): ManagedSitePage {
@@ -290,29 +343,54 @@ function normalizeRow(row: SitePageRow): ManagedSitePage {
     metaDescription: normalizeOptionalText(row.meta_description),
     ogImageUrl: normalizeOptionalText(row.og_image_url),
     canonicalUrl: normalizeOptionalText(row.canonical_url),
+    galleryImageUrls: normalizeGalleryImageUrls(row.gallery_image_urls),
   };
 }
 
 async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
-  const { data, error } = await supabaseServerClient
+  const fullSelect = "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls";
+  const baseSelect = "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url";
+
+  const fullResult = await supabaseServerClient
     .from(SITE_PAGES_TABLE)
-    .select("slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url")
+    .select(fullSelect)
     .eq("slug", slug)
     .maybeSingle();
 
-  if (error) {
-    const message = error.message.toLowerCase();
+  if (fullResult.error) {
+    const message = fullResult.error.message.toLowerCase();
     if (isMissingTableError(message)) {
       return null;
     }
-    throw new Error(error.message);
+
+    if (!isMissingGalleryColumnError(message)) {
+      throw new Error(fullResult.error.message);
+    }
+
+    const fallbackResult = await supabaseServerClient
+      .from(SITE_PAGES_TABLE)
+      .select(baseSelect)
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (fallbackResult.error) {
+      const fallbackMessage = fallbackResult.error.message.toLowerCase();
+      if (isMissingTableError(fallbackMessage)) {
+        return null;
+      }
+      throw new Error(fallbackResult.error.message);
+    }
+
+    return fallbackResult.data
+      ? normalizeRow({ ...(fallbackResult.data as SitePageRow), gallery_image_urls: [] })
+      : null;
   }
 
-  return data ? normalizeRow(data as SitePageRow) : null;
+  return fullResult.data ? normalizeRow(fullResult.data as SitePageRow) : null;
 }
 
 async function upsertSitePage(page: ManagedSitePage) {
-  const payload = {
+  const payload: SitePageRow = {
     slug: page.slug,
     title: normalizeText(page.title),
     body_html: normalizeText(page.bodyHtml),
@@ -320,14 +398,37 @@ async function upsertSitePage(page: ManagedSitePage) {
     meta_description: normalizeOptionalText(page.metaDescription),
     og_image_url: normalizeOptionalText(page.ogImageUrl),
     canonical_url: normalizeOptionalText(page.canonicalUrl),
+    gallery_image_urls: normalizeGalleryImageUrls(page.galleryImageUrls),
   };
 
-  const { error } = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(payload, {
+  const result = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(payload, {
     onConflict: "slug",
   });
 
-  if (error) {
-    throw new Error(error.message);
+  if (!result.error) {
+    return;
+  }
+
+  const message = result.error.message.toLowerCase();
+  if (!isMissingGalleryColumnError(message)) {
+    throw new Error(result.error.message);
+  }
+
+  const legacyPayload: Omit<SitePageRow, "gallery_image_urls"> = {
+    slug: payload.slug,
+    title: payload.title,
+    body_html: payload.body_html,
+    seo_title: payload.seo_title,
+    meta_description: payload.meta_description,
+    og_image_url: payload.og_image_url,
+    canonical_url: payload.canonical_url,
+  };
+  const legacyResult = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(legacyPayload, {
+    onConflict: "slug",
+  });
+
+  if (legacyResult.error) {
+    throw new Error(legacyResult.error.message);
   }
 }
 
@@ -349,6 +450,7 @@ export async function getManagedSitePage(slug: string): Promise<ManagedSitePage>
     metaDescription: null,
     ogImageUrl: null,
     canonicalUrl: null,
+    galleryImageUrls: [],
   };
 
   await upsertSitePage(fallback);
@@ -373,6 +475,8 @@ export async function saveManagedSitePage(page: ManagedSitePageInput) {
     ogImageUrl: page.ogImageUrl !== undefined ? normalizeOptionalText(page.ogImageUrl) : current.ogImageUrl,
     canonicalUrl:
       page.canonicalUrl !== undefined ? normalizeOptionalText(page.canonicalUrl) : current.canonicalUrl,
+    galleryImageUrls:
+      page.galleryImageUrls !== undefined ? normalizeGalleryImageUrls(page.galleryImageUrls) : current.galleryImageUrls,
   };
 
   await upsertSitePage(next);

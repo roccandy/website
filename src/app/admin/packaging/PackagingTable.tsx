@@ -127,10 +127,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
   const [newLabelSelections, setNewLabelSelections] = useState<string[]>([]);
   const [typeValues, setTypeValues] = useState<Record<string, string>>({});
   const [sizeValues, setSizeValues] = useState<Record<string, string>>({});
+  const [dimensionValues, setDimensionValues] = useState<Record<string, string>>({});
   const [customTypeMode, setCustomTypeMode] = useState<Record<string, boolean>>({});
   const [customSizeMode, setCustomSizeMode] = useState<Record<string, boolean>>({});
   const [newTypeValue, setNewTypeValue] = useState("");
   const [newSizeValue, setNewSizeValue] = useState("");
+  const [newDimensionsValue, setNewDimensionsValue] = useState("");
   const [newTypeCustom, setNewTypeCustom] = useState(false);
   const [newSizeCustom, setNewSizeCustom] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
@@ -269,6 +271,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     const initialLabels: Record<string, string[]> = {};
     const initialTypes: Record<string, string> = {};
     const initialSizes: Record<string, string> = {};
+    const initialDimensions: Record<string, string> = {};
     const initialTypeCustom: Record<string, boolean> = {};
     const initialSizeCustom: Record<string, boolean> = {};
     options.forEach((opt) => {
@@ -277,6 +280,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
       initialLabels[opt.id] = opt.label_type_ids ?? [];
       initialTypes[opt.id] = opt.type;
       initialSizes[opt.id] = opt.size;
+      initialDimensions[opt.id] = opt.dimensions ?? "";
       initialTypeCustom[opt.id] = !typeOptions.includes(opt.type);
       const sizesForType = sizeOptionsByType.get(opt.type) ?? [];
       initialSizeCustom[opt.id] = sizesForType.length === 0 || !sizesForType.includes(opt.size);
@@ -290,10 +294,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     setNewLabelSelections([]);
     setTypeValues(initialTypes);
     setSizeValues(initialSizes);
+    setDimensionValues(initialDimensions);
     setCustomTypeMode(initialTypeCustom);
     setCustomSizeMode(initialSizeCustom);
     setNewTypeValue("");
     setNewSizeValue("");
+    setNewDimensionsValue("");
     setNewTypeCustom(false);
     setNewSizeCustom(false);
     setDirtyIds(new Set());
@@ -360,6 +366,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
       if (!form) return;
       const type = typeValues[opt.id] ?? opt.type ?? "";
       const size = sizeValues[opt.id] ?? opt.size ?? "";
+      const dimensions = dimensionValues[opt.id] ?? opt.dimensions ?? "";
       const candy_weight_g = Number(
         (form.elements.namedItem("candy_weight_g") as HTMLInputElement | null)?.value ?? 0
       );
@@ -383,6 +390,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
         original &&
         original.type === type &&
         original.size === size &&
+        (original.dimensions ?? "") === dimensions &&
         Number(original.candy_weight_g) === candy_weight_g &&
         Number(original.unit_price) === unit_price &&
         Number(original.max_packages) === max_packages &&
@@ -396,13 +404,14 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     if (newForm) {
       const type = newTypeValue;
       const size = newSizeValue;
+      const dimensions = newDimensionsValue;
       const candy = (newForm.elements.namedItem("candy_weight_g") as HTMLInputElement | null)?.value ?? "";
       const unit = (newForm.elements.namedItem("unit_price") as HTMLInputElement | null)?.value ?? "";
       const max = (newForm.elements.namedItem("max_packages") as HTMLInputElement | null)?.value ?? "";
       const hasAllowed = newAllowed.length > 0;
       const hasLids = newLids.length > 0;
       const hasLabels = newLabelSelections.length > 0;
-      const anyField = [type, size, candy, unit, max].some((v) => v !== "");
+      const anyField = [type, size, dimensions, candy, unit, max].some((v) => v !== "");
       if (anyField || hasAllowed || hasLids || hasLabels) next.add("new");
       else next.delete("new");
     }
@@ -419,11 +428,13 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
     labelSelections,
     typeValues,
     sizeValues,
+    dimensionValues,
     newAllowed,
     newLids,
     newLabelSelections,
     newTypeValue,
     newSizeValue,
+    newDimensionsValue,
     editMode,
   ]);
 
@@ -629,6 +640,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                 const formId = `pack-${opt.id}`;
                 const typeValue = typeValues[opt.id] ?? opt.type ?? "";
                 const sizeValue = sizeValues[opt.id] ?? opt.size ?? "";
+                const dimensionsValue = dimensionValues[opt.id] ?? opt.dimensions ?? "";
                 const typeIsCustom = customTypeMode[opt.id] ?? !typeOptions.includes(typeValue);
                 const sizeOptions = sizeOptionsByType.get(typeValue) ?? [];
                 const sizeIsCustom =
@@ -769,6 +781,19 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                             )}
                             <input form={formId} type="hidden" name="size" value={sizeValue} readOnly />
                           </div>
+                          <div className="space-y-1">
+                            <input
+                              type="text"
+                              value={dimensionsValue}
+                              onChange={(event) =>
+                                setDimensionValues((prev) => ({ ...prev, [opt.id]: event.target.value }))
+                              }
+                              className="w-full rounded border border-zinc-200 px-2 py-1"
+                              placeholder="Package dimensions"
+                            />
+                            <input form={formId} type="hidden" name="dimensions" value={dimensionsValue} readOnly />
+                            <p className="text-[11px] text-zinc-400">Shown under the selected size in the designer.</p>
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-1">
@@ -776,6 +801,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                           <div className="text-xs text-zinc-500">
                             {formatSizeLabel(typeValue, sizeValue) || "-"}
                           </div>
+                          {dimensionsValue ? <div className="text-xs text-zinc-400">{dimensionsValue}</div> : null}
                         </div>
                       )}
                       {editMode && (
@@ -1162,6 +1188,21 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                           }
                           readOnly
                         />
+                      </div>
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={newDimensionsValue}
+                          onChange={(event) => {
+                            setNewDimensionsValue(event.target.value);
+                            markDirty("new");
+                            recomputeDirty();
+                          }}
+                          className="w-full rounded border border-zinc-200 px-2 py-1"
+                          placeholder="Package dimensions"
+                        />
+                        <input form="pack-new" type="hidden" name="dimensions" value={newDimensionsValue} readOnly />
+                        <p className="text-[11px] text-zinc-400">Shown under the selected size in the designer.</p>
                       </div>
                     </div>
                     <form

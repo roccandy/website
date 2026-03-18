@@ -892,6 +892,7 @@ export function QuoteBuilder({
     const ids = selectedOption?.label_type_ids ?? [];
     return ids.map((id) => labelTypeById.get(id)).filter((item): item is LabelType => Boolean(item));
   }, [labelTypeById, selectedOption?.label_type_ids]);
+  const selectedPackagingDimensions = (selectedOption?.dimensions ?? "").trim();
   const hasLabelTypes = availableLabelTypes.length > 0;
   const isJarOption = useMemo(
     () => (selectedOption?.type ?? "").toLowerCase().includes("jar"),
@@ -1616,6 +1617,11 @@ export function QuoteBuilder({
                         </span>
                       )}
                     </div>
+                    {selectedPackagingDimensions ? (
+                      <p className="text-xs normal-case tracking-[0.04em] text-zinc-500">
+                        Dimensions: <span className="font-medium text-zinc-700">{selectedPackagingDimensions}</span>
+                      </p>
+                    ) : null}
                   </div>
 
                   {isJarOption && availableLidColors.length > 0 && (

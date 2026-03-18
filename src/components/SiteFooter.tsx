@@ -11,7 +11,6 @@ const CATEGORY_LINKS: FooterLink[] = [
   { label: "Text", href: "/design/custom-text-candy" },
   { label: "Design Your Own", href: "/design" },
   { label: "Pre-Made", href: "/pre-made-candy" },
-  { label: "Gallery", href: "/#gallery" },
 ];
 
 const INFO_LINKS: FooterLink[] = [

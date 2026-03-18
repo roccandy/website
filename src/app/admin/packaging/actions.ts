@@ -77,11 +77,17 @@ function buildComboKey(type: string, size: string, categoryId: string, lidColor:
   return parts.join("_");
 }
 
+function isMissingDimensionsColumnError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("dimensions") && (normalized.includes("column") || normalized.includes("schema cache"));
+}
+
 export async function upsertPackaging(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
   const id = formData.get("id")?.toString() || undefined;
   const type = formData.get("type")?.toString();
   const size = formData.get("size")?.toString();
+  const dimensions = formData.get("dimensions")?.toString().trim() || null;
   const candy_weight_g = Number(formData.get("candy_weight_g"));
   const allowed_categories = parseList(formData.get("allowed_categories")?.toString() ?? "");
   const lid_colors = parseList(formData.get("lid_colors")?.toString() ?? "");
@@ -95,38 +101,48 @@ export async function upsertPackaging(formData: FormData) {
   const normalizedLids = isJar ? lid_colors : [];
 
   const client = supabaseServerClient;
+  const payload = {
+    type,
+    size,
+    dimensions,
+    candy_weight_g,
+    allowed_categories,
+    lid_colors: normalizedLids,
+    label_type_ids,
+    unit_price,
+    max_packages,
+    type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
+  };
+  const legacyPayload = {
+    type: payload.type,
+    size: payload.size,
+    candy_weight_g: payload.candy_weight_g,
+    allowed_categories: payload.allowed_categories,
+    lid_colors: payload.lid_colors,
+    label_type_ids: payload.label_type_ids,
+    unit_price: payload.unit_price,
+    max_packages: payload.max_packages,
+    type_sort_order: payload.type_sort_order,
+  };
 
   if (id) {
-    const { error } = await client
-      .from("packaging_options")
-      .update({
-        type,
-        size,
-        candy_weight_g,
-        allowed_categories,
-        lid_colors: normalizedLids,
-        label_type_ids,
-        unit_price,
-        max_packages,
-        type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
-      })
-      .eq("id", id);
-    if (error) throw new Error(error.message);
+    const result = await client.from("packaging_options").update(payload).eq("id", id);
+    if (result.error) {
+      if (!isMissingDimensionsColumnError(result.error.message)) {
+        throw new Error(result.error.message);
+      }
+      const legacyResult = await client.from("packaging_options").update(legacyPayload).eq("id", id);
+      if (legacyResult.error) throw new Error(legacyResult.error.message);
+    }
   } else {
-    const { error } = await client
-      .from("packaging_options")
-      .insert({
-        type,
-        size,
-        candy_weight_g,
-        allowed_categories,
-        lid_colors: normalizedLids,
-        label_type_ids,
-        unit_price,
-        max_packages,
-        type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
-      });
-    if (error) throw new Error(error.message);
+    const result = await client.from("packaging_options").insert(payload);
+    if (result.error) {
+      if (!isMissingDimensionsColumnError(result.error.message)) {
+        throw new Error(result.error.message);
+      }
+      const legacyResult = await client.from("packaging_options").insert(legacyPayload);
+      if (legacyResult.error) throw new Error(legacyResult.error.message);
+    }
   }
 
   redirect("/admin/packaging");

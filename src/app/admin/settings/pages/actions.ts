@@ -13,6 +13,13 @@ function normalizeField(value: FormDataEntryValue | null) {
   return (value?.toString() ?? "").replace(/\r\n/g, "\n").trim();
 }
 
+function normalizeGalleryImageUrls(values: FormDataEntryValue[]) {
+  return values
+    .map((value) => normalizeField(value))
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
 function readCheckbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
@@ -42,6 +49,7 @@ export async function updateSitePageAction(formData: FormData) {
     metaDescription: normalizeField(formData.get("metaDescription")) || null,
     ogImageUrl: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
     canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
+    galleryImageUrls: normalizeGalleryImageUrls(formData.getAll("galleryImageUrls")),
   });
 
   await revalidateSitePagePath(slug);

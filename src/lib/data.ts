@@ -20,6 +20,7 @@ export type PackagingOption = {
   type: string;
   type_sort_order?: number | null;
   size: string;
+  dimensions?: string | null;
   candy_weight_g: number;
   allowed_categories: string[];
   lid_colors: string[] | null;
@@ -216,6 +217,34 @@ async function fetchTable<T>(table: string) {
   return data as T[];
 }
 
+function inferPackagingDimensions(option: Pick<PackagingOption, "type" | "size" | "dimensions">) {
+  const explicit = (option.dimensions ?? "").trim();
+  if (explicit) return explicit;
+
+  const type = (option.type ?? "").trim().toLowerCase();
+  const size = (option.size ?? "").trim().toLowerCase();
+
+  if (type === "jar") {
+    if (size.startsWith("mini")) return "42mmW x 45mmH, Vol 40ml";
+    if (size.startsWith("small")) return "50mmW x 70mmH, Vol 110ml";
+    if (size.startsWith("medium")) return "60mmW x 80mmH, Vol 190ml";
+  }
+
+  if (type.includes("bag")) {
+    if (size.startsWith("3-5")) return "80 x 60mm";
+    if (size.startsWith("5-7")) return "80 x 60mm";
+    if (size.startsWith("8-10")) return "90 x 70mm";
+    if (size.startsWith("12-15")) return "90 x 70mm";
+    if (size.startsWith("25-30")) return "110 x 90mm";
+  }
+
+  if (type === "cone") {
+    return "130-250mm ribbon not incl";
+  }
+
+  return null;
+}
+
 export async function getCategories() {
   return fetchTable<Category>("categories");
 }
@@ -225,7 +254,11 @@ export async function getWeightTiers() {
 }
 
 export async function getPackagingOptions() {
-  return fetchTable<PackagingOption>("packaging_options");
+  const options = await fetchTable<PackagingOption>("packaging_options");
+  return options.map((option) => ({
+    ...option,
+    dimensions: inferPackagingDimensions(option),
+  }));
 }
 
 export async function getPackagingOptionImages() {

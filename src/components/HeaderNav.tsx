@@ -17,9 +17,6 @@ export default function HeaderNav() {
       <Link href="/pre-made-candy" className="leading-none transition-colors hover:text-[#ff4f80]">
         Pre-Made
       </Link>
-      <Link href="/#gallery" className="leading-none transition-colors hover:text-[#ff4f80]">
-        Gallery
-      </Link>
     </div>
   );
 }
