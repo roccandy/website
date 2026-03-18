@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import { analyzeImageOptimization, type ImageOptimizationSummary } from "@/lib/clientImageOptimization";
 import {
@@ -80,10 +80,10 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const bulkUploadInputRef = useRef<HTMLInputElement | null>(null);
   const appliedRequestRef = useRef<string | null>(null);
-  const [uploadState, bulkUploadAction, isBulkUploading] = useActionState(
-    bulkUploadLandingGalleryImagesAction,
+  const [uploadState, setUploadState] = useState<LandingGalleryBulkUploadActionState>(
     INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE
   );
+  const [isBulkUploading, startBulkUpload] = useTransition();
 
   const selectedCount = useMemo(() => slots.filter(Boolean).length, [slots]);
 
@@ -173,14 +173,12 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
             </p>
           </div>
 
-          <form action={bulkUploadAction} className="space-y-3">
-            <input type="hidden" name="slug" value={slug} />
+          <div className="space-y-3">
             <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Choose images</span>
               <input
                 ref={bulkUploadInputRef}
                 type="file"
-                name="landingGalleryFiles"
                 accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                 multiple
                 className="block w-full text-sm"
@@ -268,15 +266,26 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
 
             <div className="flex flex-wrap gap-2">
               <button
-                type="submit"
+                type="button"
                 disabled={selectedFiles.length === 0 || isAnalysingFiles || isBulkUploading || Boolean(selectionError)}
+                onClick={() => {
+                  if (selectedFiles.length === 0 || isAnalysingFiles || selectionError) return;
+                  setUploadState(INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE);
+                  startBulkUpload(async () => {
+                    const formData = new FormData();
+                    formData.set("slug", slug);
+                    selectedFiles.forEach((file) => formData.append("landingGalleryFiles", file));
+                    const result = await bulkUploadLandingGalleryImagesAction(formData);
+                    setUploadState(result);
+                  });
+                }}
                 className="rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isBulkUploading ? "Uploading..." : `Upload ${selectedFiles.length || ""} image${selectedFiles.length === 1 ? "" : "s"}`.trim()}
               </button>
               <p className="self-center text-xs text-zinc-500">Each image can be up to 5 MB. Bulk uploads must stay under 24 MB total. Save the page after upload to keep the new gallery order.</p>
             </div>
-          </form>
+          </div>
         </div>
       ) : null}
 

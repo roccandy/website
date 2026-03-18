@@ -89,7 +89,6 @@ export async function uploadSeoLibraryImageAction(formData: FormData) {
 }
 
 export async function bulkUploadLandingGalleryImagesAction(
-  _previousState: LandingGalleryBulkUploadActionState,
   formData: FormData
 ): Promise<LandingGalleryBulkUploadActionState> {
   try {
