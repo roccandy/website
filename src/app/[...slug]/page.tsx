@@ -308,13 +308,13 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                             rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
                           } w-[240px]`}
                         >
-                          <div className="overflow-hidden bg-zinc-100">
+                          <div className="aspect-[4/3] overflow-hidden bg-zinc-100 p-4">
                             <Image
                               src={imageUrl}
                               alt={`${page.title} gallery image ${imageIndex + 1}`}
                               width={660}
                               height={520}
-                              className="h-auto w-full object-cover"
+                              className="h-full w-full object-contain object-center"
                               priority={rowIndex === 0 && imageIndex < row.length}
                             />
                           </div>

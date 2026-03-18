@@ -304,7 +304,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Slot {index + 1}</p>
                 <div
-                  className="aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+                  className="aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-contain bg-center bg-no-repeat"
                   style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
                 >
                   {!imageUrl ? (
@@ -411,7 +411,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
                     className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-left transition hover:border-zinc-300 hover:bg-white"
                   >
                     <div
-                      className="mb-3 aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+                      className="mb-3 aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-contain bg-center bg-no-repeat"
                       style={{ backgroundImage: `url("${image.publicUrl}")` }}
                     />
                     <p className="truncate text-xs font-semibold text-zinc-900">{image.name}</p>
