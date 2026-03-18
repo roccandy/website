@@ -22,59 +22,60 @@ import {
 
 type LandingPageConfig = {
   eyebrow: string;
-  imageSrc: string;
-  imageAlt: string;
-  highlights: string[];
+  imageCards: Array<{
+    src: string;
+    alt: string;
+  }>;
   primaryCta: { label: string; href: string };
-  secondaryCta?: { label: string; href: string };
-  footerCtaText?: string;
 };
 
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   "design/wedding-candy": {
-    eyebrow: "Wedding Landing Page",
-    imageSrc: "/quote/subtypes/weddings-initials.jpg",
-    imageAlt: "Wedding candy by Roc Candy",
-    highlights: ["Personalised names or initials", "Colour-matched to your event", "Australia-wide delivery"],
+    eyebrow: "Wedding Candy",
+    imageCards: [
+      {
+        src: "/quote/subtypes/weddings-both-names.jpg",
+        alt: "Wedding candy with both names",
+      },
+      {
+        src: "/quote/subtypes/weddings-initials.jpg",
+        alt: "Wedding candy with initials",
+      },
+    ],
     primaryCta: {
-      label: "Start Wedding Candy Design",
-      href: "/design?type=weddings&subtype=weddings-initials",
+      label: "Design & Pricing",
+      href: "/design?type=weddings",
     },
-    secondaryCta: {
-      label: "Contact Roc Candy",
-      href: "/contact",
-    },
-    footerCtaText: "Need both names instead? You can switch options once the designer opens.",
   },
   "design/branded-logo-candy": {
-    eyebrow: "Branded Landing Page",
-    imageSrc: "/quote/subtypes/branded.jpg",
-    imageAlt: "Branded logo candy by Roc Candy",
-    highlights: ["Great for launches and events", "Brand colour matching", "Designed for gifts and activations"],
+    eyebrow: "Branded Candy",
+    imageCards: [
+      {
+        src: "/quote/subtypes/branded.jpg",
+        alt: "Branded logo candy",
+      },
+    ],
     primaryCta: {
-      label: "Start Branded Candy Design",
+      label: "Design & Pricing",
       href: "/design?type=branded",
     },
-    secondaryCta: {
-      label: "Contact Roc Candy",
-      href: "/contact",
-    },
-    footerCtaText: "If you have artwork or branding requirements, contact us before ordering.",
   },
   "design/custom-text-candy": {
-    eyebrow: "Custom Text Landing Page",
-    imageSrc: "/quote/subtypes/custom-1-6.jpg",
-    imageAlt: "Custom text candy by Roc Candy",
-    highlights: ["Names, initials, and short words", "Ideal for gifts and parties", "Fast path into the designer"],
+    eyebrow: "Custom Text Candy",
+    imageCards: [
+      {
+        src: "/quote/subtypes/custom-1-6.jpg",
+        alt: "Custom text candy example",
+      },
+      {
+        src: "/quote/subtypes/custom-7-14.jpeg",
+        alt: "Longer custom text candy example",
+      },
+    ],
     primaryCta: {
-      label: "Start Custom Text Candy Design",
-      href: "/design?type=text&subtype=custom-1-6",
+      label: "Design & Pricing",
+      href: "/design?type=text",
     },
-    secondaryCta: {
-      label: "Contact Roc Candy",
-      href: "/contact",
-    },
-    footerCtaText: "Longer text options are available once you enter the designer.",
   },
 };
 
@@ -152,7 +153,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
 
   return (
-    <main className="min-h-screen bg-white text-zinc-900">
+    <main className="landing-bg min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
@@ -209,56 +210,52 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
+        <div className="mx-auto max-w-5xl space-y-6 px-6 py-10 md:py-14">
           {landingConfig ? (
-            <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-[linear-gradient(180deg,rgba(255,248,251,0.98),rgba(255,255,255,1))] shadow-sm">
-              <div className="grid gap-6 p-6 md:grid-cols-[1.1fr,0.9fr] md:p-8">
-                <div className="space-y-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
-                  <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
-                    {page.title}
-                  </h1>
-                  {pageDescription ? <p className="max-w-2xl text-base text-zinc-600">{pageDescription}</p> : null}
-                  <div className="flex flex-wrap gap-2">
-                    {landingConfig.highlights.map((item) => (
-                      <span
-                        key={item}
-                        className="rounded-full border border-[#ffd3df] bg-white px-3 py-1 text-xs font-semibold text-[#ff6f95]"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-3 pt-2">
-                    <Link
-                      href={landingConfig.primaryCta.href}
-                      className="rounded-full bg-[#ff6f95] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#ff4f80]"
-                    >
-                      {landingConfig.primaryCta.label}
-                    </Link>
-                    {landingConfig.secondaryCta ? (
-                      <Link
-                        href={landingConfig.secondaryCta.href}
-                        className="rounded-full border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300"
-                      >
-                        {landingConfig.secondaryCta.label}
-                      </Link>
-                    ) : null}
-                  </div>
-                  {landingConfig.footerCtaText ? (
-                    <p className="text-sm text-zinc-500">{landingConfig.footerCtaText}</p>
-                  ) : null}
-                </div>
-                <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-                  <Image
-                    src={landingConfig.imageSrc}
-                    alt={landingConfig.imageAlt}
-                    width={900}
-                    height={700}
-                    className="h-full w-full object-cover"
-                    priority
-                  />
-                </div>
+            <section className="space-y-6 text-center">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
+                <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+                  {page.title}
+                </h1>
+              </div>
+
+              <div
+                className={
+                  landingConfig.imageCards.length === 1
+                    ? "mx-auto max-w-3xl"
+                    : "grid gap-4 sm:grid-cols-2"
+                }
+              >
+                {landingConfig.imageCards.map((card, index) => (
+                  <Link
+                    key={card.src}
+                    href={landingConfig.primaryCta.href}
+                    aria-label={`${landingConfig.primaryCta.label}: ${page.title} example ${index + 1}`}
+                    className="group block overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300"
+                  >
+                    <div className="relative aspect-[3/2] w-full overflow-hidden bg-zinc-100">
+                      <Image
+                        src={card.src}
+                        alt={card.alt}
+                        width={900}
+                        height={600}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                        priority={index === 0}
+                      />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white/90" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  href={landingConfig.primaryCta.href}
+                  className="inline-flex rounded-full bg-[#ff6f95] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#ff4f80]"
+                >
+                  {landingConfig.primaryCta.label}
+                </Link>
               </div>
             </section>
           ) : (
@@ -270,49 +267,29 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
             </section>
           )}
-          <article
-            className="
-              max-w-none space-y-4 text-base leading-relaxed text-zinc-700
-              [&_p]:my-0
-              [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
-              [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
-              [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
-              [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
-              [&_li]:my-1
-              [&_strong]:font-semibold [&_strong]:text-zinc-900
-              [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
-            "
-            dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
-          />
           {landingConfig ? (
-            <section className="rounded-3xl border border-zinc-200 bg-zinc-900 p-6 text-white shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">Ready to order?</p>
-                  <h2 className="text-2xl font-semibold">Move from research to design</h2>
-                  <p className="text-sm text-white/75">
-                    Use the designer to choose colours, text, packaging, and pricing for this type of candy.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    href={landingConfig.primaryCta.href}
-                    className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100"
-                  >
-                    {landingConfig.primaryCta.label}
-                  </Link>
-                  {landingConfig.secondaryCta ? (
-                    <Link
-                      href={landingConfig.secondaryCta.href}
-                      className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
-                    >
-                      {landingConfig.secondaryCta.label}
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-            </section>
-          ) : null}
+            page.bodyHtml ? (
+              <article
+                className="sr-only"
+                dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
+              />
+            ) : null
+          ) : (
+            <article
+              className="
+                max-w-none space-y-4 text-base leading-relaxed text-zinc-700
+                [&_p]:my-0
+                [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
+                [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
+                [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
+                [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
+                [&_li]:my-1
+                [&_strong]:font-semibold [&_strong]:text-zinc-900
+                [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
+              "
+              dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
+            />
+          )}
         </div>
       </div>
     </main>
