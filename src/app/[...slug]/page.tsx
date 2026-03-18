@@ -91,11 +91,24 @@ function resolveGalleryImages(primary: string[], fallback: string[]) {
   if (base.length === 0) return [];
 
   const resolved = [...base];
-  while (resolved.length < 6) {
+  while (resolved.length < 4) {
     resolved.push(base[resolved.length % base.length]);
   }
 
-  return resolved.slice(0, 6);
+  return resolved;
+}
+
+function buildGalleryRows(images: string[]) {
+  if (images.length === 0) return [];
+
+  const firstRow = images.filter((_, index) => index % 2 === 0);
+  const secondRow = images.filter((_, index) => index % 2 === 1);
+
+  if (secondRow.length === 0) {
+    return [firstRow];
+  }
+
+  return [firstRow, secondRow];
 }
 
 export const revalidate = 0;
@@ -179,7 +192,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls)
     : [];
-  const landingGalleryRows = landingGalleryImages.length > 0 ? [landingGalleryImages.slice(0, 3), landingGalleryImages.slice(3, 6)] : [];
+  const landingGalleryRows = buildGalleryRows(landingGalleryImages);
 
   return (
     <main className="landing-bg min-h-screen bg-white text-zinc-900">

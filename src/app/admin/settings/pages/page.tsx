@@ -62,17 +62,17 @@ function EditorGuide() {
       <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
         <p className="font-semibold text-zinc-900">SEO fields</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>`SEO title` is the browser/search title.</li>
-          <li>`Meta description` is the search snippet text.</li>
-          <li>`Social share image` is the preview image for links.</li>
+          <li>`SEO title` (`&lt;title&gt;`) is the browser/search title.</li>
+          <li>`Meta description` (`meta description`) is the search snippet text.</li>
+          <li>`Social share image` (`og:image`) is the preview image for links.</li>
         </ul>
       </div>
       <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
         <p className="font-semibold text-zinc-900">Visible page content</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>`On-page title` is the main page heading.</li>
-          <li>`Landing hero copy` controls the two visible lines under the heading on the 3 landing pages.</li>
-          <li>`Page content` is the editable intro/body content.</li>
+          <li>`On-page title` (`H1`) is the main page heading.</li>
+          <li>`Landing hero copy` controls the visible `H2` and paragraph on the 3 landing pages.</li>
+          <li>`Page content` (`HTML body copy`) is the editable intro/body content.</li>
           <li>Extra content images can be inserted into the HTML body.</li>
         </ul>
       </div>
@@ -370,7 +370,7 @@ function SitePageCard({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">On-page title (main heading)</span>
+              <span className="text-xs text-zinc-500">On-page title (H1)</span>
               <input
                 type="text"
                 name="title"
@@ -380,7 +380,7 @@ function SitePageCard({
               />
             </label>
             <label className="space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">SEO title ({(page.seoTitle ?? "").length} chars)</span>
+              <span className="text-xs text-zinc-500">SEO title (&lt;title&gt;, {(page.seoTitle ?? "").length} chars)</span>
               <input
                 type="text"
                 name="seoTitle"
@@ -394,7 +394,7 @@ function SitePageCard({
           {hasLandingGallery ? (
             <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-2">
               <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Landing hero subheading</span>
+                <span className="text-xs text-zinc-500">Landing hero subheading (H2)</span>
                 <input
                   type="text"
                   name="heroSubheading"
@@ -404,7 +404,7 @@ function SitePageCard({
                 />
               </label>
               <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Landing hero supporting line</span>
+                <span className="text-xs text-zinc-500">Landing hero supporting line (paragraph)</span>
                 <input
                   type="text"
                   name="heroSupportingLine"
@@ -418,7 +418,7 @@ function SitePageCard({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">Meta description ({(page.metaDescription ?? "").length} chars)</span>
+              <span className="text-xs text-zinc-500">Meta description (meta description, {(page.metaDescription ?? "").length} chars)</span>
               <textarea
                 name="metaDescription"
                 defaultValue={page.metaDescription ?? ""}
@@ -428,7 +428,7 @@ function SitePageCard({
               />
             </label>
             <label className="space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">Canonical URL (optional)</span>
+              <span className="text-xs text-zinc-500">Canonical URL (canonical, optional)</span>
               <input
                 type="text"
                 name="canonicalUrl"
@@ -441,27 +441,20 @@ function SitePageCard({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Social share image</span>
-                <input
-                  type="text"
-                  name="ogImageUrl"
-                  defaultValue={page.ogImageUrl ?? ""}
-                  readOnly={!canWriteSeo}
-                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                />
-              </label>
+              <input type="hidden" name="ogImageUrl" value={page.ogImageUrl ?? ""} readOnly />
               {canWriteSeo ? (
                 <label className="space-y-1 text-sm text-zinc-700">
-                  <span className="text-xs text-zinc-500">Upload new social image</span>
+                  <span className="text-xs text-zinc-500">Social share image upload (og:image)</span>
                   <input type="file" name="ogImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
                 </label>
-              ) : null}
+              ) : (
+                <p className="text-xs text-zinc-500">Social share image (og:image)</p>
+              )}
               <ImagePreview imageUrl={page.ogImageUrl} />
             </div>
             <div className="space-y-2">
               <label className="block space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Page content (HTML allowed)</span>
+                <span className="text-xs text-zinc-500">Page content (HTML body copy)</span>
                 <HtmlEditorField
                   name="bodyHtml"
                   defaultValue={page.bodyHtml}

@@ -16,8 +16,7 @@ function normalizeField(value: FormDataEntryValue | null) {
 function normalizeGalleryImageUrls(values: FormDataEntryValue[]) {
   return values
     .map((value) => normalizeField(value))
-    .filter(Boolean)
-    .slice(0, 6);
+    .filter(Boolean);
 }
 
 function readCheckbox(formData: FormData, key: string) {

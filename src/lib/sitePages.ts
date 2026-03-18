@@ -352,8 +352,7 @@ function normalizeOptionalText(value: string | null | undefined) {
 function normalizeGalleryImageUrls(values: string[] | null | undefined) {
   return (values ?? [])
     .map((value) => normalizeText(value))
-    .filter(Boolean)
-    .slice(0, 6);
+    .filter(Boolean);
 }
 
 function isMissingTableError(message: string) {

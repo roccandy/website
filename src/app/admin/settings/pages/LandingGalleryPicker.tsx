@@ -16,10 +16,8 @@ type Props = {
   readOnly: boolean;
 };
 
-const SLOT_COUNT = 6;
-
 function buildInitialSlots(imageUrls: string[]) {
-  return Array.from({ length: SLOT_COUNT }, (_, index) => imageUrls[index] ?? "");
+  return imageUrls.length > 0 ? imageUrls : [""];
 }
 
 export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, readOnly }: Props) {
@@ -39,9 +37,26 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
     }
   };
 
+  const removeSlot = (index: number) => {
+    setSlots((current) => {
+      const next = current.filter((_, slotIndex) => slotIndex !== index);
+      return next.length > 0 ? next : [""];
+    });
+    if (activeSlot === index) {
+      setActiveSlot(null);
+    } else if (activeSlot !== null && activeSlot > index) {
+      setActiveSlot(activeSlot - 1);
+    }
+  };
+
+  const addSlot = () => {
+    setSlots((current) => [...current, ""]);
+    setActiveSlot(slots.length);
+  };
+
   const moveSlot = (index: number, direction: -1 | 1) => {
     const target = index + direction;
-    if (target < 0 || target >= SLOT_COUNT) return;
+    if (target < 0 || target >= slots.length) return;
     setSlots((current) => {
       const next = [...current];
       const temp = next[index];
@@ -61,12 +76,10 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
       <div className="space-y-1">
         <p className="text-sm font-semibold text-zinc-900">Landing page mini gallery</p>
         <p className="text-xs text-zinc-600">
-          Upload images in the media library below, then place them into these 6 slots. This keeps the page editor
-          simple without asking admins to paste raw URLs.
+          Upload images in the media library below, then build this gallery with as many images as you want. This
+          keeps the page editor simple without asking admins to paste raw URLs.
         </p>
-        <p className="text-xs text-zinc-500">
-          Selected: {selectedCount} / {SLOT_COUNT}
-        </p>
+        <p className="text-xs text-zinc-500">Selected: {selectedCount}</p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -127,10 +140,18 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
                   <button
                     type="button"
                     onClick={() => moveSlot(index, 1)}
-                    disabled={index === SLOT_COUNT - 1}
+                    disabled={index === slots.length - 1}
                     className="rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Move later
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(index)}
+                    disabled={slots.length === 1 && !imageUrl}
+                    className="rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Remove slot
                   </button>
                 </div>
               ) : null}
@@ -138,6 +159,18 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
           );
         })}
       </div>
+
+      {!readOnly ? (
+        <div className="flex justify-start">
+          <button
+            type="button"
+            onClick={addSlot}
+            className="rounded border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+          >
+            Add image slot
+          </button>
+        </div>
+      ) : null}
 
       {!readOnly ? (
         activeSlot !== null ? (
