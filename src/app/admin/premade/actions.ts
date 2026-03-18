@@ -10,7 +10,7 @@ import {
 } from "@/lib/premadeDefaults";
 import {
   isOptimizableWebImageMimeType,
-  optimizeServerImageToWebp,
+  optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { deleteWooProduct, upsertWooProduct } from "@/lib/woo";
@@ -125,13 +125,13 @@ export async function uploadPremadeImageAction(formData: FormData): Promise<Prem
   }
 
   const slug = normalizePremadeFileName(trimmed);
-  const fileName = normalizeFileName(`${slug}-${Date.now()}.webp`);
   const client = supabaseServerClient;
-  const optimized = await optimizeServerImageToWebp(file, {
+  const optimized = await optimizeServerImageForWeb(file, {
     maxWidth: 1800,
     maxHeight: 1800,
     quality: 82,
   });
+  const fileName = normalizeFileName(`${slug}-${Date.now()}.${optimized.extension}`);
   const { error } = await client.storage
     .from(PREMADE_IMAGE_BUCKET)
     .upload(fileName, optimized.buffer, { contentType: optimized.contentType, upsert: true });

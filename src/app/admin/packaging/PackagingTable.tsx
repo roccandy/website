@@ -1580,12 +1580,12 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                             <ImageOptimizationStatus
                               summary={null}
                               pendingLabel="Calculating optimised image details..."
-                              helperText="Packaging uploads are stored as optimised WEBP."
+                              helperText="Packaging uploads are stored in the smallest suitable web format."
                             />
                           ) : uploadSummaries[row.key] ? (
                             <ImageOptimizationStatus
                               summary={uploadSummaries[row.key]}
-                              helperText="Packaging uploads are stored as optimised WEBP."
+                              helperText="Packaging uploads are stored in the smallest suitable web format."
                             />
                           ) : image?.image_path ? (
                             <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">

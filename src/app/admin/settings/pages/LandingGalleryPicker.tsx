@@ -22,6 +22,22 @@ type Props = {
   readOnly: boolean;
 };
 
+const MAX_SINGLE_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_BULK_UPLOAD_BYTES = 24 * 1024 * 1024;
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(precision)} ${units[unitIndex]}`;
+}
+
 function buildInitialSlots(imageUrls: string[]) {
   return imageUrls.length > 0 ? imageUrls : [""];
 }
@@ -61,6 +77,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
   const [selectedSummaries, setSelectedSummaries] = useState<ImageOptimizationSummary[]>([]);
   const [isAnalysingFiles, setIsAnalysingFiles] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const bulkUploadInputRef = useRef<HTMLInputElement | null>(null);
   const appliedRequestRef = useRef<string | null>(null);
   const [uploadState, bulkUploadAction, isBulkUploading] = useActionState(
@@ -84,6 +101,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
     setSelectedFiles([]);
     setSelectedSummaries([]);
     setAnalysisError(null);
+    setSelectionError(null);
     if (bulkUploadInputRef.current) {
       bulkUploadInputRef.current.value = "";
     }
@@ -171,7 +189,22 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
                   setSelectedFiles(files);
                   setSelectedSummaries([]);
                   setAnalysisError(null);
+                  setSelectionError(null);
                   if (files.length === 0) return;
+                  const oversizeFile = files.find((file) => file.size > MAX_SINGLE_IMAGE_BYTES);
+                  if (oversizeFile) {
+                    setSelectionError(
+                      `${oversizeFile.name} is ${formatBytes(oversizeFile.size)}. Each image must be 5 MB or smaller.`
+                    );
+                    return;
+                  }
+                  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+                  if (totalBytes > MAX_BULK_UPLOAD_BYTES) {
+                    setSelectionError(
+                      `This selection is ${formatBytes(totalBytes)}. Bulk uploads must stay under ${formatBytes(MAX_BULK_UPLOAD_BYTES)} total.`
+                    );
+                    return;
+                  }
                   setIsAnalysingFiles(true);
                   try {
                     const summaries = await Promise.all(
@@ -197,7 +230,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
               <ImageOptimizationStatus
                 summary={null}
                 pendingLabel={`Calculating optimised details for ${selectedFiles.length} image${selectedFiles.length === 1 ? "" : "s"}...`}
-                helperText="Landing gallery uploads are stored as optimised WEBP files."
+                helperText="Landing gallery uploads are stored in the smallest suitable web format."
               />
             ) : selectedSummaries.length > 0 ? (
               <div className="space-y-2">
@@ -208,13 +241,17 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
                     </p>
                     <ImageOptimizationStatus
                       summary={summary}
-                      helperText="Stored as optimised WEBP."
+                      helperText="Stored in the smallest suitable web format."
                     />
                   </div>
                 ))}
               </div>
             ) : analysisError ? (
               <ImageOptimizationStatus summary={null} helperText={analysisError} />
+            ) : selectionError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {selectionError}
+              </div>
             ) : null}
 
             {uploadState.message ? (
@@ -232,12 +269,12 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                disabled={selectedFiles.length === 0 || isAnalysingFiles || isBulkUploading}
+                disabled={selectedFiles.length === 0 || isAnalysingFiles || isBulkUploading || Boolean(selectionError)}
                 className="rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isBulkUploading ? "Uploading..." : `Upload ${selectedFiles.length || ""} image${selectedFiles.length === 1 ? "" : "s"}`.trim()}
               </button>
-              <p className="self-center text-xs text-zinc-500">Save the page after upload to keep the new gallery order.</p>
+              <p className="self-center text-xs text-zinc-500">Each image can be up to 5 MB. Bulk uploads must stay under 24 MB total. Save the page after upload to keep the new gallery order.</p>
             </div>
           </form>
         </div>

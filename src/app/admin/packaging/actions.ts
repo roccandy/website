@@ -3,7 +3,7 @@
 import { appendAdminToast, requireAdminWriteAccess } from "@/lib/adminAuth";
 import {
   isOptimizableWebImageMimeType,
-  optimizeServerImageToWebp,
+  optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -263,12 +263,12 @@ export async function uploadPackagingImage(formData: FormData) {
     if (optionError || !option) throw new Error(optionError?.message ?? "Packaging option not found");
 
     const comboKey = buildComboKey(option.type, option.size, categoryId, lidColor);
-    const fileName = normalizeFileName(`${comboKey}.webp`);
-    const optimized = await optimizeServerImageToWebp(file, {
+    const optimized = await optimizeServerImageForWeb(file, {
       maxWidth: 1800,
       maxHeight: 1800,
       quality: 82,
     });
+    const fileName = normalizeFileName(`${comboKey}.${optimized.extension}`);
 
     const { error: uploadError } = await client.storage
       .from(PACKAGING_IMAGE_BUCKET)

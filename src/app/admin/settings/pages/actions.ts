@@ -121,8 +121,9 @@ export async function bulkUploadLandingGalleryImagesAction(
     for (const file of files) {
       const result = await uploadSeoImage(file, "library");
       if (!result) continue;
+      const storedName = result.path.split("/").pop() ?? file.name;
       uploaded.push({
-        name: file.name.replace(/\.[^.]+$/, "") + ".webp",
+        name: storedName,
         path: result.path,
         publicUrl: result.publicUrl,
         updatedAt: null,

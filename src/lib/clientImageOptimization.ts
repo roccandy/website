@@ -21,6 +21,21 @@ function formatMimeType(value: string) {
   return value.toUpperCase();
 }
 
+function normalizeImageMimeType(value: string | null | undefined) {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "image/jpg") return "image/jpeg" as const;
+  if (normalized === "image/jpeg" || normalized === "image/png" || normalized === "image/webp") {
+    return normalized;
+  }
+  return null;
+}
+
+function extensionForMimeType(mimeType: "image/jpeg" | "image/png" | "image/webp") {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  return "webp";
+}
+
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -69,8 +84,8 @@ export async function optimizeBrowserImageFile(
   file: File,
   options: { maxWidth?: number; maxHeight?: number; quality?: number } = {},
 ) {
-  const mimeType = (file.type || "").toLowerCase();
-  if (!OPTIMIZABLE_RASTER_IMAGE_MIME_TYPES.has(mimeType)) {
+  const mimeType = normalizeImageMimeType(file.type);
+  if (!mimeType || !OPTIMIZABLE_RASTER_IMAGE_MIME_TYPES.has(mimeType)) {
     return file;
   }
 
@@ -90,9 +105,25 @@ export async function optimizeBrowserImageFile(
   }
 
   context.drawImage(image, 0, 0, targetWidth, targetHeight);
-  const blob = await canvasToBlob(canvas, "image/webp", quality);
-  return new File([blob], replaceExtension(file.name, "webp"), {
-    type: "image/webp",
+
+  const candidateMimeTypes: Array<"image/jpeg" | "image/png" | "image/webp"> =
+    mimeType === "image/jpeg" ? ["image/webp", "image/jpeg"] : ["image/webp", "image/png"];
+  const candidates = await Promise.all(
+    candidateMimeTypes.map(async (candidateMimeType) => ({
+      mimeType: candidateMimeType,
+      blob: await canvasToBlob(canvas, candidateMimeType, quality),
+    })),
+  );
+  const best = candidates.reduce((smallest, candidate) =>
+    candidate.blob.size < smallest.blob.size ? candidate : smallest
+  );
+
+  if (scale === 1 && file.size <= best.blob.size) {
+    return file;
+  }
+
+  return new File([best.blob], replaceExtension(file.name, extensionForMimeType(best.mimeType)), {
+    type: best.mimeType,
     lastModified: Date.now(),
   });
 }
@@ -125,7 +156,7 @@ export async function analyzeImageOptimization(
   return {
     originalType: formatMimeType(file.type || "unknown"),
     originalBytes: file.size,
-    finalType: formatMimeType(optimizedFile.type || "image/webp"),
+    finalType: formatMimeType(optimizedFile.type || file.type || "unknown"),
     finalBytes: optimizedFile.size,
   };
 }
@@ -139,5 +170,9 @@ export async function optimizeBrowserImageToDataUrl(
 }
 
 export async function fileToDataUrl(file: File) {
+  return readFileAsDataURL(file);
+}
+
+async function readFileAsDataURL(file: File) {
   return readFileAsDataUrl(file);
 }

@@ -1,7 +1,7 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
 import {
   isOptimizableWebImageMimeType,
-  optimizeServerImageToWebp,
+  optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
 
 const SEO_IMAGE_BUCKET = "seo-images";
@@ -57,12 +57,12 @@ export async function uploadSeoImage(file: File, slugPath: string) {
 
   const baseName = normalizeFileName(file.name.replace(/\.[^.]+$/, "")) || "seo-image";
   const folder = normalizeFileName(slugPath.replace(/\//g, "-")) || "page";
-  const optimized = await optimizeServerImageToWebp(file, {
+  const optimized = await optimizeServerImageForWeb(file, {
     maxWidth: 2400,
     maxHeight: 2400,
     quality: 82,
   });
-  const objectPath = `${folder}/${Date.now()}-${baseName}.webp`;
+  const objectPath = `${folder}/${Date.now()}-${baseName}.${optimized.extension}`;
 
   const upload = async () =>
     supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).upload(objectPath, optimized.buffer, {

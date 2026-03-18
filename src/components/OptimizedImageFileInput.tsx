@@ -15,7 +15,7 @@ function PendingOptimizationStatus() {
     <ImageOptimizationStatus
       summary={null}
       pendingLabel="Optimising and uploading image..."
-      helperText="The file is being converted to an optimised WEBP for the website."
+      helperText="The file is being converted to the smallest suitable web image format for the website."
     />
   );
 }
@@ -26,7 +26,7 @@ export function OptimizedImageFileInput({
   accept,
   required = false,
   className = "block w-full text-sm",
-  helperText = "This upload is stored as an optimised WEBP for the website.",
+  helperText = "This upload is stored as the smallest suitable optimised web image for the website.",
   maxWidth,
   maxHeight,
   quality,

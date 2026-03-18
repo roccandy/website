@@ -46,17 +46,91 @@ function decodeDataUrl(dataUrl) {
   };
 }
 
-async function optimizeBufferToWebp(buffer, { maxWidth = 2400, maxHeight = 2400, quality = 82 } = {}) {
-  return sharp(buffer, { failOn: "none" })
+function normalizeMimeType(value) {
+  const normalized = (value ?? "").toLowerCase();
+  if (normalized === "image/jpg") return "image/jpeg";
+  if (normalized === "image/jpeg" || normalized === "image/png" || normalized === "image/webp") {
+    return normalized;
+  }
+  return null;
+}
+
+function extensionForMimeType(mimeType) {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/png") return "png";
+  return "webp";
+}
+
+function resolveOrientedDimensions(metadata) {
+  const width = metadata.width ?? null;
+  const height = metadata.height ?? null;
+  if (!width || !height) {
+    return { width, height };
+  }
+  const orientation = metadata.orientation ?? 1;
+  if (orientation >= 5 && orientation <= 8) {
+    return { width: height, height: width };
+  }
+  return { width, height };
+}
+
+async function encodeCandidate(pipeline, mimeType, quality) {
+  const formatter =
+    mimeType === "image/webp"
+      ? pipeline.webp({ quality })
+      : mimeType === "image/png"
+        ? pipeline.png({ compressionLevel: 9, palette: true, quality: 90 })
+        : pipeline.jpeg({ quality, mozjpeg: true, progressive: true });
+  const { data, info } = await formatter.toBuffer({ resolveWithObject: true });
+  return {
+    buffer: data,
+    contentType: mimeType,
+    extension: extensionForMimeType(mimeType),
+    width: info.width ?? null,
+    height: info.height ?? null,
+  };
+}
+
+async function optimizeBufferForWeb(buffer, mimeType, { maxWidth = 2400, maxHeight = 2400, quality = 82 } = {}) {
+  const normalizedMimeType = normalizeMimeType(mimeType);
+  const metadata = await sharp(buffer, { failOn: "none" }).metadata();
+  const oriented = resolveOrientedDimensions(metadata);
+  const pipeline = sharp(buffer, { failOn: "none" })
     .rotate()
     .resize({
       width: maxWidth,
       height: maxHeight,
       fit: "inside",
       withoutEnlargement: true,
-    })
-    .webp({ quality })
-    .toBuffer();
+    });
+
+  const candidateMimeTypes =
+    normalizedMimeType === "image/jpeg" ? ["image/webp", "image/jpeg"] : ["image/webp", "image/png"];
+  const candidates = await Promise.all(
+    candidateMimeTypes.map((candidateMimeType) => encodeCandidate(pipeline.clone(), candidateMimeType, quality))
+  );
+  let best = candidates.reduce((smallest, candidate) =>
+    candidate.buffer.byteLength < smallest.buffer.byteLength ? candidate : smallest
+  );
+
+  const canKeepOriginal =
+    normalizedMimeType &&
+    oriented.width !== null &&
+    oriented.height !== null &&
+    oriented.width <= maxWidth &&
+    oriented.height <= maxHeight;
+
+  if (canKeepOriginal && buffer.byteLength <= best.buffer.byteLength) {
+    best = {
+      buffer,
+      contentType: normalizedMimeType,
+      extension: extensionForMimeType(normalizedMimeType),
+      width: oriented.width,
+      height: oriented.height,
+    };
+  }
+
+  return best;
 }
 
 async function listAllObjects(client, bucket, prefix = "") {
@@ -95,8 +169,10 @@ async function optimizeStorageBucket(client, baseUrl, bucket, options, apply, de
       throw new Error(error?.message ?? `Unable to download ${bucket}/${objectPath}`);
     }
 
-    const optimized = await optimizeBufferToWebp(Buffer.from(await data.arrayBuffer()), options);
-    const nextPath = objectPath.replace(/\.[^.]+$/i, ".webp");
+    const fileBuffer = Buffer.from(await data.arrayBuffer());
+    const fallbackMimeType = extension === ".jpg" ? "image/jpeg" : `image/${extension.replace(".", "")}`;
+    const optimized = await optimizeBufferForWeb(fileBuffer, normalizeMimeType(data.type) ?? fallbackMimeType, options);
+    const nextPath = objectPath.replace(/\.[^.]+$/i, `.${optimized.extension}`);
     const currentPublicUrl = buildPublicUrl(baseUrl, bucket, objectPath);
     const nextPublicUrl = buildPublicUrl(baseUrl, bucket, nextPath);
 
@@ -108,7 +184,7 @@ async function optimizeStorageBucket(client, baseUrl, bucket, options, apply, de
 
     const { error: uploadError } = await client.storage
       .from(bucket)
-      .upload(nextPath, optimized, { contentType: "image/webp", upsert: true });
+      .upload(nextPath, optimized.buffer, { contentType: optimized.contentType, upsert: true });
     if (uploadError) {
       throw new Error(uploadError.message);
     }
@@ -209,12 +285,12 @@ async function optimizeOrderInlineImages(client, apply) {
       if (typeof currentValue !== "string" || !currentValue.startsWith("data:image/")) continue;
       const decoded = decodeDataUrl(currentValue);
       if (!decoded || decoded.mimeType === "image/svg+xml") continue;
-      const optimized = await optimizeBufferToWebp(decoded.buffer, {
+      const optimized = await optimizeBufferForWeb(decoded.buffer, decoded.mimeType, {
         maxWidth: 1800,
         maxHeight: 1800,
         quality: 82,
       });
-      next[key] = `data:image/webp;base64,${optimized.toString("base64")}`;
+      next[key] = `data:${optimized.contentType};base64,${optimized.buffer.toString("base64")}`;
     }
 
     if (Object.keys(next).length === 0) continue;

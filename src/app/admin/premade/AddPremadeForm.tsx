@@ -297,13 +297,13 @@ export function AddPremadeForm({ flavorOptions }: Props) {
             }
           }}
         />
-        <span className="mt-1 block text-[11px] text-zinc-500">PNG, JPG, or WEBP. Stored as optimised WEBP. Max {MAX_IMAGE_SIZE_MB}MB.</span>
+        <span className="mt-1 block text-[11px] text-zinc-500">PNG, JPG, or WEBP. Stored as the smallest suitable optimised web image. Max {MAX_IMAGE_SIZE_MB}MB.</span>
         {isAnalysingImage ? (
           <div className="mt-2">
             <ImageOptimizationStatus
               summary={null}
               pendingLabel="Calculating optimised image details..."
-              helperText="This upload will be stored as an optimised WEBP."
+              helperText="This upload will be stored in the smallest suitable web format."
             />
           </div>
         ) : imageSummary ? (
@@ -311,7 +311,7 @@ export function AddPremadeForm({ flavorOptions }: Props) {
             <ImageOptimizationStatus
               summary={imageSummary}
               pendingLabel={isSubmitting ? "Optimising and uploading image..." : null}
-              helperText="This upload will be stored as an optimised WEBP."
+              helperText="This upload will be stored in the smallest suitable web format."
             />
           </div>
         ) : null}
