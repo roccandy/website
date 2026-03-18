@@ -71,6 +71,7 @@ function EditorGuide() {
         <p className="font-semibold text-zinc-900">Visible page content</p>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>`On-page title` is the main page heading.</li>
+          <li>`Landing hero copy` controls the two visible lines under the heading on the 3 landing pages.</li>
           <li>`Page content` is the editable intro/body content.</li>
           <li>Extra content images can be inserted into the HTML body.</li>
         </ul>
@@ -389,6 +390,31 @@ function SitePageCard({
               />
             </label>
           </div>
+
+          {hasLandingGallery ? (
+            <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-2">
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Landing hero subheading</span>
+                <input
+                  type="text"
+                  name="heroSubheading"
+                  defaultValue={page.heroSubheading ?? ""}
+                  readOnly={!canWriteSeo}
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Landing hero supporting line</span>
+                <input
+                  type="text"
+                  name="heroSupportingLine"
+                  defaultValue={page.heroSupportingLine ?? ""}
+                  readOnly={!canWriteSeo}
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">

@@ -170,6 +170,12 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
     truncateText(stripHtml(page.bodyHtml), 160) ||
     page.title;
   const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
+  const landingHeroSubheading = landingConfig
+    ? page.heroSubheading || landingConfig.intro
+    : null;
+  const landingHeroSupportingLine = landingConfig
+    ? page.heroSupportingLine || landingConfig.detail
+    : null;
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls)
     : [];
@@ -244,9 +250,9 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                     {page.title}
                   </h1>
                   <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
-                    {landingConfig.intro}
+                    {landingHeroSubheading}
                   </h2>
-                  <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingConfig.detail}</p>
+                  <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingHeroSupportingLine}</p>
                 </div>
 
                 <div className="flex justify-center">

@@ -44,6 +44,8 @@ export async function updateSitePageAction(formData: FormData) {
   await saveManagedSitePage({
     slug,
     title: normalizeField(formData.get("title")),
+    heroSubheading: normalizeField(formData.get("heroSubheading")) || null,
+    heroSupportingLine: normalizeField(formData.get("heroSupportingLine")) || null,
     bodyHtml: normalizeField(formData.get("bodyHtml")),
     seoTitle: normalizeField(formData.get("seoTitle")) || null,
     metaDescription: normalizeField(formData.get("metaDescription")) || null,

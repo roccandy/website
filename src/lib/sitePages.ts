@@ -5,6 +5,8 @@ const SITE_PAGES_TABLE = "site_pages";
 export type ManagedSitePage = {
   slug: string;
   title: string;
+  heroSubheading: string | null;
+  heroSupportingLine: string | null;
   bodyHtml: string;
   seoTitle: string | null;
   metaDescription: string | null;
@@ -16,6 +18,8 @@ export type ManagedSitePage = {
 export type ManagedSitePageInput = {
   slug: string;
   title?: string;
+  heroSubheading?: string | null;
+  heroSupportingLine?: string | null;
   bodyHtml?: string;
   seoTitle?: string | null;
   metaDescription?: string | null;
@@ -27,6 +31,8 @@ export type ManagedSitePageInput = {
 type SitePageRow = {
   slug: string;
   title: string;
+  hero_subheading?: string | null;
+  hero_supporting_line?: string | null;
   body_html: string;
   seo_title?: string | null;
   meta_description?: string | null;
@@ -68,6 +74,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   home: {
     slug: "home",
     title: "Personalised Rock Candy",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml:
       "<h2>Branded, Wedding and Text Lollies</h2><p>Artisan handmade candy made in Australia for weddings, branded campaigns, gifts, and celebrations.</p>",
     seoTitle: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
@@ -80,6 +88,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   about: {
     slug: "about",
     title: "A Little About Us",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: `
 <p class="normal-case text-2xl font-semibold leading-tight text-[#ff6f95]">Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!</p>
 <p>Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays, christenings, and special event days such as NAIDOC, Pride, Idahobit, and R U OK? to name a few.</p>
@@ -101,6 +111,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   faq: {
     slug: "faq",
     title: "Frequently Asked Questions",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: "<p>Find answers about ordering, delivery, ingredients, lead times, and personalised rock candy options.</p>",
     seoTitle: "FAQ | Personalised Rock Candy Questions | Roc Candy",
     metaDescription:
@@ -112,6 +124,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   design: {
     slug: "design",
     title: "Design Your Candy",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml:
       "<p>Choose colours, flavours, packaging, and design options for personalised rock candy orders across Australia.</p>",
     seoTitle: "Design Personalised Rock Candy | Wedding, Branded & Text Candy | Roc Candy",
@@ -124,6 +138,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "design/wedding-candy": {
     slug: "design/wedding-candy",
     title: "Wedding Candy",
+    heroSubheading: "Create wedding rock candy",
+    heroSupportingLine: "customise colours and packaging",
     bodyHtml: `
 <p>Roc Candy creates personalised wedding rock candy for bonbonniere, wedding favours, table styling, and custom guest gifts. Choose from initials, both names, colours, and packaging options to match your wedding theme.</p>
 <h2>Personalised wedding rock candy</h2>
@@ -160,6 +176,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "design/custom-text-candy": {
     slug: "design/custom-text-candy",
     title: "Custom Text Candy",
+    heroSubheading: "Create text rock candy",
+    heroSupportingLine: "customise colours and packaging",
     bodyHtml: `
 <p>Custom text rock candy is ideal for names, initials, short words, event details, and fun personalised gifts. Roc Candy creates handmade text candy for parties, weddings, milestones, and branded events across Australia.</p>
 <h2>Personalised text candy for events and gifts</h2>
@@ -196,6 +214,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "design/branded-logo-candy": {
     slug: "design/branded-logo-candy",
     title: "Branded Logo Candy",
+    heroSubheading: "Create branded rock candy",
+    heroSupportingLine: "customise colours and packaging",
     bodyHtml: `
 <p>Branded logo candy is a memorable way to promote your business, campaign, product launch, or event. Roc Candy creates custom rock candy that showcases your brand in a colourful, edible format.</p>
 <h2>Branded candy for events and campaigns</h2>
@@ -232,6 +252,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "pre-made-candy": {
     slug: "pre-made-candy",
     title: "Pre-made candy",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml:
       "<p>Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery across Australia.</p>",
     seoTitle: "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",
@@ -244,6 +266,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   contact: {
     slug: "contact",
     title: "Contact Roc Candy",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: `
 <p>Need help choosing the right personalised rock candy for your event, campaign, or celebration? Contact Roc Candy for advice on colours, flavours, packaging, delivery timing, and order quantities.</p>
 <h2>Get in touch</h2>
@@ -270,6 +294,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "shipping-and-returns": {
     slug: "shipping-and-returns",
     title: "Shipping and Returns",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: `
 <p>Roc Candy ships across Australia. Delivery timing depends on the type of order, production volume, and your required date.</p>
 <h2>Shipping</h2>
@@ -290,6 +316,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   privacy: {
     slug: "privacy",
     title: "Privacy Policy",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: "<p>Add privacy policy content in admin.</p>",
     seoTitle: null,
     metaDescription: null,
@@ -300,6 +328,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "terms-and-conditions": {
     slug: "terms-and-conditions",
     title: "Terms & Conditions",
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: "<p>Terms and conditions content is managed separately. Use this SEO entry to control the page title and metadata.</p>",
     seoTitle: "Terms and Conditions | Roc Candy",
     metaDescription:
@@ -334,10 +364,16 @@ function isMissingGalleryColumnError(message: string) {
   return message.includes("gallery_image_urls") || message.includes("schema cache");
 }
 
+function isMissingLandingHeroColumnError(message: string) {
+  return message.includes("hero_subheading") || message.includes("hero_supporting_line") || message.includes("schema cache");
+}
+
 function normalizeRow(row: SitePageRow): ManagedSitePage {
   return {
     slug: row.slug,
     title: normalizeText(row.title),
+    heroSubheading: normalizeOptionalText(row.hero_subheading),
+    heroSupportingLine: normalizeOptionalText(row.hero_supporting_line),
     bodyHtml: normalizeText(row.body_html),
     seoTitle: normalizeOptionalText(row.seo_title),
     metaDescription: normalizeOptionalText(row.meta_description),
@@ -348,51 +384,68 @@ function normalizeRow(row: SitePageRow): ManagedSitePage {
 }
 
 async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
-  const fullSelect = "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls";
-  const baseSelect = "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url";
+  const selectAttempts = [
+    {
+      columns:
+        "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
+      normalize: (row: SitePageRow) => row,
+    },
+    {
+      columns: "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
+      normalize: (row: SitePageRow) => ({
+        ...row,
+        hero_subheading: null,
+        hero_supporting_line: null,
+      }),
+    },
+    {
+      columns: "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url",
+      normalize: (row: SitePageRow) => ({
+        ...row,
+        gallery_image_urls: [],
+      }),
+    },
+    {
+      columns: "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url",
+      normalize: (row: SitePageRow) => ({
+        ...row,
+        hero_subheading: null,
+        hero_supporting_line: null,
+        gallery_image_urls: [],
+      }),
+    },
+  ] as const;
 
-  const fullResult = await supabaseServerClient
-    .from(SITE_PAGES_TABLE)
-    .select(fullSelect)
-    .eq("slug", slug)
-    .maybeSingle();
+  for (const attempt of selectAttempts) {
+    const result = await supabaseServerClient
+      .from(SITE_PAGES_TABLE)
+      .select(attempt.columns)
+      .eq("slug", slug)
+      .maybeSingle();
 
-  if (fullResult.error) {
-    const message = fullResult.error.message.toLowerCase();
+    if (!result.error) {
+      return result.data ? normalizeRow(attempt.normalize(result.data as unknown as SitePageRow)) : null;
+    }
+
+    const message = result.error.message.toLowerCase();
     if (isMissingTableError(message)) {
       return null;
     }
 
-    if (!isMissingGalleryColumnError(message)) {
-      throw new Error(fullResult.error.message);
+    if (!isMissingGalleryColumnError(message) && !isMissingLandingHeroColumnError(message)) {
+      throw new Error(result.error.message);
     }
-
-    const fallbackResult = await supabaseServerClient
-      .from(SITE_PAGES_TABLE)
-      .select(baseSelect)
-      .eq("slug", slug)
-      .maybeSingle();
-
-    if (fallbackResult.error) {
-      const fallbackMessage = fallbackResult.error.message.toLowerCase();
-      if (isMissingTableError(fallbackMessage)) {
-        return null;
-      }
-      throw new Error(fallbackResult.error.message);
-    }
-
-    return fallbackResult.data
-      ? normalizeRow({ ...(fallbackResult.data as SitePageRow), gallery_image_urls: [] })
-      : null;
   }
 
-  return fullResult.data ? normalizeRow(fullResult.data as SitePageRow) : null;
+  return null;
 }
 
 async function upsertSitePage(page: ManagedSitePage) {
   const payload: SitePageRow = {
     slug: page.slug,
     title: normalizeText(page.title),
+    hero_subheading: normalizeOptionalText(page.heroSubheading),
+    hero_supporting_line: normalizeOptionalText(page.heroSupportingLine),
     body_html: normalizeText(page.bodyHtml),
     seo_title: normalizeOptionalText(page.seoTitle),
     meta_description: normalizeOptionalText(page.metaDescription),
@@ -401,34 +454,53 @@ async function upsertSitePage(page: ManagedSitePage) {
     gallery_image_urls: normalizeGalleryImageUrls(page.galleryImageUrls),
   };
 
-  const result = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(payload, {
-    onConflict: "slug",
-  });
+  const upsertAttempts = [
+    payload,
+    {
+      slug: payload.slug,
+      title: payload.title,
+      body_html: payload.body_html,
+      seo_title: payload.seo_title,
+      meta_description: payload.meta_description,
+      og_image_url: payload.og_image_url,
+      canonical_url: payload.canonical_url,
+      gallery_image_urls: payload.gallery_image_urls,
+    },
+    {
+      slug: payload.slug,
+      title: payload.title,
+      hero_subheading: payload.hero_subheading,
+      hero_supporting_line: payload.hero_supporting_line,
+      body_html: payload.body_html,
+      seo_title: payload.seo_title,
+      meta_description: payload.meta_description,
+      og_image_url: payload.og_image_url,
+      canonical_url: payload.canonical_url,
+    },
+    {
+      slug: payload.slug,
+      title: payload.title,
+      body_html: payload.body_html,
+      seo_title: payload.seo_title,
+      meta_description: payload.meta_description,
+      og_image_url: payload.og_image_url,
+      canonical_url: payload.canonical_url,
+    },
+  ] as const;
 
-  if (!result.error) {
-    return;
-  }
+  for (const attempt of upsertAttempts) {
+    const result = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(attempt, {
+      onConflict: "slug",
+    });
 
-  const message = result.error.message.toLowerCase();
-  if (!isMissingGalleryColumnError(message)) {
-    throw new Error(result.error.message);
-  }
+    if (!result.error) {
+      return;
+    }
 
-  const legacyPayload: Omit<SitePageRow, "gallery_image_urls"> = {
-    slug: payload.slug,
-    title: payload.title,
-    body_html: payload.body_html,
-    seo_title: payload.seo_title,
-    meta_description: payload.meta_description,
-    og_image_url: payload.og_image_url,
-    canonical_url: payload.canonical_url,
-  };
-  const legacyResult = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(legacyPayload, {
-    onConflict: "slug",
-  });
-
-  if (legacyResult.error) {
-    throw new Error(legacyResult.error.message);
+    const message = result.error.message.toLowerCase();
+    if (!isMissingGalleryColumnError(message) && !isMissingLandingHeroColumnError(message)) {
+      throw new Error(result.error.message);
+    }
   }
 }
 
@@ -445,6 +517,8 @@ export async function getManagedSitePage(slug: string): Promise<ManagedSitePage>
   const fallback = DEFAULT_SITE_PAGES[slug] ?? {
     slug,
     title: slug,
+    heroSubheading: null,
+    heroSupportingLine: null,
     bodyHtml: "",
     seoTitle: null,
     metaDescription: null,
@@ -468,6 +542,12 @@ export async function saveManagedSitePage(page: ManagedSitePageInput) {
   const next: ManagedSitePage = {
     slug: page.slug,
     title: page.title !== undefined ? normalizeText(page.title) : current.title,
+    heroSubheading:
+      page.heroSubheading !== undefined ? normalizeOptionalText(page.heroSubheading) : current.heroSubheading,
+    heroSupportingLine:
+      page.heroSupportingLine !== undefined
+        ? normalizeOptionalText(page.heroSupportingLine)
+        : current.heroSupportingLine,
     bodyHtml: page.bodyHtml !== undefined ? normalizeText(page.bodyHtml) : current.bodyHtml,
     seoTitle: page.seoTitle !== undefined ? normalizeOptionalText(page.seoTitle) : current.seoTitle,
     metaDescription:
