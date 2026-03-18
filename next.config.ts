@@ -1,8 +1,27 @@
 import type { NextConfig } from "next";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseRemotePattern = (() => {
+  if (!supabaseUrl) return null;
+  try {
+    const parsed = new URL(supabaseUrl);
+    return {
+      protocol: parsed.protocol.replace(":", "") as "http" | "https",
+      hostname: parsed.hostname,
+      port: parsed.port,
+      pathname: "/storage/v1/object/public/**",
+    };
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: supabaseRemotePattern ? [supabaseRemotePattern] : [],
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",

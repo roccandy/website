@@ -1,13 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
   analyzeImageOptimization,
+  formatBytes,
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
 import type { Category, LabelType, PackagingOption, PackagingOptionImage } from "@/lib/data";
+import type { StorageObjectInfo } from "@/lib/storageObjects";
 import {
   comparePackagingTypes,
   getPackagingTypeSortOrder,
@@ -20,6 +23,7 @@ type Props = {
   options: PackagingOption[];
   categories: Category[];
   images: PackagingOptionImage[];
+  imageObjectInfo: StorageObjectInfo[];
   maxTotalKg: number;
   labelTypes: LabelType[];
 };
@@ -118,7 +122,19 @@ function buildComboKey(type: string, size: string, categoryId: string, lidColor:
   return parts.join("_");
 }
 
-export function PackagingTable({ options, categories, images, maxTotalKg, labelTypes }: Props) {
+function formatStoredImageType(contentType: string | null | undefined) {
+  if (!contentType) return "UNKNOWN";
+  return contentType.replace("image/", "").toUpperCase();
+}
+
+function inferStoredImageTypeFromPath(path: string | null | undefined) {
+  if (!path) return "UNKNOWN";
+  const extension = path.split(".").pop()?.trim().toLowerCase();
+  if (!extension) return "UNKNOWN";
+  return extension.toUpperCase();
+}
+
+export function PackagingTable({ options, categories, images, imageObjectInfo, maxTotalKg, labelTypes }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [comboSort, setComboSort] = useState<{ key: ComboSortKey; direction: SortDirection } | null>(null);
   const [orderedTypes, setOrderedTypes] = useState<string[]>([]);
@@ -144,6 +160,10 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
   const [newSizeCustom, setNewSizeCustom] = useState(false);
   const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const [focusMaxPackagesId, setFocusMaxPackagesId] = useState<string | null>(null);
+  const imageObjectInfoByPath = useMemo(
+    () => new Map<string, StorageObjectInfo>(imageObjectInfo.map((item) => [item.path, item])),
+    [imageObjectInfo]
+  );
   const hasDirty = dirtyIds.size > 0;
   const uniqueTypesFromOptions = useMemo(
     () => sortPackagingTypes(Array.from(new Set(options.map((opt) => opt.type).filter(Boolean))), options),
@@ -1484,6 +1504,7 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                 {sortedComboRows.map((row) => {
                   const image = imageMap.get(row.key);
                   const imageUrl = buildPublicImageUrl(image?.image_path);
+                  const storedInfo = image?.image_path ? imageObjectInfoByPath.get(image.image_path) ?? null : null;
                   const fileInputId = `combo-upload-${toDomId(row.key)}`;
                   const isMissingImage = !image?.image_path;
                   const categoryName = categoryNameById.get(row.categoryId) ?? row.categoryId;
@@ -1500,9 +1521,12 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                       <td className="px-3 py-2 text-zinc-700">{row.lidColor || "-"}</td>
                       <td className="px-3 py-2 text-xs text-zinc-500">
                         {imageUrl ? (
-                          <img
+                          <Image
                             src={imageUrl}
                             alt={`Preview for ${row.comboKey}`}
+                            width={48}
+                            height={48}
+                            sizes="48px"
                             className="h-12 w-12 rounded border border-zinc-200 object-cover"
                           />
                         ) : image?.image_path ? (
@@ -1563,6 +1587,17 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                               summary={uploadSummaries[row.key]}
                               helperText="Packaging uploads are stored as optimised WEBP."
                             />
+                          ) : image?.image_path ? (
+                            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
+                              <p>
+                                Current stored:{" "}
+                                {storedInfo
+                                  ? formatStoredImageType(storedInfo.contentType)
+                                  : inferStoredImageTypeFromPath(image.image_path)}{" "}
+                                •{" "}
+                                {storedInfo?.sizeBytes != null ? formatBytes(storedInfo.sizeBytes) : "size unavailable"}
+                              </p>
+                            </div>
                           ) : null}
                         </form>
                       </td>

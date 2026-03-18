@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
@@ -143,9 +145,17 @@ export default async function PremadeItemPage({ params }: PageProps) {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              <Link href="/" className="shrink-0">
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                  priority
+                />
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -179,13 +189,23 @@ export default async function PremadeItemPage({ params }: PageProps) {
         </div>
 
         <div className="relative mx-auto max-w-6xl space-y-8 px-6 py-10 md:py-14">
-          <a href="/pre-made-candy" className="inline-block text-sm font-semibold text-zinc-500 hover:text-zinc-900">
+          <Link href="/pre-made-candy" className="inline-block text-sm font-semibold text-zinc-500 hover:text-zinc-900">
             ← Back to all pre-made candy
-          </a>
+          </Link>
 
           <section className="grid gap-8 rounded-3xl border border-zinc-200 bg-white/90 p-5 shadow-sm md:grid-cols-2 md:p-8">
             <div className="relative overflow-hidden rounded-2xl bg-zinc-100">
-              {imageUrl ? <img src={imageUrl} alt={item.name} className="h-full w-full object-cover" /> : null}
+              {imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt={item.name}
+                  width={1200}
+                  height={900}
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="h-full w-full object-cover"
+                  priority
+                />
+              ) : null}
               {item.great_value ? (
                 <span className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-[#ff6f95] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                   Discounted
@@ -223,18 +243,20 @@ export default async function PremadeItemPage({ params }: PageProps) {
                 {related.map((relatedItem) => {
                   const relatedImage = buildPremadeImageUrl(relatedItem.image_path);
                   return (
-                    <a
+                    <Link
                       key={relatedItem.id}
                       href={buildPremadeItemPath(relatedItem)}
                       className="overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="aspect-[4/3] bg-zinc-100">
                         {relatedImage ? (
-                          <img
+                          <Image
                             src={relatedImage}
                             alt={relatedItem.name}
+                            width={960}
+                            height={720}
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                             className="h-full w-full object-cover"
-                            loading="lazy"
                           />
                         ) : null}
                       </div>
@@ -242,7 +264,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
                         <p className="text-sm font-semibold text-[#ff6f95]">{relatedItem.name}</p>
                         <p className="text-sm text-zinc-600">{formatPremadeMoney(Number(relatedItem.price))}</p>
                       </div>
-                    </a>
+                    </Link>
                   );
                 })}
               </div>

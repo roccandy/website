@@ -3,6 +3,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { JsonLd } from "@/components/JsonLd";
+import Image from "next/image";
 import { getPremadeCandies } from "@/lib/data";
 import {
   buildPremadeImageUrl,
@@ -91,7 +92,15 @@ export default async function PremadePage() {
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                  priority
+                />
               </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
@@ -161,14 +170,16 @@ export default async function PremadePage() {
                         </span>
                       ) : null}
                       {imageUrl ? (
-                        <a href={itemHref} aria-label={`View ${item.name}`}>
-                          <img
+                        <Link href={itemHref} aria-label={`View ${item.name}`}>
+                          <Image
                             src={imageUrl}
                             alt={item.name}
+                            width={960}
+                            height={720}
+                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                             className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
-                            loading="lazy"
                           />
-                        </a>
+                        </Link>
                       ) : null}
                       <AddPremadeToCartButton
                         className="absolute right-2 top-2"
@@ -183,9 +194,9 @@ export default async function PremadePage() {
                       />
                     </div>
                     <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
-                      <a href={itemHref} className="text-sm font-bold text-[#ff6f95] hover:text-[#ff4f80] hover:underline">
+                      <Link href={itemHref} className="text-sm font-bold text-[#ff6f95] hover:text-[#ff4f80] hover:underline">
                         {titleLine}
-                      </a>
+                      </Link>
                       <p className="text-xl font-semibold text-zinc-900">{formatPremadeMoney(Number(item.price))}</p>
                       {flavorLabel ? <p className="text-sm text-zinc-500">{flavorLabel}</p> : null}
                       {item.description ? <p className="text-sm text-zinc-500">{item.description}</p> : null}
@@ -193,12 +204,12 @@ export default async function PremadePage() {
                         <p className="text-sm text-zinc-500">Approx {item.approx_pcs} pcs</p>
                       ) : null}
                       <p className="text-sm font-semibold text-zinc-500">Free Shipping Australia Wide</p>
-                      <a
+                      <Link
                         href={itemHref}
                         className="mt-1 inline-block text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-800"
                       >
                         View product page
-                      </a>
+                      </Link>
                     </div>
                   </article>
                 );

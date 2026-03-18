@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import { analyzeImageOptimization, type ImageOptimizationSummary } from "@/lib/clientImageOptimization";
+import {
+  bulkUploadLandingGalleryImagesAction,
+  type LandingGalleryBulkUploadActionState,
+} from "./actions";
 
 type LibraryImage = {
   name: string;
@@ -20,11 +26,68 @@ function buildInitialSlots(imageUrls: string[]) {
   return imageUrls.length > 0 ? imageUrls : [""];
 }
 
+function appendUploadedUrlsToSlots(current: string[], nextUrls: string[]) {
+  if (nextUrls.length === 0) return current;
+
+  const nextSlots = [...current];
+  let uploadIndex = 0;
+
+  for (let slotIndex = 0; slotIndex < nextSlots.length && uploadIndex < nextUrls.length; slotIndex += 1) {
+    if (!nextSlots[slotIndex]) {
+      nextSlots[slotIndex] = nextUrls[uploadIndex] ?? "";
+      uploadIndex += 1;
+    }
+  }
+
+  if (uploadIndex < nextUrls.length) {
+    nextSlots.push(...nextUrls.slice(uploadIndex));
+  }
+
+  return nextSlots.length > 0 ? nextSlots : [""];
+}
+
+const INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE: LandingGalleryBulkUploadActionState = {
+  status: "idle",
+  message: null,
+  uploaded: null,
+  requestId: null,
+};
+
 export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, readOnly }: Props) {
   const [slots, setSlots] = useState<string[]>(() => buildInitialSlots(initialImageUrls));
+  const [libraryItems, setLibraryItems] = useState<LibraryImage[]>(libraryImages);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedSummaries, setSelectedSummaries] = useState<ImageOptimizationSummary[]>([]);
+  const [isAnalysingFiles, setIsAnalysingFiles] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const bulkUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const appliedRequestRef = useRef<string | null>(null);
+  const [uploadState, bulkUploadAction, isBulkUploading] = useActionState(
+    bulkUploadLandingGalleryImagesAction,
+    INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE
+  );
 
   const selectedCount = useMemo(() => slots.filter(Boolean).length, [slots]);
+
+  useEffect(() => {
+    if (uploadState.status !== "success" || !uploadState.uploaded?.length || !uploadState.requestId) return;
+    if (appliedRequestRef.current === uploadState.requestId) return;
+
+    appliedRequestRef.current = uploadState.requestId;
+    const uploadedUrls = uploadState.uploaded.map((image) => image.publicUrl);
+    setSlots((current) => appendUploadedUrlsToSlots(current, uploadedUrls));
+    setLibraryItems((current) => {
+      const existingPaths = new Set(current.map((image) => image.path));
+      return [...uploadState.uploaded!.filter((image) => !existingPaths.has(image.path)), ...current];
+    });
+    setSelectedFiles([]);
+    setSelectedSummaries([]);
+    setAnalysisError(null);
+    if (bulkUploadInputRef.current) {
+      bulkUploadInputRef.current.value = "";
+    }
+  }, [uploadState]);
 
   const updateSlot = (index: number, nextValue: string) => {
     setSlots((current) => current.map((value, slotIndex) => (slotIndex === index ? nextValue : value)));
@@ -76,11 +139,109 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
       <div className="space-y-1">
         <p className="text-sm font-semibold text-zinc-900">Landing page mini gallery</p>
         <p className="text-xs text-zinc-600">
-          Upload images in the media library below, then build this gallery with as many images as you want. This
+          Upload one or many images straight into this gallery, or choose from the shared media library below. This
           keeps the page editor simple without asking admins to paste raw URLs.
         </p>
         <p className="text-xs text-zinc-500">Selected: {selectedCount}</p>
       </div>
+
+      {!readOnly ? (
+        <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-zinc-900">Bulk upload into this gallery</p>
+            <p className="text-xs text-zinc-600">
+              Select multiple images from your computer. Each one will be optimised, uploaded, and added as its own
+              gallery slot.
+            </p>
+          </div>
+
+          <form action={bulkUploadAction} className="space-y-3">
+            <input type="hidden" name="slug" value={slug} />
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Choose images</span>
+              <input
+                ref={bulkUploadInputRef}
+                type="file"
+                name="landingGalleryFiles"
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                multiple
+                className="block w-full text-sm"
+                onChange={async (event) => {
+                  const files = Array.from(event.currentTarget.files ?? []);
+                  setSelectedFiles(files);
+                  setSelectedSummaries([]);
+                  setAnalysisError(null);
+                  if (files.length === 0) return;
+                  setIsAnalysingFiles(true);
+                  try {
+                    const summaries = await Promise.all(
+                      files.map((file) =>
+                        analyzeImageOptimization(file, {
+                          maxWidth: 2400,
+                          maxHeight: 2400,
+                          quality: 0.82,
+                        })
+                      )
+                    );
+                    setSelectedSummaries(summaries);
+                  } catch {
+                    setAnalysisError("Unable to calculate optimised image details for one or more files.");
+                  } finally {
+                    setIsAnalysingFiles(false);
+                  }
+                }}
+              />
+            </label>
+
+            {isAnalysingFiles ? (
+              <ImageOptimizationStatus
+                summary={null}
+                pendingLabel={`Calculating optimised details for ${selectedFiles.length} image${selectedFiles.length === 1 ? "" : "s"}...`}
+                helperText="Landing gallery uploads are stored as optimised WEBP files."
+              />
+            ) : selectedSummaries.length > 0 ? (
+              <div className="space-y-2">
+                {selectedSummaries.map((summary, index) => (
+                  <div key={`${selectedFiles[index]?.name ?? "file"}-${index}`} className="space-y-1">
+                    <p className="text-[11px] font-semibold text-zinc-700">
+                      {selectedFiles[index]?.name ?? `Image ${index + 1}`}
+                    </p>
+                    <ImageOptimizationStatus
+                      summary={summary}
+                      helperText="Stored as optimised WEBP."
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : analysisError ? (
+              <ImageOptimizationStatus summary={null} helperText={analysisError} />
+            ) : null}
+
+            {uploadState.message ? (
+              <div
+                className={`rounded-lg border px-3 py-2 text-xs ${
+                  uploadState.status === "error"
+                    ? "border-red-200 bg-red-50 text-red-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {uploadState.message}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={selectedFiles.length === 0 || isAnalysingFiles || isBulkUploading}
+                className="rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isBulkUploading ? "Uploading..." : `Upload ${selectedFiles.length || ""} image${selectedFiles.length === 1 ? "" : "s"}`.trim()}
+              </button>
+              <p className="self-center text-xs text-zinc-500">Save the page after upload to keep the new gallery order.</p>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((imageUrl, index) => {
@@ -189,11 +350,11 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
               </button>
             </div>
 
-            {libraryImages.length === 0 ? (
+            {libraryItems.length === 0 ? (
               <p className="text-sm text-zinc-500">No library images uploaded yet. Upload one below first.</p>
             ) : (
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {libraryImages.map((image) => (
+                {libraryItems.map((image) => (
                   <button
                     key={image.path}
                     type="button"

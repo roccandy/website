@@ -9,6 +9,20 @@ import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
 
+export type LandingGalleryBulkUploadActionState = {
+  status: "idle" | "success" | "error";
+  message: string | null;
+  uploaded:
+    | Array<{
+        name: string;
+        path: string;
+        publicUrl: string;
+        updatedAt: string | null;
+      }>
+    | null;
+  requestId: string | null;
+};
+
 function normalizeField(value: FormDataEntryValue | null) {
   return (value?.toString() ?? "").replace(/\r\n/g, "\n").trim();
 }
@@ -72,6 +86,77 @@ export async function uploadSeoLibraryImageAction(formData: FormData) {
   }
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "SEO library image uploaded."));
+}
+
+export async function bulkUploadLandingGalleryImagesAction(
+  _previousState: LandingGalleryBulkUploadActionState,
+  formData: FormData
+): Promise<LandingGalleryBulkUploadActionState> {
+  try {
+    await requireAdminSeoWriteAccess({ onDenied: "throw" });
+    const slug = normalizeField(formData.get("slug"));
+    const files = formData
+      .getAll("landingGalleryFiles")
+      .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+    if (!slug) {
+      return {
+        status: "error",
+        message: "Page slug is required for gallery uploads.",
+        uploaded: null,
+        requestId: `${Date.now()}`,
+      };
+    }
+
+    if (files.length === 0) {
+      return {
+        status: "error",
+        message: "Choose one or more images to upload.",
+        uploaded: null,
+        requestId: `${Date.now()}`,
+      };
+    }
+
+    const uploaded = [];
+    for (const file of files) {
+      const result = await uploadSeoImage(file, "library");
+      if (!result) continue;
+      uploaded.push({
+        name: file.name.replace(/\.[^.]+$/, "") + ".webp",
+        path: result.path,
+        publicUrl: result.publicUrl,
+        updatedAt: null,
+      });
+    }
+
+    if (uploaded.length === 0) {
+      return {
+        status: "error",
+        message: "No images were uploaded.",
+        uploaded: null,
+        requestId: `${Date.now()}`,
+      };
+    }
+
+    revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+
+    return {
+      status: "success",
+      message:
+        uploaded.length === 1
+          ? "1 image uploaded. Save the page to keep it in this gallery."
+          : `${uploaded.length} images uploaded. Save the page to keep them in this gallery.`,
+      uploaded,
+      requestId: `${Date.now()}`,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to upload landing gallery images.",
+      uploaded: null,
+      requestId: `${Date.now()}`,
+    };
+  }
 }
 
 export async function saveSiteRedirectAction(formData: FormData) {

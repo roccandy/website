@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Montserrat } from "next/font/google";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -400,7 +401,6 @@ export function QuoteBuilder({
   flavors,
   palette,
   labelTypes,
-  labelRanges,
   minBasePrices,
   initialOrderType,
 }: Props) {
@@ -419,10 +419,6 @@ export function QuoteBuilder({
   const appliedEditRef = useRef<string | null>(null);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
-  const sortedLabelRanges = useMemo(
-    () => [...labelRanges].sort((a, b) => Number(a.upper_bound) - Number(b.upper_bound)),
-    [labelRanges]
-  );
   const ingredientLabelType = useMemo(() => {
     const id = settings.ingredient_label_type_id;
     return id ? labelTypeById.get(id) ?? null : null;
@@ -552,7 +548,7 @@ export function QuoteBuilder({
 
     try {
       const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const nextImage = new Image();
+        const nextImage = new window.Image();
         nextImage.onload = () => resolve(nextImage);
         nextImage.onerror = () => reject(new Error("Preview image load failed."));
         nextImage.src = objectUrl;
@@ -1729,11 +1725,13 @@ export function QuoteBuilder({
               <div className="flex h-full items-start justify-center">
                 <div className="aspect-square w-[375px] max-w-full rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   {packagingImageUrl && !packagingImageFailed ? (
-                    <img
+                    <Image
                       src={packagingImageUrl}
                       alt={`Packaging preview for ${selectionType} ${selectionSize}`}
+                      width={750}
+                      height={750}
+                      sizes="(max-width: 768px) 100vw, 375px"
                       className="h-full w-full object-contain"
-                      loading="lazy"
                       onError={() => setPackagingImageFailed(true)}
                     />
                   ) : (
@@ -1851,10 +1849,13 @@ export function QuoteBuilder({
                           </label>
                           {labelImageUrl ? (
                             labelImageUrl.startsWith("data:image/") ? (
-                              <img
+                              <Image
                                 src={labelImageUrl}
                                 alt="Label preview"
+                                width={40}
+                                height={40}
                                 className="h-10 w-10 rounded border border-zinc-200 object-cover"
+                                unoptimized
                               />
                             ) : labelImageUrl.startsWith("data:application/pdf") ? (
                               <span className="inline-flex h-10 min-w-10 items-center justify-center rounded border border-zinc-200 bg-zinc-50 px-2 text-[10px] font-semibold text-zinc-600">
@@ -1951,11 +1952,13 @@ export function QuoteBuilder({
                   ) : null}
                   {ingredientLabelsOptIn && !ingredientPreviewFailed && (
                     <div className="w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white">
-                      <img
+                      <Image
                         src={INGREDIENT_LABEL_PREVIEW_SRC}
                         alt="Ingredient label preview"
+                        width={320}
+                        height={200}
+                        sizes="160px"
                         className="h-auto w-full object-contain"
-                        loading="lazy"
                         onError={() => setIngredientPreviewFailed(true)}
                       />
                     </div>
