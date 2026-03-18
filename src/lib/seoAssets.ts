@@ -1,9 +1,12 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
+import {
+  isOptimizableWebImageMimeType,
+  optimizeServerImageToWebp,
+} from "@/lib/serverImageOptimization";
 
 const SEO_IMAGE_BUCKET = "seo-images";
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
-const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 function normalizeFileName(value: string) {
   return value
@@ -12,12 +15,6 @@ function normalizeFileName(value: string) {
     .replace(/[^a-z0-9.\-_]+/g, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function inferExtension(name: string) {
-  const lowered = name.toLowerCase();
-  const match = ALLOWED_EXTENSIONS.find((extension) => lowered.endsWith(extension));
-  return match ?? "";
 }
 
 function isMissingBucketError(message: string) {
@@ -47,12 +44,10 @@ export async function uploadSeoImage(file: File, slugPath: string) {
     return null;
   }
 
-  const extension = inferExtension(file.name);
-  if (!extension) {
+  if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
     throw new Error("Only JPG, PNG, and WEBP images are supported.");
   }
-
-  if (file.type && !ALLOWED_MIME_TYPES.has(file.type)) {
+  if (file.type && !isOptimizableWebImageMimeType(file.type)) {
     throw new Error("Only JPG, PNG, and WEBP images are supported.");
   }
 
@@ -62,12 +57,16 @@ export async function uploadSeoImage(file: File, slugPath: string) {
 
   const baseName = normalizeFileName(file.name.replace(/\.[^.]+$/, "")) || "seo-image";
   const folder = normalizeFileName(slugPath.replace(/\//g, "-")) || "page";
-  const objectPath = `${folder}/${Date.now()}-${baseName}${extension}`;
-  const bytes = Buffer.from(await file.arrayBuffer());
+  const optimized = await optimizeServerImageToWebp(file, {
+    maxWidth: 2400,
+    maxHeight: 2400,
+    quality: 82,
+  });
+  const objectPath = `${folder}/${Date.now()}-${baseName}.webp`;
 
   const upload = async () =>
-    supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).upload(objectPath, bytes, {
-      contentType: file.type || "image/jpeg",
+    supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).upload(objectPath, optimized.buffer, {
+      contentType: optimized.contentType,
       upsert: true,
     });
 

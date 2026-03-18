@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import {
+  analyzeImageOptimization,
+  optimizeBrowserImageToDataUrl,
+  type ImageOptimizationSummary,
+} from "@/lib/clientImageOptimization";
 import type { Category, ColorPaletteRow, Flavor, PackagingOption, PremadeCandy } from "@/lib/data";
 import { upsertOrder } from "../actions";
 import { paletteSections } from "@/app/admin/settings/palette";
@@ -315,6 +321,8 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const [flavor, setFlavor] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [labelImageUrl, setLabelImageUrl] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
@@ -379,28 +387,41 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
     if (jacket === "pinstripe") return "pinstripe";
     return "";
   }, [jacket]);
-  const handleLogoUpload = (file?: File | null) => {
+  const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
       setLogoError(null);
+      setLogoSummary(null);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       setLogoUrl("");
       setLogoError("File is too large. Max 2MB.");
+      setLogoSummary(null);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
+    try {
+      setIsOptimisingLogo(true);
+      const summary = await analyzeImageOptimization(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      const result = await optimizeBrowserImageToDataUrl(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
       setLogoUrl(result);
+      setLogoSummary(summary);
       setLogoError(null);
-    };
-    reader.onerror = () => {
+    } catch {
       setLogoUrl("");
+      setLogoSummary(null);
       setLogoError("Unable to read the file.");
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setIsOptimisingLogo(false);
+    }
   };
   const openCustomPicker = (target: "heart" | "text" | "jacket1" | "jacket2", current: string) => {
     const normalized = normalizeHex(current, defaultJacketColor);
@@ -795,6 +816,22 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
               {logoError && (
                 <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{logoError}</p>
               )}
+              {isOptimisingLogo ? (
+                <div className="mt-2">
+                  <ImageOptimizationStatus
+                    summary={null}
+                    pendingLabel="Optimising image..."
+                    helperText="This artwork is compressed before it is attached to the order."
+                  />
+                </div>
+              ) : logoSummary ? (
+                <div className="mt-2">
+                  <ImageOptimizationStatus
+                    summary={logoSummary}
+                    helperText="This artwork is compressed before it is attached to the order."
+                  />
+                </div>
+              ) : null}
             </div>
           )}
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">

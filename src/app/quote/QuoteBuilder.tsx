@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Montserrat } from "next/font/google";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import type {
   Category,
   ColorPaletteRow,
@@ -17,6 +18,12 @@ import { CandyPreview } from "./CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart, type CustomCartItem } from "@/components/CartProvider";
 import { trackAddToCart } from "@/lib/analyticsEvents";
+import {
+  analyzeImageOptimization,
+  fileToDataUrl,
+  optimizeBrowserImageToDataUrl,
+  type ImageOptimizationSummary,
+} from "@/lib/clientImageOptimization";
 import { sortPackagingTypes } from "@/lib/packaging";
 
 type OrderTypeId = "weddings" | "text" | "branded";
@@ -467,6 +474,8 @@ export function QuoteBuilder({
   const [labelImageUrl, setLabelImageUrl] = useState("");
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [labelFileName, setLabelFileName] = useState("");
+  const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
   const [ingredientPreviewFailed, setIngredientPreviewFailed] = useState(false);
   const [rainbowJacket, setRainbowJacket] = useState(false);
   const [pinstripeJacket, setPinstripeJacket] = useState(false);
@@ -488,6 +497,8 @@ export function QuoteBuilder({
   const [jacketColorTwo, setJacketColorTwo] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [heartColor, setHeartColor] = useState("");
   const [textColor, setTextColor] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
@@ -758,55 +769,90 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const subtitle = subtitleLabel && hasBasePrice ? `${subtitleLabel} - base ${formatMoney(basePrice)}` : subtitleLabel;
-  const handleLogoUpload = (file?: File | null) => {
+  const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
       setLogoError(null);
+      setLogoSummary(null);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       setLogoUrl("");
       setLogoError("File is too large. Max 2MB.");
+      setLogoSummary(null);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
+    try {
+      setIsOptimisingLogo(true);
+      const summary = await analyzeImageOptimization(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      const result = await optimizeBrowserImageToDataUrl(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
       setLogoUrl(result);
+      setLogoSummary(summary);
       setLogoError(null);
-    };
-    reader.onerror = () => {
+    } catch {
       setLogoUrl("");
+      setLogoSummary(null);
       setLogoError("Unable to read the file.");
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setIsOptimisingLogo(false);
+    }
   };
-  const handleLabelUpload = (file?: File | null) => {
+  const handleLabelUpload = async (file?: File | null) => {
     if (!file) {
       setLabelFileName("");
       setLabelImageUrl("");
       setLabelImageError(null);
+      setLabelImageSummary(null);
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
       setLabelFileName("");
       setLabelImageUrl("");
       setLabelImageError("File is too large. Max 2MB.");
+      setLabelImageSummary(null);
       return;
     }
     setLabelFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
+    try {
+      setIsOptimisingLabelImage(true);
+      const summary = file.type === "application/pdf"
+        ? {
+            originalType: "PDF",
+            originalBytes: file.size,
+            finalType: "PDF",
+            finalBytes: file.size,
+          }
+        : await analyzeImageOptimization(file, {
+            maxWidth: 1800,
+            maxHeight: 1800,
+            quality: 0.82,
+          });
+      const result = file.type === "application/pdf"
+        ? await fileToDataUrl(file)
+        : await optimizeBrowserImageToDataUrl(file, {
+            maxWidth: 1800,
+            maxHeight: 1800,
+            quality: 0.82,
+          });
       setLabelImageUrl(result);
+      setLabelImageSummary(summary);
       setLabelImageError(null);
-    };
-    reader.onerror = () => {
+    } catch {
       setLabelFileName("");
       setLabelImageUrl("");
+      setLabelImageSummary(null);
       setLabelImageError("Unable to read the file.");
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setIsOptimisingLabelImage(false);
+    }
   };
 
   const selectionQty = useMemo(() => {
@@ -1793,7 +1839,7 @@ export function QuoteBuilder({
                           <input
                             id="label-artwork-upload"
                             type="file"
-                            accept=".pdf,.jpg,.jpeg"
+                            accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
                             onChange={(e) => handleLabelUpload(e.target.files?.[0])}
                             className="sr-only"
                           />
@@ -1830,6 +1876,22 @@ export function QuoteBuilder({
                         {labelImageError && (
                           <span className="mt-1 block text-xs text-red-600">{labelImageError}</span>
                         )}
+                        {isOptimisingLabelImage ? (
+                          <div className="mt-2">
+                            <ImageOptimizationStatus
+                              summary={null}
+                              pendingLabel="Optimising artwork..."
+                              helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                            />
+                          </div>
+                        ) : labelImageSummary ? (
+                          <div className="mt-2">
+                            <ImageOptimizationStatus
+                              summary={labelImageSummary}
+                              helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}
@@ -2165,6 +2227,22 @@ export function QuoteBuilder({
                     </label>
                   </div>
                   {logoError && <p className="mt-1 text-xs text-red-600">{logoError}</p>}
+                  {isOptimisingLogo ? (
+                    <div className="mt-2">
+                      <ImageOptimizationStatus
+                        summary={null}
+                        pendingLabel="Optimising image..."
+                        helperText="Your uploaded design is compressed before it is added to the order."
+                      />
+                    </div>
+                  ) : logoSummary ? (
+                    <div className="mt-2">
+                      <ImageOptimizationStatus
+                        summary={logoSummary}
+                        helperText="Your uploaded design is compressed before it is added to the order."
+                      />
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

@@ -1,6 +1,10 @@
 "use server";
 
 import { appendAdminToast, requireAdminWriteAccess } from "@/lib/adminAuth";
+import {
+  isOptimizableWebImageMimeType,
+  optimizeServerImageToWebp,
+} from "@/lib/serverImageOptimization";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -246,12 +250,8 @@ export async function uploadPackagingImage(formData: FormData) {
     if (!packagingOptionId || !categoryId || !file) {
       throw new Error("Missing image upload data");
     }
-    const extensionMatch = file.name.match(/\.(jpe?g)$/i);
-    if (!extensionMatch) {
-      throw new Error("Only JPEG images are supported.");
-    }
-    if (file.type && file.type !== "image/jpeg" && file.type !== "image/jpg") {
-      throw new Error("Only JPEG images are supported.");
+    if (file.type && !isOptimizableWebImageMimeType(file.type)) {
+      throw new Error("Only PNG, JPG, and WEBP images are supported.");
     }
 
     const client = supabaseServerClient;
@@ -262,14 +262,17 @@ export async function uploadPackagingImage(formData: FormData) {
       .single();
     if (optionError || !option) throw new Error(optionError?.message ?? "Packaging option not found");
 
-    const extension = extensionMatch[0].toLowerCase();
     const comboKey = buildComboKey(option.type, option.size, categoryId, lidColor);
-    const fileName = normalizeFileName(`${comboKey}${extension}`);
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = normalizeFileName(`${comboKey}.webp`);
+    const optimized = await optimizeServerImageToWebp(file, {
+      maxWidth: 1800,
+      maxHeight: 1800,
+      quality: 82,
+    });
 
     const { error: uploadError } = await client.storage
       .from(PACKAGING_IMAGE_BUCKET)
-      .upload(fileName, buffer, { contentType: file.type || "image/jpeg", upsert: true });
+      .upload(fileName, optimized.buffer, { contentType: optimized.contentType, upsert: true });
     if (uploadError) throw new Error(uploadError.message);
 
     const { error: upsertError } = await client.from("packaging_option_images").upsert(

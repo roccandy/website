@@ -17,6 +17,7 @@ import {
   updateSitePageAction,
   uploadSeoLibraryImageAction,
 } from "./actions";
+import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
 import { HtmlEditorField } from "./HtmlEditorField";
 import { LandingGalleryPicker } from "./LandingGalleryPicker";
 import { SeoAdminWorkspace } from "./SeoAdminWorkspace";
@@ -154,10 +155,14 @@ function SeoLibrarySection({
 
       {canWriteSeo ? (
         <form action={uploadSeoLibraryImageAction} className="flex flex-wrap items-end gap-3">
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Upload image</span>
-            <input type="file" name="libraryImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
-          </label>
+          <OptimizedImageFileInput
+            name="libraryImageFile"
+            label="Upload image"
+            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+            maxWidth={2400}
+            maxHeight={2400}
+            quality={0.82}
+          />
           <button
             type="submit"
             className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
@@ -443,10 +448,14 @@ function SitePageCard({
             <div className="space-y-3">
               <input type="hidden" name="ogImageUrl" value={page.ogImageUrl ?? ""} readOnly />
               {canWriteSeo ? (
-                <label className="space-y-1 text-sm text-zinc-700">
-                  <span className="text-xs text-zinc-500">Social share image upload (og:image)</span>
-                  <input type="file" name="ogImageFile" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="block w-full text-sm" />
-                </label>
+                <OptimizedImageFileInput
+                  name="ogImageFile"
+                  label="Social share image upload (og:image)"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  maxWidth={2400}
+                  maxHeight={2400}
+                  quality={0.82}
+                />
               ) : (
                 <p className="text-xs text-zinc-500">Social share image (og:image)</p>
               )}

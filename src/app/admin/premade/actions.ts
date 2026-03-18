@@ -8,6 +8,10 @@ import {
   DEFAULT_PRODUCT_CONDITION,
   DEFAULT_WOO_CATEGORY,
 } from "@/lib/premadeDefaults";
+import {
+  isOptimizableWebImageMimeType,
+  optimizeServerImageToWebp,
+} from "@/lib/serverImageOptimization";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { deleteWooProduct, upsertWooProduct } from "@/lib/woo";
 
@@ -32,12 +36,6 @@ function normalizeFileName(value: string) {
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/-{2,}/g, "-");
-}
-
-function normalizeExtension(extension: string) {
-  const cleaned = extension.replace(".", "").toLowerCase();
-  if (cleaned === "png" || cleaned === "jpg" || cleaned === "jpeg") return cleaned;
-  return "";
 }
 
 function buildPremadeImageUrl(path?: string | null) {
@@ -103,38 +101,46 @@ async function syncPremadeCandyToWoo(client: typeof supabaseServerClient, premad
   }
 }
 
-export type PremadeUploadUrlResponse = {
-  data: { path: string; token: string } | null;
+export type PremadeImageUploadResponse = {
+  data: { path: string } | null;
   error: string | null;
 };
 
-export async function createPremadeUploadUrl(name: string, extension: string): Promise<PremadeUploadUrlResponse> {
+export async function uploadPremadeImageAction(formData: FormData): Promise<PremadeImageUploadResponse> {
   try {
     await requireAdminWriteAccess();
   } catch (error) {
-    return { data: null, error: error instanceof Error ? error.message : "Unable to prepare upload." };
+    return { data: null, error: error instanceof Error ? error.message : "Unable to upload image." };
   }
-  const trimmed = name?.toString().trim();
-  const normalizedExt = normalizeExtension(extension);
+  const trimmed = formData.get("name")?.toString().trim();
+  const file = formData.get("file");
   if (!trimmed) {
     return { data: null, error: "Name is required." };
   }
-  if (!normalizedExt) {
-    return { data: null, error: "Only PNG or JPG images are supported." };
+  if (!(file instanceof File) || file.size === 0) {
+    return { data: null, error: "Image is required." };
+  }
+  if (file.type && !isOptimizableWebImageMimeType(file.type)) {
+    return { data: null, error: "Only PNG, JPG, and WEBP images are supported." };
   }
 
   const slug = normalizePremadeFileName(trimmed);
-  const fileName = normalizeFileName(`${slug}-${Date.now()}.${normalizedExt}`);
+  const fileName = normalizeFileName(`${slug}-${Date.now()}.webp`);
   const client = supabaseServerClient;
-  const { data, error } = await client.storage
+  const optimized = await optimizeServerImageToWebp(file, {
+    maxWidth: 1800,
+    maxHeight: 1800,
+    quality: 82,
+  });
+  const { error } = await client.storage
     .from(PREMADE_IMAGE_BUCKET)
-    .createSignedUploadUrl(fileName, { upsert: true });
+    .upload(fileName, optimized.buffer, { contentType: optimized.contentType, upsert: true });
 
-  if (error || !data) {
-    return { data: null, error: error?.message ?? "Unable to prepare upload." };
+  if (error) {
+    return { data: null, error: error.message ?? "Unable to upload image." };
   }
 
-  return { data: { path: data.path, token: data.token }, error: null };
+  return { data: { path: fileName }, error: null };
 }
 
 export async function insertPremadeCandy(payload: {

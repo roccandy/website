@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import { analyzeImageOptimization, type ImageOptimizationSummary } from "@/lib/clientImageOptimization";
 import {
   DEFAULT_GOOGLE_PRODUCT_CATEGORY,
   DEFAULT_PREMADE_BRAND,
   DEFAULT_PRODUCT_CONDITION,
 } from "@/lib/premadeDefaults";
-import { supabaseClient } from "@/lib/supabase/client";
-import { createPremadeUploadUrl, deletePremadeCandy, syncPremadeToWoo, updatePremadeCandy } from "./actions";
+import { deletePremadeCandy, syncPremadeToWoo, updatePremadeCandy, uploadPremadeImageAction } from "./actions";
 
 const MAX_IMAGE_SIZE_MB = 2;
 const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-const PREMADE_IMAGE_BUCKET = "premade-images";
 
 function formatWooSyncTimestamp(value?: string | null) {
   if (!value) return "Never";
@@ -103,6 +103,8 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [imageSummary, setImageSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isAnalysingImage, setIsAnalysingImage] = useState(false);
 
   useEffect(() => {
     if (isEditing) return;
@@ -217,25 +219,22 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
           ? "jpg"
           : fileName.endsWith(".jpeg")
             ? "jpeg"
+            : fileName.endsWith(".webp")
+              ? "webp"
             : "";
       if (!extension) {
-        setError("Only PNG or JPG images are supported.");
+        setError("Only PNG, JPG, or WEBP images are supported.");
         return;
       }
 
       setSaving(true);
       try {
-        const { data, error: urlError } = await createPremadeUploadUrl(trimmedName, extension);
-        if (!data || urlError) {
-          throw new Error(urlError || "Unable to prepare upload.");
-        }
-
-        const contentType = extension === "png" ? "image/png" : "image/jpeg";
-        const { error: uploadError } = await supabaseClient.storage
-          .from(PREMADE_IMAGE_BUCKET)
-          .uploadToSignedUrl(data.path, data.token, file, { contentType });
-        if (uploadError) {
-          throw new Error(uploadError.message);
+        const uploadFormData = new FormData();
+        uploadFormData.set("name", trimmedName);
+        uploadFormData.set("file", file);
+        const { data, error: uploadError } = await uploadPremadeImageAction(uploadFormData);
+        if (!data || uploadError) {
+          throw new Error(uploadError || "Unable to upload image.");
         }
 
         image_path = data.path;
@@ -518,13 +517,46 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
             Replace image
             <input
               type="file"
-              accept="image/png,image/jpeg"
+              accept="image/png,image/jpeg,image/webp"
               className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              onChange={async (event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                setFile(nextFile);
+                setImageSummary(null);
+                if (!nextFile) return;
+                setIsAnalysingImage(true);
+                try {
+                  const summary = await analyzeImageOptimization(nextFile, {
+                    maxWidth: 1800,
+                    maxHeight: 1800,
+                    quality: 0.82,
+                  });
+                  setImageSummary(summary);
+                } finally {
+                  setIsAnalysingImage(false);
+                }
+              }}
             />
             <span className="mt-1 block text-[11px] text-zinc-500">
-              PNG or JPG, max {MAX_IMAGE_SIZE_MB}MB.
+              PNG, JPG, or WEBP. Stored as optimised WEBP. Max {MAX_IMAGE_SIZE_MB}MB.
             </span>
+            {isAnalysingImage ? (
+              <div className="mt-2">
+                <ImageOptimizationStatus
+                  summary={null}
+                  pendingLabel="Calculating optimised image details..."
+                  helperText="This upload will be stored as an optimised WEBP."
+                />
+              </div>
+            ) : imageSummary ? (
+              <div className="mt-2">
+                <ImageOptimizationStatus
+                  summary={imageSummary}
+                  pendingLabel={saving ? "Optimising and uploading image..." : null}
+                  helperText="This upload will be stored as an optimised WEBP."
+                />
+              </div>
+            ) : null}
           </label>
         </div>
         <div className="flex-1 space-y-3">

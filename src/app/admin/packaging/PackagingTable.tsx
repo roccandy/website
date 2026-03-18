@@ -2,6 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import {
+  analyzeImageOptimization,
+  type ImageOptimizationSummary,
+} from "@/lib/clientImageOptimization";
 import type { Category, LabelType, PackagingOption, PackagingOptionImage } from "@/lib/data";
 import {
   comparePackagingTypes,
@@ -118,6 +123,8 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
   const [comboSort, setComboSort] = useState<{ key: ComboSortKey; direction: SortDirection } | null>(null);
   const [orderedTypes, setOrderedTypes] = useState<string[]>([]);
   const [draggedType, setDraggedType] = useState<string | null>(null);
+  const [uploadSummaries, setUploadSummaries] = useState<Record<string, ImageOptimizationSummary | null>>({});
+  const [optimizingRows, setOptimizingRows] = useState<Record<string, boolean>>({});
   const [dragTargetType, setDragTargetType] = useState<string | null>(null);
   const [allowedSelections, setAllowedSelections] = useState<Record<string, string[]>>({});
   const [newAllowed, setNewAllowed] = useState<string[]>([]);
@@ -1513,9 +1520,25 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                             id={fileInputId}
                             type="file"
                             name="image"
-                            accept="image/jpeg,image/jpg"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
                             required
                             className="sr-only"
+                            onChange={async (event) => {
+                              const file = event.currentTarget.files?.[0];
+                              setUploadSummaries((current) => ({ ...current, [row.key]: null }));
+                              if (!file) return;
+                              setOptimizingRows((current) => ({ ...current, [row.key]: true }));
+                              try {
+                                const summary = await analyzeImageOptimization(file, {
+                                  maxWidth: 1800,
+                                  maxHeight: 1800,
+                                  quality: 0.82,
+                                });
+                                setUploadSummaries((current) => ({ ...current, [row.key]: summary }));
+                              } finally {
+                                setOptimizingRows((current) => ({ ...current, [row.key]: false }));
+                              }
+                            }}
                           />
                           <label
                             htmlFor={fileInputId}
@@ -1529,6 +1552,18 @@ export function PackagingTable({ options, categories, images, maxTotalKg, labelT
                           >
                             Upload
                           </button>
+                          {optimizingRows[row.key] ? (
+                            <ImageOptimizationStatus
+                              summary={null}
+                              pendingLabel="Calculating optimised image details..."
+                              helperText="Packaging uploads are stored as optimised WEBP."
+                            />
+                          ) : uploadSummaries[row.key] ? (
+                            <ImageOptimizationStatus
+                              summary={uploadSummaries[row.key]}
+                              helperText="Packaging uploads are stored as optimised WEBP."
+                            />
+                          ) : null}
                         </form>
                       </td>
                     </tr>
