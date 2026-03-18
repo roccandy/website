@@ -308,7 +308,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                             rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
                           } w-[240px]`}
                         >
-                          <div className="aspect-[4/3] overflow-hidden bg-zinc-100 p-4">
+                          <div className="aspect-[4/3] overflow-hidden bg-white p-4">
                             <Image
                               src={imageUrl}
                               alt={`${page.title} gallery image ${imageIndex + 1}`}
