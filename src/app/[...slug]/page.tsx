@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Montserrat } from "next/font/google";
 import { notFound } from "next/navigation";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
@@ -21,7 +22,6 @@ import {
 } from "@/lib/sitePages";
 
 type LandingPageConfig = {
-  eyebrow: string;
   intro: string;
   detail: string;
   defaultGalleryImageUrls: string[];
@@ -30,9 +30,13 @@ type LandingPageConfig = {
 
 const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 
+const montserratLight = Montserrat({
+  subsets: ["latin"],
+  weight: ["300"],
+});
+
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   "design/wedding-candy": {
-    eyebrow: "Wedding Candy",
     intro: "Create wedding rock candy",
     detail: "customise colours and packaging",
     defaultGalleryImageUrls: [
@@ -49,7 +53,6 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     },
   },
   "design/branded-logo-candy": {
-    eyebrow: "Branded Candy",
     intro: "Create branded rock candy",
     detail: "customise colours and packaging",
     defaultGalleryImageUrls: [
@@ -66,7 +69,6 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     },
   },
   "design/custom-text-candy": {
-    eyebrow: "Custom Text Candy",
     intro: "Create text rock candy",
     detail: "customise colours and packaging",
     defaultGalleryImageUrls: [
@@ -235,11 +237,16 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
           {landingConfig ? (
             <section className="space-y-10 text-center">
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">{landingConfig.eyebrow}</p>
-                  <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(146,146,177)] md:text-6xl">
+                <div className="space-y-1 text-center">
+                  <h1
+                    className={`${montserratLight.className} mb-4 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
+                  >
                     {page.title}
                   </h1>
+                  <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
+                    {landingConfig.intro}
+                  </h2>
+                  <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingConfig.detail}</p>
                 </div>
 
                 <div className="flex justify-center">
@@ -253,19 +260,13 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <p className="text-xl leading-tight text-[rgb(169,168,198)] md:text-[40px]">
-                    <span className="block">{landingConfig.intro}</span>
-                    <span className="block">{landingConfig.detail}</span>
-                  </p>
-                  <div>
-                    <Link
-                      href={landingConfig.primaryCta.href}
-                      className="inline-flex rounded-full bg-[#ff6f95] px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
-                    >
-                      {landingConfig.primaryCta.label}
-                    </Link>
-                  </div>
+                <div>
+                  <Link
+                    href={landingConfig.primaryCta.href}
+                    className="inline-flex rounded-full bg-[#ff6f95] px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                  >
+                    {landingConfig.primaryCta.label}
+                  </Link>
                 </div>
               </div>
 
@@ -284,11 +285,11 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                           key={`${imageUrl}-${rowIndex}-${imageIndex}`}
                           href={landingConfig.primaryCta.href}
                           aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
-                          className={`block shrink-0 rounded-[2rem] border border-white/80 bg-white/90 p-4 shadow-[0_22px_45px_rgba(225,193,206,0.34)] transition hover:-translate-y-1 hover:shadow-[0_28px_60px_rgba(225,193,206,0.42)] ${
+                          className={`block shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm transition hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md ${
                             rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
                           } w-[240px]`}
                         >
-                          <div className="overflow-hidden rounded-[1.5rem] bg-white">
+                          <div className="overflow-hidden bg-zinc-100">
                             <Image
                               src={imageUrl}
                               alt={`${page.title} gallery image ${imageIndex + 1}`}
