@@ -599,6 +599,14 @@ export function OrdersTable({
     return "border-red-300 bg-red-50 text-red-900";
   };
 
+  const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | null | undefined) => {
+    if (!slotDate) return false;
+    if (order.status === "archived" || order.refunded_at) return false;
+    return slotDate <= todayKey;
+  };
+
+  const completionActionLabel = (order: OrderRow) => (order.pickup ? "Mark as collected" : "Mark as delivered");
+
   const blockedStyle = {
     backgroundImage: "repeating-linear-gradient(135deg, rgba(250, 204, 21, 0.35) 0 12px, rgba(17, 24, 39, 0.18) 12px 24px)",
   };
@@ -670,6 +678,7 @@ export function OrdersTable({
   }, [calendarMonth]);
   const weekDays = useMemo(() => {
     const anchor = new Date(calendarMonth);
+    anchor.setDate(anchor.getDate() - 1);
     return Array.from({ length: 14 }, (_, idx) => {
       const next = new Date(anchor);
       next.setDate(anchor.getDate() + idx);
@@ -867,6 +876,8 @@ export function OrdersTable({
             {listOrders.map((order) => {
                 const printTarget = order.id ?? order.order_number;
                 const scheduleStatus = getScheduleStatus(order);
+                const assignedSlotDate = assignmentByOrderId.get(order.id)?.slot?.slot_date ?? null;
+                const canCompleteFromSchedule = canCompleteOrderForSlotDate(order, assignedSlotDate);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -1464,12 +1475,12 @@ export function OrdersTable({
                                         Edit
                                       </button>
                                     )}
-                                    {scheduleStatus === "pending completion" ? (
+                                    {canCompleteFromSchedule ? (
                                       <form
                                         action={archiveOrder}
                                         onSubmit={(event) => {
                                           const confirmed = window.confirm(
-                                            "Mark this order as completed? It will move out of the production schedule."
+                                            `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
                                           );
                                           if (!confirmed) {
                                             event.preventDefault();
@@ -1481,7 +1492,7 @@ export function OrdersTable({
                                           type="submit"
                                           className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                                         >
-                                          Mark completed
+                                          {completionActionLabel(order)}
                                         </button>
                                       </form>
                                     ) : null}
@@ -1585,7 +1596,17 @@ export function OrdersTable({
                     >
                       <div className="flex items-center justify-between text-xs">
                         <span className={`${inMonth ? "text-zinc-700" : "text-zinc-300"}`}>{day.getDate()}</span>
-                        {/* blocked label is shown inside the bubble */}
+                        {!blocked ? (
+                          <form action={addManualBlock}>
+                            <input type="hidden" name="date" value={key} />
+                            <button
+                              type="submit"
+                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
+                            >
+                              Block
+                            </button>
+                          </form>
+                        ) : null}
                       </div>
                       {/* reason is shown inside the blocked bubble */}
                       <div className="mt-2 space-y-2">
@@ -1617,42 +1638,34 @@ export function OrdersTable({
                           </div>
                         ) : (
                           <>
-                            <div className="mb-2">
-                              <form action={addManualBlock}>
-                                <input type="hidden" name="date" value={key} />
-                                <button
-                                  type="submit"
-                                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
-                                >
-                                  Block day
-                                </button>
-                              </form>
-                            </div>
                             {Array.from({ length: slotsPerDay }, (_, idx) => {
                               const slotIndex = idx + 1;
                               const slotKey = `${key}:${slotIndex}`;
                               const assignment = assignmentBySlotKey.get(slotKey);
                               const order = assignment ? ordersById.get(assignment.order_id) : null;
                               const printTarget = order?.id ?? order?.order_number;
-                              const label =
+                              const title =
                                 order?.title ||
                                 (order ? formatOrderDescription(order) : "") ||
                                 order?.order_number ||
                                 "Order";
-                              const isPastSlot = key < todayKey;
+                              const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
+                              const canUnassignSlotOrder = key >= todayKey;
                               return (
-                                <div key={slotKey} className="rounded border border-dashed border-zinc-200 p-1">
+                                <div key={slotKey} className="rounded border border-dashed border-zinc-200 p-1.5">
                                   {assignment && order ? (
                                     <div
-                                      className={`rounded-md border px-2 py-1 text-[10px] ${statusCard(
+                                      className={`rounded-md border px-2.5 py-2 text-[11px] ${statusCard(
                                         getScheduleStatus(order),
                                       )}`}
                                     >
-                                      <p className="font-semibold text-zinc-900">{label}</p>
-                                      <p className="text-zinc-600">
-                                        {weightLabel(order.total_weight_kg)} - Due {formatDate(order.due_date)}
-                                      </p>
-                                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                                      <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
+                                      <p className="mt-0.5 text-sm font-semibold leading-tight text-zinc-900">{title}</p>
+                                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-700">
+                                        <span>{weightLabel(order.total_weight_kg)}</span>
+                                        <span>Due {formatDate(order.due_date)}</span>
+                                      </div>
+                                      <div className="mt-2 flex flex-wrap items-center gap-2">
                                         {printTarget ? (
                                           <a
                                             href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
@@ -1663,7 +1676,28 @@ export function OrdersTable({
                                             Print order
                                           </a>
                                         ) : null}
-                                        {!isPastSlot && (
+                                        {canCompleteSlotOrder ? (
+                                          <form
+                                            action={archiveOrder}
+                                            onSubmit={(event) => {
+                                              const confirmed = window.confirm(
+                                                `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                              );
+                                              if (!confirmed) {
+                                                event.preventDefault();
+                                              }
+                                            }}
+                                          >
+                                            <input type="hidden" name="order_id" value={order.id} />
+                                            <button
+                                              type="submit"
+                                              className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                            >
+                                              {completionActionLabel(order)}
+                                            </button>
+                                          </form>
+                                        ) : null}
+                                        {canUnassignSlotOrder ? (
                                           <form action={deleteAssignment}>
                                             <input type="hidden" name="assignment_id" value={assignment.id} />
                                             <button
@@ -1673,21 +1707,21 @@ export function OrdersTable({
                                               Unassign
                                             </button>
                                           </form>
-                                        )}
+                                        ) : null}
                                       </div>
                                     </div>
                                   ) : (
                                     <button
                                       type="button"
-                                      disabled={isPastSlot}
+                                      disabled={key < todayKey}
                                       onClick={() => setSlotPicker({ date: key, slotIndex })}
                                       className={`w-full rounded px-2 py-1 text-[10px] font-semibold ${
-                                        isPastSlot
+                                        key < todayKey
                                           ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
                                           : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
                                       }`}
                                     >
-                                      {isPastSlot ? "Past date" : "Assign"}
+                                      {key < todayKey ? "Past date" : "Assign"}
                                     </button>
                                   )}
                                 </div>
@@ -1722,7 +1756,17 @@ export function OrdersTable({
                   >
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-semibold text-zinc-900">{label}</span>
-                      {/* blocked label is shown inside the bubble */}
+                      {!blocked ? (
+                        <form action={addManualBlock}>
+                          <input type="hidden" name="date" value={key} />
+                          <button
+                            type="submit"
+                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300"
+                          >
+                            Block day
+                          </button>
+                        </form>
+                      ) : null}
                     </div>
                     {/* reason is shown inside the blocked bubble */}
                     {blocked ? (
@@ -1753,15 +1797,6 @@ export function OrdersTable({
                       </div>
                     ) : (
                       <>
-                        <form action={addManualBlock}>
-                          <input type="hidden" name="date" value={key} />
-                          <button
-                            type="submit"
-                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300"
-                          >
-                            Block day
-                          </button>
-                        </form>
                       <div className="mt-3 grid gap-2">
                         {Array.from({ length: slotsPerDay }, (_, idx) => {
                           const slotIndex = idx + 1;
@@ -1769,14 +1804,13 @@ export function OrdersTable({
                           const assignment = assignmentBySlotKey.get(slotKey);
                           const order = assignment ? ordersById.get(assignment.order_id) : null;
                           const printTarget = order?.id ?? order?.order_number;
-                          const slotLabel = `Slot ${slotIndex}`;
-                          const orderLabel =
+                          const title =
                             order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
-                          const isPastSlot = key < todayKey;
+                          const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
+                          const canUnassignSlotOrder = key >= todayKey;
                           return (
                             <div key={slotKey} className="rounded border border-dashed border-zinc-200 px-3 py-2 text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-zinc-700">{slotLabel}</span>
+                              <div className="flex items-center justify-end">
                                 {assignment && order ? (
                                   <span className="text-zinc-500">{weightLabel(order.total_weight_kg)}</span>
                                 ) : (
@@ -1784,10 +1818,14 @@ export function OrdersTable({
                                 )}
                               </div>
                               {assignment && order ? (
-                                <div className={`mt-1 rounded-md border px-2 py-1 ${statusCard(getScheduleStatus(order))}`}>
-                                  <p className="font-semibold text-zinc-900">{orderLabel}</p>
-                                  <p>Due {formatDate(order.due_date)}</p>
-                                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <div className={`mt-1 rounded-md border px-3 py-2 ${statusCard(getScheduleStatus(order))}`}>
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
+                                  <p className="mt-0.5 text-base font-semibold leading-tight text-zinc-900">{title}</p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-700">
+                                    <span>Due {formatDate(order.due_date)}</span>
+                                    <span>{order.pickup ? "Pickup" : "Delivery"}</span>
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
                                     {printTarget ? (
                                       <a
                                         href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
@@ -1798,7 +1836,28 @@ export function OrdersTable({
                                         Print order
                                       </a>
                                     ) : null}
-                                    {!isPastSlot && (
+                                    {canCompleteSlotOrder ? (
+                                      <form
+                                        action={archiveOrder}
+                                        onSubmit={(event) => {
+                                          const confirmed = window.confirm(
+                                            `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                          );
+                                          if (!confirmed) {
+                                            event.preventDefault();
+                                          }
+                                        }}
+                                      >
+                                        <input type="hidden" name="order_id" value={order.id} />
+                                        <button
+                                          type="submit"
+                                          className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                        >
+                                          {completionActionLabel(order)}
+                                        </button>
+                                      </form>
+                                    ) : null}
+                                    {canUnassignSlotOrder ? (
                                       <form action={deleteAssignment}>
                                         <input type="hidden" name="assignment_id" value={assignment.id} />
                                         <button
@@ -1808,21 +1867,21 @@ export function OrdersTable({
                                           Unassign
                                         </button>
                                       </form>
-                                    )}
+                                    ) : null}
                                   </div>
                                 </div>
                               ) : (
                                 <button
                                   type="button"
-                                  disabled={isPastSlot}
+                                  disabled={key < todayKey}
                                   onClick={() => setSlotPicker({ date: key, slotIndex })}
                                   className={`mt-2 rounded px-2 py-1 text-[11px] font-semibold ${
-                                    isPastSlot
+                                    key < todayKey
                                       ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
                                       : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
                                   }`}
                                 >
-                                  {isPastSlot ? "Past date" : "Assign"}
+                                  {key < todayKey ? "Past date" : "Assign"}
                                 </button>
                               )}
                             </div>
@@ -1894,11 +1953,6 @@ export function OrdersTable({
     </div>
   );
 }
-
-
-
-
-
 
 
 
