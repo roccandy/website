@@ -1,12 +1,17 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckoutSuccessClient } from "./CheckoutSuccessClient";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+export const metadata: Metadata = {
+  title: "Order Confirmed | Roc Candy",
+};
 
 export default function CheckoutSuccessPage() {
   return (

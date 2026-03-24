@@ -1,3 +1,9 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Setup Guide | Roc Candy Docs",
+};
+
 export default function SetupGuide() {
   return (
     <main className="min-h-screen bg-white text-zinc-900">
