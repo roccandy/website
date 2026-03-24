@@ -14,7 +14,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { addManualBlock, addOpenOverride, assignOrderToSlot, deleteAssignment, removeManualBlock, upsertOrder } from "./actions";
+import { addManualBlock, addOpenOverride, archiveOrder, assignOrderToSlot, deleteAssignment, removeManualBlock, upsertOrder } from "./actions";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { isVisibleOnProductionSchedule } from "./scheduleVisibility";
 
@@ -866,6 +866,7 @@ export function OrdersTable({
             <tbody className="divide-y divide-zinc-100">
             {listOrders.map((order) => {
                 const printTarget = order.id ?? order.order_number;
+                const scheduleStatus = getScheduleStatus(order);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -885,10 +886,10 @@ export function OrdersTable({
                           </span>
                           <span
                             className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(
-                              getScheduleStatus(order)
+                              scheduleStatus
                             )}`}
                           >
-                            {getScheduleStatus(order)}
+                            {scheduleStatus}
                           </span>
                           {order.refunded_at ? (
                             <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
@@ -1463,6 +1464,27 @@ export function OrdersTable({
                                         Edit
                                       </button>
                                     )}
+                                    {scheduleStatus === "pending completion" ? (
+                                      <form
+                                        action={archiveOrder}
+                                        onSubmit={(event) => {
+                                          const confirmed = window.confirm(
+                                            "Mark this order as completed? It will move out of the production schedule."
+                                          );
+                                          if (!confirmed) {
+                                            event.preventDefault();
+                                          }
+                                        }}
+                                      >
+                                        <input type="hidden" name="order_id" value={order.id} />
+                                        <button
+                                          type="submit"
+                                          className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                        >
+                                          Mark completed
+                                        </button>
+                                      </form>
+                                    ) : null}
                                     {printTarget ? (
                                       <a
                                         href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
@@ -1872,7 +1894,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 
