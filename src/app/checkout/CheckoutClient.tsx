@@ -81,6 +81,11 @@ const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
 type PaymentMethod = "apple_pay" | "credit_card" | "paypal";
+type PaymentProcessingState = {
+  active: boolean;
+  title: string;
+  message: string;
+};
 
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`;
@@ -151,6 +156,7 @@ function SquarePayment({
   getOrderPayload,
   onSuccess,
   onError,
+  onProcessingChange,
   selectedMethod,
 }: {
   amount: number;
@@ -159,6 +165,7 @@ function SquarePayment({
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
   onError: (stage: string, message: string) => void;
+  onProcessingChange: (state: PaymentProcessingState) => void;
   selectedMethod: "apple_pay" | "credit_card";
 }) {
   const [ready, setReady] = useState(false);
@@ -188,6 +195,11 @@ function SquarePayment({
       onError("validation", validationMessage);
       return;
     }
+    onProcessingChange({
+      active: true,
+      title: "Processing your payment",
+      message: "Please wait while we confirm your order. Do not refresh, go back, or close this page.",
+    });
     setLoading(true);
     try {
       const tokenResult = await tokenize();
@@ -220,6 +232,7 @@ function SquarePayment({
     } catch (error) {
       onError("charge", error instanceof Error ? error.message : "Payment failed.");
     } finally {
+      onProcessingChange({ active: false, title: "", message: "" });
       setLoading(false);
     }
   };
@@ -358,12 +371,14 @@ function PayPalPayment({
   getOrderPayload,
   onSuccess,
   onError,
+  onProcessingChange,
 }: {
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
   onError: (stage: string, message: string) => void;
+  onProcessingChange: (state: PaymentProcessingState) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const renderedRef = useRef(false);
@@ -413,6 +428,11 @@ function PayPalPayment({
             },
             createOrder: async () => {
               try {
+                onProcessingChange({
+                  active: true,
+                  title: "Preparing PayPal",
+                  message: "Please wait while we connect to PayPal securely.",
+                });
                 const response = await fetch("/api/payments/paypal/create-order", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -429,34 +449,46 @@ function PayPalPayment({
                 const message = error instanceof Error ? error.message : "Unable to start PayPal.";
                 setSetupError(message);
                 throw error;
+              } finally {
+                onProcessingChange({ active: false, title: "", message: "" });
               }
             },
             onApprove: async (data: { orderID?: string }) => {
-              if (!data.orderID) throw new Error("PayPal order missing.");
-              const response = await fetch("/api/payments/paypal/capture-order", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: data.orderID, order: payloadRef.current() }),
+              onProcessingChange({
+                active: true,
+                title: "Finalising your order",
+                message: "Your payment has been approved. Please wait while we confirm everything and generate your order.",
               });
-              const payload = (await response.json().catch(() => ({}))) as {
-                ok?: boolean;
-                error?: string;
-                adminEmailWarning?: string | null;
-                wooOrderId?: string | number | null;
-                orderNumber?: string | null;
-              };
-              if (!response.ok || !payload.ok) {
-                throw new Error(payload.error || "PayPal capture failed.");
+              try {
+                if (!data.orderID) throw new Error("PayPal order missing.");
+                const response = await fetch("/api/payments/paypal/capture-order", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: data.orderID, order: payloadRef.current() }),
+                });
+                const payload = (await response.json().catch(() => ({}))) as {
+                  ok?: boolean;
+                  error?: string;
+                  adminEmailWarning?: string | null;
+                  wooOrderId?: string | number | null;
+                  orderNumber?: string | null;
+                };
+                if (!response.ok || !payload.ok) {
+                  throw new Error(payload.error || "PayPal capture failed.");
+                }
+                onSuccess({
+                  adminEmailWarning: payload.adminEmailWarning ?? null,
+                  wooOrderId: payload.wooOrderId ?? null,
+                  orderNumber: payload.orderNumber ?? null,
+                });
+              } finally {
+                onProcessingChange({ active: false, title: "", message: "" });
               }
-              onSuccess({
-                adminEmailWarning: payload.adminEmailWarning ?? null,
-                wooOrderId: payload.wooOrderId ?? null,
-                orderNumber: payload.orderNumber ?? null,
-              });
             },
             onError: (err: unknown) => {
               const message = err instanceof Error ? err.message : "PayPal failed.";
               setSetupError(message);
+              onProcessingChange({ active: false, title: "", message: "" });
               onError("flow", message);
             },
           })
@@ -468,7 +500,7 @@ function PayPalPayment({
         onError("setup", message);
       }
     })();
-  }, [canPay, getOrderPayload, onError, onSuccess, validationMessage]);
+  }, [canPay, getOrderPayload, onError, onProcessingChange, onSuccess, validationMessage]);
 
   return (
     <div className="space-y-3">
@@ -1107,6 +1139,11 @@ export function CheckoutClient({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("apple_pay");
+  const [paymentProcessing, setPaymentProcessing] = useState<PaymentProcessingState>({
+    active: false,
+    title: "",
+    message: "",
+  });
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, PricingBreakdown>>({});
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
@@ -1495,6 +1532,7 @@ export function CheckoutClient({
   };
 
   const handlePaymentError = (provider: "square" | "paypal", stage: string, message: string) => {
+    setPaymentProcessing({ active: false, title: "", message: "" });
     setPaymentError(message);
     setAdminEmailWarning(null);
     void logPaymentFailure(provider, stage, message);
@@ -1505,6 +1543,20 @@ export function CheckoutClient({
       {PAYMENTS_SANDBOX_MODE ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
           Sandbox Mode: Test payments only. No real customer charges should be made from this environment.
+        </div>
+      ) : null}
+      {paymentProcessing.active ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-zinc-950/45 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/70 bg-white p-7 text-center shadow-2xl">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
+              <div className="h-7 w-7 animate-spin rounded-full border-4 border-zinc-300 border-t-zinc-900" />
+            </div>
+            <h2 className="mt-5 text-2xl font-semibold text-zinc-900">{paymentProcessing.title}</h2>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">{paymentProcessing.message}</p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              This can take 10-20 seconds
+            </p>
+          </div>
         </div>
       ) : null}
       {paymentSuccess && adminEmailWarning ? (
@@ -1771,6 +1823,7 @@ export function CheckoutClient({
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("paypal", stage, message)}
+                    onProcessingChange={setPaymentProcessing}
                   />
                 ) : (
                   <SquarePayment
@@ -1780,6 +1833,7 @@ export function CheckoutClient({
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("square", stage, message)}
+                    onProcessingChange={setPaymentProcessing}
                     selectedMethod={selectedPaymentMethod}
                   />
                 )}
