@@ -246,7 +246,10 @@ export default async function AllOrdersPage() {
                   .filter(Boolean)
                   .sort()
                   .pop() ?? null;
-                const badge = subgroup.hasRefunded
+                const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
+                const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length;
+                const partiallyRefunded = refundedCount > 0 && !allRefunded;
+                const badge = allRefunded
                   ? "border-rose-200 bg-rose-50 text-rose-700"
                   : subgroup.isPremadeGroup
                     ? premadeStatusBadge(subgroup.status)
@@ -267,7 +270,14 @@ export default async function AllOrdersPage() {
                               : "";
                           return (
                             <div key={order.id} className="space-y-1">
-                              <p className="font-semibold text-zinc-900">{title}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold text-zinc-900">{title}</p>
+                                {order.refunded_at ? (
+                                  <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                                    Refunded
+                                  </span>
+                                ) : null}
+                              </div>
                               <p className="text-xs text-zinc-500">{lineNumber}</p>
                             </div>
                           );
@@ -280,7 +290,7 @@ export default async function AllOrdersPage() {
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       <div className="space-y-1">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
-                          {subgroup.hasRefunded ? "Refunded" : subgroup.statusLabel}
+                          {allRefunded ? "Refunded" : partiallyRefunded ? "Partially refunded" : subgroup.statusLabel}
                         </span>
                         {shippedAt ? <div className="text-xs text-zinc-500">Shipped on {formatDateTime(shippedAt)}</div> : null}
                       </div>
