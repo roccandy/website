@@ -42,6 +42,31 @@ with checks as (
     )
 
   union all
+  select 'flavors.rls_enabled',
+    exists (
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'flavors' and c.relrowsecurity
+    )
+
+  union all
+  select 'policy.flavors_select_public',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'flavors' and policyname = 'flavors_select_public'
+    )
+
+  union all
+  select 'policy.flavors_admin_write',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'flavors' and policyname = 'flavors_admin_write'
+    )
+
+  union all
   select 'packaging_options.type_sort_order',
     exists (
       select 1
@@ -209,6 +234,31 @@ with checks as (
     )
 
   union all
+  select 'label_types.rls_enabled',
+    exists (
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'label_types' and c.relrowsecurity
+    )
+
+  union all
+  select 'policy.label_types_select_public',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'label_types' and policyname = 'label_types_select_public'
+    )
+
+  union all
+  select 'policy.label_types_admin_write',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'label_types' and policyname = 'label_types_admin_write'
+    )
+
+  union all
   select 'table.site_redirects',
     exists (
       select 1
@@ -262,6 +312,25 @@ with checks as (
       select 1
       from information_schema.columns
       where table_schema = 'public' and table_name = 'premade_candies' and column_name = 'canonical_url'
+    )
+
+  union all
+  select 'payment_failures.rls_enabled',
+    exists (
+      select 1
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relname = 'payment_failures' and c.relrowsecurity
+    )
+
+  union all
+  select 'policy.payment_failures_admin_write',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public'
+        and tablename = 'payment_failures'
+        and policyname = 'payment_failures_admin_write'
     )
 )
 select
