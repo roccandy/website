@@ -224,6 +224,7 @@ function SquarePayment({
     if (amount <= 0) {
       appleRef.current = null;
       setAppleAvailable(false);
+      setDebugNote(null);
       return null;
     }
 
@@ -302,7 +303,11 @@ function SquarePayment({
       {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
       <div className={selectedMethod === "apple_pay" ? "space-y-3" : "hidden"}>
         {!appleAvailable ? (
-          <p className="text-sm text-zinc-500">Apple Pay is currently unavailable on this device/browser.</p>
+          <p className="text-sm text-zinc-500">
+            {amount <= 0
+              ? "Apple Pay will appear once there is something in the cart to pay for."
+              : "Apple Pay is currently unavailable on this device/browser."}
+          </p>
         ) : null}
         <button
           type="button"
