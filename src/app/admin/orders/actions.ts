@@ -7,7 +7,7 @@ import { getOrdersRecipients, sendCustomerRefundEmail, sendOrderEmail } from "@/
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
-import { updateWooOrder } from "@/lib/woo";
+import { persistOrderRefund } from "@/lib/orderRefunds";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -374,36 +374,11 @@ export async function refundOrder(formData: FormData) {
       redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
     }
 
-    const refundedAt = new Date().toISOString();
-    const refundUpdateWithReason = await client
-      .from("orders")
-      .update({
-        status: "refunded",
-        refunded_at: refundedAt,
-        refund_reason: refundReason,
-        woo_order_status: "refunded",
-      })
-      .eq("id", order.id);
-    if (refundUpdateWithReason.error) {
-      const missingColumn = /refund_reason/i.test(refundUpdateWithReason.error.message ?? "");
-      if (missingColumn) {
-        const refundUpdateFallback = await client
-          .from("orders")
-          .update({
-            status: "refunded",
-            refunded_at: refundedAt,
-            woo_order_status: "refunded",
-          })
-          .eq("id", order.id);
-        if (refundUpdateFallback.error) throw new Error(refundUpdateFallback.error.message);
-      } else {
-        throw new Error(refundUpdateWithReason.error.message);
-      }
-    }
-
-    if (order.woo_order_id) {
-      await updateWooOrder(String(order.woo_order_id), { status: "refunded" });
-    }
+    const refundResult = await persistOrderRefund({
+      client,
+      order,
+      refundReason,
+    });
 
     if (order.customer_email) {
       await sendCustomerRefundEmail([order.customer_email], {
@@ -413,7 +388,11 @@ export async function refundOrder(formData: FormData) {
       });
     }
 
-    redirect(`${redirectBase}?toast_success=Refund%20processed`);
+    const successMessage =
+      refundResult.sharedPayment && !refundResult.fullyRefundedPayment
+        ? `Refund processed for #${order.order_number}. Other split items on this payment can still be refunded separately.`
+        : "Refund processed";
+    redirect(`${redirectBase}?toast_success=${encodeURIComponent(successMessage)}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Refund failed.";
     redirect(`${redirectBase}?toast_error=${encodeURIComponent(message)}`);

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminSession, READ_ONLY_MESSAGE } from "@/lib/adminAuth";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
-import { updateWooOrder } from "@/lib/woo";
 import { sendCustomerRefundEmail } from "@/lib/email";
+import { persistOrderRefund } from "@/lib/orderRefunds";
 
 type RefundRequest = {
   orderId: string;
@@ -38,9 +38,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment details missing." }, { status: 400 });
     }
 
-    const amount = Number.isFinite(body.amount ?? NaN) ? Number(body.amount) : Number(order.total_price);
+    const orderAmount = Number(order.total_price);
+    const amount = Number.isFinite(body.amount ?? NaN) ? Number(body.amount) : orderAmount;
     if (!Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json({ error: "Invalid refund amount." }, { status: 400 });
+    }
+    if (Number.isFinite(orderAmount) && Math.abs(amount - orderAmount) > 0.009) {
+      return NextResponse.json(
+        { error: "Custom refund amounts are not supported here. Refund the split order row separately instead." },
+        { status: 400 }
+      );
     }
 
     const reason = body.reason?.toString().trim() || null;
@@ -54,38 +61,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unsupported payment provider." }, { status: 400 });
     }
 
-    const refundedAt = new Date().toISOString();
-    const refundUpdateWithReason = await client
-      .from("orders")
-      .update({
-        status: "refunded",
-        refunded_at: refundedAt,
-        refund_reason: reason,
-        woo_order_status: "refunded",
-      })
-      .eq("id", order.id);
-    if (refundUpdateWithReason.error) {
-      const missingColumn = /refund_reason/i.test(refundUpdateWithReason.error.message ?? "");
-      if (missingColumn) {
-        const refundUpdateFallback = await client
-          .from("orders")
-          .update({
-            status: "refunded",
-            refunded_at: refundedAt,
-            woo_order_status: "refunded",
-          })
-          .eq("id", order.id);
-        if (refundUpdateFallback.error) {
-          return NextResponse.json({ error: refundUpdateFallback.error.message }, { status: 400 });
-        }
-      } else {
-        return NextResponse.json({ error: refundUpdateWithReason.error.message }, { status: 400 });
-      }
-    }
-
-    if (order.woo_order_id) {
-      await updateWooOrder(String(order.woo_order_id), { status: "refunded" });
-    }
+    await persistOrderRefund({
+      client,
+      order,
+      refundReason: reason,
+    });
 
     if (order.customer_email) {
       await sendCustomerRefundEmail([order.customer_email], {

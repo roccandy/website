@@ -183,6 +183,21 @@ export default async function AllOrdersPage() {
               const dueDate = uniqueDueDates.length <= 1 ? formatDate(uniqueDueDates[0] ?? null) : "Multiple";
               const totalWeight = groupOrders.reduce((sum, order) => sum + Number(order.total_weight_kg || 0), 0);
               const weight = totalWeight > 0 ? weightLabel(totalWeight) : "";
+              const sharedPaymentOrderIds = new Set(
+                groupOrders
+                  .filter(
+                    (order) =>
+                      Boolean(order.payment_provider) &&
+                      Boolean(order.payment_transaction_id) &&
+                      groupOrders.some(
+                        (candidate) =>
+                          candidate.id !== order.id &&
+                          candidate.payment_provider === order.payment_provider &&
+                          candidate.payment_transaction_id === order.payment_transaction_id
+                      )
+                  )
+                  .map((order) => order.id)
+              );
               const subgroupMap = new Map<string, { suffix: string | null; orders: typeof groupOrders }>();
               groupOrders.forEach((order) => {
                 const suffix = getOrderSuffix(order.order_number);
@@ -293,6 +308,12 @@ export default async function AllOrdersPage() {
                                 key={`refund-${order.id}`}
                                 orderId={order.id}
                                 orderNumber={order.order_number}
+                                amount={order.total_price}
+                                helperText={
+                                  sharedPaymentOrderIds.has(order.id)
+                                    ? "This refunds only this split order from the shared payment. The sibling split item can be refunded separately."
+                                    : null
+                                }
                                 action={refundOrder}
                                 redirectTo="/admin/orders/archived"
                               />

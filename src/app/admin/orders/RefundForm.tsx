@@ -5,19 +5,38 @@ import { useState } from "react";
 type RefundFormProps = {
   orderId: string;
   orderNumber?: string | null;
+  amount?: number | null;
+  helperText?: string | null;
   action: (formData: FormData) => void;
   redirectTo?: string;
 };
 
-export function RefundForm({ orderId, orderNumber, action, redirectTo }: RefundFormProps) {
+const formatAmount = (value: number | null | undefined) => {
+  if (!Number.isFinite(value)) return null;
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+  }).format(Number(value));
+};
+
+export function RefundForm({
+  orderId,
+  orderNumber,
+  amount,
+  helperText,
+  action,
+  redirectTo,
+}: RefundFormProps) {
   const [reason, setReason] = useState("");
   const label = orderNumber ? `#${orderNumber}` : "payment";
+  const amountLabel = formatAmount(amount);
+  const refundLabel = amountLabel ? `Refund ${label} (${amountLabel})` : `Refund ${label}`;
 
   return (
     <form
       action={action}
       onSubmit={(event) => {
-        const confirmed = window.confirm(`Refund ${label}? This cannot be undone.`);
+        const confirmed = window.confirm(`${refundLabel}? This cannot be undone.`);
         if (!confirmed) event.preventDefault();
       }}
       className="space-y-2"
@@ -32,11 +51,12 @@ export function RefundForm({ orderId, orderNumber, action, redirectTo }: RefundF
         placeholder="Refund reason (optional)"
         className="w-full rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-400"
       />
+      {helperText ? <p className="text-[11px] leading-4 text-zinc-500">{helperText}</p> : null}
       <button
         type="submit"
         className="inline-flex items-center rounded-md border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 hover:border-rose-300 hover:text-rose-800"
       >
-        Refund {label}
+        {refundLabel}
       </button>
     </form>
   );
