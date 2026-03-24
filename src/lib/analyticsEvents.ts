@@ -81,6 +81,10 @@ export function trackAddToCart(payload: { currency?: string; value?: number; ite
   dispatchEvent("add_to_cart", payload);
 }
 
+export function trackViewItem(payload: { currency?: string; value?: number; items: AnalyticsItem[] }) {
+  dispatchEvent("view_item", payload);
+}
+
 export function trackBeginCheckout(payload: { currency?: string; value?: number; items: AnalyticsItem[] }) {
   dispatchEvent("begin_checkout", payload);
 }

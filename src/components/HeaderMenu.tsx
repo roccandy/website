@@ -48,13 +48,8 @@ export default function HeaderMenu() {
   const { items, clearCart, updateQuantity, removeItem } = useCart();
   const [open, setOpen] = useState(false);
   const [renderDrawer, setRenderDrawer] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const hasItems = items.length > 0;
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const openDrawer = () => {
     setRenderDrawer(true);
@@ -104,7 +99,7 @@ export default function HeaderMenu() {
         ) : null}
       </button>
 
-      {renderDrawer && mounted
+      {renderDrawer && typeof document !== "undefined"
         ? createPortal(
             <div className="fixed inset-0 z-[60]">
               <button

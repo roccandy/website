@@ -1,6 +1,7 @@
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import Link from "next/link";
 import { CheckoutSuccessClient } from "./CheckoutSuccessClient";
 
 export const revalidate = 0;
@@ -16,9 +17,9 @@ export default function CheckoutSuccessPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a
@@ -60,18 +61,18 @@ export default function CheckoutSuccessPage() {
               preparing your order.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <a
+              <Link
                 href="/pre-made-candy"
                 className="rounded-full border border-zinc-900 bg-zinc-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
               >
                 Continue shopping
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/design"
                 className="rounded-full border border-zinc-200 bg-white px-5 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
               >
                 Start a new quote
-              </a>
+              </Link>
             </div>
           </div>
         </div>

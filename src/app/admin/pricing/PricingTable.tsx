@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { deleteTier, upsertTier } from "./actions";
 import type { Category, WeightTier } from "@/lib/data";
 
@@ -12,13 +12,7 @@ const START_KG = 0;
 export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
   const [editMode, setEditMode] = useState(false);
   const [draft, setDraft] = useState<DraftTier[]>(tiers);
-  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
   const originalMap = useMemo(() => new Map(tiers.map((t) => [t.id, t])), [tiers]);
-  useEffect(() => {
-    // Reset draft when server data changes.
-    setDraft(tiers);
-    setDirtyIds(new Set());
-  }, [tiers]);
 
   const isTierDirty = useCallback(
     (t: DraftTier) => {
@@ -35,12 +29,12 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
     [originalMap]
   );
 
-  useEffect(() => {
+  const dirtyIds = useMemo(() => {
     const next = new Set<string>();
-    draft.forEach((t) => {
-      if (isTierDirty(t)) next.add(t.id);
+    draft.forEach((tier) => {
+      if (isTierDirty(tier)) next.add(tier.id);
     });
-    setDirtyIds(next);
+    return next;
   }, [draft, isTierDirty]);
 
   const hasDirty = dirtyIds.size > 0;
@@ -459,4 +453,3 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
     </>
   );
 }
-

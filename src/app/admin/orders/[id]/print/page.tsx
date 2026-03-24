@@ -1,9 +1,11 @@
 ﻿import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
+import type { OrderRow } from "@/lib/data";
 import { PrintButton } from "./PrintButton";
 
 type Params = {
@@ -17,15 +19,6 @@ const formatDate = (iso: string | null) => {
     return new Date(iso).toLocaleDateString();
   } catch {
     return iso;
-  }
-};
-
-const formatDay = (iso: string | null) => {
-  if (!iso) return "";
-  try {
-    return new Date(iso).toLocaleDateString(undefined, { weekday: "long" });
-  } catch {
-    return "";
   }
 };
 
@@ -177,19 +170,19 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
 
   const client = supabaseServerClient;
   const orderQuery = client.from("orders").select("*");
-  let order: any = null;
+  let order: OrderRow | null = null;
   let error: { message: string } | null = null;
   if (rawId && rawId !== "undefined") {
     if (isUuid(rawId)) {
       const result = await orderQuery.eq("id", rawId).maybeSingle();
-      order = result.data;
+      order = (result.data as OrderRow | null) ?? null;
       error = result.error ? { message: result.error.message } : null;
     } else {
       const result = await orderQuery
         .eq("order_number", rawId)
         .order("created_at", { ascending: false })
         .limit(1);
-      order = result.data?.[0] ?? null;
+      order = (result.data?.[0] as OrderRow | null) ?? null;
       error = result.error ? { message: result.error.message } : null;
     }
   }
@@ -208,17 +201,17 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
             {error.message}
           </p>
         )}
-        <a
+        <Link
           href="/admin/orders"
           className="inline-flex items-center rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
         >
           Back to production schedule
-        </a>
+        </Link>
       </div>
     );
   }
 
-  const { data: packagingOptions } = await client.from("packaging_options").select("*");
+  const { data: packagingOptions } = await client.from("packaging_options").select("id,type");
   const packaging = packagingOptions?.find((opt) => opt.id === order.packaging_option_id) ?? null;
   const { data: paletteRows } = await client.from("color_palette").select("category,shade,hex");
   const paletteHexMap = buildPaletteHexMap(paletteRows ?? []);
@@ -229,11 +222,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     slotIds.length > 0
       ? await client.from("production_slots").select("slot_date,slot_index").in("id", slotIds)
       : { data: [] };
-  const productionDate = (slots ?? [])
-    .map((slot) => slot.slot_date)
-    .sort((a, b) => (a > b ? 1 : -1))[0];
-
-  const labelsYesNo = order.labels_count && Number(order.labels_count) > 0 ? "Yes" : "No";
   const textColorHex = order.text_color || "#b7b7b7";
   const heartColorHex = order.heart_color || textColorHex;
   const textColorDisplay = resolveColorDisplay(textColorHex, paletteHexMap);
@@ -254,7 +242,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const [lineOne, lineTwo] = hasHeart ? designText.split("\u2665").map((part) => part.trim()) : ["", ""];
   const isWeddingInitials = order.category_id === "weddings-initials";
   const isWedding = order.category_id?.startsWith("weddings");
-  const isCustomText = order.category_id?.startsWith("custom-");
   const isBranded = order.category_id === "branded";
 
   const jacketLabel = (() => {

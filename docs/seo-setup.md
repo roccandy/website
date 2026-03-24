@@ -17,7 +17,10 @@
 - Redirect-only aliases are marked `noindex`.
 - Admin, checkout, docs, and 404 surfaces are marked `noindex`.
 - Google Analytics 4 and Google Tag Manager can be enabled by env var without more code changes.
+- The analytics loader prefers GTM over direct GA4 when both IDs are present, reducing duplicate-tracking risk.
 - Search engine verification tags can be enabled by env var without more code changes.
+- The SEO workspace now covers both fixed site pages and individual pre-made product pages.
+- `view_item`, `add_to_cart`, `begin_checkout`, and `purchase` ecommerce events are implemented in the app.
 
 ## Env Vars For SEO
 
@@ -63,5 +66,7 @@ Set these in production if they are not already configured:
   - review/rating data
   - GTIN/MPN
   - richer shipping/return policy data
+
+- Pre-made product metadata can now be edited in the SEO workspace, but the actual product pricing / stock / content still live in the pre-made admin.
 
 - The codebase still has unrelated lint issues in older page/components files. The SEO additions themselves pass focused lint and TypeScript validation.

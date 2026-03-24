@@ -7,6 +7,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { JsonLd } from "@/components/JsonLd";
+import { PremadeItemAnalytics } from "@/components/PremadeItemAnalytics";
 import { getPremadeCandies, getPremadeCandyById } from "@/lib/data";
 import {
   buildPremadeImageUrl,
@@ -15,6 +16,8 @@ import {
   formatPremadeFlavors,
   formatPremadeMoney,
   formatPremadeWeight,
+  hasPremadeSale,
+  resolvePremadePrice,
 } from "@/lib/premadeCatalog";
 import {
   buildAbsoluteUrl,
@@ -68,19 +71,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   const weightLabel = formatPremadeWeight(Number(item.weight_g));
   const titlePrefix = weightLabel ? `${weightLabel} ${item.name}` : item.name;
+  const seoTitle = item.seo_title?.trim() || `${titlePrefix} | Pre-Made Rock Candy | Roc Candy`;
   const description =
+    item.meta_description?.trim() ||
     item.short_description?.trim() ||
     item.description?.trim() ||
     `Buy ${item.name} pre-made rock candy from Roc Candy.`;
-  const image = buildPremadeImageUrl(item.image_path);
+  const image = item.og_image_url?.trim() || buildPremadeImageUrl(item.image_path);
   const path = buildPremadeItemPath(item);
   const metadata = buildMetadata({
-    title: `${titlePrefix} | Pre-Made Rock Candy | Roc Candy`,
+    title: seoTitle,
     description,
     path,
     imagePath: image || "/quote/subtypes/premade.jpg",
     imageAlt: item.name,
   });
+
+  if (item.canonical_url?.trim()) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(item.canonical_url)
+          ? item.canonical_url
+          : buildAbsoluteUrl(item.canonical_url),
+      },
+      openGraph: {
+        ...metadata.openGraph,
+        images: image ? [toOpenGraphImage(image, item.name)] : metadata.openGraph?.images,
+      },
+    };
+  }
 
   return {
     ...metadata,
@@ -105,8 +125,13 @@ export default async function PremadeItemPage({ params }: PageProps) {
     .filter((candidate) => candidate.is_active && candidate.id !== item.id)
     .slice(0, 4);
   const productUrl = buildAbsoluteUrl(buildPremadeItemPath(item));
-  const effectivePrice =
-    item.sale_price != null && Number(item.sale_price) > 0 ? Number(item.sale_price) : Number(item.price);
+  const effectivePrice = resolvePremadePrice(item);
+  const showSalePrice = hasPremadeSale(item);
+  const productDescription =
+    item.meta_description?.trim() ||
+    item.short_description?.trim() ||
+    item.description?.trim() ||
+    item.name;
 
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
@@ -115,13 +140,13 @@ export default async function PremadeItemPage({ params }: PageProps) {
           buildWebPageSchema({
             path: buildPremadeItemPath(item),
             name: item.name,
-            description: item.short_description?.trim() || item.description?.trim() || item.name,
+            description: productDescription,
           }),
           {
             "@type": "Product",
             "@id": `${productUrl}#product`,
             name: item.name,
-            description: item.short_description?.trim() || item.description?.trim() || item.name,
+            description: productDescription,
             image: imageUrl ? [imageUrl] : undefined,
             sku: item.sku ?? undefined,
             brand: {
@@ -139,6 +164,12 @@ export default async function PremadeItemPage({ params }: PageProps) {
             },
           },
         ])}
+      />
+      <PremadeItemAnalytics
+        itemId={item.id}
+        itemName={item.name}
+        itemVariant={flavorLabel || undefined}
+        price={effectivePrice}
       />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
@@ -216,7 +247,12 @@ export default async function PremadeItemPage({ params }: PageProps) {
             <div className="space-y-4">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Pre-made candy</p>
               <h1 className="text-3xl font-semibold tracking-tight text-[#ff6f95]">{item.name}</h1>
-              <p className="text-2xl font-semibold text-zinc-900">{formatPremadeMoney(Number(item.price))}</p>
+              <div className="space-y-1">
+                {showSalePrice ? (
+                  <p className="text-sm text-zinc-400 line-through">{formatPremadeMoney(Number(item.price))}</p>
+                ) : null}
+                <p className="text-2xl font-semibold text-zinc-900">{formatPremadeMoney(effectivePrice)}</p>
+              </div>
               {weightLabel ? <p className="text-sm text-zinc-600">Pack size: {weightLabel}</p> : null}
               {flavorLabel ? <p className="text-sm text-zinc-600">Flavours: {flavorLabel}</p> : null}
               {item.approx_pcs ? <p className="text-sm text-zinc-600">Approx {item.approx_pcs} pcs</p> : null}
@@ -228,7 +264,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
                   premadeId: item.id,
                   name: item.name,
                   flavor: flavorLabel || undefined,
-                  price: Number(item.price),
+                  price: effectivePrice,
                   weight_g: Number(item.weight_g),
                   imageUrl,
                 }}
@@ -242,6 +278,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 {related.map((relatedItem) => {
                   const relatedImage = buildPremadeImageUrl(relatedItem.image_path);
+                  const relatedPrice = resolvePremadePrice(relatedItem);
                   return (
                     <Link
                       key={relatedItem.id}
@@ -262,7 +299,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
                       </div>
                       <div className="space-y-1 px-3 py-3">
                         <p className="text-sm font-semibold text-[#ff6f95]">{relatedItem.name}</p>
-                        <p className="text-sm text-zinc-600">{formatPremadeMoney(Number(relatedItem.price))}</p>
+                        <p className="text-sm text-zinc-600">{formatPremadeMoney(relatedPrice)}</p>
                       </div>
                     </Link>
                   );

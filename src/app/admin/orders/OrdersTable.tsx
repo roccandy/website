@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   ColorPaletteRow,
@@ -14,7 +14,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { addManualBlock, addOpenOverride, assignOrderToSlot, deleteAssignment, removeManualBlock, refundOrder, upsertOrder } from "./actions";
+import { addManualBlock, addOpenOverride, assignOrderToSlot, deleteAssignment, removeManualBlock, upsertOrder } from "./actions";
 import { paletteSections } from "@/app/admin/settings/palette";
 
 type Props = {
@@ -267,7 +267,7 @@ export function OrdersTable({
   const packagingById = useMemo(() => new Map(packagingOptions.map((option) => [option.id, option])), [packagingOptions]);
   const paletteHexSet = useMemo(() => new Set(colorOptions.map((option) => option.value)), [colorOptions]);
 
-  const syncEditableState = (order: OrderRow | null) => {
+  const syncEditableState = useCallback((order: OrderRow | null) => {
     if (!order) return;
     setPickupMode(order.pickup ? "on" : "off");
     setJacketMode(order.jacket ?? "");
@@ -299,17 +299,24 @@ export function OrdersTable({
     setHeartColorInput(formatColorInput(nextHeartColor, "hex"));
     setJacketColorOneInput(formatColorInput(nextJacketColorOne, "hex"));
     setJacketColorTwoInput(formatColorInput(nextJacketColorTwo, "hex"));
-  };
+  }, [packagingById, paletteHexSet]);
 
   useEffect(() => {
-    if (!selected) {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (!selected) {
+        setIsEditing(false);
+        return;
+      }
+      syncEditableState(selected);
       setIsEditing(false);
-      return;
-    }
-    syncEditableState(selected);
-    setIsEditing(false);
-    setEditKey((prev) => prev + 1);
-  }, [selected, paletteHexSet, packagingById]);
+      setEditKey((prev) => prev + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, syncEditableState]);
 
   useEffect(() => {
     if (!toast) return;
@@ -327,10 +334,12 @@ export function OrdersTable({
 
   useEffect(() => {
     if (!showJacketColorTwo) {
-      setJacketColorTwoValue("");
-      setJacketColorTwoInput("");
-      setJacketColorTwoFormat("hex");
-      setJacketColorTwoCustom(false);
+      queueMicrotask(() => {
+        setJacketColorTwoValue("");
+        setJacketColorTwoInput("");
+        setJacketColorTwoFormat("hex");
+        setJacketColorTwoCustom(false);
+      });
     }
   }, [showJacketColorTwo]);
   const categoryOptions = useMemo(
@@ -359,20 +368,22 @@ export function OrdersTable({
     return Array.from(unique);
   }, [filteredPackagingOptions]);
   useEffect(() => {
-    if (!orderCategoryId) {
-      if (packagingType) setPackagingType("");
-      if (packagingSize) setPackagingSize("");
-      return;
-    }
-    if (packagingTypes.length === 0) {
-      if (packagingType) setPackagingType("");
-      if (packagingSize) setPackagingSize("");
-      return;
-    }
-    if (!packagingType || !packagingTypes.includes(packagingType)) {
-      setPackagingType(packagingTypes[0]);
-      setPackagingSize("");
-    }
+    queueMicrotask(() => {
+      if (!orderCategoryId) {
+        if (packagingType) setPackagingType("");
+        if (packagingSize) setPackagingSize("");
+        return;
+      }
+      if (packagingTypes.length === 0) {
+        if (packagingType) setPackagingType("");
+        if (packagingSize) setPackagingSize("");
+        return;
+      }
+      if (!packagingType || !packagingTypes.includes(packagingType)) {
+        setPackagingType(packagingTypes[0]);
+        setPackagingSize("");
+      }
+    });
   }, [orderCategoryId, packagingTypes, packagingType, packagingSize]);
   const sizesForType = useMemo(() => {
     if (!packagingType) return [];
@@ -396,17 +407,19 @@ export function OrdersTable({
       .map(({ opt }) => opt);
   }, [filteredPackagingOptions, packagingType]);
   useEffect(() => {
-    if (!packagingType) {
-      if (packagingSize) setPackagingSize("");
-      return;
-    }
-    if (sizesForType.length === 0) {
-      if (packagingSize) setPackagingSize("");
-      return;
-    }
-    if (!packagingSize || !sizesForType.some((option) => option.size === packagingSize)) {
-      setPackagingSize(sizesForType[0].size);
-    }
+    queueMicrotask(() => {
+      if (!packagingType) {
+        if (packagingSize) setPackagingSize("");
+        return;
+      }
+      if (sizesForType.length === 0) {
+        if (packagingSize) setPackagingSize("");
+        return;
+      }
+      if (!packagingSize || !sizesForType.some((option) => option.size === packagingSize)) {
+        setPackagingSize(sizesForType[0].size);
+      }
+    });
   }, [packagingType, packagingSize, sizesForType]);
   const selectedPackagingOptionId = useMemo(() => {
     const found = sizesForType.find((option) => option.size === packagingSize);
@@ -432,16 +445,20 @@ export function OrdersTable({
     const max = Number(selectedPackagingOption.max_packages);
     if (!Number.isFinite(max)) return;
     if (parsed <= max) return;
-    setQuantityInput(String(max));
+    queueMicrotask(() => {
+      setQuantityInput(String(max));
+    });
   }, [quantityInput, selectedPackagingOption?.max_packages]);
   useEffect(() => {
-    if (!isJarOption || availableLidColors.length === 0) {
-      if (jarLidColorValue) setJarLidColorValue("");
-      return;
-    }
-    if (!availableLidColors.includes(jarLidColorValue)) {
-      setJarLidColorValue(availableLidColors[0]);
-    }
+    queueMicrotask(() => {
+      if (!isJarOption || availableLidColors.length === 0) {
+        if (jarLidColorValue) setJarLidColorValue("");
+        return;
+      }
+      if (!availableLidColors.includes(jarLidColorValue)) {
+        setJarLidColorValue(availableLidColors[0]);
+      }
+    });
   }, [availableLidColors, isJarOption, jarLidColorValue]);
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders]);
   const listOrders = useMemo(() => {
@@ -1851,8 +1868,6 @@ export function OrdersTable({
     </div>
   );
 }
-
-
 
 
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
+import { supabaseServerClient } from "@/lib/supabase/server";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
@@ -39,6 +40,13 @@ function readCheckbox(formData: FormData, key: string) {
 
 async function revalidateSitePagePath(slug: string) {
   revalidatePath(buildManagedSitePageHref(slug));
+  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  revalidatePath("/sitemap.xml");
+}
+
+async function revalidatePremadePagePath(path: string) {
+  revalidatePath(path);
+  revalidatePath("/pre-made-candy");
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   revalidatePath("/sitemap.xml");
 }
@@ -86,6 +94,36 @@ export async function uploadSeoLibraryImageAction(formData: FormData) {
   }
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "SEO library image uploaded."));
+}
+
+export async function updatePremadeSeoAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  const id = normalizeField(formData.get("id"));
+  const pagePath = normalizeField(formData.get("pagePath"));
+  if (!id || !pagePath) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Product id and path are required."));
+  }
+
+  const ogImageFile = formData.get("ogImageFile");
+  const uploadedOgImage =
+    ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, `premade-${id}`) : null;
+
+  const { error } = await supabaseServerClient
+    .from("premade_candies")
+    .update({
+      seo_title: normalizeField(formData.get("seoTitle")) || null,
+      meta_description: normalizeField(formData.get("metaDescription")) || null,
+      og_image_url: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
+      canonical_url: normalizeField(formData.get("canonicalUrl")) || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", error.message));
+  }
+
+  await revalidatePremadePagePath(pagePath);
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Pre-made product SEO saved."));
 }
 
 export async function bulkUploadLandingGalleryImagesAction(

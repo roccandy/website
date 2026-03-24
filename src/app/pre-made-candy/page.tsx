@@ -11,6 +11,8 @@ import {
   formatPremadeFlavors,
   formatPremadeMoney,
   formatPremadeWeight,
+  hasPremadeSale,
+  resolvePremadePrice,
 } from "@/lib/premadeCatalog";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage } from "@/lib/sitePages";
@@ -158,6 +160,8 @@ export default async function PremadePage() {
                 const titleLine = weightLabel ? `${weightLabel} ${item.name}` : item.name;
                 const flavorLabel = formatPremadeFlavors(item.flavors ?? null);
                 const itemHref = buildPremadeItemPath(item);
+                const effectivePrice = resolvePremadePrice(item);
+                const showSalePrice = hasPremadeSale(item);
                 return (
                   <article
                     key={item.id}
@@ -187,7 +191,7 @@ export default async function PremadePage() {
                           premadeId: item.id,
                           name: item.name,
                           flavor: flavorLabel || undefined,
-                          price: Number(item.price),
+                          price: effectivePrice,
                           weight_g: Number(item.weight_g),
                           imageUrl,
                         }}
@@ -197,7 +201,12 @@ export default async function PremadePage() {
                       <Link href={itemHref} className="text-sm font-bold text-[#ff6f95] hover:text-[#ff4f80] hover:underline">
                         {titleLine}
                       </Link>
-                      <p className="text-xl font-semibold text-zinc-900">{formatPremadeMoney(Number(item.price))}</p>
+                      <div className="space-y-0.5">
+                        {showSalePrice ? (
+                          <p className="text-sm text-zinc-400 line-through">{formatPremadeMoney(Number(item.price))}</p>
+                        ) : null}
+                        <p className="text-xl font-semibold text-zinc-900">{formatPremadeMoney(effectivePrice)}</p>
+                      </div>
                       {flavorLabel ? <p className="text-sm text-zinc-500">{flavorLabel}</p> : null}
                       {item.description ? <p className="text-sm text-zinc-500">{item.description}</p> : null}
                       {item.approx_pcs ? (

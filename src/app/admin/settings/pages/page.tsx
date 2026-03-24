@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
+import { getPremadeCandies } from "@/lib/data";
+import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { listSeoLibraryImages } from "@/lib/seoAssets";
 import { listSiteRedirects } from "@/lib/siteRedirects";
 import {
@@ -14,6 +16,7 @@ import {
 import {
   deleteSiteRedirectAction,
   saveSiteRedirectAction,
+  updatePremadeSeoAction,
   updateSitePageAction,
   uploadSeoLibraryImageAction,
 } from "./actions";
@@ -58,6 +61,7 @@ function EditorGuide() {
           <li>Only real site pages already in the app.</li>
           <li>No page creation and no layout builder.</li>
           <li>Each page keeps its existing design and route.</li>
+          <li>Terms content is still edited separately; this screen handles its SEO metadata only.</li>
         </ul>
       </div>
       <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
@@ -356,6 +360,11 @@ function SitePageCard({
           <p className="text-xs text-zinc-500">
             Public URL: <span className="font-mono">{buildManagedSitePageHref(page.slug)}</span>
           </p>
+          {page.slug === "terms-and-conditions" ? (
+            <p className="text-xs text-amber-700">
+              SEO title, meta description, canonical, and social image are editable here. The terms body content stays in the terms editor.
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -503,6 +512,123 @@ function SitePageCard({
   );
 }
 
+function PremadeSeoCard({
+  item,
+  canWriteSeo,
+}: {
+  item: Awaited<ReturnType<typeof getPremadeCandies>>[number];
+  canWriteSeo: boolean;
+}) {
+  const pagePath = buildPremadeItemPath(item);
+  const fallbackImageUrl = buildPremadeImageUrl(item.image_path);
+  const socialImageUrl = item.og_image_url?.trim() || null;
+
+  return (
+    <details className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div className="space-y-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pre-made product</p>
+          <p className="text-lg font-semibold text-zinc-900">{item.name}</p>
+          <p className="text-xs text-zinc-500">
+            Public URL: <span className="font-mono">{pagePath}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href={pagePath}
+            target="_blank"
+            className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+          >
+            View product
+          </Link>
+          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${item.is_active ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"}`}>
+            {item.is_active ? "Active" : "Inactive"}
+          </span>
+          <span className="text-xs font-semibold text-zinc-500 transition group-open:rotate-180">▾</span>
+        </div>
+      </summary>
+
+      <div className="border-t border-zinc-200 px-5 py-5">
+        <form action={updatePremadeSeoAction} className="space-y-4">
+          <input type="hidden" name="id" value={item.id} />
+          <input type="hidden" name="pagePath" value={pagePath} />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">SEO title (&lt;title&gt;)</span>
+              <input
+                type="text"
+                name="seoTitle"
+                defaultValue={item.seo_title ?? ""}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                placeholder={`${item.name} | Pre-Made Rock Candy | Roc Candy`}
+              />
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Canonical URL (optional)</span>
+              <input
+                type="text"
+                name="canonicalUrl"
+                defaultValue={item.canonical_url ?? ""}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                placeholder={pagePath}
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Meta description</span>
+              <textarea
+                name="metaDescription"
+                defaultValue={item.meta_description ?? ""}
+                rows={3}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                placeholder={item.short_description ?? item.description ?? ""}
+              />
+            </label>
+            <div className="space-y-3">
+              <input type="hidden" name="ogImageUrl" value={socialImageUrl ?? ""} readOnly />
+              {canWriteSeo ? (
+                <OptimizedImageFileInput
+                  name="ogImageFile"
+                  label="Social share image upload (og:image)"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  maxWidth={2400}
+                  maxHeight={2400}
+                  quality={0.82}
+                />
+              ) : (
+                <p className="text-xs text-zinc-500">Social share image (og:image)</p>
+              )}
+              <ImagePreview imageUrl={socialImageUrl || fallbackImageUrl} />
+              {!socialImageUrl ? (
+                <p className="text-xs text-zinc-500">Default preview uses the product image unless you upload a dedicated social image.</p>
+              ) : null}
+            </div>
+          </div>
+
+          {canWriteSeo ? (
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
+                Save product SEO
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
+          )}
+        </form>
+      </div>
+    </details>
+  );
+}
+
 export default async function AdminManagedPagesPage() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -510,6 +636,7 @@ export default async function AdminManagedPagesPage() {
   }
 
   const pages = await getManagedSitePages(EDITABLE_SITE_PAGE_SLUGS);
+  const premadeProducts = await getPremadeCandies();
   const seoLibraryImages = await listSeoLibraryImages();
   const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
@@ -570,7 +697,9 @@ export default async function AdminManagedPagesPage() {
         <div className="space-y-3">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-zinc-900">Policy Pages</h3>
-            <p className="text-sm text-zinc-600">Legal and policy pages. Terms content itself is still managed in the terms editor.</p>
+            <p className="text-sm text-zinc-600">
+              Legal and policy pages. Privacy content is editable here. Terms content itself still lives in the separate terms editor.
+            </p>
           </div>
           {policyPages.map((page) => (
             <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} seoLibraryImages={seoLibraryImages} />
@@ -600,6 +729,24 @@ export default async function AdminManagedPagesPage() {
     </AdminSection>
   );
 
+  const premadeProductsSection = (
+    <AdminSection
+      eyebrow="Products"
+      title="Pre-Made Product SEO"
+      description="Edit SEO metadata for individual pre-made product pages without opening the full product admin."
+    >
+      {premadeProducts.length === 0 ? (
+        <p className="text-sm text-zinc-500">No pre-made products found.</p>
+      ) : (
+        <div className="space-y-3">
+          {premadeProducts.map((item) => (
+            <PremadeSeoCard key={item.id} item={item} canWriteSeo={canWriteSeo} />
+          ))}
+        </div>
+      )}
+    </AdminSection>
+  );
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -614,10 +761,12 @@ export default async function AdminManagedPagesPage() {
 
       <SeoAdminWorkspace
         pageCount={pages.length}
+        productCount={premadeProducts.length}
         redirectCount={redirects.length}
         imageCount={seoLibraryImages.length}
         overview={overviewSection}
         pages={pagesSection}
+        productPages={premadeProductsSection}
         redirects={redirectsSection}
         mediaLibrary={mediaLibrarySection}
       />

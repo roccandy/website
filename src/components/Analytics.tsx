@@ -3,6 +3,7 @@ import Script from "next/script";
 export function Analytics() {
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim();
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID?.trim();
+  const loadDirectGa = Boolean(gaMeasurementId && !gtmId);
 
   return (
     <>
@@ -19,7 +20,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           }}
         />
       ) : null}
-      {gaMeasurementId ? (
+      {loadDirectGa ? (
         <>
           <Script
             id="ga-loader"

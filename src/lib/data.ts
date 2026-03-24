@@ -107,6 +107,10 @@ export type PremadeCandy = {
   product_condition: string | null;
   sale_price: number | null;
   availability: string | null;
+  seo_title: string | null;
+  meta_description: string | null;
+  og_image_url: string | null;
+  canonical_url: string | null;
   woo_product_id: string | null;
   woo_sync_status: string | null;
   woo_last_sync_at: string | null;

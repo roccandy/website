@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type FooterLink = {
@@ -16,8 +17,7 @@ const CATEGORY_LINKS: FooterLink[] = [
 const INFO_LINKS: FooterLink[] = [
   { label: "FAQ", href: "/faq" },
   { label: "About", href: "/about" },
-  { label: "Blog", href: "/#blog" },
-  { label: "Contact", href: "__CONTACT__" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const LEGAL_LINKS: FooterLink[] = [
@@ -56,16 +56,13 @@ function IconButton({
 export default function SiteFooter() {
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
-  const infoLinks = INFO_LINKS.map((link) =>
-    link.href === "__CONTACT__" ? { ...link, href: enquiriesHref } : link
-  );
 
   return (
     <footer className="site-footer mt-10 border-t border-[#d8d8d1] bg-[#efefeb] text-[#8e8e88]">
       <div className="mx-auto max-w-6xl px-6 py-7">
         <div className="flex flex-col items-center gap-3 text-center">
           <Link href="/" aria-label="Roc Candy home">
-            <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-16 w-auto" />
+            <Image src="/branding/logo-gold.svg" alt="Roc Candy" width={160} height={64} className="h-16 w-auto" />
           </Link>
           <p className="max-w-4xl normal-case text-[14px] text-[#9f9f99]">
             53 View St, North Perth (not open to the public)
@@ -125,24 +122,14 @@ export default function SiteFooter() {
       <div className="border-t border-[#d8d8d1]">
         <div className="mx-auto max-w-6xl px-6 py-4">
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {infoLinks.map((link) => (
-              link.href.startsWith("mailto:") ? (
-                <a
-                  key={`info-${link.label}`}
-                  href={link.href}
-                  className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
-                >
-                  {link.label}
-                </a>
-              ) : (
-                <Link
-                  key={`info-${link.label}`}
-                  href={link.href}
-                  className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
-                >
-                  {link.label}
-                </Link>
-              )
+            {INFO_LINKS.map((link) => (
+              <Link
+                key={`info-${link.label}`}
+                href={link.href}
+                className="normal-case text-[14px] text-[#ff6f95] transition hover:text-[#ff4f80]"
+              >
+                {link.label}
+              </Link>
             ))}
 
             <div className="mx-1 flex flex-wrap items-center justify-center gap-1.5">
@@ -153,11 +140,12 @@ export default function SiteFooter() {
                   title={badge.label}
                   aria-label={badge.label}
                 >
-                  <img
+                  <Image
                     src={badge.src}
                     alt={badge.label}
+                    width={48}
+                    height={12}
                     className={`h-3 w-auto object-contain ${badge.iconClassName ?? ""}`}
-                    loading="lazy"
                   />
                 </span>
               ))}

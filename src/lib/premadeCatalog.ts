@@ -22,6 +22,20 @@ export function formatPremadeMoney(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
+export function resolvePremadePrice(item: Pick<PremadeCandy, "price" | "sale_price">) {
+  const salePrice = Number(item.sale_price);
+  if (Number.isFinite(salePrice) && salePrice > 0) {
+    return salePrice;
+  }
+  return Number(item.price);
+}
+
+export function hasPremadeSale(item: Pick<PremadeCandy, "price" | "sale_price">) {
+  const salePrice = Number(item.sale_price);
+  const basePrice = Number(item.price);
+  return Number.isFinite(salePrice) && salePrice > 0 && salePrice < basePrice;
+}
+
 export function formatPremadeFlavors(flavors: string[] | null) {
   if (!flavors || flavors.length === 0) return "";
   if (flavors.includes("Mixed")) return "Mixed Flavours";

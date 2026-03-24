@@ -15,6 +15,9 @@ export default async function PricingPage() {
   }
 
   const [categories, tiers, settings] = await Promise.all([getCategories(), getWeightTiers(), getSettings()]);
+  const pricingTableKey = JSON.stringify(
+    tiers.map((tier) => [tier.id, tier.category_id, tier.min_kg, tier.max_kg, tier.price, tier.per_kg, tier.notes ?? ""])
+  );
 
   return (
     <section className="space-y-6">
@@ -31,8 +34,12 @@ export default async function PricingPage() {
         </p>
       </div>
 
-      <PricingTable categories={categories} tiers={tiers} maxTotalKg={settings.max_total_kg} />
+      <PricingTable
+        key={pricingTableKey}
+        categories={categories}
+        tiers={tiers}
+        maxTotalKg={settings.max_total_kg}
+      />
     </section>
   );
 }
-

@@ -85,11 +85,7 @@ function readStoredCart(): CartItem[] {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-
-  useEffect(() => {
-    setItems(readStoredCart());
-  }, []);
+  const [items, setItems] = useState<CartItem[]>(() => readStoredCart());
 
   useEffect(() => {
     if (typeof window === "undefined") return;

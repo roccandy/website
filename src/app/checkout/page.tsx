@@ -1,7 +1,9 @@
+import Image from "next/image";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { formatPremadeFlavors } from "@/lib/premadeCatalog";
+import Link from "next/link";
 import {
   getColorPalette,
   getLabelTypes,
@@ -12,6 +14,7 @@ import {
 } from "@/lib/data";
 import { getActiveProductionBlockoutMessage } from "@/lib/productionBlockout";
 import { CheckoutClient } from "./CheckoutClient";
+import { resolvePremadePrice } from "@/lib/premadeCatalog";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -52,7 +55,7 @@ export default async function CheckoutPage() {
       name: item.name,
       flavorLabel: formatPremadeFlavors(item.flavors ?? null),
       description: item.description,
-      price: Number(item.price),
+      price: resolvePremadePrice(item),
       weight_g: Number(item.weight_g),
       weightLabel: formatWeight(Number(item.weight_g)),
       imageUrl: buildPremadeImageUrl(item.image_path),
@@ -68,9 +71,17 @@ export default async function CheckoutPage() {
           <LandingTopLinksBar />
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <a href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
-              </a>
+              <Link href="/" className="shrink-0">
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                  priority
+                />
+              </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
                 <a

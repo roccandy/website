@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { useCart, type CartItem, type CustomCartItem, type PremadeCartItem } from "@/components/CartProvider";
 import { CandyPreview } from "@/app/quote/CandyPreview";
@@ -220,7 +220,7 @@ function SquarePayment({
     }
   };
 
-  const refreshApplePay = async (payments: SquarePayments) => {
+  const refreshApplePay = useCallback(async (payments: SquarePayments) => {
     if (amount <= 0) {
       appleRef.current = null;
       setAppleAvailable(false);
@@ -248,7 +248,7 @@ function SquarePayment({
       setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
       return null;
     }
-  };
+  }, [amount]);
 
   useEffect(() => {
     if (initializedRef.current || initializingRef.current) return;
@@ -289,12 +289,12 @@ function SquarePayment({
       }
     })();
 
-  }, [onError]);
+  }, [onError, refreshApplePay]);
 
   useEffect(() => {
     if (!ready || !paymentsRef.current) return;
     void refreshApplePay(paymentsRef.current);
-  }, [amount, ready]);
+  }, [ready, refreshApplePay]);
 
   return (
     <div className="space-y-4">
@@ -588,7 +588,6 @@ function CartItemRow({
   onEditCustom,
   onQuantityChange,
   pricing,
-  dueDate,
   paletteMap,
   labelTypeMap,
   maxPackages,
@@ -598,7 +597,6 @@ function CartItemRow({
   onEditCustom?: () => void;
   onQuantityChange?: (qty: number) => void;
   pricing?: PricingBreakdown;
-  dueDate?: string;
   paletteMap?: Map<string, string>;
   labelTypeMap?: Map<string, LabelType>;
   maxPackages?: number | null;
@@ -1103,6 +1101,7 @@ export function CheckoutClient({
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const trackedBeginCheckoutRef = useRef(false);
+  const orderConfirmationTimeoutRef = useRef<number | null>(null);
 
   const buildExtrasForItem = (item: CustomCartItem) => {
     if (item.jacketExtras?.length) return item.jacketExtras;
@@ -1115,7 +1114,7 @@ export function CheckoutClient({
     return [];
   };
 
-  const resolveCustomMaxPackages = (item: CustomCartItem) => {
+  const resolveCustomMaxPackages = useCallback((item: CustomCartItem) => {
     const fromItem = Number(item.maxPackages);
     if (Number.isFinite(fromItem) && fromItem > 0) return Math.floor(fromItem);
     if (item.packagingOptionId) {
@@ -1123,7 +1122,7 @@ export function CheckoutClient({
       if (fromOption && fromOption > 0) return fromOption;
     }
     return null;
-  };
+  }, [packagingMaxByOptionId]);
 
   useEffect(() => {
     customItems.forEach((item) => {
@@ -1133,9 +1132,9 @@ export function CheckoutClient({
         updateQuantity(item.id, maxPackages);
       }
     });
-  }, [customItems, updateQuantity, packagingMaxByOptionId]);
+  }, [customItems, resolveCustomMaxPackages, updateQuantity]);
 
-  const fetchPricing = async (item: CustomCartItem, date?: string) => {
+  const fetchPricing = useCallback(async (item: CustomCartItem, date?: string) => {
     if (!item.categoryId || !item.packagingOptionId || !item.quantity) return null;
     const extras = buildExtrasForItem(item);
     const payload = {
@@ -1155,21 +1154,23 @@ export function CheckoutClient({
       throw new Error(data.error || "Unable to update pricing");
     }
     return (await res.json()) as PricingBreakdown;
-  };
+  }, []);
 
   useEffect(() => {
     let active = true;
-    if (!customItems.length) {
-      setPricingOverrides({});
-      setPricingError(null);
-      setPricingLoading(false);
-      return;
-    }
-
-    setPricingLoading(true);
-    setPricingError(null);
-
     void (async () => {
+      if (!customItems.length) {
+        if (!active) return;
+        setPricingOverrides({});
+        setPricingError(null);
+        setPricingLoading(false);
+        return;
+      }
+
+      if (!active) return;
+      setPricingLoading(true);
+      setPricingError(null);
+
       let errorMessage: string | null = null;
       const results = await Promise.all(
         customItems.map(async (item) => {
@@ -1197,16 +1198,15 @@ export function CheckoutClient({
     return () => {
       active = false;
     };
-  }, [customItems, dueDate]);
+  }, [customItems, dueDate, fetchPricing]);
 
   useEffect(() => {
-    if (!paymentSuccess) return;
-    setOrderConfirmationVisible(true);
-    const timeout = setTimeout(() => {
-      setOrderConfirmationVisible(false);
-    }, 6000);
-    return () => clearTimeout(timeout);
-  }, [paymentSuccess]);
+    return () => {
+      if (orderConfirmationTimeoutRef.current) {
+        window.clearTimeout(orderConfirmationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const cartPricing = useMemo(() => {
     let baseSubtotal = 0;
@@ -1368,6 +1368,14 @@ export function CheckoutClient({
         items: analyticsItems,
       });
     }
+    if (orderConfirmationTimeoutRef.current) {
+      window.clearTimeout(orderConfirmationTimeoutRef.current);
+    }
+    setOrderConfirmationVisible(true);
+    orderConfirmationTimeoutRef.current = window.setTimeout(() => {
+      setOrderConfirmationVisible(false);
+      orderConfirmationTimeoutRef.current = null;
+    }, 6000);
     setPaymentSuccess(true);
     setPaymentError(null);
     setAdminEmailWarning(warning === "Admin email not wired up." ? warning : null);
@@ -1458,7 +1466,6 @@ export function CheckoutClient({
                     key={item.id}
                     item={item}
                     pricing={pricingOverrides[item.id]}
-                    dueDate={dueDate || undefined}
                     onRemove={() => removeItem(item.id)}
                     onEditCustom={
                       item.type === "custom" ? () => window.location.assign(`/design?edit=${encodeURIComponent(item.id)}`) : undefined

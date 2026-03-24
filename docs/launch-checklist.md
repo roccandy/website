@@ -10,6 +10,32 @@ Related docs:
 - [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql)
 - [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql)
 - [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql)
+- [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql)
+
+## Current Repo Status
+
+These items are already implemented in code:
+
+- [x] Generated `sitemap.xml`, `robots.txt`, canonicals, Open Graph, Twitter cards, and structured data.
+- [x] SEO/admin workspace for fixed site pages.
+- [x] SEO role with read-only access outside SEO-editable sections.
+- [x] Redirect manager in the SEO workspace.
+- [x] SEO media library.
+- [x] Individual SEO landing pages for wedding, custom text, branded, contact, shipping/returns.
+- [x] Individual pre-made product pages with Product schema.
+- [x] Per-product SEO fields for pre-made product pages in the SEO workspace.
+- [x] Ecommerce events for `view_item` on pre-made product pages, plus `add_to_cart`, `begin_checkout`, and `purchase`.
+- [x] Analytics loader now prefers GTM over direct GA4 when both IDs are configured, reducing duplicate tracking risk.
+
+These items are still manual / launch work:
+
+- [ ] Run required SQL in Supabase.
+- [ ] Enter final page and product SEO content in admin.
+- [ ] Set production env vars.
+- [ ] Validate payments, Woo mirroring, and emails.
+- [ ] Configure GA4 / Google Ads / Search Console / Merchant on the real domain.
+- [ ] Build the redirect map from old URLs.
+- [ ] Switch the real domain to the new site and validate live behavior.
 
 ## Principles
 
@@ -24,6 +50,7 @@ Related docs:
 - [ ] Run [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql) in Supabase.
 - [ ] Run [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql) in Supabase.
 - [ ] Run [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql) in Supabase.
+- [ ] Run [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql) in Supabase.
 - [ ] Confirm the `SEO` role appears in admin users.
 - [ ] Assign the SEO person the `SEO` role.
 - [ ] Confirm the SEO user can access `/admin/settings/pages`.
@@ -44,6 +71,7 @@ Related docs:
 - [ ] Fill in Shipping and Returns content and metadata.
 - [ ] Fill in Privacy page title/content/metadata.
 - [ ] Fill in Terms page title/metadata.
+- [ ] Fill in pre-made product SEO title / meta description / social image where needed.
 - [ ] Upload final social/share images to the SEO media library if needed.
 - [ ] Check all copy for phone number, email address, and business details accuracy.
 
@@ -56,8 +84,8 @@ Related docs:
 - [ ] Set `YANDEX_SITE_VERIFICATION` if needed.
 - [ ] Set `NEXT_PUBLIC_GA_MEASUREMENT_ID`.
 - [ ] Set `NEXT_PUBLIC_GTM_ID` if GTM will be used.
-- [ ] Decide whether GA4 is controlled directly, via GTM, or both.
-- [ ] Avoid double tracking between direct GA4 and GTM.
+- [ ] Decide whether GA4 is controlled directly or via GTM.
+- [x] Code now avoids loading direct GA4 when GTM is present.
 - [ ] Set live Square credentials.
 - [ ] Set live PayPal credentials.
 - [ ] Set all email-related env vars and recipients.
@@ -78,6 +106,7 @@ Related docs:
 
 ## Phase 5: Tracking + Ads Conversion Setup
 
+- [x] `view_item` is implemented for pre-made product pages.
 - [ ] Confirm `add_to_cart` is firing in GA4 DebugView.
 - [ ] Confirm `begin_checkout` is firing in GA4 DebugView.
 - [ ] Confirm `purchase` is firing in GA4 DebugView after successful payment.
@@ -120,6 +149,7 @@ Related docs:
 - [ ] Confirm pre-made product pages are live-ready and indexable.
 - [ ] Confirm shipping / returns page is complete.
 - [ ] Confirm contact page is complete.
+- [ ] Confirm pre-made product SEO fields have been filled for the priority products.
 - [ ] Confirm product pricing, availability, brand, and category data are correct.
 - [ ] Confirm Merchant Center website claim/verification is tied to the real domain, not staging.
 - [ ] Prepare feed / crawl strategy for Merchant Center.
@@ -199,8 +229,7 @@ Related docs:
 ## Phase 14: Follow-Up Improvements After Stable Launch
 
 - [ ] Add enhanced conversions for Google Ads.
-- [ ] Add `view_item` event for fuller ecommerce tracking.
-- [ ] Add product-level editable SEO fields for pre-made product pages if required.
+- [ ] Expand `view_item` tracking if you want collection-page/product-list coverage as well.
 - [ ] Replace remaining public-page `<img>` usage where performance matters.
 - [ ] Review Merchant feed quality and product metadata depth.
 - [ ] Review whether Woo is still needed after the new stack stabilizes.

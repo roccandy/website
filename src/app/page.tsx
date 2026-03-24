@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
@@ -82,7 +83,15 @@ export default async function Home() {
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                  priority
+                />
               </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
@@ -160,10 +169,12 @@ export default async function Home() {
                   className="group flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-300"
                 >
                   <div className="relative aspect-[3/2] w-full overflow-hidden bg-zinc-100">
-                    <img
+                    <Image
                       src={option.image}
                       alt={option.label}
-                      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                      fill
+                      sizes="(max-width: 768px) 50vw, 20vw"
+                      className="object-cover transition duration-300 group-hover:scale-[1.03]"
                     />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-transparent to-white/90" />
                   </div>
@@ -226,11 +237,12 @@ export default async function Home() {
             </article>
 
             <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-              <img
+              <Image
                 src="/about-carousel/about-1.jpg"
                 alt="Handmade Roc Candy pieces"
+                width={1200}
+                height={1200}
                 className="h-full min-h-[300px] w-full object-cover"
-                loading="lazy"
               />
             </div>
           </section>
@@ -264,16 +276,6 @@ export default async function Home() {
             </div>
           </section>
 
-          <section id="blog" className="scroll-mt-44 space-y-6 pb-10">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Blog</p>
-              <h2 className="text-2xl font-semibold text-zinc-900">Latest from Roc Candy</h2>
-            </div>
-            <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600 shadow-sm">
-              Blog posts are coming soon. We will share new launches, wedding ideas, and behind-the-scenes candy
-              stories here.
-            </div>
-          </section>
           </div>
         </div>
       </div>
