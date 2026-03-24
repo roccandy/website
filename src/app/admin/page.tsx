@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { getOrders } from "@/lib/data";
 
 const baseSections = [
   {
@@ -125,6 +126,7 @@ function isSeoEditableHref(href: string) {
 
 export default async function AdminHome() {
   const session = await requireAdminSession();
+  const orders = await getOrders();
   const sections = session.user.canManageUsers
     ? [
         ...baseSections,
@@ -142,6 +144,16 @@ export default async function AdminHome() {
       ]
     : baseSections;
   const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
+  const outstandingCounts = {
+    "/admin/orders": orders.filter((order) => order.design_type !== "premade" && order.status !== "archived").length,
+    "/admin/orders/additional-items": orders.filter(
+      (order) =>
+        order.design_type === "premade" &&
+        order.status !== "shipped" &&
+        order.status !== "refunded" &&
+        order.status !== "archived"
+    ).length,
+  } as const;
 
   return (
     <section className="space-y-10">
@@ -177,7 +189,14 @@ export default async function AdminHome() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
+                        {item.href in outstandingCounts && outstandingCounts[item.href as keyof typeof outstandingCounts] > 0 ? (
+                          <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold leading-none text-white">
+                            {outstandingCounts[item.href as keyof typeof outstandingCounts]}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-zinc-500">{item.description}</p>
                     </div>
                     <span className="text-xs font-semibold text-zinc-400 transition group-hover:text-zinc-600">
