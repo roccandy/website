@@ -87,6 +87,16 @@ function cleanText(value: string | null | undefined) {
   return trimmed ? trimmed : null;
 }
 
+function cleanGeographyText(value: string | null | undefined) {
+  const cleaned = cleanText(value);
+  if (!cleaned) return null;
+  const normalized = cleaned.toLowerCase();
+  if (normalized === "pickup" || normalized === "pick up" || normalized.startsWith("pickup ")) {
+    return null;
+  }
+  return cleaned;
+}
+
 function toCustomerKey(order: OrderRow) {
   const email = cleanText(order.customer_email)?.toLowerCase();
   if (email) return `email:${email}`;
@@ -175,8 +185,12 @@ function buildGroups(orders: OrderRow[], categoryNameById: Map<string, string>, 
       .map((row) => row.due_date)
       .filter(Boolean)
       .sort()[0] ?? null;
-    const state = rows.map((row) => cleanText(row.state) ?? cleanText(row.location)).find(Boolean) ?? null;
-    const suburb = rows.map((row) => cleanText(row.suburb)).find(Boolean) ?? null;
+    const state = rows
+      .map((row) => (row.pickup ? null : cleanGeographyText(row.state) ?? cleanGeographyText(row.location)))
+      .find(Boolean) ?? null;
+    const suburb = rows
+      .map((row) => (row.pickup ? null : cleanGeographyText(row.suburb)))
+      .find(Boolean) ?? null;
     const organizationName = rows.map((row) => cleanText(row.organization_name)).find(Boolean) ?? null;
     const paymentProvider =
       rows.map((row) => cleanText(row.payment_provider) ?? cleanText(row.payment_method)).find(Boolean) ?? null;
