@@ -16,7 +16,6 @@ export const metadata: Metadata = {
 export default function CheckoutSuccessPage() {
   return (
     <main className="landing-bg min-h-screen text-zinc-900">
-      <CheckoutSuccessClient />
       <div className="relative">
         <div className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]">
           <LandingTopLinksBar />
@@ -57,29 +56,8 @@ export default function CheckoutSuccessPage() {
           </div>
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-6 py-16">
-          <div className="rounded-3xl border border-zinc-200 bg-white/90 p-8 text-center shadow-lg">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Payment received</p>
-            <h1 className="mt-3 text-3xl font-semibold text-zinc-900">Thank you for your order!</h1>
-            <p className="mt-3 text-sm text-zinc-600">
-              We’ve received your payment. You’ll get a confirmation email shortly, and our team will start
-              preparing your order.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <Link
-                href="/pre-made-candy"
-                className="rounded-full border border-zinc-900 bg-zinc-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-zinc-800"
-              >
-                Continue shopping
-              </Link>
-              <Link
-                href="/design"
-                className="rounded-full border border-zinc-200 bg-white px-5 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
-              >
-                Start a new quote
-              </Link>
-            </div>
-          </div>
+        <div className="relative mx-auto max-w-6xl px-6 py-16">
+          <CheckoutSuccessClient />
         </div>
       </div>
     </main>

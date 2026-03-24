@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { useCart, type CartItem, type CustomCartItem, type PremadeCartItem } from "@/components/CartProvider";
 import { CandyPreview } from "@/app/quote/CandyPreview";
@@ -8,6 +9,7 @@ import { paletteSections } from "@/app/admin/settings/palette";
 import type { ColorPaletteRow, LabelType, PackagingOption, QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
+import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
 type PremadeSuggestion = {
   id: string;
@@ -155,7 +157,7 @@ function SquarePayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null }) => void;
+  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
   onError: (stage: string, message: string) => void;
   selectedMethod: "apple_pay" | "credit_card";
 }) {
@@ -208,10 +210,12 @@ function SquarePayment({
       const payload = (await response.json().catch(() => ({}))) as {
         adminEmailWarning?: string | null;
         wooOrderId?: string | number | null;
+        orderNumber?: string | null;
       };
       onSuccess({
         adminEmailWarning: payload.adminEmailWarning ?? null,
         wooOrderId: payload.wooOrderId ?? null,
+        orderNumber: payload.orderNumber ?? null,
       });
     } catch (error) {
       onError("charge", error instanceof Error ? error.message : "Payment failed.");
@@ -358,7 +362,7 @@ function PayPalPayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null }) => void;
+  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
   onError: (stage: string, message: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -439,6 +443,7 @@ function PayPalPayment({
                 error?: string;
                 adminEmailWarning?: string | null;
                 wooOrderId?: string | number | null;
+                orderNumber?: string | null;
               };
               if (!response.ok || !payload.ok) {
                 throw new Error(payload.error || "PayPal capture failed.");
@@ -446,6 +451,7 @@ function PayPalPayment({
               onSuccess({
                 adminEmailWarning: payload.adminEmailWarning ?? null,
                 wooOrderId: payload.wooOrderId ?? null,
+                orderNumber: payload.orderNumber ?? null,
               });
             },
             onError: (err: unknown) => {
@@ -1047,6 +1053,7 @@ export function CheckoutClient({
   transactionFeePercent,
   productionBlockoutMessage,
 }: Props) {
+  const router = useRouter();
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const paletteMap = useMemo(() => buildPaletteLabelMap(palette), [palette]);
   const labelTypeMap = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
@@ -1100,13 +1107,11 @@ export function CheckoutClient({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("apple_pay");
-  const [orderConfirmationVisible, setOrderConfirmationVisible] = useState(false);
   const [pricingOverrides, setPricingOverrides] = useState<Record<string, PricingBreakdown>>({});
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const trackedBeginCheckoutRef = useRef(false);
-  const orderConfirmationTimeoutRef = useRef<number | null>(null);
 
   const buildExtrasForItem = (item: CustomCartItem) => {
     if (item.jacketExtras?.length) return item.jacketExtras;
@@ -1204,14 +1209,6 @@ export function CheckoutClient({
       active = false;
     };
   }, [customItems, dueDate, fetchPricing]);
-
-  useEffect(() => {
-    return () => {
-      if (orderConfirmationTimeoutRef.current) {
-        window.clearTimeout(orderConfirmationTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const cartPricing = useMemo(() => {
     let baseSubtotal = 0;
@@ -1358,12 +1355,106 @@ export function CheckoutClient({
     premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
   });
 
-  const handlePaymentSuccess = ({
+  const paymentMethodLabel =
+    selectedPaymentMethod === "apple_pay"
+      ? "Apple Pay"
+      : selectedPaymentMethod === "credit_card"
+        ? "Credit Card"
+        : "PayPal";
+
+  const deliveryAddress = pickup
+    ? "Pickup in North Perth"
+    : [addressLine1.trim(), addressLine2.trim(), suburb.trim(), stateValue.trim(), postcode.trim()]
+        .filter(Boolean)
+        .join(", ") || "-";
+
+  const buildSuccessSummary = ({
     adminEmailWarning: warning,
     wooOrderId,
+    orderNumber,
   }: {
     adminEmailWarning?: string | null;
     wooOrderId?: string | number | null;
+    orderNumber?: string | null;
+  }) => {
+    const summaryItems = items.map((item) => {
+      if (item.type === "premade") {
+        const subtitleParts = [formatWeight(item.weight_g), item.flavor].filter(Boolean);
+        return {
+          id: item.id,
+          title: item.name,
+          quantity: item.quantity,
+          lineTotal: item.price * item.quantity,
+          subtitle: subtitleParts.join(" | ") || null,
+          details: [] as Array<{ label: string; value: string }>,
+        };
+      }
+
+      const pricing = pricingOverrides[item.id];
+      const rawJacketValue = item.jacket || item.jacketType || "";
+      const usesTwoColours = rawJacketValue === "two_colour" || rawJacketValue === "two_colour_pinstripe";
+      const jacketLabel = formatJacketLabel(item);
+      const jacketColours = jacketLabel === "Rainbow"
+        ? "Rainbow"
+        : formatColorList(
+            usesTwoColours ? [item.jacketColorOne, item.jacketColorTwo] : [item.jacketColorOne],
+            paletteMap
+          );
+      const labelTypeLabel = item.labelTypeId ? formatLabelTypeLabel(labelTypeMap.get(item.labelTypeId)) : "";
+      const details = [
+        { label: "Order type", value: getCustomOrderTypeLine(item.categoryId || item.designType) },
+        { label: "Packaging", value: item.packagingLabel ? `${item.quantity} x ${formatPackagingLabel(item.packagingLabel)}` : `Qty ${item.quantity}` },
+        { label: "Jacket type", value: jacketLabel },
+        { label: "Jacket colours", value: jacketColours },
+        { label: "Text colour", value: formatColorValue(item.textColor, paletteMap) },
+        { label: "Heart colour", value: formatColorValue(item.heartColor, paletteMap) },
+        { label: "Flavour", value: item.flavor || "" },
+        { label: "Labels", value: item.labelsCount != null ? `${item.labelsCount}` : item.labelImageUrl ? "Yes" : "No" },
+        { label: "Ingredient labels", value: item.ingredientLabelsOptIn ? "Yes" : "No" },
+        { label: "Label type", value: labelTypeLabel },
+      ].filter((detail) => detail.value);
+
+      return {
+        id: item.id,
+        title: item.title || item.designText || "Custom order",
+        quantity: item.quantity,
+        lineTotal: pricing?.total ?? item.totalPrice ?? null,
+        subtitle: item.description || null,
+        details,
+      };
+    });
+
+    storeCheckoutSuccessSummary({
+      orderNumber: orderNumber ?? null,
+      wooOrderId: wooOrderId ?? null,
+      orderDateIso: new Date().toISOString(),
+      paymentMethod: paymentMethodLabel,
+      requestedDate: dueDate || null,
+      pickup,
+      deliveryAddress,
+      customer: {
+        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        organizationName: organizationName.trim() || null,
+      },
+      items: summaryItems,
+      subtotal: cartPricing.total - cartPricing.urgencyTotal - cartPricing.transactionTotal,
+      urgencyTotal: cartPricing.urgencyTotal,
+      transactionTotal: cartPricing.transactionTotal,
+      total: cartPricing.total,
+      adminEmailWarning: warning ?? null,
+    });
+  };
+
+  const handlePaymentSuccess = ({
+    adminEmailWarning: warning,
+    wooOrderId,
+    orderNumber,
+  }: {
+    adminEmailWarning?: string | null;
+    wooOrderId?: string | number | null;
+    orderNumber?: string | null;
   }) => {
     if (wooOrderId) {
       trackPurchaseOnce({
@@ -1373,18 +1464,16 @@ export function CheckoutClient({
         items: analyticsItems,
       });
     }
-    if (orderConfirmationTimeoutRef.current) {
-      window.clearTimeout(orderConfirmationTimeoutRef.current);
-    }
-    setOrderConfirmationVisible(true);
-    orderConfirmationTimeoutRef.current = window.setTimeout(() => {
-      setOrderConfirmationVisible(false);
-      orderConfirmationTimeoutRef.current = null;
-    }, 6000);
+    buildSuccessSummary({
+      adminEmailWarning: warning,
+      wooOrderId,
+      orderNumber,
+    });
     setPaymentSuccess(true);
     setPaymentError(null);
     setAdminEmailWarning(warning === "Admin email not wired up." ? warning : null);
     clearCart();
+    router.replace("/checkout/success");
   };
 
   const logPaymentFailure = async (provider: "square" | "paypal", stage: string, message: string) => {
@@ -1416,29 +1505,6 @@ export function CheckoutClient({
       {PAYMENTS_SANDBOX_MODE ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
           Sandbox Mode: Test payments only. No real customer charges should be made from this environment.
-        </div>
-      ) : null}
-      {orderConfirmationVisible ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
-            <p className="text-lg font-semibold text-zinc-900">Check your email for order confirmation.</p>
-            {adminEmailWarning ? (
-              <p className="mt-2 text-sm text-rose-600">{adminEmailWarning}</p>
-            ) : null}
-            <button
-              type="button"
-              data-neutral-button
-              onClick={() => setOrderConfirmationVisible(false)}
-              className="mt-4 rounded-full px-4 py-2 text-sm font-semibold"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {paymentSuccess ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center text-sm font-semibold text-emerald-700">
-          Payment received. Your order is confirmed.
         </div>
       ) : null}
       {paymentSuccess && adminEmailWarning ? (

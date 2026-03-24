@@ -180,7 +180,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, wooOrderId: wooOrder.id, adminEmailWarning });
+    return NextResponse.json({ ok: true, wooOrderId: wooOrder.id, orderNumber: orderNumbers.baseOrderNumber, adminEmailWarning });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Square payment.";
     await logPaymentFailure({
