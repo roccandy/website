@@ -22,6 +22,7 @@ type MonthlyPoint = {
   key: string;
   label: string;
   shortLabel: string;
+  yearLabel: string;
   revenue: number;
   orders: number;
 };
@@ -138,6 +139,7 @@ function buildLast12Months(groups: OrderGroup[]) {
       key,
       label: date.toLocaleString("en-AU", { month: "long", year: "numeric" }),
       shortLabel: date.toLocaleString("en-AU", { month: "short" }),
+      yearLabel: String(date.getFullYear()),
       revenue: 0,
       orders: 0,
     };
@@ -388,10 +390,13 @@ function MonthlyRevenueChart({ months }: { months: MonthlyPoint[] }) {
       {months.map((month) => (
         <div key={month.key} className="flex flex-col gap-2">
           <div className="flex h-40 items-end rounded-2xl border border-zinc-200 bg-zinc-50 p-2">
-            <div className="flex w-full items-end gap-1">
+            <div className="flex h-full w-full items-end gap-1">
               <div
-                className="w-2 flex-1 rounded-full bg-gradient-to-t from-amber-400 via-orange-400 to-rose-400"
-                style={{ height: `${Math.max(10, (month.revenue / maxRevenue) * 100)}%` }}
+                className="w-2 flex-1 rounded-full"
+                style={{
+                  height: `${Math.max(10, (month.revenue / maxRevenue) * 100)}%`,
+                  background: "linear-gradient(180deg, rgb(251 113 133), rgb(251 146 60) 52%, rgb(251 191 36))",
+                }}
                 title={`${month.label}: ${toPreciseCurrency(month.revenue)}`}
               />
               <div
@@ -403,6 +408,7 @@ function MonthlyRevenueChart({ months }: { months: MonthlyPoint[] }) {
           </div>
           <div>
             <p className="text-xs font-semibold text-zinc-800">{month.shortLabel}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{month.yearLabel}</p>
             <p className="text-[11px] text-zinc-500">{toCount(month.orders)} / {toCurrency(month.revenue)}</p>
           </div>
         </div>
