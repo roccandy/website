@@ -1659,59 +1659,57 @@ export function OrdersTable({
                                         getScheduleStatus(order),
                                       )}`}
                                     >
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                          <p className="mt-0.5 text-sm font-semibold leading-tight text-zinc-900">{title}</p>
-                                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-700">
-                                            <span>{weightLabel(order.total_weight_kg)}</span>
-                                            <span>Due {formatDate(order.due_date)}</span>
-                                          </div>
+                                      <div className="min-w-0">
+                                        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
+                                        <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-zinc-900">{title}</p>
+                                        <div className="mt-1 space-y-0.5 text-[10px] text-zinc-700">
+                                          <p>{weightLabel(order.total_weight_kg)}</p>
+                                          <p>Due {formatDate(order.due_date)}</p>
                                         </div>
-                                        <div className="flex w-[8.5rem] shrink-0 flex-col items-stretch gap-1">
-                                          {printTarget ? (
-                                            <a
-                                              href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[10px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                      </div>
+                                      <div className="mt-2 flex flex-col items-stretch gap-1">
+                                        {printTarget ? (
+                                          <a
+                                            href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[10px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                          >
+                                            Print order
+                                          </a>
+                                        ) : null}
+                                        {canCompleteSlotOrder ? (
+                                          <form
+                                            action={archiveOrder}
+                                            onSubmit={(event) => {
+                                              const confirmed = window.confirm(
+                                                `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                              );
+                                              if (!confirmed) {
+                                                event.preventDefault();
+                                              }
+                                            }}
+                                          >
+                                            <input type="hidden" name="order_id" value={order.id} />
+                                            <button
+                                              type="submit"
+                                              className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
                                             >
-                                              Print order
-                                            </a>
-                                          ) : null}
-                                          {canCompleteSlotOrder ? (
-                                            <form
-                                              action={archiveOrder}
-                                              onSubmit={(event) => {
-                                                const confirmed = window.confirm(
-                                                  `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                                );
-                                                if (!confirmed) {
-                                                  event.preventDefault();
-                                                }
-                                              }}
+                                              {completionActionLabel(order)}
+                                            </button>
+                                          </form>
+                                        ) : null}
+                                        {canUnassignSlotOrder ? (
+                                          <form action={deleteAssignment}>
+                                            <input type="hidden" name="assignment_id" value={assignment.id} />
+                                            <button
+                                              type="submit"
+                                              className="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[10px] font-semibold text-rose-700 hover:border-rose-300"
                                             >
-                                              <input type="hidden" name="order_id" value={order.id} />
-                                              <button
-                                                type="submit"
-                                                className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                              >
-                                                {completionActionLabel(order)}
-                                              </button>
-                                            </form>
-                                          ) : null}
-                                          {canUnassignSlotOrder ? (
-                                            <form action={deleteAssignment}>
-                                              <input type="hidden" name="assignment_id" value={assignment.id} />
-                                              <button
-                                                type="submit"
-                                                className="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[10px] font-semibold text-rose-700 hover:border-rose-300"
-                                              >
-                                                Unassign
-                                              </button>
-                                            </form>
-                                          ) : null}
-                                        </div>
+                                              Unassign
+                                            </button>
+                                          </form>
+                                        ) : null}
                                       </div>
                                     </div>
                                   ) : (
@@ -1961,7 +1959,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 
