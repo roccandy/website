@@ -58,8 +58,13 @@ export const metadata: Metadata = {
   title: "Roc Candy Admin",
   description: "Roc Candy admin panel",
   icons: {
-    icon: [{ url: "/branding/admin-favicon.svg", type: "image/svg+xml" }],
-    shortcut: [{ url: "/branding/admin-favicon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/branding/admin-favicon.ico", sizes: "any" },
+      { url: "/branding/admin-favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/branding/admin-favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/branding/admin-favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: [{ url: "/branding/admin-favicon.ico" }],
     apple: [{ url: "/branding/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   robots: {
