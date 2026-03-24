@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getOrders } from "@/lib/data";
+import { isVisibleOnPremadeOrders, isVisibleOnProductionSchedule } from "./orders/scheduleVisibility";
 
 const baseSections = [
   {
@@ -145,14 +146,8 @@ export default async function AdminHome() {
     : baseSections;
   const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
   const outstandingCounts = {
-    "/admin/orders": orders.filter((order) => order.design_type !== "premade" && order.status !== "archived").length,
-    "/admin/orders/additional-items": orders.filter(
-      (order) =>
-        order.design_type === "premade" &&
-        order.status !== "shipped" &&
-        order.status !== "refunded" &&
-        order.status !== "archived"
-    ).length,
+    "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,
+    "/admin/orders/additional-items": orders.filter(isVisibleOnPremadeOrders).length,
   } as const;
 
   return (

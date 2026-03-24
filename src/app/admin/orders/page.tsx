@@ -16,6 +16,10 @@ import { OrdersTable } from "./OrdersTable";
 import { FrontEndCalendarButton } from "./FrontEndCalendarButton";
 import { buildPricingContext, calculatePricingWithContext } from "@/lib/pricing";
 
+export const metadata = {
+  title: "Production Schedule | Roc Candy Admin",
+};
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -83,7 +87,8 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-          <h2 className="text-3xl font-semibold">All Orders / Refunds</h2>
+          <h2 className="text-3xl font-semibold">Production Schedule</h2>
+          <p className="text-sm text-zinc-600">Current custom orders that still need production attention.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link

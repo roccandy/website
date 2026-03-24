@@ -16,6 +16,7 @@ import type {
 import type { PricingBreakdown } from "@/lib/pricing";
 import { addManualBlock, addOpenOverride, assignOrderToSlot, deleteAssignment, removeManualBlock, upsertOrder } from "./actions";
 import { paletteSections } from "@/app/admin/settings/palette";
+import { isVisibleOnProductionSchedule } from "./scheduleVisibility";
 
 type Props = {
   orders: OrderRow[];
@@ -462,7 +463,7 @@ export function OrdersTable({
   }, [availableLidColors, isJarOption, jarLidColorValue]);
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders]);
   const listOrders = useMemo(() => {
-    const visible = orders.filter((order) => order.status !== "archived" && order.design_type !== "premade");
+    const visible = orders.filter(isVisibleOnProductionSchedule);
     return [...visible].sort((a, b) => {
       const aDate = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
       const bDate = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
@@ -1868,7 +1869,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 
