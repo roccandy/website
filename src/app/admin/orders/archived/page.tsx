@@ -39,6 +39,7 @@ const scheduleStatusBadge = (status: string) => {
   if (status === "archived") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (status === "pending completion") return "border-amber-200 bg-amber-50 text-amber-700";
   if (status === "scheduled") return "border-blue-200 bg-blue-50 text-blue-700";
+  if (status === "unassigned") return "border-zinc-300 bg-zinc-100 text-zinc-700";
   return "border-red-200 bg-red-50 text-red-700";
 };
 

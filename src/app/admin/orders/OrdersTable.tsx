@@ -580,6 +580,9 @@ export function OrdersTable({
     if (status === "scheduled") {
       return "border-blue-200 bg-blue-50 text-blue-700";
     }
+    if (status === "unassigned") {
+      return "border-zinc-300 bg-zinc-100 text-zinc-700";
+    }
     return "border-red-200 bg-red-50 text-red-700";
   };
 
@@ -888,7 +891,7 @@ export function OrdersTable({
                             {getScheduleStatus(order)}
                           </span>
                           {order.refunded_at ? (
-                            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
                               Refunded
                             </span>
                           ) : null}
@@ -1869,7 +1872,6 @@ export function OrdersTable({
     </div>
   );
 }
-
 
 
 
