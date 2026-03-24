@@ -119,6 +119,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signed in</p>
                 <p className="text-xs font-medium normal-case text-zinc-700">{signedInDisplay}</p>
               </div>
+              <Link
+                href="/admin/stats"
+                title="Open the secret stats room"
+                aria-label="Open the secret stats room"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-700"
+              >
+                <span aria-hidden="true">◔</span>
+              </Link>
               <LogoutButton />
             </div>
           </div>
