@@ -50,13 +50,24 @@ Important caveat:
 
 These items are still manual / launch work:
 
-- [ ] Run required SQL in Supabase.
+- [x] Required core SQL/schema changes are present on the live project.
 - [ ] Enter final page and product SEO content in admin.
 - [ ] Set production env vars.
 - [ ] Validate payments, Woo mirroring, and emails.
 - [ ] Configure GA4 / Google Ads / Search Console / Merchant on the real domain.
 - [ ] Build the redirect map from old URLs.
 - [ ] Switch the real domain to the new site and validate live behavior.
+
+## Remaining High-Priority Actions
+
+If you want the shortest realistic list between now and launch, it is:
+
+- [ ] Finish page and product SEO content in admin.
+- [ ] Set all production env vars in Vercel.
+- [ ] Validate live payment config, Woo mirroring, and emails.
+- [ ] Verify GA4/Ads setup on the real domain.
+- [ ] Build and enter the redirect map from the old site.
+- [ ] Cut the domain over and run launch-day QA.
 
 ## Principles
 
@@ -70,12 +81,12 @@ These items are still manual / launch work:
 
 - [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) against the live project and confirm it returns all `OK`.
 - [x] Apply [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql) to the live project.
-- [ ] Apply [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql) to remove redundant duplicate policies.
-- [ ] Run [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql) in Supabase.
-- [ ] Run [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql) in Supabase.
-- [ ] Run [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql) in Supabase.
-- [ ] Run [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql) in Supabase.
-- [ ] Confirm the `SEO` role appears in admin users.
+- [x] Apply [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql) to remove redundant duplicate policies.
+- [x] Confirm the live project includes the outcomes from [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql).
+- [x] Confirm the live project includes the outcomes from [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql).
+- [x] Confirm the live project includes the outcomes from [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql).
+- [x] Confirm the live project includes the outcomes from [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql).
+- [ ] Confirm the `SEO` role appears in the admin users screen.
 - [ ] Assign the SEO person the `SEO` role.
 - [ ] Confirm the SEO user can access `/admin/settings/pages`.
 - [ ] Confirm the SEO user has read-only access everywhere else intended.
