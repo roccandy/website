@@ -55,6 +55,13 @@ const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
 
 export const metadata: Metadata = {
+  title: "Roc Candy Admin",
+  description: "Roc Candy admin panel",
+  icons: {
+    icon: [{ url: "/branding/admin-favicon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/branding/admin-favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/branding/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   robots: {
     index: false,
     follow: false,

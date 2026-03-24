@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Roc Candy Admin">
+  <rect width="64" height="64" rx="14" fill="#18181b" />
+  <circle cx="22" cy="24" r="10" fill="#ff6f95" />
+  <circle cx="42" cy="24" r="10" fill="#f7c45a" />
+  <rect x="10" y="40" width="44" height="12" rx="6" fill="#ffffff" opacity="0.95" />
+  <path d="M22 19h4c2.8 0 5 2.2 5 5s-2.2 5-5 5h-4z" fill="#fff" />
+  <path d="M38 31V17h5c3.4 0 6 2.6 6 6 0 2.5-1.4 4.7-3.6 5.6L49 31h-4.8l-3-2.8V31z" fill="#fff" />
+  <path d="M18 46h28" stroke="#18181b" stroke-width="4" stroke-linecap="round" />
+</svg>
