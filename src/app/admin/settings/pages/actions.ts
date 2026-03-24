@@ -79,23 +79,6 @@ export async function updateSitePageAction(formData: FormData) {
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Built-in page saved."));
 }
 
-export async function uploadSeoLibraryImageAction(formData: FormData) {
-  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
-  const file = formData.get("libraryImageFile");
-  if (!(file instanceof File) || file.size === 0) {
-    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Choose an image to upload."));
-  }
-
-  try {
-    await uploadSeoImage(file, "library");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to upload the SEO image.";
-    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
-  }
-  revalidatePath(MANAGED_PAGES_ADMIN_PATH);
-  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "SEO library image uploaded."));
-}
-
 export async function updatePremadeSeoAction(formData: FormData) {
   await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
   const id = normalizeField(formData.get("id"));

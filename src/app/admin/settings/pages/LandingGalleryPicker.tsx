@@ -8,17 +8,9 @@ import {
   type LandingGalleryBulkUploadActionState,
 } from "./actions";
 
-type LibraryImage = {
-  name: string;
-  path: string;
-  publicUrl: string;
-  updatedAt: string | null;
-};
-
 type Props = {
   slug: string;
   initialImageUrls: string[];
-  libraryImages: LibraryImage[];
   readOnly: boolean;
 };
 
@@ -69,10 +61,8 @@ const INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE: LandingGalleryBulkUploadActionS
   requestId: null,
 };
 
-export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, readOnly }: Props) {
+export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props) {
   const [slots, setSlots] = useState<string[]>(() => buildInitialSlots(initialImageUrls));
-  const [libraryItems, setLibraryItems] = useState<LibraryImage[]>(libraryImages);
-  const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedSummaries, setSelectedSummaries] = useState<ImageOptimizationSummary[]>([]);
   const [isAnalysingFiles, setIsAnalysingFiles] = useState(false);
@@ -94,10 +84,6 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
     appliedRequestRef.current = uploadState.requestId;
     const uploadedUrls = uploadState.uploaded.map((image) => image.publicUrl);
     setSlots((current) => appendUploadedUrlsToSlots(current, uploadedUrls));
-    setLibraryItems((current) => {
-      const existingPaths = new Set(current.map((image) => image.path));
-      return [...uploadState.uploaded!.filter((image) => !existingPaths.has(image.path)), ...current];
-    });
     setSelectedFiles([]);
     setSelectedSummaries([]);
     setAnalysisError(null);
@@ -113,9 +99,6 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
 
   const clearSlot = (index: number) => {
     updateSlot(index, "");
-    if (activeSlot === index) {
-      setActiveSlot(null);
-    }
   };
 
   const removeSlot = (index: number) => {
@@ -123,16 +106,10 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
       const next = current.filter((_, slotIndex) => slotIndex !== index);
       return next.length > 0 ? next : [""];
     });
-    if (activeSlot === index) {
-      setActiveSlot(null);
-    } else if (activeSlot !== null && activeSlot > index) {
-      setActiveSlot(activeSlot - 1);
-    }
   };
 
   const addSlot = () => {
     setSlots((current) => [...current, ""]);
-    setActiveSlot(slots.length);
   };
 
   const moveSlot = (index: number, direction: -1 | 1) => {
@@ -145,11 +122,6 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
       next[target] = temp;
       return next;
     });
-    if (activeSlot === index) {
-      setActiveSlot(target);
-    } else if (activeSlot === target) {
-      setActiveSlot(index);
-    }
   };
 
   return (
@@ -157,8 +129,8 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
       <div className="space-y-1">
         <p className="text-sm font-semibold text-zinc-900">Landing page mini gallery</p>
         <p className="text-xs text-zinc-600">
-          Upload one or many images straight into this gallery, or choose from the shared media library below. This
-          keeps the page editor simple without asking admins to paste raw URLs.
+          Upload one or many images straight into this gallery, then reorder or remove them here. No image URLs are
+          needed.
         </p>
         <p className="text-xs text-zinc-500">Selected: {selectedCount}</p>
       </div>
@@ -291,13 +263,10 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((imageUrl, index) => {
-          const isActive = activeSlot === index;
           return (
             <div
               key={`${slug}-gallery-slot-${index}`}
-              className={`space-y-3 rounded-xl border bg-white p-3 shadow-sm ${
-                isActive ? "border-zinc-900" : "border-zinc-200"
-              }`}
+              className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"
             >
               <input type="hidden" name="galleryImageUrls" value={imageUrl} readOnly />
 
@@ -317,17 +286,6 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
 
               {!readOnly ? (
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveSlot(isActive ? null : index)}
-                    className={`rounded border px-3 py-1.5 text-xs font-semibold ${
-                      isActive
-                        ? "border-zinc-900 bg-zinc-900 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                    }`}
-                  >
-                    {imageUrl ? "Replace" : "Choose"} image
-                  </button>
                   <button
                     type="button"
                     onClick={() => clearSlot(index)}
@@ -377,54 +335,6 @@ export function LandingGalleryPicker({ slug, initialImageUrls, libraryImages, re
             Add image slot
           </button>
         </div>
-      ) : null}
-
-      {!readOnly ? (
-        activeSlot !== null ? (
-          <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-zinc-900">Choose image for slot {activeSlot + 1}</p>
-                <p className="text-xs text-zinc-600">Select from the existing media library.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveSlot(null)}
-                className="rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-              >
-                Close
-              </button>
-            </div>
-
-            {libraryItems.length === 0 ? (
-              <p className="text-sm text-zinc-500">No library images uploaded yet. Upload one below first.</p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {libraryItems.map((image) => (
-                  <button
-                    key={image.path}
-                    type="button"
-                    onClick={() => {
-                      updateSlot(activeSlot, image.publicUrl);
-                      setActiveSlot(null);
-                    }}
-                    className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-left transition hover:border-zinc-300 hover:bg-white"
-                  >
-                    <div
-                      className="mb-3 aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-white bg-contain bg-center bg-no-repeat"
-                      style={{ backgroundImage: `url("${image.publicUrl}")` }}
-                    />
-                    <p className="truncate text-xs font-semibold text-zinc-900">{image.name}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-zinc-300 bg-white/80 px-4 py-3 text-xs text-zinc-500">
-            Select a slot above, then choose an image from the media library.
-          </div>
-        )
       ) : null}
     </div>
   );

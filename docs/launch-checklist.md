@@ -23,7 +23,7 @@ These items are already implemented in code:
 - [x] SEO/admin workspace for fixed site pages.
 - [x] SEO role with read-only access outside SEO-editable sections.
 - [x] Redirect manager in the SEO workspace.
-- [x] SEO media library.
+- [x] SEO workspace simplified to direct image uploads on pages/products, without a separate media-library tab.
 - [x] Individual SEO landing pages for wedding, custom text, branded, contact, shipping/returns.
 - [x] Individual pre-made product pages with Product schema.
 - [x] Per-product SEO fields for pre-made product pages in the SEO workspace.

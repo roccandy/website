@@ -2,18 +2,16 @@
 
 import { useState, type ReactNode } from "react";
 
-type TabId = "overview" | "pages" | "productPages" | "redirects" | "mediaLibrary";
+type TabId = "overview" | "pages" | "productPages" | "redirects";
 
 type Props = {
   pageCount: number;
   productCount: number;
   redirectCount: number;
-  imageCount: number;
   overview: ReactNode;
   pages: ReactNode;
   productPages: ReactNode;
   redirects: ReactNode;
-  mediaLibrary: ReactNode;
 };
 
 const TAB_ORDER: Array<{ id: TabId; label: string }> = [
@@ -21,19 +19,16 @@ const TAB_ORDER: Array<{ id: TabId; label: string }> = [
   { id: "pages", label: "Site Pages" },
   { id: "productPages", label: "Product SEO" },
   { id: "redirects", label: "Redirects" },
-  { id: "mediaLibrary", label: "Media Library" },
 ];
 
 export function SeoAdminWorkspace({
   pageCount,
   productCount,
   redirectCount,
-  imageCount,
   overview,
   pages,
   productPages,
   redirects,
-  mediaLibrary,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
@@ -42,7 +37,6 @@ export function SeoAdminWorkspace({
     pages: `${pageCount} pages`,
     productPages: `${productCount} products`,
     redirects: `${redirectCount} rules`,
-    mediaLibrary: `${imageCount} images`,
   };
 
   const panelByTab: Record<TabId, ReactNode> = {
@@ -50,7 +44,6 @@ export function SeoAdminWorkspace({
     pages,
     productPages,
     redirects,
-    mediaLibrary,
   };
 
   return (

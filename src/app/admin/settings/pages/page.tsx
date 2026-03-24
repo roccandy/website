@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { getPremadeCandies } from "@/lib/data";
 import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
-import { listSeoLibraryImages } from "@/lib/seoAssets";
 import { listSiteRedirects } from "@/lib/siteRedirects";
 import {
   buildManagedSitePageHref,
@@ -18,7 +17,6 @@ import {
   saveSiteRedirectAction,
   updatePremadeSeoAction,
   updateSitePageAction,
-  uploadSeoLibraryImageAction,
 } from "./actions";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
 import { HtmlEditorField } from "./HtmlEditorField";
@@ -113,9 +111,6 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
         className="h-40 w-full rounded-xl border border-zinc-200 bg-zinc-100 bg-cover bg-center"
         style={{ backgroundImage: `url("${imageUrl}")` }}
       />
-      <a href={imageUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-zinc-600 underline-offset-2 hover:underline">
-        Open image
-      </a>
     </div>
   );
 }
@@ -123,81 +118,13 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
 function LandingGalleryEditor({
   slug,
   imageUrls,
-  libraryImages,
   readOnly,
 }: {
   slug: string;
   imageUrls: string[];
-  libraryImages: Awaited<ReturnType<typeof listSeoLibraryImages>>;
   readOnly: boolean;
 }) {
-  return (
-    <LandingGalleryPicker
-      slug={slug}
-      initialImageUrls={imageUrls}
-      libraryImages={libraryImages}
-      readOnly={readOnly}
-    />
-  );
-}
-
-function SeoLibrarySection({
-  canWriteSeo,
-  images,
-}: {
-  canWriteSeo: boolean;
-  images: Awaited<ReturnType<typeof listSeoLibraryImages>>;
-}) {
-  return (
-    <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-zinc-900">SEO Media Library</h2>
-        <p className="text-sm text-zinc-600">
-          Upload reusable images here for social previews or for inserting into page content with an image URL.
-        </p>
-      </div>
-
-      {canWriteSeo ? (
-        <form action={uploadSeoLibraryImageAction} className="flex flex-wrap items-end gap-3">
-          <OptimizedImageFileInput
-            name="libraryImageFile"
-            label="Upload image"
-            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            maxWidth={2400}
-            maxHeight={2400}
-            quality={0.82}
-          />
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            Upload to library
-          </button>
-        </form>
-      ) : null}
-
-      {images.length === 0 ? (
-        <p className="text-sm text-zinc-500">No library images uploaded yet.</p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {images.map((image) => (
-            <div key={image.path} className="rounded-xl border border-zinc-200 p-3">
-              <div
-                className="mb-3 h-32 w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
-                style={{ backgroundImage: `url("${image.publicUrl}")` }}
-              />
-              <p className="text-xs font-semibold text-zinc-900">{image.name}</p>
-              <input
-                readOnly
-                value={image.publicUrl}
-                className="mt-2 w-full rounded border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600"
-              />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <LandingGalleryPicker slug={slug} initialImageUrls={imageUrls} readOnly={readOnly} />;
 }
 
 function RedirectsSection({
@@ -339,12 +266,10 @@ function RedirectsSection({
 function SitePageCard({
   page,
   canWriteSeo,
-  seoLibraryImages,
   defaultOpen = false,
 }: {
   page: Awaited<ReturnType<typeof getManagedSitePages>>[number];
   canWriteSeo: boolean;
-  seoLibraryImages: Awaited<ReturnType<typeof listSeoLibraryImages>>;
   defaultOpen?: boolean;
 }) {
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
@@ -489,7 +414,6 @@ function SitePageCard({
             <LandingGalleryEditor
               slug={page.slug}
               imageUrls={page.galleryImageUrls}
-              libraryImages={seoLibraryImages}
               readOnly={!canWriteSeo}
             />
           ) : null}
@@ -637,7 +561,6 @@ export default async function AdminManagedPagesPage() {
 
   const pages = await getManagedSitePages(EDITABLE_SITE_PAGE_SLUGS);
   const premadeProducts = await getPremadeCandies();
-  const seoLibraryImages = await listSeoLibraryImages();
   const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
 
@@ -678,7 +601,6 @@ export default async function AdminManagedPagesPage() {
               key={page.slug}
               page={page}
               canWriteSeo={canWriteSeo}
-              seoLibraryImages={seoLibraryImages}
               defaultOpen={index === 0}
             />
           ))}
@@ -690,7 +612,7 @@ export default async function AdminManagedPagesPage() {
             <p className="text-sm text-zinc-600">Fixed marketing and SEO pages already linked from the site.</p>
           </div>
           {landingPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} seoLibraryImages={seoLibraryImages} />
+            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} />
           ))}
         </div>
 
@@ -702,7 +624,7 @@ export default async function AdminManagedPagesPage() {
             </p>
           </div>
           {policyPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} seoLibraryImages={seoLibraryImages} />
+            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} />
           ))}
         </div>
       </div>
@@ -716,16 +638,6 @@ export default async function AdminManagedPagesPage() {
       description="Use redirects to preserve old URLs during launch and migration."
     >
       <RedirectsSection canWriteSeo={canWriteSeo} redirects={redirects} />
-    </AdminSection>
-  );
-
-  const mediaLibrarySection = (
-    <AdminSection
-      eyebrow="Assets"
-      title="Media Library"
-      description="Upload reusable images here for social previews and content blocks."
-    >
-      <SeoLibrarySection canWriteSeo={canWriteSeo} images={seoLibraryImages} />
     </AdminSection>
   );
 
@@ -763,12 +675,10 @@ export default async function AdminManagedPagesPage() {
         pageCount={pages.length}
         productCount={premadeProducts.length}
         redirectCount={redirects.length}
-        imageCount={seoLibraryImages.length}
         overview={overviewSection}
         pages={pagesSection}
         productPages={premadeProductsSection}
         redirects={redirectsSection}
-        mediaLibrary={mediaLibrarySection}
       />
     </section>
   );
