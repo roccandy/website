@@ -7,6 +7,9 @@ Use this file as the primary working document.
 Related docs:
 - [domain-switch-checklist.md](/Users/joeconlin/dev/roccandy/docs/domain-switch-checklist.md)
 - [seo-setup.md](/Users/joeconlin/dev/roccandy/docs/seo-setup.md)
+- [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql)
+- [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql)
+- [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql)
 - [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql)
 - [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql)
 - [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql)
@@ -26,6 +29,24 @@ These items are already implemented in code:
 - [x] Per-product SEO fields for pre-made product pages in the SEO workspace.
 - [x] Ecommerce events for `view_item` on pre-made product pages, plus `add_to_cart`, `begin_checkout`, and `purchase`.
 - [x] Analytics loader now prefers GTM over direct GA4 when both IDs are configured, reducing duplicate tracking risk.
+
+## Supabase Status
+
+The current live Supabase project has been checked directly against the app.
+
+- [x] Core SEO/content tables exist: `site_pages`, `site_faqs`, `site_terms_items`, `site_redirects`, `admin_users`.
+- [x] Current SEO/product schema columns exist, including pre-made product SEO fields.
+- [x] `flavors`, `label_types`, and `payment_failures` now have the expected RLS/policies.
+- [x] The schema health check currently returns all `OK` on the live project.
+- [x] Redundant duplicate policies on `orders` and `production_slots` have a cleanup script.
+- [ ] The database permission model still uses `is_admin(auth.uid())` for RLS.
+- [ ] The website admin login uses `admin_users` via NextAuth, not Supabase Auth.
+
+Important caveat:
+
+- This mismatch is not currently blocking the app because server-side writes use the service-role client.
+- It does mean the DB's native RLS admin model is still legacy/independent from the website admin login.
+- Do not delete `user_roles` or rewrite `is_admin()` casually before a dedicated auth migration.
 
 These items are still manual / launch work:
 
@@ -47,6 +68,9 @@ These items are still manual / launch work:
 
 ## Phase 1: Database + Admin Setup
 
+- [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) against the live project and confirm it returns all `OK`.
+- [x] Apply [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql) to the live project.
+- [ ] Apply [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql) to remove redundant duplicate policies.
 - [ ] Run [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql) in Supabase.
 - [ ] Run [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql) in Supabase.
 - [ ] Run [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql) in Supabase.
@@ -233,6 +257,7 @@ These items are still manual / launch work:
 - [ ] Replace remaining public-page `<img>` usage where performance matters.
 - [ ] Review Merchant feed quality and product metadata depth.
 - [ ] Review whether Woo is still needed after the new stack stabilizes.
+- [ ] Plan a dedicated admin auth/RLS migration if you want DB-native admin permissions to match the website admin login.
 
 ## Final Go/No-Go Questions
 
