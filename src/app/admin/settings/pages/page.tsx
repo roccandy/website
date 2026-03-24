@@ -275,6 +275,7 @@ function SitePageCard({
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
     page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number],
   );
+  const isTermsPage = page.slug === "terms-and-conditions";
 
   return (
     <details open={defaultOpen} className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -285,9 +286,9 @@ function SitePageCard({
           <p className="text-xs text-zinc-500">
             Public URL: <span className="font-mono">{buildManagedSitePageHref(page.slug)}</span>
           </p>
-          {page.slug === "terms-and-conditions" ? (
+          {isTermsPage ? (
             <p className="text-xs text-amber-700">
-              SEO title, meta description, canonical, and social image are editable here. The terms body content stays in the terms editor.
+              This card only controls the Terms page SEO fields and page title. The actual Terms and Conditions body content is edited in the separate Terms editor.
             </p>
           ) : null}
         </div>
@@ -396,17 +397,31 @@ function SitePageCard({
               <ImagePreview imageUrl={page.ogImageUrl} />
             </div>
             <div className="space-y-2">
-              <label className="block space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Page content (HTML body copy)</span>
-                <HtmlEditorField
-                  name="bodyHtml"
-                  defaultValue={page.bodyHtml}
-                  rows={12}
-                  readOnly={!canWriteSeo}
-                  placeholder="<p>Start writing the page content here.</p>"
-                />
-              </label>
-              <PageBodyHint />
+              {isTermsPage ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="font-semibold">Terms content is not edited here.</p>
+                  <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                    Use this card for the page title, SEO title, meta description, canonical URL, and social share image only.
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-amber-800">
+                    To edit the actual Terms and Conditions text shown on the website, go to <span className="font-semibold">Admin / Settings / Terms</span>.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <label className="block space-y-1 text-sm text-zinc-700">
+                    <span className="text-xs text-zinc-500">Page content (HTML body copy)</span>
+                    <HtmlEditorField
+                      name="bodyHtml"
+                      defaultValue={page.bodyHtml}
+                      rows={12}
+                      readOnly={!canWriteSeo}
+                      placeholder="<p>Start writing the page content here.</p>"
+                    />
+                  </label>
+                  <PageBodyHint />
+                </>
+              )}
             </div>
           </div>
 
@@ -620,7 +635,7 @@ export default async function AdminManagedPagesPage() {
           <div className="space-y-1">
             <h3 className="text-lg font-semibold text-zinc-900">Policy Pages</h3>
             <p className="text-sm text-zinc-600">
-              Legal and policy pages. Privacy content is editable here. Terms content itself still lives in the separate terms editor.
+              Legal and policy pages. Privacy content is editable here. For Terms and Conditions, this screen only edits the page title and SEO metadata. The actual terms body text still lives in the separate Terms editor.
             </p>
           </div>
           {policyPages.map((page) => (
