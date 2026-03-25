@@ -15,6 +15,7 @@ Related docs:
 - [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql)
 - [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql)
 - [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql)
+- [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql)
 
 ## Current Repo Status
 
@@ -25,6 +26,7 @@ These items are already implemented in code:
 - [x] `vercel.app` hosts now send `X-Robots-Tag: noindex, nofollow, noarchive`.
 - [x] Public canonical/sitemap base URL no longer falls back to ad-hoc `VERCEL_URL` preview hosts.
 - [x] SEO/admin workspace for fixed site pages.
+- [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.
 - [x] SEO role with read-only access outside SEO-editable sections.
 - [x] Redirect manager in the SEO workspace.
 - [x] SEO workspace simplified to direct image uploads on pages/products, without a separate media-library tab.
@@ -95,6 +97,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [x] Confirm the live project includes the outcomes from [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql).
 - [x] Confirm the live project includes the outcomes from [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql).
 - [x] Confirm the live project includes the outcomes from [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql).
+- [ ] Apply [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql) to add page-level FAQ selection fields.
 - [ ] Confirm the `SEO` role appears in the admin users screen.
 - [ ] Assign the SEO person the `SEO` role.
 - [ ] Confirm the SEO user can access `/admin/settings/pages`.
@@ -108,6 +111,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Review the final homepage meta description in admin and keep it roughly 150-155 characters.
 - [ ] Fill in About page content and metadata.
 - [ ] Fill in FAQ page intro and metadata.
+- [ ] Select relevant FAQ library items on the key landing and category pages that should show FAQs on-page.
 - [ ] Fill in Blog page content and metadata.
 - [ ] Fill in Design page intro and metadata.
 - [ ] Fill in Pre-made Candy page intro and metadata.

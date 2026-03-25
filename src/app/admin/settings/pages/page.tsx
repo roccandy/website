@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { getPremadeCandies } from "@/lib/data";
+import { getManagedFaqItems } from "@/lib/faqs";
 import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { listSiteRedirects } from "@/lib/siteRedirects";
 import {
@@ -76,6 +77,7 @@ function EditorGuide() {
           <li>`On-page title` (`H1`) is the main page heading.</li>
           <li>`Landing hero copy` controls the visible `H2` and paragraph on the 3 landing pages.</li>
           <li>`Page content` (`HTML body copy`) is the editable intro/body content.</li>
+          <li>`Page FAQs` lets you choose shared FAQ library items for that specific page.</li>
           <li>Extra content images can be inserted into the HTML body.</li>
         </ul>
       </div>
@@ -125,6 +127,84 @@ function LandingGalleryEditor({
   readOnly: boolean;
 }) {
   return <LandingGalleryPicker slug={slug} initialImageUrls={imageUrls} readOnly={readOnly} />;
+}
+
+function PageFaqSelector({
+  pageSlug,
+  selectedIds,
+  faqHeading,
+  faqItems,
+  readOnly,
+}: {
+  pageSlug: string;
+  selectedIds: string[];
+  faqHeading: string | null;
+  faqItems: Awaited<ReturnType<typeof getManagedFaqItems>>;
+  readOnly: boolean;
+}) {
+  if (pageSlug === "faq" || pageSlug === "terms-and-conditions") {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-zinc-900">Page FAQs</h3>
+        <p className="text-sm text-zinc-600">
+          Choose which FAQ library items appear at the bottom of this page. Edit the master FAQ content in{" "}
+          <Link href="/admin/settings/faqs" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
+            FAQ Settings
+          </Link>
+          .
+        </p>
+      </div>
+
+      <label className="block space-y-1 text-sm text-zinc-700">
+        <span className="text-xs text-zinc-500">FAQ section heading (optional)</span>
+        <input
+          type="text"
+          name="faqHeading"
+          defaultValue={faqHeading ?? ""}
+          readOnly={readOnly}
+          placeholder="Common Questions"
+          className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+        />
+      </label>
+
+      {faqItems.length === 0 ? (
+        <p className="text-sm text-zinc-500">No FAQ items are available yet. Add them in FAQ Settings first.</p>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {faqItems.map((item) => {
+            const checked = selectedIds.includes(item.id);
+            return (
+              <label
+                key={item.id}
+                className={`rounded-lg border px-3 py-3 text-sm ${
+                  checked ? "border-[#ffb0c7] bg-white" : "border-zinc-200 bg-white"
+                } ${readOnly ? "opacity-75" : ""}`}
+              >
+                <span className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    name="faqItemIds"
+                    value={item.id}
+                    defaultChecked={checked}
+                    disabled={readOnly}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span className="space-y-1">
+                    <span className="block font-semibold text-zinc-900">{item.question}</span>
+                    <span className="block text-xs text-zinc-500">Library item</span>
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function RedirectsSection({
@@ -266,10 +346,12 @@ function RedirectsSection({
 function SitePageCard({
   page,
   canWriteSeo,
+  faqItems,
   defaultOpen = false,
 }: {
   page: Awaited<ReturnType<typeof getManagedSitePages>>[number];
   canWriteSeo: boolean;
+  faqItems: Awaited<ReturnType<typeof getManagedFaqItems>>;
   defaultOpen?: boolean;
 }) {
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
@@ -433,6 +515,14 @@ function SitePageCard({
             />
           ) : null}
 
+          <PageFaqSelector
+            pageSlug={page.slug}
+            selectedIds={page.faqItemIds}
+            faqHeading={page.faqHeading}
+            faqItems={faqItems}
+            readOnly={!canWriteSeo}
+          />
+
           {canWriteSeo ? (
             <div className="flex justify-end">
               <button
@@ -575,6 +665,7 @@ export default async function AdminManagedPagesPage() {
   }
 
   const pages = await getManagedSitePages(EDITABLE_SITE_PAGE_SLUGS);
+  const faqItems = await getManagedFaqItems();
   const premadeProducts = await getPremadeCandies();
   const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
@@ -616,6 +707,7 @@ export default async function AdminManagedPagesPage() {
               key={page.slug}
               page={page}
               canWriteSeo={canWriteSeo}
+              faqItems={faqItems}
               defaultOpen={index === 0}
             />
           ))}
@@ -627,7 +719,7 @@ export default async function AdminManagedPagesPage() {
             <p className="text-sm text-zinc-600">Fixed marketing and SEO pages already linked from the site.</p>
           </div>
           {landingPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} />
+            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} faqItems={faqItems} />
           ))}
         </div>
 
@@ -639,7 +731,7 @@ export default async function AdminManagedPagesPage() {
             </p>
           </div>
           {policyPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} />
+            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} faqItems={faqItems} />
           ))}
         </div>
       </div>

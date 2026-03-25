@@ -1,5 +1,6 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
 import { buildDesignerPath } from "@/lib/designUrls";
+import { getFaqContentItemsByIds, type FaqContent } from "@/lib/faqs";
 
 const SITE_PAGES_TABLE = "site_pages";
 
@@ -9,6 +10,8 @@ export type ManagedSitePage = {
   heroSubheading: string | null;
   heroSupportingLine: string | null;
   bodyHtml: string;
+  faqHeading: string | null;
+  faqItemIds: string[];
   seoTitle: string | null;
   metaDescription: string | null;
   ogImageUrl: string | null;
@@ -22,6 +25,8 @@ export type ManagedSitePageInput = {
   heroSubheading?: string | null;
   heroSupportingLine?: string | null;
   bodyHtml?: string;
+  faqHeading?: string | null;
+  faqItemIds?: string[];
   seoTitle?: string | null;
   metaDescription?: string | null;
   ogImageUrl?: string | null;
@@ -35,11 +40,18 @@ type SitePageRow = {
   hero_subheading?: string | null;
   hero_supporting_line?: string | null;
   body_html: string;
+  faq_heading?: string | null;
+  faq_item_ids?: string[] | null;
   seo_title?: string | null;
   meta_description?: string | null;
   og_image_url?: string | null;
   canonical_url?: string | null;
   gallery_image_urls?: string[] | null;
+};
+
+export type ManagedSitePageFaqSection = {
+  heading: string;
+  items: FaqContent[];
 };
 
 export const LANDING_GALLERY_PAGE_SLUGS = [
@@ -82,6 +94,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSupportingLine: null,
     bodyHtml:
       "<h2>Branded, Wedding and Text Lollies</h2><p>Artisan handmade candy made in Australia for weddings, branded campaigns, gifts, and celebrations.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
     metaDescription:
       "Personalised handmade rock candy for weddings, branded events and custom gifts. Vegan, gluten free and dairy free, delivered Australia-wide.",
@@ -105,6 +119,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <p>We ship Australia-wide, delivering our delicious rock candy to all major cities, including Sydney, Melbourne, Brisbane, Perth, Adelaide, and beyond.</p>
 <p>You can also browse our <a href="/pre-made-candy">pre-made candy range</a> for ready-to-order options.</p>
     `,
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "About Roc Candy | Handmade Personalised Rock Candy Since 1999",
     metaDescription:
       "Learn about Roc Candy, Australian artisan confectioners creating handmade personalised rock candy for weddings, events, gifts, and branded campaigns since 1999.",
@@ -118,6 +134,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: "<p>Find answers about ordering, delivery, ingredients, lead times, and personalised rock candy options.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "FAQ | Personalised Rock Candy Questions | Roc Candy",
     metaDescription:
       "Answers to common questions about Roc Candy personalised rock candy, including ordering, delivery, ingredients, lead times, and custom designs.",
@@ -132,6 +150,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSupportingLine: null,
     bodyHtml:
       "<p>Stories, inspiration, product ideas, and behind-the-scenes updates from Roc Candy. Use this page as the blog landing page until individual articles are added.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Roc Candy Blog | Personalised Rock Candy Ideas, Events & News",
     metaDescription:
       "Read Roc Candy blog posts for personalised rock candy ideas, event inspiration, branded candy tips, wedding styling, and product updates.",
@@ -146,6 +166,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSupportingLine: null,
     bodyHtml:
       "<p>Choose colours, flavours, packaging, and design options for personalised rock candy orders across Australia.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Design Personalised Rock Candy | Wedding, Branded & Text Candy | Roc Candy",
     metaDescription:
       "Design personalised rock candy for weddings, branded events, gifts, and custom text orders. Choose colours, flavours, packaging, and styling online.",
@@ -171,12 +193,10 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   <li>Bridal shower and engagement events</li>
   <li>Gift boxes and welcome bags</li>
 </ul>
-<h2>Wedding candy FAQs</h2>
-<p><strong>Can I order initials or both names?</strong><br />Yes. The wedding designer includes initials and both-names options so you can choose the format that suits your event.</p>
-<p><strong>Can the colours match my wedding palette?</strong><br />Yes. We aim to match your chosen colours as closely as possible for a cohesive finish.</p>
-<p><strong>Do you deliver across Australia?</strong><br />Yes. Roc Candy offers Australia-wide delivery, but custom orders should allow enough lead time for production and shipping.</p>
 <p><a href="${buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" })}">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
     `,
+    faqHeading: "Wedding Candy FAQs",
+    faqItemIds: [],
     seoTitle: "Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy",
     metaDescription:
       "Create personalised wedding rock candy in Australia with names, initials, colours, and packaging for bonbonniere, favours, and wedding tables.",
@@ -209,12 +229,10 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 </ul>
 <h2>Choosing the right text option</h2>
 <p>The designer includes different options depending on the length of text you want to use. Shorter text is usually the best option for visual clarity, but longer word ranges are also available.</p>
-<h2>Custom text candy FAQs</h2>
-<p><strong>Can I create candy with a name or short message?</strong><br />Yes. Roc Candy offers custom text options for names, initials, and short words.</p>
-<p><strong>Can I choose colours and packaging too?</strong><br />Yes. You can select colours, packaging, and other presentation details within the designer.</p>
-<p><strong>Is this available Australia-wide?</strong><br />Yes. Roc Candy delivers across Australia, but lead times should be checked for custom orders.</p>
 <p><a href="${buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" })}">Start a custom text design</a> or <a href="/contact">contact us</a> if you want help choosing the right format.</p>
     `,
+    faqHeading: "Custom Text Candy FAQs",
+    faqItemIds: [],
     seoTitle: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
     metaDescription:
       "Create personalised text rock candy with names, words, initials, and custom colours for gifts, parties, weddings, and events across Australia.",
@@ -247,12 +265,10 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   <li>Product launches and activations</li>
   <li>Retail promotions and hospitality events</li>
 </ul>
-<h2>Branded candy FAQs</h2>
-<p><strong>Is branded candy suitable for corporate events?</strong><br />Yes. It is commonly used for activations, conferences, launches, hospitality, and gifting.</p>
-<p><strong>Can you match brand colours?</strong><br />We aim to match brand colours as closely as possible and can advise on the best approach for production.</p>
-<p><strong>What if I need help before ordering?</strong><br />Use the contact page if you need advice on quantities, timing, or whether your branding concept is suitable.</p>
 <p><a href="${buildDesignerPath({ orderType: "branded", categoryId: "branded" })}">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
     `,
+    faqHeading: "Branded Candy FAQs",
+    faqItemIds: [],
     seoTitle: "Branded Logo Candy Australia | Custom Rock Candy for Events | Roc Candy",
     metaDescription:
       "Order branded logo candy in Australia for promotions, launches, client gifts, and events. Custom rock candy designed with your branding.",
@@ -274,6 +290,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSupportingLine: null,
     bodyHtml:
       "<p>Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery across Australia.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",
     metaDescription:
       "Browse Roc Candy's pre-made rock candy collection with ready-to-order flavours, pack sizes, and Australia-wide delivery.",
@@ -302,6 +320,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 </ul>
 <p>If you already know what you need, you can also <a href="/design">start your custom candy order online</a> or browse our <a href="/pre-made-candy">pre-made candy range</a>.</p>
     `,
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Contact Roc Candy | Personalised Rock Candy Australia",
     metaDescription:
       "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
@@ -324,6 +344,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <h2>Need help before ordering?</h2>
 <p>If you are unsure about lead times, shipping options, or the best product for your event, <a href="/contact">contact us</a> and we will help you plan the order properly.</p>
     `,
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Shipping and Returns | Roc Candy Australia",
     metaDescription:
       "Read Roc Candy shipping and returns information for personalised and pre-made rock candy orders across Australia.",
@@ -337,6 +359,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: "<p>Add privacy policy content in admin.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: null,
     metaDescription: null,
     ogImageUrl: null,
@@ -349,6 +373,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: "<p>Terms and conditions content is managed separately. Use this SEO entry to control the page title and metadata.</p>",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: "Terms and Conditions | Roc Candy",
     metaDescription:
       "Read Roc Candy's terms and conditions covering orders, production, delivery, payments, refunds, and website use.",
@@ -381,6 +407,12 @@ function normalizeGalleryImageUrls(values: string[] | null | undefined) {
     .filter(Boolean);
 }
 
+function normalizeFaqItemIds(values: string[] | null | undefined) {
+  return (values ?? [])
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
+}
+
 function isMissingTableError(message: string) {
   return message.includes("site_pages") || message.includes("relation") || message.includes("schema cache");
 }
@@ -393,6 +425,10 @@ function isMissingLandingHeroColumnError(message: string) {
   return message.includes("hero_subheading") || message.includes("hero_supporting_line") || message.includes("schema cache");
 }
 
+function isMissingFaqSelectionColumnError(message: string) {
+  return message.includes("faq_heading") || message.includes("faq_item_ids") || message.includes("schema cache");
+}
+
 function normalizeRow(row: SitePageRow): ManagedSitePage {
   return {
     slug: row.slug,
@@ -400,6 +436,8 @@ function normalizeRow(row: SitePageRow): ManagedSitePage {
     heroSubheading: normalizeOptionalText(row.hero_subheading),
     heroSupportingLine: normalizeOptionalText(row.hero_supporting_line),
     bodyHtml: normalizeText(row.body_html),
+    faqHeading: normalizeOptionalText(row.faq_heading),
+    faqItemIds: normalizeFaqItemIds(row.faq_item_ids),
     seoTitle: normalizeOptionalText(row.seo_title),
     metaDescription: normalizeOptionalText(row.meta_description),
     ogImageUrl: normalizeOptionalText(row.og_image_url),
@@ -438,6 +476,9 @@ function areManagedSitePagesEqual(left: ManagedSitePage, right: ManagedSitePage)
     left.heroSubheading === right.heroSubheading &&
     left.heroSupportingLine === right.heroSupportingLine &&
     left.bodyHtml === right.bodyHtml &&
+    left.faqHeading === right.faqHeading &&
+    left.faqItemIds.length === right.faqItemIds.length &&
+    left.faqItemIds.every((value, index) => value === right.faqItemIds[index]) &&
     left.seoTitle === right.seoTitle &&
     left.metaDescription === right.metaDescription &&
     left.ogImageUrl === right.ogImageUrl &&
@@ -451,8 +492,17 @@ async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
   const selectAttempts = [
     {
       columns:
-        "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
+        "slug,title,hero_subheading,hero_supporting_line,body_html,faq_heading,faq_item_ids,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
       normalize: (row: SitePageRow) => row,
+    },
+    {
+      columns:
+        "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
+      normalize: (row: SitePageRow) => ({
+        ...row,
+        faq_heading: null,
+        faq_item_ids: [],
+      }),
     },
     {
       columns: "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
@@ -460,10 +510,12 @@ async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
         ...row,
         hero_subheading: null,
         hero_supporting_line: null,
+        faq_heading: null,
+        faq_item_ids: [],
       }),
     },
     {
-      columns: "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url",
+      columns: "slug,title,hero_subheading,hero_supporting_line,body_html,faq_heading,faq_item_ids,seo_title,meta_description,og_image_url,canonical_url",
       normalize: (row: SitePageRow) => ({
         ...row,
         gallery_image_urls: [],
@@ -475,6 +527,8 @@ async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
         ...row,
         hero_subheading: null,
         hero_supporting_line: null,
+        faq_heading: null,
+        faq_item_ids: [],
         gallery_image_urls: [],
       }),
     },
@@ -496,7 +550,11 @@ async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
       return null;
     }
 
-    if (!isMissingGalleryColumnError(message) && !isMissingLandingHeroColumnError(message)) {
+    if (
+      !isMissingGalleryColumnError(message) &&
+      !isMissingLandingHeroColumnError(message) &&
+      !isMissingFaqSelectionColumnError(message)
+    ) {
       throw new Error(result.error.message);
     }
   }
@@ -511,6 +569,8 @@ async function upsertSitePage(page: ManagedSitePage) {
     hero_subheading: normalizeOptionalText(page.heroSubheading),
     hero_supporting_line: normalizeOptionalText(page.heroSupportingLine),
     body_html: normalizeText(page.bodyHtml),
+    faq_heading: normalizeOptionalText(page.faqHeading),
+    faq_item_ids: normalizeFaqItemIds(page.faqItemIds),
     seo_title: normalizeOptionalText(page.seoTitle),
     meta_description: normalizeOptionalText(page.metaDescription),
     og_image_url: normalizeOptionalText(page.ogImageUrl),
@@ -520,6 +580,18 @@ async function upsertSitePage(page: ManagedSitePage) {
 
   const upsertAttempts = [
     payload,
+    {
+      slug: payload.slug,
+      title: payload.title,
+      hero_subheading: payload.hero_subheading,
+      hero_supporting_line: payload.hero_supporting_line,
+      body_html: payload.body_html,
+      seo_title: payload.seo_title,
+      meta_description: payload.meta_description,
+      og_image_url: payload.og_image_url,
+      canonical_url: payload.canonical_url,
+      gallery_image_urls: payload.gallery_image_urls,
+    },
     {
       slug: payload.slug,
       title: payload.title,
@@ -562,7 +634,11 @@ async function upsertSitePage(page: ManagedSitePage) {
     }
 
     const message = result.error.message.toLowerCase();
-    if (!isMissingGalleryColumnError(message) && !isMissingLandingHeroColumnError(message)) {
+    if (
+      !isMissingGalleryColumnError(message) &&
+      !isMissingLandingHeroColumnError(message) &&
+      !isMissingFaqSelectionColumnError(message)
+    ) {
       throw new Error(result.error.message);
     }
   }
@@ -582,6 +658,8 @@ export async function getManagedSitePage(slug: string): Promise<ManagedSitePage>
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: "",
+    faqHeading: null,
+    faqItemIds: [],
     seoTitle: null,
     metaDescription: null,
     ogImageUrl: null,
@@ -619,6 +697,8 @@ export async function saveManagedSitePage(page: ManagedSitePageInput) {
         ? normalizeOptionalText(page.heroSupportingLine)
         : current.heroSupportingLine,
     bodyHtml: page.bodyHtml !== undefined ? normalizeText(page.bodyHtml) : current.bodyHtml,
+    faqHeading: page.faqHeading !== undefined ? normalizeOptionalText(page.faqHeading) : current.faqHeading,
+    faqItemIds: page.faqItemIds !== undefined ? normalizeFaqItemIds(page.faqItemIds) : current.faqItemIds,
     seoTitle: page.seoTitle !== undefined ? normalizeOptionalText(page.seoTitle) : current.seoTitle,
     metaDescription:
       page.metaDescription !== undefined ? normalizeOptionalText(page.metaDescription) : current.metaDescription,
@@ -630,4 +710,19 @@ export async function saveManagedSitePage(page: ManagedSitePageInput) {
   };
 
   await upsertSitePage(next);
+}
+
+export async function getManagedSitePageFaqSection(
+  pageOrSlug: ManagedSitePage | string,
+): Promise<ManagedSitePageFaqSection | null> {
+  const page = typeof pageOrSlug === "string" ? await getManagedSitePage(pageOrSlug) : pageOrSlug;
+  if (page.faqItemIds.length === 0) return null;
+
+  const items = await getFaqContentItemsByIds(page.faqItemIds);
+  if (items.length === 0) return null;
+
+  return {
+    heading: page.faqHeading || "Common Questions",
+    items,
+  };
 }

@@ -78,6 +78,8 @@ export async function updateSitePageAction(formData: FormData) {
     heroSubheading: normalizeField(formData.get("heroSubheading")) || null,
     heroSupportingLine: normalizeField(formData.get("heroSupportingLine")) || null,
     bodyHtml,
+    faqHeading: normalizeField(formData.get("faqHeading")) || null,
+    faqItemIds: formData.getAll("faqItemIds").map((value) => normalizeField(value)).filter(Boolean),
     seoTitle: normalizeField(formData.get("seoTitle")) || null,
     metaDescription: normalizeField(formData.get("metaDescription")) || null,
     ogImageUrl: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,

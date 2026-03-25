@@ -3,7 +3,9 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { PageFaqSection } from "@/components/PageFaqSection";
+import { buildFaqSchemaItems } from "@/lib/faqs";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { Montserrat } from "next/font/google";
 import Link from "next/link";
@@ -46,6 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PrivacyPage() {
   const privacyPage = await getManagedSitePage("privacy");
+  const faqSection = await getManagedSitePageFaqSection(privacyPage);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const description =
@@ -61,6 +64,15 @@ export default async function PrivacyPage() {
             name: privacyPage.title || "Privacy Policy",
             description,
           }),
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/privacy")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -123,6 +135,7 @@ export default async function PrivacyPage() {
             "
             dangerouslySetInnerHTML={{ __html: privacyPage.bodyHtml || "<p>Add privacy policy content in admin.</p>" }}
           />
+          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
         </div>
       </div>
     </main>

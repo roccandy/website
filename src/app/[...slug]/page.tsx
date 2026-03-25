@@ -6,7 +6,9 @@ import { notFound } from "next/navigation";
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import {
   buildAbsoluteUrl,
   buildMetadata,
@@ -19,6 +21,7 @@ import {
   buildManagedSitePageHref,
   CATCH_ALL_SITE_PAGE_SLUGS,
   getManagedSitePage,
+  getManagedSitePageFaqSection,
 } from "@/lib/sitePages";
 import { buildDesignerPath } from "@/lib/designUrls";
 
@@ -183,6 +186,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
     page.metaDescription ||
     truncateText(stripHtml(page.bodyHtml), 160) ||
     page.title;
+  const faqSection = await getManagedSitePageFaqSection(page);
   const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
   const landingHeroSubheading = landingConfig
     ? page.heroSubheading || landingConfig.intro
@@ -204,6 +208,15 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
             name: page.title,
             description: pageDescription,
           }),
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl(pageHref)}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -358,6 +371,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
             />
           )}
+          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
         </div>
       </div>
     </main>

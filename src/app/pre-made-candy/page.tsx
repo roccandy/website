@@ -2,9 +2,11 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
+import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import Image from "next/image";
 import { getPremadeCandies } from "@/lib/data";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import {
   buildPremadeImageUrl,
   buildPremadeItemPath,
@@ -15,7 +17,7 @@ import {
   resolvePremadePrice,
 } from "@/lib/premadeCatalog";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -52,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PremadePage() {
   const page = await getManagedSitePage("pre-made-candy");
+  const faqSection = await getManagedSitePageFaqSection(page);
   const candies = await getPremadeCandies();
   const visible = candies.filter((item) => item.is_active);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
@@ -86,6 +89,15 @@ export default async function PremadePage() {
               itemListElement: itemList,
             },
           },
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/pre-made-candy")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -225,6 +237,8 @@ export default async function PremadePage() {
               })}
             </section>
           )}
+
+          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
         </div>
       </div>
     </main>

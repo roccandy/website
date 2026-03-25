@@ -3,8 +3,10 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
 import { JsonLd } from "@/components/JsonLd";
+import { PageFaqSection } from "@/components/PageFaqSection";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -47,6 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AboutPage() {
   const aboutPage = await getManagedSitePage("about");
+  const faqSection = await getManagedSitePageFaqSection(aboutPage);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const description =
@@ -63,6 +66,15 @@ export default async function AboutPage() {
             name: aboutPage.title || "About Roc Candy",
             description,
           }),
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/about")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -128,6 +140,7 @@ export default async function AboutPage() {
               "
               dangerouslySetInnerHTML={{ __html: aboutPage.bodyHtml }}
             />
+            {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
           </div>
         </div>
       </div>

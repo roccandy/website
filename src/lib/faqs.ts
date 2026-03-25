@@ -187,6 +187,28 @@ export async function getFaqContentItems(): Promise<FaqContent[]> {
   return items.map(({ question, answerHtml }) => ({ question, answerHtml }));
 }
 
+export async function getFaqContentItemsByIds(ids: string[]): Promise<FaqContent[]> {
+  const normalizedIds = ids.map((id) => normalizeText(id)).filter(Boolean);
+  if (normalizedIds.length === 0) return [];
+
+  const idSet = new Set(normalizedIds);
+  const items = await getManagedFaqItems();
+  return items
+    .filter((item) => idSet.has(item.id))
+    .map(({ question, answerHtml }) => ({ question, answerHtml }));
+}
+
+export function buildFaqSchemaItems(items: FaqContent[]) {
+  return items.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answerHtml,
+    },
+  }));
+}
+
 export async function saveManagedFaqItems(items: ManagedFaqItem[]) {
   const normalized = normalizeFaqItems(items);
   const client = supabaseServerClient;

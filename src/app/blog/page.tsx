@@ -2,8 +2,10 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
+import { PageFaqSection } from "@/components/PageFaqSection";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -47,6 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function BlogPage() {
   const blogPage = await getManagedSitePage("blog");
+  const faqSection = await getManagedSitePageFaqSection(blogPage);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const description =
@@ -63,6 +66,15 @@ export default async function BlogPage() {
             name: blogPage.title || "Roc Candy Blog",
             description,
           }),
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/blog")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -140,6 +152,7 @@ export default async function BlogPage() {
             "
             dangerouslySetInnerHTML={{ __html: blogPage.bodyHtml }}
           />
+          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
         </div>
       </div>
     </main>

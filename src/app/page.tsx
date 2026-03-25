@@ -5,12 +5,14 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
+import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildDesignerPath } from "@/lib/designUrls";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import type { Metadata } from "next";
 
 const LEGACY_HOME_META_DESCRIPTION =
@@ -71,6 +73,7 @@ const CANDY_OPTIONS = [
 
 export default async function Home() {
   const homePage = await getManagedSitePage("home");
+  const faqSection = await getManagedSitePageFaqSection(homePage);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const homeDescription = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
@@ -83,6 +86,15 @@ export default async function Home() {
             name: homePage.title || "Personalised Rock Candy Australia",
             description: homeDescription,
           }),
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -283,6 +295,14 @@ export default async function Home() {
               </div>
             </div>
           </section>
+
+          {faqSection ? (
+            <PageFaqSection
+              heading={faqSection.heading}
+              items={faqSection.items}
+              className="mx-auto max-w-4xl"
+            />
+          ) : null}
 
           </div>
         </div>

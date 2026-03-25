@@ -15,11 +15,13 @@ import {
 import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
+import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildDesignerPath, getDesignerCanonicalTarget, isLegacyDesignerQuery, resolveDesignerState } from "@/lib/designUrls";
-import { getManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -194,6 +196,8 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   }
 
   const designPage = await getManagedSitePage("design");
+  const initialOrderType = designerState?.orderType;
+  const faqSection = !initialOrderType ? await getManagedSitePageFaqSection(designPage) : null;
   const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
@@ -209,7 +213,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const minBasePrices = buildMinBasePrices(categories, tiers);
   const activeFlavors = flavors.filter((flavor) => flavor.is_active !== false);
-  const initialOrderType = designerState?.orderType;
   const seoVariant =
     initialOrderType && initialOrderType in DESIGN_VARIANTS
       ? DESIGN_VARIANTS[initialOrderType]
@@ -241,6 +244,15 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
             },
             url: buildAbsoluteUrl(seoVariant.path),
           },
+          ...(faqSection
+            ? [
+                {
+                  "@type": "FAQPage",
+                  "@id": `${buildAbsoluteUrl("/design")}#faq`,
+                  mainEntity: buildFaqSchemaItems(faqSection.items),
+                },
+              ]
+            : []),
         ])}
       />
       <div className="relative">
@@ -320,6 +332,11 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
               initialOrderType={initialOrderType}
               titleHeadingLevel={initialOrderType ? "h1" : "h2"}
             />
+            {faqSection ? (
+              <div className="mx-auto mt-10 max-w-4xl">
+                <PageFaqSection heading={faqSection.heading} items={faqSection.items} />
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

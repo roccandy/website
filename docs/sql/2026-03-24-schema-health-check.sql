@@ -194,6 +194,22 @@ with checks as (
     )
 
   union all
+  select 'site_pages.faq_heading',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'site_pages' and column_name = 'faq_heading'
+    )
+
+  union all
+  select 'site_pages.faq_item_ids',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'site_pages' and column_name = 'faq_item_ids'
+    )
+
+  union all
   select 'policy.site_pages_select_public',
     exists (
       select 1
