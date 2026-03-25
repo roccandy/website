@@ -21,9 +21,7 @@ import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePage
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getManagedSitePage("pre-made-candy");

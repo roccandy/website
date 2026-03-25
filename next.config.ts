@@ -19,7 +19,10 @@ const supabaseRemotePattern = (() => {
 const nextConfig: NextConfig = {
   reactCompiler: true,
   poweredByHeader: false,
+  compress: true,
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: supabaseRemotePattern ? [supabaseRemotePattern] : [],
   },
   experimental: {
@@ -62,6 +65,10 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/labels/:path*",
+        headers: staticAssetHeaders,
+      },
+      {
+        source: "/favicon.ico",
         headers: staticAssetHeaders,
       },
     ];

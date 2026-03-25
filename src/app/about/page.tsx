@@ -9,11 +9,10 @@ import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, 
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = 300;
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -83,7 +82,14 @@ export default async function AboutPage() {
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                />
               </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">

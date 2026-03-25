@@ -28,9 +28,7 @@ function resolveHomeDescription(metaDescription: string | null, bodyHtml: string
   return truncateText(stripHtml(bodyHtml), 155) || DEFAULT_HOME_META_DESCRIPTION;
 }
 
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const homePage = await getManagedSitePage("home");

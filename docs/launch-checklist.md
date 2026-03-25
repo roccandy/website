@@ -25,6 +25,8 @@ These items are already implemented in code:
 - [x] Added `/llms.txt` for AI/GEO crawlers.
 - [x] `vercel.app` hosts now send `X-Robots-Tag: noindex, nofollow, noarchive`.
 - [x] Public canonical/sitemap base URL no longer falls back to ad-hoc `VERCEL_URL` preview hosts.
+- [x] Public marketing/product pages now use ISR-style caching instead of forced `no-store` rendering.
+- [x] Static public assets have long-lived cache headers, and Next image delivery is configured for modern formats plus a higher cache TTL.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.
 - [x] SEO role with read-only access outside SEO-editable sections.
@@ -182,6 +184,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Confirm no canonical tags point at ad-hoc Vercel preview hosts.
 - [ ] Confirm Open Graph / share metadata renders correctly.
 - [ ] Confirm structured data is present on key pages.
+- [x] Public pages now revalidate on a short cache window rather than bypassing caching entirely.
 - [ ] Confirm the temporary domain is not the domain you will submit to Google systems as the real site.
 - [x] Publish `/llms.txt` for AI/GEO crawler guidance.
 

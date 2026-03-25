@@ -43,7 +43,7 @@ How to use it:
 | Image optimisation | Partially implemented | Many images are handled well, but not every asset has been fully audited. | Pending | Continue compressing oversized assets and checking performance. |
 | Descriptive file names | Partially implemented | Some assets are good; this has not been fully audited sitewide. | Pending | Review key landing/product images. |
 | Alt text includes meaningful product description / keywords naturally | Partially implemented | Some alt text is fine; no full audit has been completed. | Pending | Review important landing/product images manually. |
-| Page speed / caching / minification / CDN | Partially implemented | Next.js + Vercel gives a strong baseline. | Pending | Validate with live speed/CWV testing and tune where needed. |
+| Page speed / caching / minification / CDN | Partially implemented | Next.js + Vercel gives a strong baseline, public pages now use ISR-style caching instead of forced `no-store`, static assets have long-lived cache headers, and Next image delivery is configured for AVIF/WebP plus a longer cache TTL. | Pending | Validate with live speed/CWV testing and tune where needed. |
 | Core Web Vitals targets | Partially implemented | No confirmed live CWV pass yet. | Pending | Test on the live domain after cutover. |
 | Mobile first / mobile-friendly | Partially implemented | The site has had clear mobile work, but still needs formal QA. | Pending | Run device QA and Google mobile testing. |
 | Custom 404 page | Implemented | A proper custom 404 page exists with useful links back into the site. | Pending | Launch QA only. |

@@ -115,9 +115,7 @@ function buildGalleryRows(images: string[]) {
   return [firstRow, secondRow];
 }
 
-export const revalidate = 0;
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = 300;
 
 type ManagedPageProps = {
   params:

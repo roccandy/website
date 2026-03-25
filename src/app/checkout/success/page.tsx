@@ -2,6 +2,7 @@ import HeaderNav from "@/components/HeaderNav";
 import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { CheckoutSuccessClient } from "./CheckoutSuccessClient";
 
@@ -22,7 +23,14 @@ export default function CheckoutSuccessPage() {
           <div className="mx-auto w-full max-w-6xl px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="shrink-0">
-                <img src="/branding/logo-gold.svg" alt="Roc Candy" className="h-20 md:h-24" data-header-logo />
+                <Image
+                  src="/branding/logo-gold.svg"
+                  alt="Roc Candy"
+                  width={240}
+                  height={96}
+                  className="h-20 w-auto md:h-24"
+                  data-header-logo
+                />
               </Link>
               <HeaderNav />
               <div className="flex shrink-0 items-center gap-2">
