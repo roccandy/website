@@ -95,6 +95,7 @@ If you want the shortest realistic list between now and launch, it is:
 
 - [ ] Review and complete the editable site pages in `/admin/settings/pages`.
 - [ ] Fill in homepage title, visible intro content, SEO title, meta description, and share image.
+- [ ] Shorten the homepage meta description to roughly 150-155 characters so it does not truncate in Google SERPs.
 - [ ] Fill in About page content and metadata.
 - [ ] Fill in FAQ page intro and metadata.
 - [ ] Fill in Design page intro and metadata.
@@ -161,10 +162,13 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Confirm `/robots.txt` loads on staging.
 - [ ] Confirm sitemap includes homepage, core pages, landing pages, and active pre-made products.
 - [ ] Confirm admin, checkout, docs, and non-index pages are excluded or `noindex`.
+- [ ] Confirm staging / preview deployments are not indexable by search engines.
 - [ ] Confirm canonical URLs are correct.
+- [ ] Confirm no canonical tags point at ad-hoc Vercel preview hosts.
 - [ ] Confirm Open Graph / share metadata renders correctly.
 - [ ] Confirm structured data is present on key pages.
 - [ ] Confirm the temporary domain is not the domain you will submit to Google systems as the real site.
+- [ ] Decide whether to publish `/llms.txt` for AI/GEO crawler guidance. This is optional and not a launch blocker.
 
 ## Phase 7: Redirect Mapping
 
