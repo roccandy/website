@@ -70,6 +70,8 @@ export const CATCH_ALL_SITE_PAGE_SLUGS = [
   "design/branded-logo-candy",
 ] as const;
 
+type ManagedSeoField = "seoTitle" | "metaDescription" | "ogImageUrl" | "canonicalUrl";
+
 const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   home: {
     slug: "home",
@@ -340,6 +342,14 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   },
 };
 
+const LEGACY_SITE_PAGE_DEFAULTS: Partial<Record<string, Partial<Record<ManagedSeoField, readonly string[]>>>> = {
+  home: {
+    metaDescription: [
+      "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
+    ],
+  },
+};
+
 function normalizeText(value: string | null | undefined) {
   return (value ?? "").replace(/\r\n/g, "\n").trim();
 }
@@ -380,6 +390,45 @@ function normalizeRow(row: SitePageRow): ManagedSitePage {
     canonicalUrl: normalizeOptionalText(row.canonical_url),
     galleryImageUrls: normalizeGalleryImageUrls(row.gallery_image_urls),
   };
+}
+
+function resolveSeoFieldValue(
+  slug: string,
+  field: ManagedSeoField,
+  value: string | null,
+  fallback: string | null,
+) {
+  if (!value) return fallback;
+  const legacyValues = LEGACY_SITE_PAGE_DEFAULTS[slug]?.[field] ?? [];
+  return legacyValues.includes(value) ? fallback : value;
+}
+
+function hydrateManagedSitePage(existing: ManagedSitePage, fallback?: ManagedSitePage | null): ManagedSitePage {
+  if (!fallback) return existing;
+
+  return {
+    ...existing,
+    seoTitle: resolveSeoFieldValue(existing.slug, "seoTitle", existing.seoTitle, fallback.seoTitle),
+    metaDescription: resolveSeoFieldValue(existing.slug, "metaDescription", existing.metaDescription, fallback.metaDescription),
+    ogImageUrl: resolveSeoFieldValue(existing.slug, "ogImageUrl", existing.ogImageUrl, fallback.ogImageUrl),
+    canonicalUrl: resolveSeoFieldValue(existing.slug, "canonicalUrl", existing.canonicalUrl, fallback.canonicalUrl),
+  };
+}
+
+function areManagedSitePagesEqual(left: ManagedSitePage, right: ManagedSitePage) {
+  return (
+    left.slug === right.slug &&
+    left.title === right.title &&
+    left.heroSubheading === right.heroSubheading &&
+    left.heroSupportingLine === right.heroSupportingLine &&
+    left.bodyHtml === right.bodyHtml &&
+    left.seoTitle === right.seoTitle &&
+    left.metaDescription === right.metaDescription &&
+    left.ogImageUrl === right.ogImageUrl &&
+    left.canonicalUrl === right.canonicalUrl &&
+    left.galleryImageUrls.length === right.galleryImageUrls.length &&
+    left.galleryImageUrls.every((value, index) => value === right.galleryImageUrls[index])
+  );
 }
 
 async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
@@ -509,10 +558,6 @@ export function buildManagedSitePageHref(slug: string) {
 
 export async function getManagedSitePage(slug: string): Promise<ManagedSitePage> {
   const existing = await readSitePage(slug);
-  if (existing) {
-    return existing;
-  }
-
   const fallback = DEFAULT_SITE_PAGES[slug] ?? {
     slug,
     title: slug,
@@ -525,6 +570,14 @@ export async function getManagedSitePage(slug: string): Promise<ManagedSitePage>
     canonicalUrl: null,
     galleryImageUrls: [],
   };
+
+  if (existing) {
+    const hydrated = hydrateManagedSitePage(existing, fallback);
+    if (!areManagedSitePagesEqual(existing, hydrated)) {
+      await upsertSitePage(hydrated);
+    }
+    return hydrated;
+  }
 
   await upsertSitePage(fallback);
   return fallback;
