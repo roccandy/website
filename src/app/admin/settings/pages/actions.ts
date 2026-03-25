@@ -57,6 +57,16 @@ export async function updateSitePageAction(formData: FormData) {
   if (!slug) {
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Page slug is required."));
   }
+  const bodyHtml = normalizeField(formData.get("bodyHtml"));
+  if (/<h1\b/i.test(bodyHtml)) {
+    redirect(
+      appendAdminToast(
+        MANAGED_PAGES_ADMIN_PATH,
+        "error",
+        "Page body HTML cannot include H1 headings. Use H2 and H3 only.",
+      ),
+    );
+  }
 
   const ogImageFile = formData.get("ogImageFile");
   const uploadedOgImage =
@@ -67,7 +77,7 @@ export async function updateSitePageAction(formData: FormData) {
     title: normalizeField(formData.get("title")),
     heroSubheading: normalizeField(formData.get("heroSubheading")) || null,
     heroSupportingLine: normalizeField(formData.get("heroSupportingLine")) || null,
-    bodyHtml: normalizeField(formData.get("bodyHtml")),
+    bodyHtml,
     seoTitle: normalizeField(formData.get("seoTitle")) || null,
     metaDescription: normalizeField(formData.get("metaDescription")) || null,
     ogImageUrl: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,

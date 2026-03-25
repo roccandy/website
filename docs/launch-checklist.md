@@ -31,6 +31,7 @@ These items are already implemented in code:
 - [x] Individual SEO landing pages for wedding, custom text, branded, contact, shipping/returns.
 - [x] Public FAQ now uses `/faqs`, with `/faq` redirected for compatibility.
 - [x] A real `/blog` route now exists as an editable fixed site page.
+- [x] Core public pages now use a cleaner heading hierarchy, with the main designer duplicate-H1 issue removed.
 - [x] Individual pre-made product pages with Product schema.
 - [x] Per-product SEO fields for pre-made product pages in the SEO workspace.
 - [x] Ecommerce events for `view_item` on pre-made product pages, plus `add_to_cart`, `begin_checkout`, and `purchase`.

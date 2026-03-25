@@ -35,7 +35,7 @@ How to use it:
 | --- | --- | --- | --- | --- |
 | Clear homepage value proposition above the fold + CTA | Implemented | Homepage has headline, supporting copy, and strong design CTA. | Pending | Final wording polish only. |
 | USP on homepage | Partially implemented | Homepage has USP-style messaging and benefit labels. | Pending | Review whether the final wording is exactly what you want. |
-| H-tag structure | Partially implemented | Much better than before, but still needs rendered page-by-page review. | Pending | Verify one H1 per main page, then sensible H2/H3 hierarchy. |
+| H-tag structure | Implemented | Core public templates now use a single visible H1 per page more consistently, the main designer no longer duplicates H1s, and the SEO editor now steers content authors to H2/H3 only. | Pending | Do a final rendered QA pass on key pages after content is finalised. |
 | URLs short, lowercase, hyphenated, descriptive | Partially implemented | SEO landing pages are clean; the internal designer still uses query params. | Pending | Keep using landing pages as SEO/ad entry points rather than raw designer URLs. |
 | Static rather than dynamic URLs | Partially implemented | Landing pages are static, but design variants still rely on query params. | Pending | Acceptable if public marketing traffic lands on the static pages first. |
 | 300-500 words minimum on product/category pages | Partially implemented | Landing pages have meaningful body copy; not every page has been audited against this target. | Pending | Review and expand thin priority pages. |

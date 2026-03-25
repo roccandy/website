@@ -82,6 +82,7 @@ export function HtmlEditorField({
           </div>
         ) : null}
       </div>
+      <p className="text-xs text-zinc-500">Use `H2` and `H3` only here. The page `H1` is already provided by the site template.</p>
 
       {mode === "edit" ? (
         <textarea

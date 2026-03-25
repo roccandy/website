@@ -40,6 +40,7 @@ type Props = {
   labelRanges: LabelRange[];
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
+  titleHeadingLevel?: "h1" | "h2";
 };
 
 type Selection = { optionId: string; quantity: number };
@@ -403,6 +404,7 @@ export function QuoteBuilder({
   labelTypes,
   minBasePrices,
   initialOrderType,
+  titleHeadingLevel = "h1",
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -458,6 +460,7 @@ export function QuoteBuilder({
   const needsSubtypeSelection = showSubtype && !categoryId;
 
   const [selectionType, setSelectionType] = useState<string>("");
+  const TitleTag = titleHeadingLevel;
   const [selectionSize, setSelectionSize] = useState<string>("");
   const [selectionQtyInput, setSelectionQtyInput] = useState("");
   const [jarLidColor, setJarLidColor] = useState("");
@@ -1446,7 +1449,9 @@ export function QuoteBuilder({
   return (
     <div className="relative space-y-6">
       <section className="pt-10 text-center lg:mx-auto lg:max-w-5xl">
-        <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{mainTitle}</h1>
+        <TitleTag className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">
+          {mainTitle}
+        </TitleTag>
         <p className={`${montserratLight.className} mt-3 text-[14px] font-[200] tracking-[0.03em] text-zinc-600`}>
           <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
           <span className="sm:hidden">
@@ -1586,7 +1591,7 @@ export function QuoteBuilder({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold normal-case text-zinc-900">Packaging</h3>
+                    <h2 className="text-lg font-semibold normal-case text-zinc-900">Packaging</h2>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1746,7 +1751,7 @@ export function QuoteBuilder({
             </div>
 
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-              <h3 className="text-lg font-semibold normal-case text-zinc-900">Labels (optional)</h3>
+              <h2 className="text-lg font-semibold normal-case text-zinc-900">Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
@@ -1974,7 +1979,7 @@ export function QuoteBuilder({
             className="mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible"
           >
           <div>
-            <h3 className="text-lg font-semibold normal-case text-zinc-900">Design</h3>
+            <h2 className="text-lg font-semibold normal-case text-zinc-900">Design</h2>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
@@ -2253,7 +2258,7 @@ export function QuoteBuilder({
           </div>
         </div>
           <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-            <h3 className="text-lg font-semibold normal-case text-zinc-900">Flavour</h3>
+            <h2 className="text-lg font-semibold normal-case text-zinc-900">Flavour</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {flavors.map((f) => {
                 const isActive = flavor === f.name;
@@ -2288,7 +2293,7 @@ export function QuoteBuilder({
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900">Ready to continue?</h3>
+            <h2 className="text-lg font-semibold text-zinc-900">Ready to continue?</h2>
             <p className="mt-2 text-sm text-zinc-600">
               You can add delivery, payment, and contact details in the cart.
             </p>
@@ -2414,7 +2419,7 @@ export function QuoteBuilder({
           >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-zinc-900">Set a brand color</h3>
+                    <h2 className="text-lg font-semibold text-zinc-900">Set a brand color</h2>
                   </div>
                   <button
                     type="button"

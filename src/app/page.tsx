@@ -201,9 +201,9 @@ export default async function Home() {
             </div>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
-              <p className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+              <h2 className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
                 Custom Rock Candy
-              </p>
+              </h2>
               <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you&apos;re planning a
                 wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
@@ -230,9 +230,9 @@ export default async function Home() {
             </article>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
-              <p className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+              <h2 className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
                 A little about us
-              </p>
+              </h2>
               <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 We are very happy Australian artisan confectioners specialising in personalised and custom handmade
                 rock candies for all types of occasions. Established in 1999, our rock candy treats are vegan,
