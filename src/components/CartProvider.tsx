@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "roccandy-cart-v1";
 
@@ -63,7 +63,9 @@ type CartContextValue = {
   clearCart: () => void;
 };
 
-const CartContext = createContext<CartContextValue | null>(null);
+type CartListener = () => void;
+
+const listeners = new Set<CartListener>();
 
 function createCartId(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -84,93 +86,134 @@ function readStoredCart(): CartItem[] {
   }
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => readStoredCart());
+let itemsState: CartItem[] = typeof window === "undefined" ? [] : readStoredCart();
+let storageListenerAttached = false;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
-
-  const addPremadeItem = useCallback(
-    (item: Omit<PremadeCartItem, "id" | "type" | "quantity"> & { quantity?: number }) => {
-      setItems((prev) => {
-        const existing = prev.find(
-          (entry) => entry.type === "premade" && entry.premadeId === item.premadeId
-        ) as PremadeCartItem | undefined;
-        if (existing) {
-          return prev.map((entry) =>
-            entry.id === existing.id
-              ? { ...existing, quantity: existing.quantity + (item.quantity ?? 1) }
-              : entry
-          );
-        }
-        const next: PremadeCartItem = {
-          id: createCartId("premade"),
-          type: "premade",
-          premadeId: item.premadeId,
-          name: item.name,
-          flavor: item.flavor,
-          price: item.price,
-          weight_g: item.weight_g,
-          imageUrl: item.imageUrl,
-          quantity: item.quantity ?? 1,
-        };
-        return [...prev, next];
-      });
-    },
-    []
-  );
-
-  const addCustomItem = useCallback((item: Omit<CustomCartItem, "id" | "type">) => {
-    setItems((prev) => [
-      ...prev,
-      {
-        id: item.orderId || createCartId("custom"),
-        type: "custom",
-        ...item,
-      },
-    ]);
-  }, []);
-
-  const updateCustomItem = useCallback((id: string, updates: Partial<Omit<CustomCartItem, "id" | "type">>) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id || item.type !== "custom") return item;
-        return {
-          ...item,
-          ...updates,
-        };
-      })
-    );
-  }, []);
-
-  const updateQuantity = useCallback((id: string, quantity: number) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item))
-    );
-  }, []);
-
-  const removeItem = useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const clearCart = useCallback(() => {
-    setItems([]);
-  }, []);
-
-  const value = useMemo<CartContextValue>(
-    () => ({ items, addPremadeItem, addCustomItem, updateCustomItem, updateQuantity, removeItem, clearCart }),
-    [items, addPremadeItem, addCustomItem, updateCustomItem, updateQuantity, removeItem, clearCart]
-  );
-
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+function notify() {
+  listeners.forEach((listener) => listener());
 }
 
-export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error("useCart must be used within CartProvider.");
-  }
-  return ctx;
+function persist(items: CartItem[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function setItems(next: CartItem[]) {
+  itemsState = next;
+  persist(next);
+  notify();
+}
+
+function updateItems(updater: (items: CartItem[]) => CartItem[]) {
+  setItems(updater(itemsState));
+}
+
+function attachStorageListener() {
+  if (storageListenerAttached || typeof window === "undefined") return;
+  storageListenerAttached = true;
+  window.addEventListener("storage", (event) => {
+    if (event.key !== STORAGE_KEY) return;
+    itemsState = readStoredCart();
+    notify();
+  });
+}
+
+function subscribe(listener: CartListener) {
+  attachStorageListener();
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function getSnapshot() {
+  return itemsState;
+}
+
+function getServerSnapshot() {
+  return [] as CartItem[];
+}
+
+const addPremadeItem: CartContextValue["addPremadeItem"] = (item) => {
+  updateItems((prev) => {
+    const existing = prev.find(
+      (entry) => entry.type === "premade" && entry.premadeId === item.premadeId
+    ) as PremadeCartItem | undefined;
+    if (existing) {
+      return prev.map((entry) =>
+        entry.id === existing.id
+          ? { ...existing, quantity: existing.quantity + (item.quantity ?? 1) }
+          : entry
+      );
+    }
+
+    const next: PremadeCartItem = {
+      id: createCartId("premade"),
+      type: "premade",
+      premadeId: item.premadeId,
+      name: item.name,
+      flavor: item.flavor,
+      price: item.price,
+      weight_g: item.weight_g,
+      imageUrl: item.imageUrl,
+      quantity: item.quantity ?? 1,
+    };
+
+    return [...prev, next];
+  });
+};
+
+const addCustomItem: CartContextValue["addCustomItem"] = (item) => {
+  updateItems((prev) => [
+    ...prev,
+    {
+      id: item.orderId || createCartId("custom"),
+      type: "custom",
+      ...item,
+    },
+  ]);
+};
+
+const updateCustomItem: CartContextValue["updateCustomItem"] = (id, updates) => {
+  updateItems((prev) =>
+    prev.map((item) => {
+      if (item.id !== id || item.type !== "custom") return item;
+      return {
+        ...item,
+        ...updates,
+      };
+    })
+  );
+};
+
+const updateQuantity: CartContextValue["updateQuantity"] = (id, quantity) => {
+  updateItems((prev) =>
+    prev.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item))
+  );
+};
+
+const removeItem: CartContextValue["removeItem"] = (id) => {
+  updateItems((prev) => prev.filter((item) => item.id !== id));
+};
+
+const clearCart: CartContextValue["clearCart"] = () => {
+  setItems([]);
+};
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+export function useCart(): CartContextValue {
+  const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  return {
+    items,
+    addPremadeItem,
+    addCustomItem,
+    updateCustomItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
+  };
 }

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
-import { CartProvider } from "@/components/CartProvider";
 import { JsonLd } from "@/components/JsonLd";
 import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 import SiteFooter from "@/components/SiteFooter";
@@ -86,12 +85,10 @@ export default function RootLayout({
           ])}
         />
         <MobileHeaderShrinkOnScroll />
-        <CartProvider>
-          <div className="flex min-h-screen flex-col">
-            <div className="flex-1">{children}</div>
-            <SiteFooter />
-          </div>
-        </CartProvider>
+        <div className="flex min-h-screen flex-col">
+          <div className="flex-1">{children}</div>
+          <SiteFooter />
+        </div>
       </body>
     </html>
   );

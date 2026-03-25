@@ -27,6 +27,7 @@ These items are already implemented in code:
 - [x] Public canonical/sitemap base URL no longer falls back to ad-hoc `VERCEL_URL` preview hosts.
 - [x] Public marketing/product pages now use ISR-style caching instead of forced `no-store` rendering.
 - [x] Static public assets have long-lived cache headers, and Next image delivery is configured for modern formats plus a higher cache TTL.
+- [x] Cart state no longer wraps the entire app in the root layout, and the cart drawer now loads as a deferred client chunk instead of inflating the main public render path.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.
 - [x] SEO role with read-only access outside SEO-editable sections.
@@ -179,6 +180,8 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Confirm `/robots.txt` loads on staging.
 - [x] Run lab Lighthouse checks on the staging/live deployment and record a baseline.
   Current baseline on `roccandy.vercel.app`: home desktop `90`, home mobile `91`, wedding landing desktop `93`.
+- [x] Run a local production-build performance check after the deeper bundle cleanup.
+  Current local production baseline on `127.0.0.1`: home desktop `99`, home mobile `92`.
 - [ ] Confirm sitemap includes homepage, core pages, landing pages, and active pre-made products.
 - [ ] Confirm admin, checkout, docs, and non-index pages are excluded or `noindex`.
 - [ ] Confirm staging / preview deployments are not indexable by search engines.
