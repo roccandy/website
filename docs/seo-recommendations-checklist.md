@@ -1,0 +1,70 @@
+# SEO Recommendations Checklist
+
+This document turns Damien's SEO email into a working checklist.
+
+How to use it:
+
+- `Repo status` = what is true in the current codebase/staging setup.
+- `Project decision` = what you decide to do next.
+- Use `Pending`, `Done`, or `Deferred`.
+- If you defer something, write why in `Reason / next step`.
+
+## Sitemap / Page Structure
+
+| Recommendation | Repo status | What exists now | Project decision | Reason / next step |
+| --- | --- | --- | --- | --- |
+| Staging site available | Implemented | `https://roccandy.vercel.app` exists and is reviewable. | Pending | |
+| Homepage `/` | Implemented | Exists with SEO metadata, schema, CTA, and editable SEO/content fields. | Pending | Finalise homepage copy, SEO title, meta description, and share image in admin. |
+| Design Your Candy `/design/` | Implemented | Exists and is editable from the SEO panel. | Pending | Finalise intro/meta copy and verify live canonical output on the production domain. |
+| Wedding Candy `/design/wedding-candy/` | Implemented | Exists as a proper landing page and links into the designer. | Pending | Final content/SEO review and launch QA. |
+| Branded / Logo Candy `/design/branded-logo-candy/` | Implemented | Exists as a proper landing page. | Pending | Final content/SEO review and launch QA. |
+| Custom Text Candy `/design/custom-text-candy/` | Implemented | Exists as a proper landing page. | Pending | Final content/SEO review and launch QA. |
+| Occasions hub `/occasions/` | Not implemented | No occasions hub page exists. | Pending | Create only if you want a real content program for occasions. |
+| Occasion subpages like `/occasions/baby-shower/`, corporate, birthday, anniversary, Christmas, Halloween | Not implemented | These pages do not exist. | Pending | Only build if you can write useful unique copy; avoid thin pages. |
+| Pre Made Candy `/pre-made-candy/` | Implemented | Exists and is SEO-editable at collection-page level. | Pending | Final collection-page content/meta review. |
+| Each pre-made product has its own page | Implemented | Individual product pages exist. | Pending | Fill in per-product SEO fields for priority products. |
+| About Us `/about/` | Implemented | Exists and is editable from the SEO panel. | Pending | Final content/metadata review. |
+| FAQs `/faqs/` | Partially implemented | FAQ page exists at `/faq`, not `/faqs`. | Pending | Decide whether to keep `/faq` and redirect `/faqs`, or rename route. |
+| Blog `/blog/` | Not implemented | No real blog route or CMS exists. | Pending | Build only if blog publishing is actually planned. |
+| Destination pages `/sydney/`, `/melbourne/`, `/perth/` etc | Not implemented | These pages do not exist. | Pending | Only build if there is a real local-content plan. |
+| Contact Us `/contact/` | Implemented | Exists and is editable from the SEO panel. | Pending | Final content/metadata review. |
+
+## SEO & UX
+
+| Recommendation | Repo status | What exists now | Project decision | Reason / next step |
+| --- | --- | --- | --- | --- |
+| Clear homepage value proposition above the fold + CTA | Implemented | Homepage has headline, supporting copy, and strong design CTA. | Pending | Final wording polish only. |
+| USP on homepage | Partially implemented | Homepage has USP-style messaging and benefit labels. | Pending | Review whether the final wording is exactly what you want. |
+| H-tag structure | Partially implemented | Much better than before, but still needs rendered page-by-page review. | Pending | Verify one H1 per main page, then sensible H2/H3 hierarchy. |
+| URLs short, lowercase, hyphenated, descriptive | Partially implemented | SEO landing pages are clean; the internal designer still uses query params. | Pending | Keep using landing pages as SEO/ad entry points rather than raw designer URLs. |
+| Static rather than dynamic URLs | Partially implemented | Landing pages are static, but design variants still rely on query params. | Pending | Acceptable if public marketing traffic lands on the static pages first. |
+| 300-500 words minimum on product/category pages | Partially implemented | Landing pages have meaningful body copy; not every page has been audited against this target. | Pending | Review and expand thin priority pages. |
+| FAQs at the bottom of category/product pages | Partially implemented | FAQ content exists sitewide; not every landing/product page has dedicated FAQ expansion. | Pending | Add FAQs to the most important landing/category pages if needed. |
+| Image optimisation | Partially implemented | Many images are handled well, but not every asset has been fully audited. | Pending | Continue compressing oversized assets and checking performance. |
+| Descriptive file names | Partially implemented | Some assets are good; this has not been fully audited sitewide. | Pending | Review key landing/product images. |
+| Alt text includes meaningful product description / keywords naturally | Partially implemented | Some alt text is fine; no full audit has been completed. | Pending | Review important landing/product images manually. |
+| Page speed / caching / minification / CDN | Partially implemented | Next.js + Vercel gives a strong baseline. | Pending | Validate with live speed/CWV testing and tune where needed. |
+| Core Web Vitals targets | Partially implemented | No confirmed live CWV pass yet. | Pending | Test on the live domain after cutover. |
+| Mobile first / mobile-friendly | Partially implemented | The site has had clear mobile work, but still needs formal QA. | Pending | Run device QA and Google mobile testing. |
+| Custom 404 page | Implemented | A proper custom 404 page exists with useful links back into the site. | Pending | Launch QA only. |
+
+## Additional UX / Marketing Recommendations
+
+| Recommendation | Repo status | What exists now | Project decision | Reason / next step |
+| --- | --- | --- | --- | --- |
+| Google Reviews floating widget sitewide (Trustindex) | Not implemented | No Trustindex / floating reviews widget is present. | Pending | Add only if you want the paid widget and accept the UX impact. |
+| Social links in the footer | Implemented | Footer includes Facebook, Instagram, phone, and email links. | Pending | No major work needed beyond launch QA. |
+| Strip banner at the top like `Free Delivery Australia-Wide` | Partially implemented | There is a top links bar, but not really the promo banner he described. | Pending | Decide whether to replace/augment the current top bar with a real promo strip. |
+| Add USPs across all top-level pages | Partially implemented | Some USP messaging exists, but not consistently across all top-level pages. | Pending | Add a consistent USP block or repeated proof points to the main landing pages. |
+
+## Notes
+
+- The current app is much closer to Damien's requested structure than the original version he reviewed.
+- The biggest remaining gaps are not core technical SEO anymore; they are missing content sections and launch validation.
+- The most obvious still-missing items from his email are:
+  - real blog
+  - occasions pages
+  - location pages
+  - reviews widget
+  - full USP rollout across top-level pages
+  - live-domain validation for speed, indexing, ads, and tracking

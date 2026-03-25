@@ -7,6 +7,7 @@ Use this file as the primary working document.
 Related docs:
 - [domain-switch-checklist.md](/Users/joeconlin/dev/roccandy/docs/domain-switch-checklist.md)
 - [seo-setup.md](/Users/joeconlin/dev/roccandy/docs/seo-setup.md)
+- [seo-recommendations-checklist.md](/Users/joeconlin/dev/roccandy/docs/seo-recommendations-checklist.md)
 - [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql)
 - [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql)
 - [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql)
