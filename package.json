@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:apply-sql": "node scripts/run-supabase-sql.mjs",
     "import-packaging-images": "node scripts/import-packaging-images.mjs",
     "normalize-jar-sizes": "node scripts/normalize-jar-sizes.mjs",
     "optimize-uploaded-images": "node scripts/optimize-uploaded-images.mjs"
@@ -38,6 +39,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.5",
+    "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

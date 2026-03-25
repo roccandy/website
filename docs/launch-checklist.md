@@ -97,7 +97,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [x] Confirm the live project includes the outcomes from [2026-03-10-site-pages-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-pages-seo-fields.sql).
 - [x] Confirm the live project includes the outcomes from [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql).
 - [x] Confirm the live project includes the outcomes from [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql).
-- [ ] Apply [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql) to add page-level FAQ selection fields.
+- [x] Apply [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql) to add page-level FAQ selection fields.
 - [ ] Confirm the `SEO` role appears in the admin users screen.
 - [ ] Assign the SEO person the `SEO` role.
 - [ ] Confirm the SEO user can access `/admin/settings/pages`.
