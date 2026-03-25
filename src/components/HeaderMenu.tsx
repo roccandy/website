@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Icon from "@mdi/react";
-import { mdiCartOutline, mdiTrashCanOutline, mdiClose } from "@mdi/js";
 import { useCart } from "./CartProvider";
 
 function formatWeight(weight_g: number) {
@@ -91,7 +89,12 @@ export default function HeaderMenu() {
         onClick={openDrawer}
         className="inline-flex h-10 w-10 items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
       >
-        <Icon path={mdiCartOutline} size={1.6} aria-hidden="true" />
+        <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2ZM7.17 14h9.95c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 21.58 5H6.21l-.94-2H2v2h1.73l3.6 7.59-1.35 2.45A2 2 0 0 0 7.7 18H20v-2H7.7l1.1-2Z"
+          />
+        </svg>
         {hasItems ? (
           <span className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#ff6f95] px-1 text-[10px] font-semibold text-white">
             {itemCount}
@@ -123,7 +126,12 @@ export default function HeaderMenu() {
                       onClick={closeDrawer}
                       className="inline-flex h-7 w-7 items-center justify-center text-[#ff6f95] hover:text-[#ff4f80]"
                     >
-                      <Icon path={mdiClose} size={0.7} aria-hidden="true" />
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                        <path
+                          fill="currentColor"
+                          d="M18.3 5.71 12 12.01l-6.29-6.3-1.42 1.42 6.3 6.29-6.3 6.29 1.42 1.42 6.29-6.3 6.3 6.3 1.42-1.42-6.3-6.29 6.3-6.29-1.42-1.42Z"
+                        />
+                      </svg>
                     </button>
                   </div>
 
@@ -265,7 +273,12 @@ export default function HeaderMenu() {
                                   aria-label="Remove item"
                                   className="inline-flex h-7 w-7 items-center justify-center text-zinc-400 hover:text-zinc-600"
                                 >
-                                  <Icon path={mdiTrashCanOutline} size={0.7} aria-hidden="true" />
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                                    <path
+                                      fill="currentColor"
+                                      d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v8h-2V9Zm4 0h2v8h-2V9ZM7 9h2v8H7V9Zm-1 12a2 2 0 0 1-2-2V8h16v11a2 2 0 0 1-2 2H6Z"
+                                    />
+                                  </svg>
                                 </button>
                               </div>
                             </li>
