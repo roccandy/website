@@ -61,7 +61,8 @@ Set these in production if they are not already configured:
   - `/pre-made-candy`
   - `/pre-made-candy/[item]`
   - `/about`
-  - `/faq`
+  - `/faqs`
+  - `/blog`
 
 - `/quote` and `/premade` are redirect aliases and should not be indexed.
 

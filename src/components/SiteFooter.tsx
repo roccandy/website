@@ -15,8 +15,9 @@ const CATEGORY_LINKS: FooterLink[] = [
 ];
 
 const INFO_LINKS: FooterLink[] = [
-  { label: "FAQ", href: "/faq" },
+  { label: "FAQs", href: "/faqs" },
   { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog" },
   { label: "Contact", href: "/contact" },
 ];
 

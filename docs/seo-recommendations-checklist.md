@@ -24,8 +24,8 @@ How to use it:
 | Pre Made Candy `/pre-made-candy/` | Implemented | Exists and is SEO-editable at collection-page level. | Pending | Final collection-page content/meta review. |
 | Each pre-made product has its own page | Implemented | Individual product pages exist. | Pending | Fill in per-product SEO fields for priority products. |
 | About Us `/about/` | Implemented | Exists and is editable from the SEO panel. | Pending | Final content/metadata review. |
-| FAQs `/faqs/` | Partially implemented | FAQ page exists at `/faq`, not `/faqs`. | Pending | Decide whether to keep `/faq` and redirect `/faqs`, or rename route. |
-| Blog `/blog/` | Not implemented | No real blog route or CMS exists. | Pending | Build only if blog publishing is actually planned. |
+| FAQs `/faqs/` | Implemented | FAQ page now lives at `/faqs`, with `/faq` kept as a compatibility redirect. | Pending | Final content/metadata review and launch QA. |
+| Blog `/blog/` | Partially implemented | A real `/blog` route now exists and is editable from the SEO panel as a fixed site page. | Pending | Decide whether to keep it as a landing page or later add individual article publishing. |
 | Destination pages `/sydney/`, `/melbourne/`, `/perth/` etc | Not implemented | These pages do not exist. | Pending | Only build if there is a real local-content plan. |
 | Contact Us `/contact/` | Implemented | Exists and is editable from the SEO panel. | Pending | Final content/metadata review. |
 
@@ -62,7 +62,7 @@ How to use it:
 - The current app is much closer to Damien's requested structure than the original version he reviewed.
 - The biggest remaining gaps are not core technical SEO anymore; they are missing content sections and launch validation.
 - The most obvious still-missing items from his email are:
-  - real blog
+  - individual blog article publishing if you want the blog to become an active content channel
   - occasions pages
   - location pages
   - reviews widget

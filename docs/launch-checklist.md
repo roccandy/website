@@ -29,6 +29,8 @@ These items are already implemented in code:
 - [x] Redirect manager in the SEO workspace.
 - [x] SEO workspace simplified to direct image uploads on pages/products, without a separate media-library tab.
 - [x] Individual SEO landing pages for wedding, custom text, branded, contact, shipping/returns.
+- [x] Public FAQ now uses `/faqs`, with `/faq` redirected for compatibility.
+- [x] A real `/blog` route now exists as an editable fixed site page.
 - [x] Individual pre-made product pages with Product schema.
 - [x] Per-product SEO fields for pre-made product pages in the SEO workspace.
 - [x] Ecommerce events for `view_item` on pre-made product pages, plus `add_to_cart`, `begin_checkout`, and `purchase`.
@@ -103,6 +105,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Review the final homepage meta description in admin and keep it roughly 150-155 characters.
 - [ ] Fill in About page content and metadata.
 - [ ] Fill in FAQ page intro and metadata.
+- [ ] Fill in Blog page content and metadata.
 - [ ] Fill in Design page intro and metadata.
 - [ ] Fill in Pre-made Candy page intro and metadata.
 - [ ] Fill in Wedding landing page content and metadata.
@@ -113,7 +116,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Fill in Privacy page title/content/metadata.
 - [ ] Fill in Terms page title/metadata.
 - [ ] Fill in pre-made product SEO title / meta description / social image where needed.
-- [ ] Upload final social/share images to the SEO media library if needed.
+- [ ] Upload final social/share images directly within the relevant page/product SEO editors if needed.
 - [ ] Check all copy for phone number, email address, and business details accuracy.
 
 ## Phase 3: Production Environment Configuration

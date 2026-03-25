@@ -580,7 +580,7 @@ export default async function AdminManagedPagesPage() {
   const canWriteSeo = session.user.canWriteSeo;
 
   const mainPages = pages.filter((page) =>
-    ["home", "about", "faq", "design", "pre-made-candy"].includes(page.slug),
+    ["home", "about", "faq", "blog", "design", "pre-made-candy"].includes(page.slug),
   );
   const landingPages = pages.filter((page) =>
     ["design/wedding-candy", "design/custom-text-candy", "design/branded-logo-candy", "contact", "shipping-and-returns"].includes(page.slug),

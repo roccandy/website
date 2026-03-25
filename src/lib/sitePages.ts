@@ -51,6 +51,7 @@ export const EDITABLE_SITE_PAGE_SLUGS = [
   "home",
   "about",
   "faq",
+  "blog",
   "design",
   "design/wedding-candy",
   "design/custom-text-candy",
@@ -120,6 +121,20 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     metaDescription:
       "Answers to common questions about Roc Candy personalised rock candy, including ordering, delivery, ingredients, lead times, and custom designs.",
     ogImageUrl: null,
+    canonicalUrl: null,
+    galleryImageUrls: [],
+  },
+  blog: {
+    slug: "blog",
+    title: "Roc Candy Blog",
+    heroSubheading: null,
+    heroSupportingLine: null,
+    bodyHtml:
+      "<p>Stories, inspiration, product ideas, and behind-the-scenes updates from Roc Candy. Use this page as the blog landing page until individual articles are added.</p>",
+    seoTitle: "Roc Candy Blog | Personalised Rock Candy Ideas, Events & News",
+    metaDescription:
+      "Read Roc Candy blog posts for personalised rock candy ideas, event inspiration, branded candy tips, wedding styling, and product updates.",
+    ogImageUrl: "/landing/home-feature-poster.png",
     canonicalUrl: null,
     galleryImageUrls: [],
   },
@@ -553,7 +568,9 @@ async function upsertSitePage(page: ManagedSitePage) {
 }
 
 export function buildManagedSitePageHref(slug: string) {
-  return slug === "home" ? "/" : `/${slug.replace(/^\/+/, "")}`;
+  if (slug === "home") return "/";
+  if (slug === "faq") return "/faqs";
+  return `/${slug.replace(/^\/+/, "")}`;
 }
 
 export async function getManagedSitePage(slug: string): Promise<ManagedSitePage> {

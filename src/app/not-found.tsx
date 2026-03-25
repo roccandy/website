@@ -28,7 +28,7 @@ const QUICK_LINKS = [
   {
     title: "FAQs",
     description: "Find answers on delivery, production times and ordering.",
-    href: "/faq",
+    href: "/faqs",
   },
 ];
 
