@@ -177,6 +177,8 @@ If you want the shortest realistic list between now and launch, it is:
 
 - [ ] Confirm `/sitemap.xml` loads on staging.
 - [ ] Confirm `/robots.txt` loads on staging.
+- [x] Run lab Lighthouse checks on the staging/live deployment and record a baseline.
+  Current baseline on `roccandy.vercel.app`: home desktop `90`, home mobile `91`, wedding landing desktop `93`.
 - [ ] Confirm sitemap includes homepage, core pages, landing pages, and active pre-made products.
 - [ ] Confirm admin, checkout, docs, and non-index pages are excluded or `noindex`.
 - [ ] Confirm staging / preview deployments are not indexable by search engines.
@@ -187,6 +189,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [x] Public pages now revalidate on a short cache window rather than bypassing caching entirely.
 - [ ] Confirm the temporary domain is not the domain you will submit to Google systems as the real site.
 - [x] Publish `/llms.txt` for AI/GEO crawler guidance.
+- [ ] Re-run Lighthouse / CWV checks on the final production domain after cutover, because the real benchmark is `roccandy.com.au` with production CDN and CrUX behavior.
 
 ## Phase 7: Redirect Mapping
 
