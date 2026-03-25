@@ -9,6 +9,7 @@ Related docs:
 - [seo-setup.md](/Users/joeconlin/dev/roccandy/docs/seo-setup.md)
 - [seo-recommendations-checklist.md](/Users/joeconlin/dev/roccandy/docs/seo-recommendations-checklist.md)
 - [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql)
+- [2026-03-25-function-search-path-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-function-search-path-hardening.sql)
 - [2026-03-25-rls-audit.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-rls-audit.sql)
 - [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql)
 - [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql)
@@ -53,6 +54,7 @@ The current live Supabase project has been checked directly against the app.
 - [x] Core SEO/content tables exist: `site_pages`, `site_faqs`, `site_terms_items`, `site_redirects`, `admin_users`.
 - [x] Current SEO/product schema columns exist, including pre-made product SEO fields.
 - [x] `flavors`, `label_types`, and `payment_failures` now have the expected RLS/policies.
+- [x] Public helper functions `is_admin` and `set_admin_users_updated_at` now use an explicit `search_path` to satisfy Security Advisor hardening warnings.
 - [x] The schema health check currently returns all `OK` on the live project.
 - [x] Redundant duplicate policies on `orders` and `production_slots` have a cleanup script.
 - [ ] The database permission model still uses `is_admin(auth.uid())` for RLS.
@@ -97,6 +99,7 @@ If you want the shortest realistic list between now and launch, it is:
 
 - [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) against the live project and confirm it returns all `OK`.
 - [x] Add [2026-03-25-rls-audit.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-rls-audit.sql) for quickly separating real app RLS issues from Supabase internal-schema alerts.
+- [x] Apply [2026-03-25-function-search-path-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-function-search-path-hardening.sql) to address Security Advisor function warnings.
 - [x] Apply [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql) to the live project.
 - [x] Apply [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql) to remove redundant duplicate policies.
 - [x] Confirm the live project includes the outcomes from [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql).
