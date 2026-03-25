@@ -9,6 +9,7 @@ Related docs:
 - [seo-setup.md](/Users/joeconlin/dev/roccandy/docs/seo-setup.md)
 - [seo-recommendations-checklist.md](/Users/joeconlin/dev/roccandy/docs/seo-recommendations-checklist.md)
 - [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql)
+- [2026-03-25-rls-audit.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-rls-audit.sql)
 - [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql)
 - [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql)
 - [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql)
@@ -95,6 +96,7 @@ If you want the shortest realistic list between now and launch, it is:
 ## Phase 1: Database + Admin Setup
 
 - [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) against the live project and confirm it returns all `OK`.
+- [x] Add [2026-03-25-rls-audit.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-rls-audit.sql) for quickly separating real app RLS issues from Supabase internal-schema alerts.
 - [x] Apply [2026-03-24-rls-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-rls-hardening.sql) to the live project.
 - [x] Apply [2026-03-24-policy-cleanup.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-policy-cleanup.sql) to remove redundant duplicate policies.
 - [x] Confirm the live project includes the outcomes from [2026-03-10-admin-users-seo-role.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-admin-users-seo-role.sql).
