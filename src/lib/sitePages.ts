@@ -1,4 +1,5 @@
 import { supabaseServerClient } from "@/lib/supabase/server";
+import { buildDesignerPath } from "@/lib/designUrls";
 
 const SITE_PAGES_TABLE = "site_pages";
 
@@ -174,7 +175,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <p><strong>Can I order initials or both names?</strong><br />Yes. The wedding designer includes initials and both-names options so you can choose the format that suits your event.</p>
 <p><strong>Can the colours match my wedding palette?</strong><br />Yes. We aim to match your chosen colours as closely as possible for a cohesive finish.</p>
 <p><strong>Do you deliver across Australia?</strong><br />Yes. Roc Candy offers Australia-wide delivery, but custom orders should allow enough lead time for production and shipping.</p>
-<p><a href="/design?type=weddings&subtype=weddings-initials">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
+<p><a href="${buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" })}">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
     `,
     seoTitle: "Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy",
     metaDescription:
@@ -212,7 +213,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <p><strong>Can I create candy with a name or short message?</strong><br />Yes. Roc Candy offers custom text options for names, initials, and short words.</p>
 <p><strong>Can I choose colours and packaging too?</strong><br />Yes. You can select colours, packaging, and other presentation details within the designer.</p>
 <p><strong>Is this available Australia-wide?</strong><br />Yes. Roc Candy delivers across Australia, but lead times should be checked for custom orders.</p>
-<p><a href="/design?type=text&subtype=custom-1-6">Start a custom text design</a> or <a href="/contact">contact us</a> if you want help choosing the right format.</p>
+<p><a href="${buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" })}">Start a custom text design</a> or <a href="/contact">contact us</a> if you want help choosing the right format.</p>
     `,
     seoTitle: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
     metaDescription:
@@ -250,7 +251,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <p><strong>Is branded candy suitable for corporate events?</strong><br />Yes. It is commonly used for activations, conferences, launches, hospitality, and gifting.</p>
 <p><strong>Can you match brand colours?</strong><br />We aim to match brand colours as closely as possible and can advise on the best approach for production.</p>
 <p><strong>What if I need help before ordering?</strong><br />Use the contact page if you need advice on quantities, timing, or whether your branding concept is suitable.</p>
-<p><a href="/design?type=branded">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
+<p><a href="${buildDesignerPath({ orderType: "branded", categoryId: "branded" })}">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
     `,
     seoTitle: "Branded Logo Candy Australia | Custom Rock Candy for Events | Roc Candy",
     metaDescription:

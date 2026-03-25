@@ -7,6 +7,7 @@ import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { JsonLd } from "@/components/JsonLd";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { buildDesignerPath } from "@/lib/designUrls";
 import { DesignCtaModal } from "./DesignCtaModal";
 import { Montserrat } from "next/font/google";
 import { getManagedSitePage } from "@/lib/sitePages";
@@ -60,11 +61,11 @@ const montserratLight = Montserrat({
 
 const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 const CANDY_OPTIONS = [
-  { label: "Branded", href: "/design?type=branded", image: "/quote/subtypes/branded.jpg" },
-  { label: "Both Names", href: "/design?type=weddings&subtype=weddings-both-names", image: "/quote/subtypes/weddings-both-names.jpg" },
-  { label: "Initials", href: "/design?type=weddings&subtype=weddings-initials", image: "/quote/subtypes/weddings-initials.jpg" },
-  { label: "Custom Text 1-6 Letters", href: "/design?type=text&subtype=custom-1-6", image: "/quote/subtypes/custom-1-6.jpg" },
-  { label: "Custom Text 7-14 Letters", href: "/design?type=text&subtype=custom-7-14", image: "/quote/subtypes/custom-7-14.jpeg" },
+  { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }), image: "/quote/subtypes/branded.jpg" },
+  { label: "Both Names", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }), image: "/quote/subtypes/weddings-both-names.jpg" },
+  { label: "Initials", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" }), image: "/quote/subtypes/weddings-initials.jpg" },
+  { label: "Custom Text 1-6 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" }), image: "/quote/subtypes/custom-1-6.jpg" },
+  { label: "Custom Text 7-14 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-7-14" }), image: "/quote/subtypes/custom-7-14.jpeg" },
   { label: "Pre-made candy", href: "/pre-made-candy", image: "/quote/subtypes/premade.jpg" },
 ];
 

@@ -55,15 +55,16 @@ Set these in production if they are not already configured:
 - The main SEO landing pages are:
   - `/`
   - `/design`
-  - `/design?type=branded`
-  - `/design?type=weddings`
-  - `/design?type=text`
+  - `/design/wedding-candy`
+  - `/design/branded-logo-candy`
+  - `/design/custom-text-candy`
   - `/pre-made-candy`
   - `/pre-made-candy/[item]`
   - `/about`
   - `/faqs`
   - `/blog`
 
+- Stateful designer URLs such as `/design?type=wedding&variant=initials` are utility URLs only and should not be indexed.
 - `/quote` and `/premade` are redirect aliases and should not be indexed.
 
 - Product schema is generated from the `premade_candies` table. If richer data is needed, the most useful additions would be:

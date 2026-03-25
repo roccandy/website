@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { buildDesignerPath } from "@/lib/designUrls";
 
 const OPTIONS = [
-  { label: "Wedding Candy", href: "/design?type=weddings" },
-  { label: "Text Candy", href: "/design?type=text" },
-  { label: "Branded Logo Candy", href: "/design?type=branded" },
+  { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
+  { label: "Text Candy", href: buildDesignerPath({ orderType: "text" }) },
+  { label: "Branded Logo Candy", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
 ];
 
 export function DesignCtaModal() {

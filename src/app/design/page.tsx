@@ -18,16 +18,20 @@ import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
+import { buildDesignerPath, getDesignerCanonicalTarget, isLegacyDesignerQuery, resolveDesignerState } from "@/lib/designUrls";
 import { getManagedSitePage } from "@/lib/sitePages";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 type QuotePageProps = {
-  searchParams?: { type?: string } | Promise<{ type?: string }>;
+  searchParams?:
+    | { type?: string; variant?: string; subtype?: string }
+    | Promise<{ type?: string; variant?: string; subtype?: string }>;
 };
 
 const DESIGN_VARIANTS = {
@@ -35,21 +39,21 @@ const DESIGN_VARIANTS = {
     title: "Branded Rock Candy Australia | Custom Logo Candy | Roc Candy",
     description:
       "Design branded rock candy with your logo or artwork for events, promotions, gifts, and corporate campaigns across Australia.",
-    path: "/design?type=branded",
+    path: "/design/branded-logo-candy",
     name: "Branded Rock Candy Designer",
   },
   weddings: {
     title: "Wedding Rock Candy Australia | Personalised Wedding Candy | Roc Candy",
     description:
       "Create personalised wedding rock candy with names, initials, colours, and custom styling for favours, bomboniere, and wedding tables.",
-    path: "/design?type=weddings",
+    path: "/design/wedding-candy",
     name: "Wedding Rock Candy Designer",
   },
   text: {
     title: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
     description:
       "Create personalised text rock candy with names, words, initials, and custom colours for gifts, parties, weddings, and events.",
-    path: "/design?type=text",
+    path: "/design/custom-text-candy",
     name: "Custom Text Rock Candy Designer",
   },
   default: {
@@ -94,9 +98,18 @@ function buildMinBasePrices(categories: Category[], tiers: WeightTier[]) {
 
 export async function generateMetadata({ searchParams }: QuotePageProps): Promise<Metadata> {
   const resolvedSearchParams = await searchParams;
-  const typeParam = resolvedSearchParams?.type;
-  const isVariant = typeParam === "branded" || typeParam === "weddings" || typeParam === "text";
-  const variant = isVariant ? DESIGN_VARIANTS[typeParam] : DESIGN_VARIANTS.default;
+  const designerState = resolveDesignerState({
+    type: resolvedSearchParams?.type,
+    variant: resolvedSearchParams?.variant,
+    subtype: resolvedSearchParams?.subtype,
+  });
+  const isVariant = Boolean(designerState);
+  const variant = designerState ? DESIGN_VARIANTS[designerState.orderType] : DESIGN_VARIANTS.default;
+  const canonicalTarget = getDesignerCanonicalTarget({
+    type: resolvedSearchParams?.type,
+    variant: resolvedSearchParams?.variant,
+    subtype: resolvedSearchParams?.subtype,
+  });
 
   if (!isVariant) {
     const page = await getManagedSitePage("design");
@@ -125,16 +138,61 @@ export async function generateMetadata({ searchParams }: QuotePageProps): Promis
     return metadata;
   }
 
-  return buildMetadata({
+  const metadata = buildMetadata({
     title: variant.title,
     description: variant.description,
-    path: variant.path,
+    path: canonicalTarget,
     imagePath: "/landing/design-top.webp",
     imageAlt: variant.name,
+    noIndex: true,
   });
+
+  return {
+    ...metadata,
+    alternates: {
+      canonical: canonicalTarget,
+    },
+    robots: {
+      index: false,
+      follow: true,
+    },
+  };
 }
 
 export default async function QuotePage({ searchParams }: QuotePageProps) {
+  const resolvedSearchParams = await searchParams;
+  const designerState = resolveDesignerState({
+    type: resolvedSearchParams?.type,
+    variant: resolvedSearchParams?.variant,
+    subtype: resolvedSearchParams?.subtype,
+  });
+  const normalizedTarget = designerState
+    ? buildDesignerPath({
+        orderType: designerState.orderType,
+        categoryId: designerState.categoryId,
+        extraParams: resolvedSearchParams ?? {},
+      })
+    : (() => {
+        const extraQuery = new URLSearchParams();
+        Object.entries(resolvedSearchParams ?? {}).forEach(([key, value]) => {
+          if (key !== "type" && key !== "variant" && key !== "subtype" && value) {
+            extraQuery.set(key, value);
+          }
+        });
+        const query = extraQuery.toString();
+        return query ? `/design?${query}` : "/design";
+      })();
+  const currentQuery = resolvedSearchParams
+    ? new URLSearchParams(
+        Object.entries(resolvedSearchParams).flatMap(([key, value]) => (value ? [[key, value]] : [])),
+      ).toString()
+    : "";
+  const currentPath = currentQuery ? `/design?${currentQuery}` : "/design";
+
+  if (isLegacyDesignerQuery(resolvedSearchParams ?? {}) || currentPath !== normalizedTarget) {
+    redirect(normalizedTarget);
+  }
+
   const designPage = await getManagedSitePage("design");
   const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
@@ -151,10 +209,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const minBasePrices = buildMinBasePrices(categories, tiers);
   const activeFlavors = flavors.filter((flavor) => flavor.is_active !== false);
-  const resolvedSearchParams = await searchParams;
-  const typeParam = resolvedSearchParams?.type;
-  const initialOrderType =
-    typeParam === "weddings" || typeParam === "text" || typeParam === "branded" ? typeParam : undefined;
+  const initialOrderType = designerState?.orderType;
   const seoVariant =
     initialOrderType && initialOrderType in DESIGN_VARIANTS
       ? DESIGN_VARIANTS[initialOrderType]

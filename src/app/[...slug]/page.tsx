@@ -20,6 +20,7 @@ import {
   CATCH_ALL_SITE_PAGE_SLUGS,
   getManagedSitePage,
 } from "@/lib/sitePages";
+import { buildDesignerPath } from "@/lib/designUrls";
 
 type LandingPageConfig = {
   intro: string;
@@ -49,7 +50,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     ],
     primaryCta: {
       label: "Design & Pricing",
-      href: "/design?type=weddings",
+      href: buildDesignerPath({ orderType: "weddings" }),
     },
   },
   "design/branded-logo-candy": {
@@ -65,7 +66,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     ],
     primaryCta: {
       label: "Design & Pricing",
-      href: "/design?type=branded",
+      href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }),
     },
   },
   "design/custom-text-candy": {
@@ -81,7 +82,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     ],
     primaryCta: {
       label: "Design & Pricing",
-      href: "/design?type=text",
+      href: buildDesignerPath({ orderType: "text" }),
     },
   },
 };

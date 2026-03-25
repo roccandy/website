@@ -25,6 +25,7 @@ import {
   optimizeBrowserImageToDataUrl,
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
+import { buildDesignerPath, resolveDesignerState } from "@/lib/designUrls";
 import { sortPackagingTypes } from "@/lib/packaging";
 
 type OrderTypeId = "weddings" | "text" | "branded";
@@ -89,19 +90,12 @@ const montserratLight = Montserrat({
   weight: ["200"],
 });
 
-function normalizeOrderType(value?: string | null): OrderTypeId | undefined {
-  if (value === "weddings" || value === "text" || value === "branded") {
-    return value as OrderTypeId;
-  }
-  return undefined;
-}
-
 function inferOrderTypeFromCategory(value?: string | null): OrderTypeId | undefined {
   if (!value) return undefined;
   if (value === "weddings" || value.startsWith("weddings-")) return "weddings";
   if (value === "text" || value.startsWith("custom-")) return "text";
   if (value === "branded") return "branded";
-  return normalizeOrderType(value);
+  return undefined;
 }
 
 function splitWeddingDesign(value?: string | null) {
@@ -408,6 +402,11 @@ export function QuoteBuilder({
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const designerState = resolveDesignerState({
+    type: searchParams?.get("type"),
+    variant: searchParams?.get("variant"),
+    subtype: searchParams?.get("subtype"),
+  });
   const { items, addCustomItem, updateCustomItem } = useCart();
   const editItemId = searchParams?.get("edit")?.trim() ?? "";
   const editItem = useMemo(
@@ -438,14 +437,11 @@ export function QuoteBuilder({
   );
     const resolvedInitialOrderType =
       ORDER_TYPES.find((type) => type.id === initialOrderType)?.id ?? ORDER_TYPES[0]?.id ?? "weddings";
-    const queryOrderType = normalizeOrderType(searchParams?.get("type"));
-    const querySubtype = searchParams?.get("subtype") ?? undefined;
+    const queryOrderType = designerState?.orderType;
+    const querySubtype = designerState?.categoryId ?? undefined;
     const initialOrderTypeResolved = queryOrderType ?? resolvedInitialOrderType;
     const hasExplicitOrderType = Boolean(queryOrderType || initialOrderType);
-    const validInitialQuerySubtype =
-      querySubtype && ORDER_SUBTYPES[initialOrderTypeResolved]?.some((sub) => sub.id === querySubtype)
-        ? querySubtype
-        : undefined;
+    const validInitialQuerySubtype = querySubtype;
     const initialSubtype = (() => {
       if (validInitialQuerySubtype) return validInitialQuerySubtype;
       if (initialOrderTypeResolved === "branded") {
@@ -720,7 +716,11 @@ export function QuoteBuilder({
   useEffect(() => {
     const urlOrderType =
       typeof window !== "undefined"
-        ? normalizeOrderType(new URLSearchParams(window.location.search).get("type"))
+        ? resolveDesignerState({
+            type: new URLSearchParams(window.location.search).get("type"),
+            variant: new URLSearchParams(window.location.search).get("variant"),
+            subtype: new URLSearchParams(window.location.search).get("subtype"),
+          })?.orderType
         : undefined;
       const nextOrderType = queryOrderType ?? initialOrderType ?? urlOrderType;
       if (!nextOrderType) return;
@@ -751,6 +751,19 @@ export function QuoteBuilder({
         setCategoryId(nextSubtype);
       }
     }, [queryOrderType, querySubtype, initialOrderType, orderType, categoryId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const nextPath = buildDesignerPath({
+      orderType,
+      categoryId: categoryId || null,
+      extraParams: searchParams ?? undefined,
+    });
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (current === nextPath) return;
+    router.replace(nextPath, { scroll: false });
+  }, [router, orderType, categoryId, searchParams]);
   const rainbowDisabled = pinstripeJacket || twoColourJacket;
   const pinstripeDisabled = rainbowJacket;
   const twoColourDisabled = rainbowJacket;
