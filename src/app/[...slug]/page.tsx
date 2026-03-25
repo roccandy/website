@@ -8,6 +8,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import {
   buildAbsoluteUrl,
@@ -31,8 +32,6 @@ type LandingPageConfig = {
   defaultGalleryImageUrls: string[];
   primaryCta: { label: string; href: string };
 };
-
-const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
@@ -280,16 +279,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                   <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingHeroSupportingLine}</p>
                 </div>
 
-                <div className="flex justify-center">
-                  <div className="inline-flex rounded-full border border-white/45 bg-white/45 px-4 py-2 text-center text-xs font-medium tracking-[0.08em] text-zinc-500 shadow-sm backdrop-blur">
-                    <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
-                    <span className="sm:hidden">
-                      {FEATURE_LABELS.slice(0, 3).join(" | ")}
-                      <br />
-                      {FEATURE_LABELS.slice(3).join(" | ")}
-                    </span>
-                  </div>
-                </div>
+                <SiteUsps />
 
                 <div>
                   <Link
@@ -344,6 +334,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                 {page.title}
               </h1>
               {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
+              <SiteUsps className="pt-3" />
             </section>
           )}
           {landingConfig ? (

@@ -3,6 +3,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import FaqAccordion from "@/components/FaqAccordion";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteUsps } from "@/components/SiteUsps";
 import { getFaqContentItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage } from "@/lib/sitePages";
@@ -133,6 +134,7 @@ export default async function FaqsPage() {
             >
               {faqPage.title || "Frequently Asked Questions"}
             </h1>
+            <SiteUsps className="pt-2" />
           </section>
           {faqPage.bodyHtml ? (
             <article

@@ -4,6 +4,7 @@ import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteUsps } from "@/components/SiteUsps";
 import Image from "next/image";
 import { getPremadeCandies } from "@/lib/data";
 import { buildFaqSchemaItems } from "@/lib/faqs";
@@ -150,6 +151,7 @@ export default async function PremadePage() {
           <section className="space-y-3 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Shop</p>
             <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{page.title || "Pre-made candy"}</h1>
+            <SiteUsps />
             {page.bodyHtml ? (
               <article
                 className="mx-auto max-w-3xl text-base leading-relaxed text-zinc-600 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"

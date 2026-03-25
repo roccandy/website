@@ -4,6 +4,7 @@ import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import AboutPhotoCarousel from "@/components/AboutPhotoCarousel";
 import { JsonLd } from "@/components/JsonLd";
 import { PageFaqSection } from "@/components/PageFaqSection";
+import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
@@ -130,6 +131,7 @@ export default async function AboutPage() {
             >
               {aboutPage.title || "A Little About Us"}
             </h1>
+            <SiteUsps />
 
             <AboutPhotoCarousel />
             <article

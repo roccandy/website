@@ -7,6 +7,7 @@ import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
+import { SiteUsps } from "@/components/SiteUsps";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildDesignerPath } from "@/lib/designUrls";
 import { buildFaqSchemaItems } from "@/lib/faqs";
@@ -59,7 +60,6 @@ const montserratLight = Montserrat({
   weight: ["300"],
 });
 
-const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
 const CANDY_OPTIONS = [
   { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }), image: "/quote/subtypes/branded.jpg" },
   { label: "Both Names", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }), image: "/quote/subtypes/weddings-both-names.jpg" },
@@ -163,16 +163,7 @@ export default async function Home() {
                 ) : null}
               </div>
 
-              <div className="flex justify-center">
-                <div className="inline-flex rounded-full border border-white/45 bg-white/45 px-4 py-2 text-center text-xs font-medium tracking-[0.08em] text-zinc-500 shadow-sm backdrop-blur">
-                  <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
-                  <span className="sm:hidden">
-                    {FEATURE_LABELS.slice(0, 3).join(" | ")}
-                    <br />
-                    {FEATURE_LABELS.slice(3).join(" | ")}
-                  </span>
-                </div>
-              </div>
+              <SiteUsps />
 
               <div id="design" className="pt-6">
                 <DesignCtaModal />

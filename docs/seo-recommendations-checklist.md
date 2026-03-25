@@ -55,7 +55,7 @@ How to use it:
 | Google Reviews floating widget sitewide (Trustindex) | Not implemented | No Trustindex / floating reviews widget is present. | Pending | Add only if you want the paid widget and accept the UX impact. |
 | Social links in the footer | Implemented | Footer includes Facebook, Instagram, phone, and email links. | Pending | No major work needed beyond launch QA. |
 | Strip banner at the top like `Free Delivery Australia-Wide` | Partially implemented | There is a top links bar, but not really the promo banner he described. | Pending | Decide whether to replace/augment the current top bar with a real promo strip. |
-| Add USPs across all top-level pages | Partially implemented | Some USP messaging exists, but not consistently across all top-level pages. | Pending | Add a consistent USP block or repeated proof points to the main landing pages. |
+| Add USPs across all top-level pages | Implemented | The homepage, key top-level pages, and main landing/fixed public pages now share a consistent USP block highlighting Vegan, Gluten Free, Dairy Free, Handmade, Aust Made, and Free Delivery. | Done | Do a final content/design QA pass on the live domain after launch. |
 
 ## Notes
 

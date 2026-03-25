@@ -3,6 +3,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import { JsonLd } from "@/components/JsonLd";
 import { PageFaqSection } from "@/components/PageFaqSection";
+import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
@@ -134,6 +135,7 @@ export default async function BlogPage() {
                 {[blogPage.heroSubheading, blogPage.heroSupportingLine].filter(Boolean).join(" · ")}
               </p>
             ) : null}
+            <SiteUsps className="pt-2" />
           </section>
 
           <article

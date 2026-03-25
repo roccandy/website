@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Montserrat } from "next/font/google";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import { SiteUsps } from "@/components/SiteUsps";
 import type {
   Category,
   ColorPaletteRow,
@@ -83,12 +83,6 @@ type Rgba = {
   b: number;
   a: number;
 };
-
-const FEATURE_LABELS = ["Vegan", "Gluten Free", "Dairy Free", "Handmade", "Aust Made", "Free Delivery"];
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["200"],
-});
 
 function inferOrderTypeFromCategory(value?: string | null): OrderTypeId | undefined {
   if (!value) return undefined;
@@ -1465,14 +1459,7 @@ export function QuoteBuilder({
         <TitleTag className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">
           {mainTitle}
         </TitleTag>
-        <p className={`${montserratLight.className} mt-3 text-[14px] font-[200] tracking-[0.03em] text-zinc-600`}>
-          <span className="hidden sm:inline">{FEATURE_LABELS.join(" | ")}</span>
-          <span className="sm:hidden">
-            {FEATURE_LABELS.slice(0, 3).join(" | ")}
-            <br />
-            {FEATURE_LABELS.slice(3).join(" | ")}
-          </span>
-        </p>
+        <SiteUsps className="mt-3" />
         {subtitle && <p className="mt-2 text-[24px] font-medium text-[rgb(146,146,177)]">{subtitle}</p>}
       </section>
 

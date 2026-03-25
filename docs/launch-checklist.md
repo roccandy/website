@@ -37,6 +37,7 @@ These items are already implemented in code:
 - [x] Public FAQ now uses `/faqs`, with `/faq` redirected for compatibility.
 - [x] A real `/blog` route now exists as an editable fixed site page.
 - [x] Core public pages now use a cleaner heading hierarchy, with the main designer duplicate-H1 issue removed.
+- [x] Main public landing and top-level pages now share a consistent USP block.
 - [x] Designer state URLs now use a tidier `type` + `variant` scheme, with legacy params redirected.
 - [x] Stateful designer URLs are treated as utility URLs with canonical/noindex behavior pointing back to the main landing pages.
 - [x] Individual pre-made product pages with Product schema.
