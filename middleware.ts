@@ -21,6 +21,18 @@ let redirectCache: {
   redirects: SiteRedirect[];
 } | null = null;
 
+function isVercelHost(hostname: string | null) {
+  const normalizedHostname = (hostname ?? "").split(":")[0].toLowerCase();
+  return normalizedHostname.endsWith(".vercel.app");
+}
+
+function attachPreviewNoIndexHeader(request: NextRequest, response: NextResponse) {
+  if (isVercelHost(request.headers.get("host"))) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
+  return response;
+}
+
 function shouldSkipRedirectLookup(pathname: string) {
   return (
     pathname.startsWith("/_next") ||
@@ -96,12 +108,12 @@ function resolveDestinationUrl(request: NextRequest, redirect: SiteRedirect) {
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   if (shouldSkipRedirectLookup(pathname)) {
-    return NextResponse.next();
+    return attachPreviewNoIndexHeader(request, NextResponse.next());
   }
 
   const redirects = await loadRedirects();
   if (redirects.length === 0) {
-    return NextResponse.next();
+    return attachPreviewNoIndexHeader(request, NextResponse.next());
   }
 
   const requestPath = normalizeRedirectSourcePath(pathname);
@@ -111,16 +123,16 @@ export async function middleware(request: NextRequest) {
     redirects.find((item) => item.sourcePath === requestPath);
 
   if (!redirect || !redirect.isActive) {
-    return NextResponse.next();
+    return attachPreviewNoIndexHeader(request, NextResponse.next());
   }
 
   const destinationUrl = resolveDestinationUrl(request, redirect);
   const currentUrl = new URL(request.url);
   if (destinationUrl.toString() === currentUrl.toString()) {
-    return NextResponse.next();
+    return attachPreviewNoIndexHeader(request, NextResponse.next());
   }
 
-  return NextResponse.redirect(destinationUrl, redirect.statusCode);
+  return attachPreviewNoIndexHeader(request, NextResponse.redirect(destinationUrl, redirect.statusCode));
 }
 
 export const config = {

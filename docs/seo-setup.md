@@ -14,13 +14,16 @@
   - `Product`
   - `Service`
 - `manifest.webmanifest` is generated.
+- `/llms.txt` is available for AI/GEO crawlers.
 - Redirect-only aliases are marked `noindex`.
 - Admin, checkout, docs, and 404 surfaces are marked `noindex`.
+- `vercel.app` preview hosts now return `X-Robots-Tag: noindex, nofollow, noarchive`.
 - Google Analytics 4 and Google Tag Manager can be enabled by env var without more code changes.
 - The analytics loader prefers GTM over direct GA4 when both IDs are present, reducing duplicate-tracking risk.
 - Search engine verification tags can be enabled by env var without more code changes.
 - The SEO workspace now covers both fixed site pages and individual pre-made product pages.
 - `view_item`, `add_to_cart`, `begin_checkout`, and `purchase` ecommerce events are implemented in the app.
+- Public canonicals and sitemap host no longer fall back to ad-hoc `VERCEL_URL` preview hosts.
 
 ## Env Vars For SEO
 

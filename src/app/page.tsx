@@ -12,16 +12,26 @@ import { Montserrat } from "next/font/google";
 import { getManagedSitePage } from "@/lib/sitePages";
 import type { Metadata } from "next";
 
+const LEGACY_HOME_META_DESCRIPTION =
+  "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.";
+const DEFAULT_HOME_META_DESCRIPTION =
+  "Personalised handmade rock candy for weddings, branded events and custom gifts. Vegan, gluten free and dairy free, delivered Australia-wide.";
+
+function resolveHomeDescription(metaDescription: string | null, bodyHtml: string) {
+  const normalizedMetaDescription = metaDescription?.trim() || null;
+  if (normalizedMetaDescription && normalizedMetaDescription !== LEGACY_HOME_META_DESCRIPTION) {
+    return normalizedMetaDescription;
+  }
+  return truncateText(stripHtml(bodyHtml), 155) || DEFAULT_HOME_META_DESCRIPTION;
+}
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 export async function generateMetadata(): Promise<Metadata> {
   const homePage = await getManagedSitePage("home");
-  const description =
-    homePage.metaDescription ||
-    truncateText(stripHtml(homePage.bodyHtml), 160) ||
-    "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.";
+  const description = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
 
   const metadata = buildMetadata({
     title: homePage.seoTitle || "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
@@ -62,10 +72,7 @@ export default async function Home() {
   const homePage = await getManagedSitePage("home");
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
-  const homeDescription =
-    homePage.metaDescription ||
-    truncateText(stripHtml(homePage.bodyHtml), 160) ||
-    "Handmade personalised rock candy for weddings, branded events, custom text gifts, and celebrations across Australia.";
+  const homeDescription = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
   return (
     <main className="min-h-screen text-zinc-900">
       <JsonLd

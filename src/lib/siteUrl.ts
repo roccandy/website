@@ -11,7 +11,6 @@ export function getSiteBaseUrl() {
   return (
     ensureBaseUrl(process.env.NEXT_PUBLIC_SITE_URL) ??
     ensureBaseUrl(process.env.SITE_URL) ??
-    ensureBaseUrl(process.env.VERCEL_URL) ??
     DEFAULT_SITE_URL
   );
 }

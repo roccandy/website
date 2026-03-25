@@ -20,6 +20,9 @@ Related docs:
 These items are already implemented in code:
 
 - [x] Generated `sitemap.xml`, `robots.txt`, canonicals, Open Graph, Twitter cards, and structured data.
+- [x] Added `/llms.txt` for AI/GEO crawlers.
+- [x] `vercel.app` hosts now send `X-Robots-Tag: noindex, nofollow, noarchive`.
+- [x] Public canonical/sitemap base URL no longer falls back to ad-hoc `VERCEL_URL` preview hosts.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] SEO role with read-only access outside SEO-editable sections.
 - [x] Redirect manager in the SEO workspace.
@@ -95,7 +98,8 @@ If you want the shortest realistic list between now and launch, it is:
 
 - [ ] Review and complete the editable site pages in `/admin/settings/pages`.
 - [ ] Fill in homepage title, visible intro content, SEO title, meta description, and share image.
-- [ ] Shorten the homepage meta description to roughly 150-155 characters so it does not truncate in Google SERPs.
+- [x] Default homepage meta description in code is now within typical SERP length.
+- [ ] Review the final homepage meta description in admin and keep it roughly 150-155 characters.
 - [ ] Fill in About page content and metadata.
 - [ ] Fill in FAQ page intro and metadata.
 - [ ] Fill in Design page intro and metadata.
@@ -168,7 +172,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Confirm Open Graph / share metadata renders correctly.
 - [ ] Confirm structured data is present on key pages.
 - [ ] Confirm the temporary domain is not the domain you will submit to Google systems as the real site.
-- [ ] Decide whether to publish `/llms.txt` for AI/GEO crawler guidance. This is optional and not a launch blocker.
+- [x] Publish `/llms.txt` for AI/GEO crawler guidance.
 
 ## Phase 7: Redirect Mapping
 

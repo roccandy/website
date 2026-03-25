@@ -4,7 +4,7 @@ import { getSiteBaseUrl } from "@/lib/siteUrl";
 const SITE_NAME = "Roc Candy";
 const DEFAULT_TITLE = "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy";
 const DEFAULT_DESCRIPTION =
-  "Handmade personalised rock candy for weddings, branded events, gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.";
+  "Handmade personalised rock candy for weddings, branded events and custom gifts. Vegan, gluten free and dairy free, delivered Australia-wide.";
 const DEFAULT_OG_IMAGE_PATH = "/landing/home-feature-poster.png";
 const DEFAULT_PHONE = "+61 414 519 211";
 const DEFAULT_EMAIL = "enquiries@roccandy.com.au";

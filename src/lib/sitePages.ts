@@ -80,7 +80,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
       "<h2>Branded, Wedding and Text Lollies</h2><p>Artisan handmade candy made in Australia for weddings, branded campaigns, gifts, and celebrations.</p>",
     seoTitle: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
     metaDescription:
-      "Personalised handmade rock candy for weddings, branded events, custom text gifts, and celebrations across Australia. Vegan, gluten free, dairy free, and delivered Australia wide.",
+      "Personalised handmade rock candy for weddings, branded events and custom gifts. Vegan, gluten free and dairy free, delivered Australia-wide.",
     ogImageUrl: "/landing/home-feature-poster.png",
     canonicalUrl: null,
     galleryImageUrls: [],
