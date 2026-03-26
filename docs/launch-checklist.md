@@ -200,6 +200,8 @@ If you want the shortest realistic list between now and launch, it is:
 
 - [ ] Confirm `/sitemap.xml` loads on staging.
 - [ ] Confirm `/robots.txt` loads on staging.
+- [x] A temporary preview crawl mode now exists for staging SEO audits.
+  Set `ALLOW_PREVIEW_CRAWL=true` and `PREVIEW_SITE_URL=https://roccandy.vercel.app`, redeploy, run the crawl, then turn it back off.
 - [x] Run lab Lighthouse checks on the staging/live deployment and record a baseline.
   Current baseline on `roccandy.vercel.app`: home desktop `90`, home mobile `91`, wedding landing desktop `93`.
 - [x] Run a local production-build performance check after the deeper bundle cleanup.

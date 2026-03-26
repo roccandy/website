@@ -4,6 +4,7 @@ import {
   normalizeRedirectSourcePath,
   type SiteRedirect,
 } from "@/lib/siteRedirectsShared";
+import { isPreviewCrawlModeEnabled } from "@/lib/siteUrl";
 
 const REDIRECT_CACHE_TTL_MS = 60_000;
 const SITE_REDIRECTS_TABLE = "site_redirects";
@@ -27,7 +28,7 @@ function isVercelHost(hostname: string | null) {
 }
 
 function attachPreviewNoIndexHeader(request: NextRequest, response: NextResponse) {
-  if (isVercelHost(request.headers.get("host"))) {
+  if (isVercelHost(request.headers.get("host")) && !isPreviewCrawlModeEnabled()) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   return response;
