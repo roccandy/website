@@ -175,8 +175,12 @@ export default async function PremadeItemPage({ params }: PageProps) {
         />
 
         <div className="relative mx-auto max-w-6xl space-y-8 px-6 py-10 md:py-14">
-          <Link href="/pre-made-candy" className="inline-block text-sm font-semibold text-zinc-500 hover:text-zinc-900">
-            ← Back to all pre-made candy
+          <Link
+            href="/pre-made-candy"
+            className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-md"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Back to all pre-made candy</span>
           </Link>
 
           <section className="grid gap-8 rounded-3xl border border-zinc-200 bg-white/90 p-5 shadow-sm md:grid-cols-2 md:p-8">
