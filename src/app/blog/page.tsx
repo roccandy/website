@@ -30,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: blogPage.seoTitle || "Roc Candy Blog | Personalised Rock Candy Ideas, Events & News",
     description,
     path: "/blog",
-    imagePath: blogPage.ogImageUrl || "/landing/home-feature-poster.png",
+    imagePath: blogPage.ogImageUrl || "/landing/home-feature-poster.jpg",
     imageAlt: blogPage.title || "Roc Candy blog",
   });
 

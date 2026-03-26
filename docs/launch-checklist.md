@@ -29,6 +29,7 @@ These items are already implemented in code:
 - [x] Public canonical/sitemap base URL no longer falls back to ad-hoc `VERCEL_URL` preview hosts.
 - [x] Public marketing/product pages now use ISR-style caching instead of forced `no-store` rendering.
 - [x] Static public assets have long-lived cache headers, and Next image delivery is configured for modern formats plus a higher cache TTL.
+- [x] The homepage feature video now uses a re-encoded full-length web asset at roughly `3.1 MB` instead of the older `10 MB` file, while still eager-loading for fast playback.
 - [x] Cart state no longer wraps the entire app in the root layout, and the cart drawer now loads as a deferred client chunk instead of inflating the main public render path.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.

@@ -99,7 +99,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
     metaDescription:
       "Personalised handmade rock candy for weddings, branded events and custom gifts. Vegan, gluten free and dairy free, delivered Australia-wide.",
-    ogImageUrl: "/landing/home-feature-poster.png",
+    ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],
   },
@@ -155,7 +155,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Roc Candy Blog | Personalised Rock Candy Ideas, Events & News",
     metaDescription:
       "Read Roc Candy blog posts for personalised rock candy ideas, event inspiration, branded candy tips, wedding styling, and product updates.",
-    ogImageUrl: "/landing/home-feature-poster.png",
+    ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],
   },
@@ -325,7 +325,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Contact Roc Candy | Personalised Rock Candy Australia",
     metaDescription:
       "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
-    ogImageUrl: "/landing/home-feature-poster.png",
+    ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],
   },
@@ -349,7 +349,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Shipping and Returns | Roc Candy Australia",
     metaDescription:
       "Read Roc Candy shipping and returns information for personalised and pre-made rock candy orders across Australia.",
-    ogImageUrl: "/landing/home-feature-poster.png",
+    ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],
   },

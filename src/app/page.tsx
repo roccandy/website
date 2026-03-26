@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: homePage.seoTitle || "Personalised Rock Candy Australia | Wedding, Branded & Custom Candy",
     description,
     path: "/",
-    imagePath: homePage.ogImageUrl || "/landing/home-feature-poster.png",
+    imagePath: homePage.ogImageUrl || "/landing/home-feature-poster.jpg",
     imageAlt: homePage.title || "Roc Candy personalised rock candy",
   });
 
@@ -197,7 +197,7 @@ export default async function Home() {
             <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
-                poster="/landing/home-feature-poster.png"
+                poster="/landing/home-feature-poster.jpg"
                 className="h-full w-full object-cover"
                 eager
               />

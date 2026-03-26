@@ -154,7 +154,7 @@ export async function generateMetadata({ params }: ManagedPageProps): Promise<Me
     title: page.seoTitle || `${page.title} | Roc Candy`,
     description,
     path: buildManagedSitePageHref(page.slug),
-    imagePath: page.ogImageUrl || "/landing/home-feature-poster.png",
+    imagePath: page.ogImageUrl || "/landing/home-feature-poster.jpg",
     imageAlt: page.title,
   });
 
