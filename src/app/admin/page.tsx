@@ -145,7 +145,7 @@ export default async function AdminHome() {
                 pendingPremadeGroups.map(({ key, order, count }) => (
                   <Link
                     key={key}
-                    href={`/admin/orders/additional-items?focus=${encodeURIComponent(key)}#premade-group-${key}`}
+                    href={`/admin/orders/additional-items?focus=${encodeURIComponent(key)}`}
                     className="flex items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-white px-3 py-2"
                   >
                     <div className="min-w-0">
