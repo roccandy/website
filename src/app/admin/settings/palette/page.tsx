@@ -1,6 +1,6 @@
 import { getColorPalette } from "@/lib/data";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { ColorPaletteEditor } from "@/app/admin/settings/ColorPaletteEditor";
 import { paletteSections } from "@/app/admin/settings/palette";
@@ -28,7 +28,7 @@ async function updateColorPalette(formData: FormData) {
   "use server";
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/palette" });
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const rows = paletteSections.flatMap((section, sectionIndex) =>
     section.items.map((item, itemIndex) => ({
       category: item.categoryKey,

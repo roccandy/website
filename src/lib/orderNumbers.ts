@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 
 const ORDER_NUMBER_PADDING = 4;
 const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
@@ -18,7 +18,7 @@ export function normalizeBaseOrderNumber(input?: string | null) {
 }
 
 export async function generateOrderNumber() {
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabaseAdminClient
     .from("orders")
     .select("order_number");
   if (error) throw new Error(error.message);

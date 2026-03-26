@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 
 type PaymentFailurePayload = {
   provider: "square" | "paypal";
@@ -10,7 +10,7 @@ type PaymentFailurePayload = {
 
 export async function logPaymentFailure(payload: PaymentFailurePayload) {
   try {
-    await supabaseServerClient.from("payment_failures").insert({
+    await supabaseAdminClient.from("payment_failures").insert({
       provider: payload.provider,
       stage: payload.stage,
       message: payload.message,

@@ -1,5 +1,5 @@
 import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 
 type OrderPayload = Record<string, unknown>;
 
@@ -162,7 +162,7 @@ async function persistEmailPreview(previewSource: string | null, orderNumber: st
             ? "svg"
             : "png";
     const objectPath = `email-previews/${monthKey}/${orderKey}-${Date.now()}.${ext}`;
-    const { error } = await supabaseServerClient.storage.from(bucket).upload(objectPath, bytes, {
+    const { error } = await supabaseAdminClient.storage.from(bucket).upload(objectPath, bytes, {
       upsert: false,
       contentType,
       cacheControl: "31536000",

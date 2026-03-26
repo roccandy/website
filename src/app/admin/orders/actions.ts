@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { getOrdersRecipients, sendCustomerRefundEmail, sendOrderEmail } from "@/lib/email";
 import { redirect } from "next/navigation";
@@ -104,7 +104,7 @@ export async function upsertOrder(formData: FormData) {
     })
     .filter((item): item is { id: string; quantity: number } => Boolean(item));
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const existing = id
     ? (await client.from("orders").select("*").eq("id", id).maybeSingle()).data
     : null;
@@ -348,7 +348,7 @@ export async function refundOrder(formData: FormData) {
   if (!id) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
   }
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: order, error } = await client.from("orders").select("*").eq("id", id).maybeSingle();
   if (error || !order) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
@@ -412,7 +412,7 @@ export async function upsertSlot(formData: FormData) {
     throw new Error("Capacity must be greater than zero.");
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const writeSlot = async (capacityValue: number) => {
     const payload = { slot_date, capacity_kg: capacityValue, status, notes };
     if (id) {
@@ -461,7 +461,7 @@ export async function assignOrderToSlot(formData: FormData) {
       throw new Error("Cannot assign orders to past dates.");
     }
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     let resolvedSlotId = slot_id;
 
     const { data: order, error: orderError } = await client
@@ -617,7 +617,7 @@ export async function deleteAssignment(formData: FormData) {
     const assignmentId = formData.get("assignment_id")?.toString();
     if (!assignmentId) throw new Error("Missing assignment id");
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     const { data: orderSlot, error: slotLookupError } = await client
       .from("order_slots")
       .select("order_id")
@@ -648,7 +648,7 @@ export async function archiveOrder(formData: FormData) {
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("orders").update({ status: "archived" }).eq("id", orderId);
   if (error) throw new Error(error.message);
 
@@ -660,7 +660,7 @@ export async function unarchiveOrder(formData: FormData) {
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("orders").update({ status: "pending" }).eq("id", orderId);
   if (error) throw new Error(error.message);
 
@@ -672,7 +672,7 @@ export async function markAdditionalItemShipped(formData: FormData) {
   const orderId = formData.get("order_id")?.toString();
   if (!orderId) throw new Error("Missing order id");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: existing, error: existingError } = await client
     .from("orders")
     .select("refunded_at")
@@ -698,7 +698,7 @@ export async function markAdditionalItemsShipped(formData: FormData) {
     .filter(Boolean);
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { count: refundedCount, error: refundedError } = await client
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -726,7 +726,7 @@ export async function markAdditionalItemsPending(formData: FormData) {
     .filter(Boolean);
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { count: refundedCount, error: refundedError } = await client
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -750,7 +750,7 @@ export async function addOpenOverride(formData: FormData) {
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: existing, error: existingError } = await client
     .from("production_blocks")
     .select("id")
@@ -777,7 +777,7 @@ export async function addManualBlock(formData: FormData) {
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error: removeOpenError } = await client
     .from("production_blocks")
     .delete()
@@ -812,7 +812,7 @@ export async function removeManualBlock(formData: FormData) {
   const date = formData.get("date")?.toString();
   if (!date) throw new Error("Date is required.");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("production_blocks")
     .delete()
@@ -831,7 +831,7 @@ export async function addQuoteBlock(formData: FormData) {
   if (!start_date) throw new Error("Start date is required.");
   const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("quote_blocks").insert({
     start_date,
     end_date: resolvedEnd,
@@ -847,7 +847,7 @@ export async function removeQuoteBlock(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Block id is required.");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("quote_blocks").delete().eq("id", id);
   if (error) throw new Error(error.message);
 

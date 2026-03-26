@@ -5,7 +5,7 @@ import {
   isOptimizableWebImageMimeType,
   optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -121,7 +121,7 @@ export async function upsertPackaging(formData: FormData) {
     const isJar = type.toLowerCase().includes("jar");
     const normalizedLids = isJar ? lid_colors : [];
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     const payload = {
       type,
       size,
@@ -188,7 +188,7 @@ export async function updatePackagingTypeOrder(formData: FormData) {
     redirect("/admin/packaging");
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: existing, error: existingError } = await client.from("packaging_options").select("type");
   if (existingError) throw new Error(existingError.message);
 
@@ -226,7 +226,7 @@ export async function deletePackaging(formData: FormData) {
   try {
     const id = formData.get("id")?.toString();
     if (!id) throw new Error("Missing id");
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     const { error } = await client.from("packaging_options").delete().eq("id", id);
     if (error) throw new Error(error.message);
   } catch (error) {
@@ -254,7 +254,7 @@ export async function uploadPackagingImage(formData: FormData) {
       throw new Error("Only PNG, JPG, and WEBP images are supported.");
     }
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     const { data: option, error: optionError } = await client
       .from("packaging_options")
       .select("type,size")

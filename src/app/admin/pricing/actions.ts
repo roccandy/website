@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 
@@ -21,7 +21,7 @@ export async function upsertTier(formData: FormData) {
     throw new Error(`Max weight per settings is ${max_total_kg} kg.`);
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   if (id) {
     const { error } = await client
       .from("weight_tiers")
@@ -41,7 +41,7 @@ export async function deleteTier(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/pricing?edit=1" });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("weight_tiers").delete().eq("id", id);
   if (error) throw new Error(error.message);
   redirect("/admin/pricing?edit=1");

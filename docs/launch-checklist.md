@@ -6,6 +6,7 @@ Use this file as the primary working document.
 
 Related docs:
 - [domain-switch-checklist.md](/Users/joeconlin/dev/roccandy/docs/domain-switch-checklist.md)
+- [architecture-notes.md](/Users/joeconlin/dev/roccandy/docs/architecture-notes.md)
 - [seo-setup.md](/Users/joeconlin/dev/roccandy/docs/seo-setup.md)
 - [seo-recommendations-checklist.md](/Users/joeconlin/dev/roccandy/docs/seo-recommendations-checklist.md)
 - [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql)
@@ -31,6 +32,13 @@ These items are already implemented in code:
 - [x] Static public assets have long-lived cache headers, and Next image delivery is configured for modern formats plus a higher cache TTL.
 - [x] The homepage feature video now uses a re-encoded full-length web asset at roughly `3.1 MB` instead of the older `10 MB` file, while still eager-loading for fast playback.
 - [x] Cart state no longer wraps the entire app in the root layout, and the cart drawer now loads as a deferred client chunk instead of inflating the main public render path.
+- [x] Supabase access is now split into explicit admin and public clients, and the server/admin client no longer falls back to the anon key if `SUPABASE_SERVICE_ROLE_KEY` is missing.
+- [x] Public managed-content and redirect reads now use the explicit public Supabase client, while privileged writes stay on the explicit admin client.
+- [x] Site pages, FAQs, and terms are now pure reads at request time; built-in content sync/backfill happens explicitly via `npm run sync-managed-content`.
+- [x] Square and PayPal now share one paid-order finalization service for Woo creation, Supabase inserts, and email sending.
+- [x] The repeated public top-bar/header shell now lives in one shared component instead of being duplicated across major public pages.
+- [x] `QuoteBuilder` and `OrdersTable` have been broken up with extracted shared modules/components to reduce monolith risk without changing public behavior.
+- [x] A real test gate now exists with `npm test` (Vitest) covering designer URL logic, redirect normalization, managed-content sync, and paid-order finalization.
 - [x] Unused starter SVGs, dead GSAP-based components, and superseded homepage media variants have been removed from the repo.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.
@@ -59,15 +67,16 @@ The current live Supabase project has been checked directly against the app.
 - [x] Public helper functions `is_admin` and `set_admin_users_updated_at` now use an explicit `search_path` to satisfy Security Advisor hardening warnings.
 - [x] The schema health check currently returns all `OK` on the live project.
 - [x] Redundant duplicate policies on `orders` and `production_slots` have a cleanup script.
-- [x] Cleanup audit found no safe public-table deletions to make right now; the remaining legacy-looking table (`user_roles`) is still intentionally used by `is_admin()` for RLS.
-- [ ] The database permission model still uses `is_admin(auth.uid())` for RLS.
-- [ ] The website admin login uses `admin_users` via NextAuth, not Supabase Auth.
+- [x] Cleanup audit found no safe public-table deletions to make right now.
+- [x] The active website/admin paths now use `admin_users` + NextAuth with the explicit server admin client, and no active app path relies on `user_roles` / `is_admin()` for its normal behavior.
+- [ ] Transitional DB SQL/RLS artifacts still reference `is_admin(auth.uid())`.
+- [ ] Transitional compatibility objects like `user_roles` and `is_admin()` still exist in the database and legacy SQL docs.
 
 Important caveat:
 
-- This mismatch is not currently blocking the app because server-side writes use the service-role client.
-- It does mean the DB's native RLS admin model is still legacy/independent from the website admin login.
-- Do not delete `user_roles` or rewrite `is_admin()` casually before a dedicated auth migration.
+- This is no longer an active app-path blocker because the app now uses explicit server-admin writes and `admin_users` + NextAuth.
+- It does mean the DB still contains legacy transitional admin-policy artifacts that are independent from the website login model.
+- Do not delete `user_roles` or rewrite `is_admin()` casually before a dedicated transitional cleanup/replacement pass.
 
 These items are still manual / launch work:
 
@@ -100,6 +109,7 @@ If you want the shortest realistic list between now and launch, it is:
 
 ## Phase 1: Database + Admin Setup
 
+- [x] Add explicit admin/public Supabase clients and remove the service-role-to-anon fallback.
 - [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) against the live project and confirm it returns all `OK`.
 - [x] Add [2026-03-25-rls-audit.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-rls-audit.sql) for quickly separating real app RLS issues from Supabase internal-schema alerts.
 - [x] Apply [2026-03-25-function-search-path-hardening.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-function-search-path-hardening.sql) to address Security Advisor function warnings.
@@ -117,6 +127,8 @@ If you want the shortest realistic list between now and launch, it is:
 
 ## Phase 2: Content + SEO Content Entry
 
+- [x] Site pages, FAQs, and terms now render without mutating the database during normal reads.
+- [x] Built-in content sync/backfill now exists as an explicit command: `npm run sync-managed-content`.
 - [ ] Review and complete the editable site pages in `/admin/settings/pages`.
 - [ ] Fill in homepage title, visible intro content, SEO title, meta description, and share image.
 - [x] Default homepage meta description in code is now within typical SERP length.
@@ -157,6 +169,7 @@ If you want the shortest realistic list between now and launch, it is:
 
 ## Phase 4: Payments + Order Flow
 
+- [x] Square and PayPal paid-order routes now share one finalization service for Woo order creation, Supabase inserts, and email sending.
 - [ ] Confirm the site is not using sandbox payment configuration in production.
 - [ ] Test a Square payment on staging if possible.
 - [ ] Test a PayPal payment on staging if possible.
@@ -258,6 +271,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [ ] Test several pre-made product pages.
 - [ ] Test Contact page.
 - [ ] Test Shipping and Returns page.
+- [x] `npm test` now exists and should be run alongside `npm run lint` and `npm run build` before major merges or launch changes.
 - [ ] Test Privacy page.
 - [ ] Test Terms page.
 - [ ] Test 404 page.

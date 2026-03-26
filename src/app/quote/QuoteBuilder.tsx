@@ -16,7 +16,6 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import { CandyPreview } from "./CandyPreview";
-import { paletteSections } from "@/app/admin/settings/palette";
 import { useCart, type CustomCartItem } from "@/components/CartProvider";
 import { trackAddToCart } from "@/lib/analyticsEvents";
 import {
@@ -27,8 +26,35 @@ import {
 } from "@/lib/clientImageOptimization";
 import { buildDesignerPath, resolveDesignerState } from "@/lib/designUrls";
 import { sortPackagingTypes } from "@/lib/packaging";
-
-type OrderTypeId = "weddings" | "text" | "branded";
+import {
+  buildPaletteGroups,
+  clampByte,
+  clampChannel,
+  cmykToHex,
+  getPaletteHex,
+  hexToCmyk,
+  hexToRgba,
+  normalizeHex,
+  PalettePicker,
+  parseHexInput,
+  rgbaToHex,
+  sanitizeHexInput,
+  type Cmyk,
+  type Rgba,
+} from "./quoteBuilderPalette";
+import {
+  buildPublicImageUrl,
+  formatLabelTypeLabel,
+  inferOrderTypeFromCategory,
+  ORDER_SUBTYPES,
+  ORDER_TYPE_TITLES,
+  resolveInitialDesignerSelection,
+  resolveSyncedDesignerSelection,
+  splitWeddingDesign,
+  SUBTITLE_BY_CATEGORY,
+  toTitleCase,
+  type OrderTypeId,
+} from "./quoteBuilderShared";
 
 type Props = {
   categories: Category[];
@@ -58,329 +84,12 @@ type QuoteResult = {
   totalWeightKg: number;
   items: QuoteItem[];
 };
-
-type PaletteOption = {
-  id: string;
-  label: string;
-  hex: string;
-};
-
-type PaletteGroup = {
-  title: string;
-  options: PaletteOption[];
-};
-
-type Cmyk = {
-  c: number;
-  m: number;
-  y: number;
-  k: number;
-};
-
-type Rgba = {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-};
-
-function inferOrderTypeFromCategory(value?: string | null): OrderTypeId | undefined {
-  if (!value) return undefined;
-  if (value === "weddings" || value.startsWith("weddings-")) return "weddings";
-  if (value === "text" || value.startsWith("custom-")) return "text";
-  if (value === "branded") return "branded";
-  return undefined;
-}
-
-function splitWeddingDesign(value?: string | null) {
-  const safe = (value || "").trim();
-  if (!safe) return { lineOne: "", lineTwo: "" };
-  const heartSplit = safe.split(/\s*\u2764\uFE0F?\s*/);
-  if (heartSplit.length >= 2) {
-    return { lineOne: heartSplit[0].trim(), lineTwo: heartSplit.slice(1).join(" ").trim() };
-  }
-  const ampSplit = safe.split(/\s*&\s*/);
-  if (ampSplit.length >= 2) {
-    return { lineOne: ampSplit[0].trim(), lineTwo: ampSplit.slice(1).join(" ").trim() };
-  }
-  return { lineOne: safe, lineTwo: "" };
-}
-
-function getPaletteHex(
-  palette: ColorPaletteRow[],
-  category: string,
-  shade: string,
-  fallback: string,
-) {
-  const found = palette.find((row) => row.category === category && row.shade === shade);
-  return found?.hex ?? fallback;
-}
-
-function buildPaletteGroups(palette: ColorPaletteRow[]): PaletteGroup[] {
-  const lookup = new Map(palette.map((row) => [`${row.category}:${row.shade}`, row.hex]));
-  return paletteSections.map((section) => ({
-    title: section.title,
-    options: section.items.map((item) => ({
-      id: item.name,
-      label: item.label,
-      hex: lookup.get(`${item.categoryKey}:${item.shadeKey}`) ?? item.defaultValue,
-    })),
-  }));
-}
-
-function clampChannel(value: number) {
-  return Math.min(100, Math.max(0, Math.round(value)));
-}
-
-function clampByte(value: number) {
-  return Math.min(255, Math.max(0, Math.round(value)));
-}
-
-function clampAlpha(value: number) {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(1, Math.max(0, value));
-}
-
-function hexToCmyk(hex: string): Cmyk | null {
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) return null;
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const k = 1 - Math.max(r, g, b);
-  if (k === 1) {
-    return { c: 0, m: 0, y: 0, k: 100 };
-  }
-  const c = (1 - r - k) / (1 - k);
-  const m = (1 - g - k) / (1 - k);
-  const y = (1 - b - k) / (1 - k);
-  return {
-    c: clampChannel(c * 100),
-    m: clampChannel(m * 100),
-    y: clampChannel(y * 100),
-    k: clampChannel(k * 100),
-  };
-}
-
-function hexToRgba(hex: string, alpha = 1): Rgba | null {
-  if (!/^#[0-9a-f]{6}$/i.test(hex)) return null;
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
-    a: clampAlpha(alpha),
-  };
-}
-
-function cmykToHex(cmyk: Cmyk): string {
-  const c = clampChannel(cmyk.c) / 100;
-  const m = clampChannel(cmyk.m) / 100;
-  const y = clampChannel(cmyk.y) / 100;
-  const k = clampChannel(cmyk.k) / 100;
-  const r = Math.round(255 * (1 - c) * (1 - k));
-  const g = Math.round(255 * (1 - m) * (1 - k));
-  const b = Math.round(255 * (1 - y) * (1 - k));
-  const toHex = (value: number) => value.toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function rgbaToHex(rgba: Rgba): string {
-  const r = clampByte(rgba.r);
-  const g = clampByte(rgba.g);
-  const b = clampByte(rgba.b);
-  const toHex = (value: number) => value.toString(16).padStart(2, "0");
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function normalizeHex(value: string, fallback: string) {
-  const raw = value.trim().toLowerCase();
-  if (!raw) return fallback;
-  const withHash = raw.startsWith("#") ? raw : `#${raw}`;
-  if (/^#[0-9a-f]{3}$/.test(withHash)) {
-    const [, r, g, b] = withHash;
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-  if (/^#[0-9a-f]{6}$/.test(withHash)) {
-    return withHash;
-  }
-  return fallback;
-}
-
-function parseHexInput(value: string): string | null {
-  const raw = value.trim().toLowerCase();
-  if (!raw) return null;
-  const withHash = raw.startsWith("#") ? raw : `#${raw}`;
-  if (/^#[0-9a-f]{3}$/.test(withHash)) {
-    const [, r, g, b] = withHash;
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-  if (/^#[0-9a-f]{6}$/.test(withHash)) {
-    return withHash;
-  }
-  return null;
-}
-
-function sanitizeHexInput(value: string): string {
-  const stripped = value.replace(/#/g, "").replace(/[^0-9a-f]/gi, "").slice(0, 6);
-  return `#${stripped}`;
-}
-
-function PalettePicker({
-  label,
-  value,
-  onChange,
-  groups,
-  onCustom,
-  placeholderLabel = "Select colour",
-  placeholderSwatch,
-}: {
-  label: string;
-  value: string;
-  onChange: (hex: string) => void;
-  groups: PaletteGroup[];
-  onCustom: () => void;
-  placeholderLabel?: string;
-  placeholderSwatch?: string;
-}) {
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
-  const flat = groups.flatMap((group) => group.options);
-  const hasValue = Boolean(value);
-  const selected = hasValue ? flat.find((option) => option.hex.toLowerCase() === value.toLowerCase()) : undefined;
-  const selectedLabel = hasValue ? selected?.label ?? "Custom" : placeholderLabel;
-  const swatchValue = hasValue ? value : placeholderSwatch ?? "#e5e7eb";
-  const handleSelect = (hex: string) => {
-    onChange(hex);
-    if (detailsRef.current) {
-      detailsRef.current.open = false;
-    }
-  };
-  return (
-    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-3 text-xs font-semibold text-zinc-700">
-        <span className="normal-case tracking-[0.04em] text-zinc-500">{label}</span>
-        <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
-          <span>{selectedLabel}</span>
-          <span
-            style={{
-              width: 20,
-              height: 20,
-              backgroundColor: swatchValue,
-              border: "1px solid #000",
-              borderRadius: 9999,
-              boxSizing: "border-box",
-              flexShrink: 0,
-              display: "inline-block",
-            }}
-          />
-        </span>
-      </summary>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
-        {groups.map((group) => (
-          <div key={group.title}>
-            <p className="sr-only">{group.title}</p>
-            <div className="mt grid grid-cols-3 gap-2 gap-2">
-              {group.options.map((option) => {
-                const isActive = option.hex.toLowerCase() === value.toLowerCase();
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => handleSelect(option.hex)}
-                    className={`palette-swatch h-8 w-full rounded-full border ${
-                      isActive ? "ring-2 ring-zinc-900 ring-offset-1" : ""
-                    }`}
-                    style={
-                      {
-                        backgroundColor: option.hex,
-                        "--swatch": option.hex,
-                        "--swatch-border": "#000000",
-                      } as React.CSSProperties
-                    }
-                    aria-label={option.label}
-                  >
-                    <span className="sr-only">{option.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <div>
-          <p className="sr-only">Custom</p>
-            <button
-              type="button"
-              data-neutral-button
-              className="mt flex h-9 w-full items-center justify-center rounded-full px-3 text-[11px] font-semibold hover:text-zinc-800"
-              onClick={onCustom}
-            >
-              Custom colour
-            </button>
-        </div>
-      </div>
-    </details>
-  );
-}
-
-const ORDER_TYPES: { id: OrderTypeId; label: string }[] = [
-  { id: "weddings", label: "Weddings" },
-  { id: "text", label: "Custom text" },
-  { id: "branded", label: "Branded" },
-];
-
-const ORDER_SUBTYPES: Record<OrderTypeId, { id: string; label: string }[]> = {
-  weddings: [
-    { id: "weddings-initials", label: "Initials" },
-    { id: "weddings-both-names", label: "Both names" },
-  ],
-  text: [
-    { id: "custom-1-6", label: "1-6 letters" },
-    { id: "custom-7-14", label: "7-14 letters" },
-  ],
-  branded: [{ id: "branded", label: "Branded" }],
-};
-
-const ORDER_TYPE_TITLES: Record<OrderTypeId, string> = {
-  weddings: "Wedding Candy",
-  text: "Custom Text Candy",
-  branded: "Branded Candy",
-};
-
-const SUBTITLE_BY_CATEGORY: Record<string, string> = {
-  "weddings-both-names": "Names & Hearts",
-  "weddings-initials": "Initials & Hearts",
-  "custom-1-6": "Text: Up to 6 letters",
-  "custom-7-14": "Text: 7 - 14 letters",
-  branded: "Logo Branded Candy",
-};
-
-const PACKAGING_IMAGE_BUCKET = "packaging-images";
 const LID_COLOR_SWATCH: Record<string, string> = {
   black: "#1f1f1f",
   silver: "#d7d7d7",
   gold: "#d2b16f",
 };
 const INGREDIENT_LABEL_PREVIEW_SRC = "/labels/ingredient-label.png";
-const LABEL_SHAPE_LABELS: Record<LabelType["shape"], string> = {
-  square: "Square",
-  rectangular: "Rectangular",
-  circle: "Circle",
-};
-
-function buildPublicImageUrl(imagePath: string | null | undefined) {
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base || !imagePath) return "";
-  const encoded = encodeURIComponent(imagePath);
-  return `${base}/storage/v1/object/public/${PACKAGING_IMAGE_BUCKET}/${encoded}`;
-}
-
-function formatLabelTypeLabel(labelType: LabelType) {
-  const shape = LABEL_SHAPE_LABELS[labelType.shape] ?? labelType.shape;
-  const dimension = (labelType.dimensions || "").trim();
-  return dimension ? `${shape} ${dimension}` : shape;
-}
-
-function toTitleCase(value: string) {
-  return value.replace(/\w\S*/g, (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
-}
 
 export function QuoteBuilder({
   categories,
@@ -429,23 +138,16 @@ export function QuoteBuilder({
     () => getPaletteHex(palette, "grey", "light", "#b7b7b7"),
     [palette],
   );
-    const resolvedInitialOrderType =
-      ORDER_TYPES.find((type) => type.id === initialOrderType)?.id ?? ORDER_TYPES[0]?.id ?? "weddings";
-    const queryOrderType = designerState?.orderType;
-    const querySubtype = designerState?.categoryId ?? undefined;
-    const initialOrderTypeResolved = queryOrderType ?? resolvedInitialOrderType;
-    const hasExplicitOrderType = Boolean(queryOrderType || initialOrderType);
-    const validInitialQuerySubtype = querySubtype;
-    const initialSubtype = (() => {
-      if (validInitialQuerySubtype) return validInitialQuerySubtype;
-      if (initialOrderTypeResolved === "branded") {
-        return ORDER_SUBTYPES.branded[0]?.id ?? "branded";
-      }
-      if (hasExplicitOrderType) return "";
-      return ORDER_SUBTYPES[initialOrderTypeResolved]?.[0]?.id ?? categories[0]?.id ?? "";
-    })();
-    const [orderType, setOrderType] = useState<OrderTypeId>(initialOrderTypeResolved);
-    const [categoryId, setCategoryId] = useState(initialSubtype);
+  const queryOrderType = designerState?.orderType;
+  const querySubtype = designerState?.categoryId ?? undefined;
+  const { initialOrderTypeResolved, initialSubtype } = resolveInitialDesignerSelection({
+    initialOrderType,
+    queryOrderType,
+    querySubtype,
+    categories,
+  });
+  const [orderType, setOrderType] = useState<OrderTypeId>(initialOrderTypeResolved);
+  const [categoryId, setCategoryId] = useState(initialSubtype);
   const showSubtype = orderType !== "branded";
   const needsSubtypeSelection = showSubtype && !categoryId;
 
@@ -716,35 +418,24 @@ export function QuoteBuilder({
             subtype: new URLSearchParams(window.location.search).get("subtype"),
           })?.orderType
         : undefined;
-      const nextOrderType = queryOrderType ?? initialOrderType ?? urlOrderType;
-      if (!nextOrderType) return;
+    const nextSelection = resolveSyncedDesignerSelection({
+      orderType,
+      categoryId,
+      queryOrderType,
+      querySubtype,
+      initialOrderType,
+      urlOrderType,
+      hasManualSubtype: hasManualSubtypeRef.current,
+    });
+    if (!nextSelection) return;
 
-      const validQuerySubtype =
-        querySubtype && ORDER_SUBTYPES[nextOrderType]?.some((sub) => sub.id === querySubtype) ? querySubtype : undefined;
-      const isValidSubtype = ORDER_SUBTYPES[nextOrderType]?.some((sub) => sub.id === categoryId);
-      const allowQuerySubtype = !hasManualSubtypeRef.current;
-      const hasExplicitOrderType = Boolean(queryOrderType || initialOrderType || urlOrderType);
-      const shouldRequireSubtypeSelection =
-        hasExplicitOrderType && !validQuerySubtype && nextOrderType !== "branded" && !hasManualSubtypeRef.current;
-
-      let nextSubtype = categoryId;
-      if (allowQuerySubtype && validQuerySubtype) {
-        nextSubtype = validQuerySubtype;
-      } else if (shouldRequireSubtypeSelection) {
-        nextSubtype = "";
-      } else if (nextOrderType === "branded") {
-        nextSubtype = ORDER_SUBTYPES.branded[0]?.id ?? "branded";
-      } else if (!isValidSubtype) {
-        nextSubtype = ORDER_SUBTYPES[nextOrderType]?.[0]?.id ?? "";
-      }
-
-      if (nextOrderType !== orderType) {
-        setOrderType(nextOrderType);
-      }
-      if (nextSubtype !== categoryId) {
-        setCategoryId(nextSubtype);
-      }
-    }, [queryOrderType, querySubtype, initialOrderType, orderType, categoryId]);
+    if (nextSelection.nextOrderType !== orderType) {
+      setOrderType(nextSelection.nextOrderType);
+    }
+    if (nextSelection.nextSubtype !== categoryId) {
+      setCategoryId(nextSelection.nextSubtype);
+    }
+  }, [queryOrderType, querySubtype, initialOrderType, orderType, categoryId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

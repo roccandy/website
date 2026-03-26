@@ -1,6 +1,6 @@
 import { getSettings } from "@/lib/data";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 export const revalidate = 0;
@@ -18,7 +18,7 @@ async function updateExtrasPricing(formData: FormData) {
   const jacket_two_colour = Number(formData.get("jacket_two_colour"));
   const jacket_pinstripe = Number(formData.get("jacket_pinstripe"));
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("settings")
     .update({

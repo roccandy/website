@@ -1,5 +1,7 @@
+import { createHash } from "crypto";
 import { FAQ_ITEMS } from "@/lib/faqData";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { supabasePublicClient } from "@/lib/supabase/public";
 
 const LEGACY_FAQ_BUCKET = "site-content";
 const LEGACY_FAQ_PATH = "faqs.json";
@@ -35,6 +37,18 @@ function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function buildDeterministicUuid(seed: string) {
+  const chars = createHash("sha1")
+    .update(seed)
+    .digest("hex")
+    .slice(0, 32)
+    .padEnd(32, "0")
+    .split("");
+  chars[12] = "5";
+  chars[16] = "a";
+  return `${chars.slice(0, 8).join("")}-${chars.slice(8, 12).join("")}-${chars.slice(12, 16).join("")}-${chars.slice(16, 20).join("")}-${chars.slice(20, 32).join("")}`;
+}
+
 function sortFaqItems(items: ManagedFaqItem[]) {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder);
 }
@@ -44,7 +58,7 @@ function normalizeFaqItems(items: ManagedFaqItem[]): ManagedFaqItem[] {
     .map((item, index) => {
       const normalizedId = normalizeText(item.id);
       return {
-        id: isUuid(normalizedId) ? normalizedId : crypto.randomUUID(),
+        id: isUuid(normalizedId) ? normalizedId : buildDeterministicUuid(`faq:${item.question}:${index}`),
         question: normalizeText(item.question),
         answerHtml: normalizeText(item.answerHtml),
         sortOrder: index,
@@ -55,7 +69,7 @@ function normalizeFaqItems(items: ManagedFaqItem[]): ManagedFaqItem[] {
 
 function buildFallbackFaqItems(): ManagedFaqItem[] {
   return FAQ_ITEMS.map((item, index) => ({
-    id: crypto.randomUUID(),
+    id: buildDeterministicUuid(`faq:${item.question}:${index}`),
     question: item.question,
     answerHtml: item.answerHtml,
     sortOrder: index,
@@ -80,7 +94,7 @@ function looksLikeMissingStorage(message: string) {
 }
 
 async function readFaqItemsFromTable(): Promise<ManagedFaqItem[] | null> {
-  const client = supabaseServerClient;
+  const client = supabasePublicClient;
   const { data, error } = await client
     .from(FAQ_TABLE)
     .select("id,question,answer_html,sort_order")
@@ -106,7 +120,7 @@ async function readFaqItemsFromTable(): Promise<ManagedFaqItem[] | null> {
 }
 
 async function readLegacyFaqItemsFromStorage(): Promise<ManagedFaqItem[] | null> {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   let data: Blob | null = null;
   let error: { message?: string } | null = null;
 
@@ -150,7 +164,7 @@ async function readLegacyFaqItemsFromStorage(): Promise<ManagedFaqItem[] | null>
       const sortOrder = Number.isFinite(Number(item.sortOrder)) ? Number(item.sortOrder) : index;
       if (!question || !answerHtml) return null;
       return {
-        id: isUuid(id) ? id : crypto.randomUUID(),
+        id: isUuid(id) ? id : buildDeterministicUuid(`faq:${question}:${index}`),
         question,
         answerHtml,
         sortOrder,
@@ -166,20 +180,9 @@ export async function getManagedFaqItems(): Promise<ManagedFaqItem[]> {
   if (fromTable && fromTable.length > 0) return fromTable;
 
   const legacy = await readLegacyFaqItemsFromStorage();
-  if (legacy && legacy.length > 0) {
-    if (fromTable) {
-      // Table exists but is empty: migrate legacy records into SQL table automatically.
-      await saveManagedFaqItems(legacy);
-    }
-    return legacy;
-  }
+  if (legacy && legacy.length > 0) return legacy;
 
-  const fallback = buildFallbackFaqItems();
-  if (fromTable) {
-    // Table exists but no records anywhere: seed defaults once.
-    await saveManagedFaqItems(fallback);
-  }
-  return fallback;
+  return buildFallbackFaqItems();
 }
 
 export async function getFaqContentItems(): Promise<FaqContent[]> {
@@ -211,7 +214,7 @@ export function buildFaqSchemaItems(items: FaqContent[]) {
 
 export async function saveManagedFaqItems(items: ManagedFaqItem[]) {
   const normalized = normalizeFaqItems(items);
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
 
   const { error: clearError } = await client
     .from(FAQ_TABLE)
@@ -234,4 +237,21 @@ export async function saveManagedFaqItems(items: ManagedFaqItem[]) {
   if (insertError) {
     throw new Error(insertError.message);
   }
+}
+
+export async function syncManagedFaqItems() {
+  const fromTable = await readFaqItemsFromTable();
+  if (fromTable && fromTable.length > 0) {
+    return fromTable;
+  }
+
+  const legacy = await readLegacyFaqItemsFromStorage();
+  if (legacy && legacy.length > 0) {
+    await saveManagedFaqItems(legacy);
+    return legacy;
+  }
+
+  const fallback = buildFallbackFaqItems();
+  await saveManagedFaqItems(fallback);
+  return fallback;
 }

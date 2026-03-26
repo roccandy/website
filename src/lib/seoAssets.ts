@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import {
   isOptimizableWebImageMimeType,
   optimizeServerImageForWeb,
@@ -23,7 +23,7 @@ function isMissingBucketError(message: string) {
 }
 
 async function ensureSeoImageBucket() {
-  const { error } = await supabaseServerClient.storage.createBucket(SEO_IMAGE_BUCKET, {
+  const { error } = await supabaseAdminClient.storage.createBucket(SEO_IMAGE_BUCKET, {
     public: true,
     fileSizeLimit: `${MAX_UPLOAD_BYTES}`,
     allowedMimeTypes: Array.from(ALLOWED_MIME_TYPES),
@@ -65,7 +65,7 @@ export async function uploadSeoImage(file: File, slugPath: string) {
   const objectPath = `${folder}/${Date.now()}-${baseName}.${optimized.extension}`;
 
   const upload = async () =>
-    supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).upload(objectPath, optimized.buffer, {
+    supabaseAdminClient.storage.from(SEO_IMAGE_BUCKET).upload(objectPath, optimized.buffer, {
       contentType: optimized.contentType,
       upsert: true,
     });
@@ -80,7 +80,7 @@ export async function uploadSeoImage(file: File, slugPath: string) {
     throw new Error(result.error.message);
   }
 
-  const { data } = supabaseServerClient.storage.from(SEO_IMAGE_BUCKET).getPublicUrl(objectPath);
+  const { data } = supabaseAdminClient.storage.from(SEO_IMAGE_BUCKET).getPublicUrl(objectPath);
   if (!data.publicUrl) {
     throw new Error("Unable to generate a public URL for the SEO image.");
   }

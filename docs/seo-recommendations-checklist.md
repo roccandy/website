@@ -60,6 +60,7 @@ How to use it:
 ## Notes
 
 - The current app is much closer to Damien's requested structure than the original version he reviewed.
+- A core hardening/simplification pass has now landed underneath the public site: explicit Supabase admin/public clients, explicit managed-content sync instead of write-on-read behavior, centralized paid-order finalization, a shared public header shell, and a real `npm test` gate.
 - The biggest remaining gaps are not core technical SEO anymore; they are missing content sections and launch validation.
 - The most obvious still-missing items from his email are:
   - individual blog article publishing if you want the blog to become an active content channel

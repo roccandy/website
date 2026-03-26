@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/data";
 import { generateOrderNumber, normalizeBaseOrderNumber, normalizeOrderNumber } from "@/lib/orderNumbers";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Max total kg is ${settings.max_total_kg}.` }, { status: 400 });
     }
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     let order_number = normalizeBaseOrderNumber(normalizeOrderNumber(body.orderNumber));
     if (!order_number) {
       order_number = await generateOrderNumber();

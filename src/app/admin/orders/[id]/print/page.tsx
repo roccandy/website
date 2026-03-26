@@ -2,7 +2,7 @@
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
@@ -168,7 +168,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const isUuid = (value: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const orderQuery = client.from("orders").select("*");
   let order: OrderRow | null = null;
   let error: { message: string } | null = null;

@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { calculatePricing } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumbers";
 import { getSettings } from "@/lib/data";
@@ -65,7 +65,7 @@ async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
   if (premadeItems.length === 0) return premadeById;
 
   const premadeIds = premadeItems.map((item) => item.premadeId);
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabaseAdminClient
     .from("premade_candies")
     .select("id,name,price,weight_g,woo_product_id,description")
     .in("id", premadeIds);

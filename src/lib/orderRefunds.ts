@@ -1,8 +1,8 @@
 import type { OrderRow } from "@/lib/data";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { updateWooOrder } from "@/lib/woo";
 
-type ServerClient = typeof supabaseServerClient;
+type ServerClient = typeof supabaseAdminClient;
 
 type RefundPersistenceInput = {
   client: ServerClient;

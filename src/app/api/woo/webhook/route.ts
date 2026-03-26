@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
 
 type WooWebhookPayload = {
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const paidAt = payload.date_paid ? new Date(payload.date_paid).toISOString() : null;
   const paid = status === "processing" || status === "completed";
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: orders, error: fetchError } = await client
     .from("orders")
     .select("*")

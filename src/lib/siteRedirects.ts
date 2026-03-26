@@ -1,4 +1,5 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { supabasePublicClient } from "@/lib/supabase/public";
 import {
   normalizeRedirectDestinationPath,
   normalizeRedirectSourcePath,
@@ -31,7 +32,7 @@ function mapRow(row: SiteRedirectRow): SiteRedirect {
 }
 
 export async function listSiteRedirects(): Promise<SiteRedirect[]> {
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabasePublicClient
     .from(SITE_REDIRECTS_TABLE)
     .select("source_path,destination_path,status_code,is_active,updated_at")
     .order("source_path", { ascending: true });
@@ -65,7 +66,7 @@ export async function saveSiteRedirect(input: {
     throw new Error("Source and destination cannot be the same.");
   }
 
-  const { error } = await supabaseServerClient.from(SITE_REDIRECTS_TABLE).upsert(
+  const { error } = await supabaseAdminClient.from(SITE_REDIRECTS_TABLE).upsert(
     {
       source_path: sourcePath,
       destination_path: destinationPath,
@@ -86,7 +87,7 @@ export async function deleteSiteRedirect(sourcePath: string) {
     throw new Error("Source path is required.");
   }
 
-  const { error } = await supabaseServerClient.from(SITE_REDIRECTS_TABLE).delete().eq("source_path", normalizedSource);
+  const { error } = await supabaseAdminClient.from(SITE_REDIRECTS_TABLE).delete().eq("source_path", normalizedSource);
   if (error) {
     throw new Error(error.message);
   }

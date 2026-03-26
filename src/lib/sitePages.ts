@@ -1,8 +1,11 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { supabasePublicClient } from "@/lib/supabase/public";
 import { buildDesignerPath } from "@/lib/designUrls";
 import { getFaqContentItemsByIds, type FaqContent } from "@/lib/faqs";
 
 const SITE_PAGES_TABLE = "site_pages";
+const SITE_PAGES_SELECT =
+  "slug,title,hero_subheading,hero_supporting_line,body_html,faq_heading,faq_item_ids,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls";
 
 export type ManagedSitePage = {
   slug: string;
@@ -417,18 +420,6 @@ function isMissingTableError(message: string) {
   return message.includes("site_pages") || message.includes("relation") || message.includes("schema cache");
 }
 
-function isMissingGalleryColumnError(message: string) {
-  return message.includes("gallery_image_urls") || message.includes("schema cache");
-}
-
-function isMissingLandingHeroColumnError(message: string) {
-  return message.includes("hero_subheading") || message.includes("hero_supporting_line") || message.includes("schema cache");
-}
-
-function isMissingFaqSelectionColumnError(message: string) {
-  return message.includes("faq_heading") || message.includes("faq_item_ids") || message.includes("schema cache");
-}
-
 function normalizeRow(row: SitePageRow): ManagedSitePage {
   return {
     slug: row.slug,
@@ -489,77 +480,21 @@ function areManagedSitePagesEqual(left: ManagedSitePage, right: ManagedSitePage)
 }
 
 async function readSitePage(slug: string): Promise<ManagedSitePage | null> {
-  const selectAttempts = [
-    {
-      columns:
-        "slug,title,hero_subheading,hero_supporting_line,body_html,faq_heading,faq_item_ids,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
-      normalize: (row: SitePageRow) => row,
-    },
-    {
-      columns:
-        "slug,title,hero_subheading,hero_supporting_line,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
-      normalize: (row: SitePageRow) => ({
-        ...row,
-        faq_heading: null,
-        faq_item_ids: [],
-      }),
-    },
-    {
-      columns: "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url,gallery_image_urls",
-      normalize: (row: SitePageRow) => ({
-        ...row,
-        hero_subheading: null,
-        hero_supporting_line: null,
-        faq_heading: null,
-        faq_item_ids: [],
-      }),
-    },
-    {
-      columns: "slug,title,hero_subheading,hero_supporting_line,body_html,faq_heading,faq_item_ids,seo_title,meta_description,og_image_url,canonical_url",
-      normalize: (row: SitePageRow) => ({
-        ...row,
-        gallery_image_urls: [],
-      }),
-    },
-    {
-      columns: "slug,title,body_html,seo_title,meta_description,og_image_url,canonical_url",
-      normalize: (row: SitePageRow) => ({
-        ...row,
-        hero_subheading: null,
-        hero_supporting_line: null,
-        faq_heading: null,
-        faq_item_ids: [],
-        gallery_image_urls: [],
-      }),
-    },
-  ] as const;
+  const result = await supabasePublicClient
+    .from(SITE_PAGES_TABLE)
+    .select(SITE_PAGES_SELECT)
+    .eq("slug", slug)
+    .maybeSingle();
 
-  for (const attempt of selectAttempts) {
-    const result = await supabaseServerClient
-      .from(SITE_PAGES_TABLE)
-      .select(attempt.columns)
-      .eq("slug", slug)
-      .maybeSingle();
-
-    if (!result.error) {
-      return result.data ? normalizeRow(attempt.normalize(result.data as unknown as SitePageRow)) : null;
-    }
-
+  if (result.error) {
     const message = result.error.message.toLowerCase();
     if (isMissingTableError(message)) {
       return null;
     }
-
-    if (
-      !isMissingGalleryColumnError(message) &&
-      !isMissingLandingHeroColumnError(message) &&
-      !isMissingFaqSelectionColumnError(message)
-    ) {
-      throw new Error(result.error.message);
-    }
+    throw new Error(result.error.message);
   }
 
-  return null;
+  return result.data ? normalizeRow(result.data as SitePageRow) : null;
 }
 
 async function upsertSitePage(page: ManagedSitePage) {
@@ -578,69 +513,12 @@ async function upsertSitePage(page: ManagedSitePage) {
     gallery_image_urls: normalizeGalleryImageUrls(page.galleryImageUrls),
   };
 
-  const upsertAttempts = [
-    payload,
-    {
-      slug: payload.slug,
-      title: payload.title,
-      hero_subheading: payload.hero_subheading,
-      hero_supporting_line: payload.hero_supporting_line,
-      body_html: payload.body_html,
-      seo_title: payload.seo_title,
-      meta_description: payload.meta_description,
-      og_image_url: payload.og_image_url,
-      canonical_url: payload.canonical_url,
-      gallery_image_urls: payload.gallery_image_urls,
-    },
-    {
-      slug: payload.slug,
-      title: payload.title,
-      body_html: payload.body_html,
-      seo_title: payload.seo_title,
-      meta_description: payload.meta_description,
-      og_image_url: payload.og_image_url,
-      canonical_url: payload.canonical_url,
-      gallery_image_urls: payload.gallery_image_urls,
-    },
-    {
-      slug: payload.slug,
-      title: payload.title,
-      hero_subheading: payload.hero_subheading,
-      hero_supporting_line: payload.hero_supporting_line,
-      body_html: payload.body_html,
-      seo_title: payload.seo_title,
-      meta_description: payload.meta_description,
-      og_image_url: payload.og_image_url,
-      canonical_url: payload.canonical_url,
-    },
-    {
-      slug: payload.slug,
-      title: payload.title,
-      body_html: payload.body_html,
-      seo_title: payload.seo_title,
-      meta_description: payload.meta_description,
-      og_image_url: payload.og_image_url,
-      canonical_url: payload.canonical_url,
-    },
-  ] as const;
+  const result = await supabaseAdminClient.from(SITE_PAGES_TABLE).upsert(payload, {
+    onConflict: "slug",
+  });
 
-  for (const attempt of upsertAttempts) {
-    const result = await supabaseServerClient.from(SITE_PAGES_TABLE).upsert(attempt, {
-      onConflict: "slug",
-    });
-
-    if (!result.error) {
-      return;
-    }
-
-    const message = result.error.message.toLowerCase();
-    if (
-      !isMissingGalleryColumnError(message) &&
-      !isMissingLandingHeroColumnError(message) &&
-      !isMissingFaqSelectionColumnError(message)
-    ) {
-      throw new Error(result.error.message);
-    }
+  if (result.error) {
+    throw new Error(result.error.message);
   }
 }
 
@@ -650,9 +528,8 @@ export function buildManagedSitePageHref(slug: string) {
   return `/${slug.replace(/^\/+/, "")}`;
 }
 
-export async function getManagedSitePage(slug: string): Promise<ManagedSitePage> {
-  const existing = await readSitePage(slug);
-  const fallback = DEFAULT_SITE_PAGES[slug] ?? {
+export function getDefaultManagedSitePage(slug: string): ManagedSitePage {
+  return DEFAULT_SITE_PAGES[slug] ?? {
     slug,
     title: slug,
     heroSubheading: null,
@@ -666,22 +543,44 @@ export async function getManagedSitePage(slug: string): Promise<ManagedSitePage>
     canonicalUrl: null,
     galleryImageUrls: [],
   };
+}
 
-  if (existing) {
-    const hydrated = hydrateManagedSitePage(existing, fallback);
-    if (!areManagedSitePagesEqual(existing, hydrated)) {
-      await upsertSitePage(hydrated);
-    }
-    return hydrated;
+export function listDefaultManagedSitePages(slugs: readonly string[] = EDITABLE_SITE_PAGE_SLUGS) {
+  return slugs.map((slug) => getDefaultManagedSitePage(slug));
+}
+
+export async function getManagedSitePage(slug: string): Promise<ManagedSitePage> {
+  const existing = await readSitePage(slug);
+  const fallback = getDefaultManagedSitePage(slug);
+
+  if (!existing) {
+    return fallback;
   }
 
-  await upsertSitePage(fallback);
-  return fallback;
+  return hydrateManagedSitePage(existing, fallback);
 }
 
 export async function getManagedSitePages(slugs: readonly string[]) {
   const pages = await Promise.all(slugs.map((slug) => getManagedSitePage(slug)));
   return pages;
+}
+
+export async function syncManagedSitePages(slugs: readonly string[] = EDITABLE_SITE_PAGE_SLUGS) {
+  const synced: ManagedSitePage[] = [];
+
+  for (const slug of slugs) {
+    const fallback = getDefaultManagedSitePage(slug);
+    const existing = await readSitePage(slug);
+    const next = existing ? hydrateManagedSitePage(existing, fallback) : fallback;
+
+    if (!existing || !areManagedSitePagesEqual(existing, next)) {
+      await upsertSitePage(next);
+    }
+
+    synced.push(next);
+  }
+
+  return synced;
 }
 
 export async function saveManagedSitePage(page: ManagedSitePageInput) {

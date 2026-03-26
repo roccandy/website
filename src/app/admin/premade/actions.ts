@@ -12,7 +12,7 @@ import {
   isOptimizableWebImageMimeType,
   optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { deleteWooProduct, upsertWooProduct } from "@/lib/woo";
 
 const PREMADE_IMAGE_BUCKET = "premade-images";
@@ -46,14 +46,14 @@ function buildPremadeImageUrl(path?: string | null) {
 }
 
 async function updateWooSyncStatus(
-  client: typeof supabaseServerClient,
+  client: typeof supabaseAdminClient,
   id: string,
   patch: Partial<Pick<PremadeCandy, "woo_product_id" | "woo_sync_status" | "woo_last_sync_at" | "woo_sync_error">>
 ) {
   await client.from("premade_candies").update(patch).eq("id", id);
 }
 
-async function syncPremadeCandyToWoo(client: typeof supabaseServerClient, premade: PremadeCandy) {
+async function syncPremadeCandyToWoo(client: typeof supabaseAdminClient, premade: PremadeCandy) {
   const startedAt = new Date().toISOString();
   await updateWooSyncStatus(client, premade.id, {
     woo_sync_status: WOO_STATUS_SYNCING,
@@ -125,7 +125,7 @@ export async function uploadPremadeImageAction(formData: FormData): Promise<Prem
   }
 
   const slug = normalizePremadeFileName(trimmed);
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const optimized = await optimizeServerImageForWeb(file, {
     maxWidth: 1800,
     maxHeight: 1800,
@@ -184,7 +184,7 @@ export async function insertPremadeCandy(payload: {
     return { error: "Sale price must be zero or greater." };
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: sortRows, error: sortError } = await client
     .from("premade_candies")
     .select("sort_order")
@@ -303,7 +303,7 @@ export async function updatePremadeCandy(payload: {
     update.image_path = payload.image_path;
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client
     .from("premade_candies")
     .update(update)
@@ -324,7 +324,7 @@ export async function setPremadeActive(id: string, is_active: boolean): Promise<
     return { error: error instanceof Error ? error.message : "Unable to update pre-made item." };
   }
   if (!id) return { error: "Missing item id." };
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client
     .from("premade_candies")
     .update({ is_active, availability: is_active ? "in_stock" : "out_of_stock" })
@@ -347,7 +347,7 @@ export async function updatePremadeOrder(
     return { error: error instanceof Error ? error.message : "Unable to save pre-made order." };
   }
   if (!updates.length) return { error: null };
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   for (const update of updates) {
     const { error } = await client
       .from("premade_candies")
@@ -365,7 +365,7 @@ export async function syncPremadeToWoo(id: string): Promise<{ error: string | nu
     return { error: error instanceof Error ? error.message : "Unable to sync pre-made item." };
   }
   if (!id) return { error: "Missing item id." };
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).single();
   if (error || !data) return { error: error?.message ?? "Premade item not found." };
   const syncResult = await syncPremadeCandyToWoo(client, data as PremadeCandy);
@@ -388,7 +388,7 @@ export async function syncAllPremadeToWoo(): Promise<{
       total: 0,
     };
   }
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client.from("premade_candies").select("*");
   if (error) {
     return { error: error.message, synced: 0, failed: 0, total: 0 };
@@ -416,7 +416,7 @@ export async function deletePremadeCandy(id: string): Promise<{ error: string | 
     return { error: error instanceof Error ? error.message : "Unable to delete pre-made item." };
   }
   if (!id) return { error: "Missing item id." };
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data: existing, error: readError } = await client
     .from("premade_candies")
     .select("id,image_path,woo_product_id")

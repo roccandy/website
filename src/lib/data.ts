@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 
 export type Category = {
   id: string;
@@ -215,7 +215,7 @@ export type OrderSlot = {
 };
 
 async function fetchTable<T>(table: string) {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client.from(table).select("*");
   if (error) throw new Error(error.message);
   return data as T[];
@@ -295,7 +295,7 @@ export async function getProductionBlocks() {
 }
 
 export async function getQuoteBlocks() {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const [quoteResult, productionResult, settingsResult] = await Promise.all([
     client.from("quote_blocks").select("*"),
     client.from("production_blocks").select("*"),
@@ -374,7 +374,7 @@ export async function getQuoteBlocks() {
 }
 
 export async function getColorPalette() {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client
     .from("color_palette")
     .select("*")
@@ -388,7 +388,7 @@ export async function getOrderSlots() {
 }
 
 export async function getFlavors() {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const ordered = await client
     .from("flavors")
     .select("*")
@@ -407,7 +407,7 @@ export async function getFlavors() {
 }
 
 export async function getPremadeCandies() {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client
     .from("premade_candies")
     .select("*")
@@ -418,7 +418,7 @@ export async function getPremadeCandies() {
 }
 
 export async function getPremadeCandyById(id: string) {
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(error.message);
   return (data as PremadeCandy | null) ?? null;

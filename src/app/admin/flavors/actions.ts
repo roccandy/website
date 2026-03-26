@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 const PATH = "/admin/flavors";
@@ -15,7 +15,7 @@ export async function insertFlavor(name: string): Promise<{ error: string | null
   const trimmed = name?.toString().trim();
   if (!trimmed) return { error: "Flavor name required." };
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const latest = await client
     .from("flavors")
     .select("sort_order")
@@ -35,7 +35,7 @@ export async function deleteFlavor(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: PATH });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("flavors").delete().eq("id", id);
   if (error) throw new Error(error.message);
   redirect(PATH);
@@ -48,7 +48,7 @@ export async function toggleFlavorActive(formData: FormData) {
   const nextActiveRaw = formData.get("next_active")?.toString().trim().toLowerCase();
   const nextActive = nextActiveRaw === "true";
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("flavors").update({ is_active: nextActive }).eq("id", id);
   if (error) throw new Error(error.message);
   redirect(PATH);
@@ -64,7 +64,7 @@ export async function updateFlavorOrder(
   }
   if (!Array.isArray(updates) || updates.length === 0) return { error: null };
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   try {
     for (const update of updates) {
       const id = update.id?.toString().trim();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, READ_ONLY_MESSAGE } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { sendCustomerRefundEmail } from "@/lib/email";
 import { persistOrderRefund } from "@/lib/orderRefunds";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Order id is required." }, { status: 400 });
     }
 
-    const client = supabaseServerClient;
+    const client = supabaseAdminClient;
     const { data: order, error } = await client.from("orders").select("*").eq("id", body.orderId).maybeSingle();
     if (error || !order) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });

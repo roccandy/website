@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { hashPassword, verifyPassword } from "@/lib/passwords";
 import type { AdminRole } from "@/types/next-auth";
 
@@ -34,7 +34,7 @@ function isMissingTableError(message: string) {
 }
 
 export async function listAdminUsers() {
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
     .order("created_at", { ascending: true });
@@ -49,7 +49,7 @@ export async function listAdminUsers() {
 
 export async function getAdminUserByEmail(email: string) {
   const normalized = normalizeAdminEmail(email);
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
     .eq("email", normalized)
@@ -64,7 +64,7 @@ export async function getAdminUserByEmail(email: string) {
 }
 
 export async function hasAnyAdminUsers() {
-  const { count, error } = await supabaseServerClient
+  const { count, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .select("id", { count: "exact", head: true });
 
@@ -84,7 +84,7 @@ export async function createAdminUser(input: {
 }) {
   const email = normalizeAdminEmail(input.email);
   const passwordHash = hashPassword(input.password);
-  const { error } = await supabaseServerClient.from(ADMIN_USERS_TABLE).insert({
+  const { error } = await supabaseAdminClient.from(ADMIN_USERS_TABLE).insert({
     email,
     display_name: input.displayName?.trim() || null,
     password_hash: passwordHash,
@@ -100,7 +100,7 @@ export async function updateAdminUserProfile(input: {
   role: AdminRole;
   isActive: boolean;
 }) {
-  const { error } = await supabaseServerClient
+  const { error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .update({
       display_name: input.displayName?.trim() || null,
@@ -112,7 +112,7 @@ export async function updateAdminUserProfile(input: {
 }
 
 export async function updateAdminUserPassword(id: string, password: string) {
-  const { error } = await supabaseServerClient
+  const { error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .update({ password_hash: hashPassword(password) })
     .eq("id", id);
@@ -120,7 +120,7 @@ export async function updateAdminUserPassword(id: string, password: string) {
 }
 
 export async function deleteAdminUser(id: string) {
-  const { error } = await supabaseServerClient.from(ADMIN_USERS_TABLE).delete().eq("id", id);
+  const { error } = await supabaseAdminClient.from(ADMIN_USERS_TABLE).delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 
@@ -129,7 +129,7 @@ export async function verifyAdminUserPassword(email: string, password: string) {
   if (!user || !user.is_active) return null;
   if (!verifyPassword(password, user.password_hash)) return null;
 
-  await supabaseServerClient
+  await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
     .update({ last_login_at: new Date().toISOString() })
     .eq("id", user.id);

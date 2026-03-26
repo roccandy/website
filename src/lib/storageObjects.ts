@@ -1,4 +1,4 @@
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 
 export type StorageObjectInfo = {
   path: string;
@@ -12,7 +12,7 @@ function readMetadataValue(record: Record<string, unknown> | null | undefined, k
 }
 
 export async function listBucketObjectInfo(bucket: string, prefix = ""): Promise<StorageObjectInfo[]> {
-  const { data, error } = await supabaseServerClient.storage.from(bucket).list(prefix, {
+  const { data, error } = await supabaseAdminClient.storage.from(bucket).list(prefix, {
     limit: 1000,
     sortBy: { column: "name", order: "asc" },
   });

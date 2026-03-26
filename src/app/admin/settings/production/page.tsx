@@ -1,6 +1,6 @@
 import { getProductionBlocks, getSettings } from "@/lib/data";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -25,7 +25,7 @@ async function updateProductionSettings(formData: FormData) {
   const production_slots_per_day = Number(formData.get("production_slots_per_day"));
   const max_total_kg = Number(formData.get("max_total_kg"));
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("settings")
     .update({
@@ -50,7 +50,7 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
     ? Math.min(12, Math.max(1, Math.floor(monthsRaw)))
     : 3;
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("settings")
     .update({
@@ -77,7 +77,7 @@ async function updateDefaultNoProduction(formData: FormData) {
   const no_production_sat = formData.get("no_production_sat") === "on";
   const no_production_sun = formData.get("no_production_sun") === "on";
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("settings")
     .update({
@@ -112,7 +112,7 @@ async function addBlock(formData: FormData) {
 
   const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("production_blocks").insert({
     start_date,
     end_date: resolvedEnd,
@@ -135,7 +135,7 @@ async function deleteBlock(formData: FormData) {
     throw new Error("Block id missing.");
   }
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("production_blocks").delete().eq("id", id);
   if (error) {
     throw new Error(error.message);
@@ -162,7 +162,7 @@ async function updateBlock(formData: FormData) {
 
   const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client
     .from("production_blocks")
     .update({

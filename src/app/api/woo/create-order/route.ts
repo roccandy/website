@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createWooOrder } from "@/lib/woo";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       woo_payment_url: wooOrder.payment_url ?? null,
     }));
 
-    const { error: insertError } = await supabaseServerClient.from("orders").insert(enrichedPayloads);
+    const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
     if (insertError) {
       console.error("Supabase order insert failed:", insertError);
     }

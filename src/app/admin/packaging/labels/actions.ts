@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 const SHAPES = new Set(["square", "rectangular", "circle"]);
@@ -17,7 +17,7 @@ export async function upsertLabelType(formData: FormData) {
   if (!dimensions.trim()) throw new Error("Label dimensions are required");
   if (!Number.isFinite(cost)) throw new Error("Label cost is required");
 
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
 
   if (id) {
     const { error } = await client
@@ -37,7 +37,7 @@ export async function deleteLabelType(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging/labels" });
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
-  const client = supabaseServerClient;
+  const client = supabaseAdminClient;
   const { error } = await client.from("label_types").delete().eq("id", id);
   if (error) throw new Error(error.message);
   redirect("/admin/packaging/labels");

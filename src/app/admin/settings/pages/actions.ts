@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
@@ -103,7 +103,7 @@ export async function updatePremadeSeoAction(formData: FormData) {
   const uploadedOgImage =
     ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, `premade-${id}`) : null;
 
-  const { error } = await supabaseServerClient
+  const { error } = await supabaseAdminClient
     .from("premade_candies")
     .update({
       seo_title: normalizeField(formData.get("seoTitle")) || null,

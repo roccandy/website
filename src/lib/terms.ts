@@ -1,6 +1,8 @@
+import { createHash } from "crypto";
 import { DEFAULT_TERMS_TEXT } from "@/lib/termsData";
 import { buildTermsTree, normalizeTermsItems, type ManagedTermsItem, type ManagedTermsNode } from "@/lib/terms-shared";
-import { supabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { supabasePublicClient } from "@/lib/supabase/public";
 
 const TERMS_TABLE = "site_terms_items";
 
@@ -15,6 +17,18 @@ type SiteTermsRow = {
 
 function normalizeText(value: string | null | undefined) {
   return (value ?? "").replace(/\r\n/g, "\n").trim();
+}
+
+function buildDeterministicUuid(seed: string) {
+  const chars = createHash("sha1")
+    .update(seed)
+    .digest("hex")
+    .slice(0, 32)
+    .padEnd(32, "0")
+    .split("");
+  chars[12] = "5";
+  chars[16] = "a";
+  return `${chars.slice(0, 8).join("")}-${chars.slice(8, 12).join("")}-${chars.slice(12, 16).join("")}-${chars.slice(16, 20).join("")}-${chars.slice(20, 32).join("")}`;
 }
 
 function isMissingTermsTableError(message: string) {
@@ -77,7 +91,7 @@ function buildDefaultTermsItems(): ManagedTermsItem[] {
       const parent = depth > 0 ? lastAtDepth.get(depth - 1) ?? null : null;
       const initialText = parsed.text;
       current = {
-        id: crypto.randomUUID(),
+        id: buildDeterministicUuid(`terms:${parsed.marker}:${initialText}:${items.length}`),
         parentId: parent?.id ?? null,
         marker: parsed.marker,
         title: looksLikeTitle(initialText) ? initialText : "",
@@ -113,7 +127,7 @@ function buildDefaultTermsItems(): ManagedTermsItem[] {
 }
 
 async function readTermsItemsFromTable(): Promise<ManagedTermsItem[] | null> {
-  const { data, error } = await supabaseServerClient
+  const { data, error } = await supabasePublicClient
     .from(TERMS_TABLE)
     .select("id,parent_id,marker,title,body,sort_order")
     .order("parent_id", { ascending: true, nullsFirst: true })
@@ -142,11 +156,7 @@ export async function getManagedTermsItems(): Promise<ManagedTermsItem[]> {
   const fromTable = await readTermsItemsFromTable();
   if (fromTable && fromTable.length > 0) return fromTable;
 
-  const fallback = buildDefaultTermsItems();
-  if (fromTable) {
-    await saveManagedTermsItems(fallback);
-  }
-  return fallback;
+  return buildDefaultTermsItems();
 }
 
 export async function getManagedTermsTree(): Promise<ManagedTermsNode[]> {
@@ -157,7 +167,7 @@ export async function getManagedTermsTree(): Promise<ManagedTermsNode[]> {
 export async function saveManagedTermsItems(items: ManagedTermsItem[]) {
   const normalized = normalizeTermsItems(items);
 
-  const { error: clearError } = await supabaseServerClient
+  const { error: clearError } = await supabaseAdminClient
     .from(TERMS_TABLE)
     .delete()
     .neq("id", "00000000-0000-0000-0000-000000000000");
@@ -176,8 +186,19 @@ export async function saveManagedTermsItems(items: ManagedTermsItem[]) {
     sort_order: item.sortOrder,
   }));
 
-  const { error: insertError } = await supabaseServerClient.from(TERMS_TABLE).insert(rows);
+  const { error: insertError } = await supabaseAdminClient.from(TERMS_TABLE).insert(rows);
   if (insertError) {
     throw new Error(insertError.message);
   }
+}
+
+export async function syncManagedTermsItems() {
+  const fromTable = await readTermsItemsFromTable();
+  if (fromTable && fromTable.length > 0) {
+    return fromTable;
+  }
+
+  const fallback = buildDefaultTermsItems();
+  await saveManagedTermsItems(fallback);
+  return fallback;
 }
