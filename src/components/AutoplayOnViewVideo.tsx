@@ -6,9 +6,10 @@ type Props = {
   src: string;
   poster?: string;
   className?: string;
+  eager?: boolean;
 };
 
-export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
+export default function AutoplayOnViewVideo({ src, poster, className, eager = false }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isVisibleRef = useRef(false);
   const hasPreloadedRef = useRef(false);
@@ -24,6 +25,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     node.muted = true;
     node.defaultMuted = true;
     node.playsInline = true;
+    node.preload = "auto";
 
     const tryPlay = () => {
       const playPromise = node.play();
@@ -48,7 +50,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
           node.pause();
         }
       },
-      { threshold: [0, 0.1], rootMargin: "120px 0px 120px 0px" }
+      { threshold: [0, 0.1], rootMargin: eager ? "320px 0px 320px 0px" : "120px 0px 120px 0px" }
     );
 
     const preloadObserver = new IntersectionObserver(
@@ -96,7 +98,13 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     node.addEventListener("waiting", handleWaiting);
     node.addEventListener("ended", handleEnded);
     playObserver.observe(node);
-    preloadObserver.observe(node);
+    if (eager) {
+      hasPreloadedRef.current = true;
+      node.load();
+      tryPlay();
+    } else {
+      preloadObserver.observe(node);
+    }
 
     return () => {
       window.clearInterval(retryTimer);
@@ -109,7 +117,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       playObserver.disconnect();
       preloadObserver.disconnect();
     };
-  }, []);
+  }, [eager]);
 
   const showLoader = isInView && !hasStartedPlayback && (!isReady || !isPlaying);
 
