@@ -7,6 +7,7 @@ import {
   getAdminNavToneClasses,
   isSeoFocusedUser,
   isSeoEditableAdminHref,
+  isSelfServiceAdminHref,
 } from "@/app/admin/adminNavigation";
 import type { Session } from "next-auth";
 
@@ -51,7 +52,10 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
               <div className="mt-4 space-y-2">
                 {section.items.map((item) => {
                   const active = pathname === item.href;
-                  const writable = user.canWrite || (user.canWriteSeo && isSeoEditableAdminHref(item.href));
+                  const writable =
+                    isSelfServiceAdminHref(item.href) ||
+                    user.canWrite ||
+                    (user.canWriteSeo && isSeoEditableAdminHref(item.href));
 
                   return (
                     <Link

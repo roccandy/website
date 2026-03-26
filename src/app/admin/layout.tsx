@@ -115,14 +115,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         {!session.user.canWrite && !session.user.canWriteSeo ? (
           <div className="border-b border-sky-300 bg-sky-50">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800 lg:px-6">
-              Read-only access: this user can view admin pages but cannot make changes
+              Read-only access: this user can view admin pages but cannot make changes beyond their own password
             </div>
           </div>
         ) : null}
         {!session.user.canWrite && session.user.canWriteSeo ? (
           <div className="border-b border-emerald-300 bg-emerald-50">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800 lg:px-6">
-              SEO editor access: content & SEO pages, FAQs, privacy, and terms are writable. Other admin areas are read-only.
+              SEO editor access: content & SEO pages, FAQs, privacy, and terms are writable. Other admin areas are read-only, aside from their own password.
             </div>
           </div>
         ) : null}

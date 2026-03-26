@@ -81,6 +81,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
     description: "Users, reporting, and internal tools.",
     tone: "sky",
     items: [
+      { label: "My Password", href: "/admin/settings/password", description: "Change your own sign-in password." },
       { label: "Stats", href: "/admin/stats", description: "Internal performance, revenue, and order stats." },
     ],
   },
@@ -93,6 +94,10 @@ export function isSeoEditableAdminHref(href: string) {
     href === "/admin/settings/privacy" ||
     href === "/admin/settings/terms"
   );
+}
+
+export function isSelfServiceAdminHref(href: string) {
+  return href === "/admin/settings/password";
 }
 
 export function isSeoFocusedUser(user: AdminSessionUser) {
