@@ -15,6 +15,7 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
   const [isInView, setIsInView] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasStartedPlayback, setHasStartedPlayback] = useState(false);
 
   useEffect(() => {
     const node = videoRef.current;
@@ -69,7 +70,10 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
       }
     };
 
-    const handlePlaying = () => setIsPlaying(true);
+    const handlePlaying = () => {
+      setIsPlaying(true);
+      setHasStartedPlayback(true);
+    };
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setIsPlaying(false);
     const handleEnded = () => {
@@ -107,20 +111,10 @@ export default function AutoplayOnViewVideo({ src, poster, className }: Props) {
     };
   }, []);
 
-  const showLoader = isInView && (!isReady || !isPlaying);
+  const showLoader = isInView && !hasStartedPlayback && (!isReady || !isPlaying);
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {poster ? (
-        <img
-          src={poster}
-          alt=""
-          aria-hidden="true"
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-            isPlaying ? "opacity-0" : "opacity-100"
-          }`}
-        />
-      ) : null}
       <video
         ref={videoRef}
         className={className}
