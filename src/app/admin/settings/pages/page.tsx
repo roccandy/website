@@ -6,7 +6,6 @@ import { authOptions } from "@/lib/auth";
 import { getPremadeCandies } from "@/lib/data";
 import { getManagedFaqItems } from "@/lib/faqs";
 import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
-import { listSiteRedirects } from "@/lib/siteRedirects";
 import {
   buildManagedSitePageHref,
   EDITABLE_SITE_PAGE_SLUGS,
@@ -14,8 +13,6 @@ import {
   LANDING_GALLERY_PAGE_SLUGS,
 } from "@/lib/sitePages";
 import {
-  deleteSiteRedirectAction,
-  saveSiteRedirectAction,
   updatePremadeSeoAction,
   updateSitePageAction,
 } from "./actions";
@@ -48,58 +45,6 @@ function AdminSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function EditorGuide() {
-  return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
-        <p className="font-semibold text-zinc-900">What this page edits</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Only real site pages already in the app.</li>
-          <li>No page creation and no layout builder.</li>
-          <li>Each page keeps its existing design and route.</li>
-          <li>Terms content is still edited separately; this screen handles its SEO metadata only.</li>
-        </ul>
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
-        <p className="font-semibold text-zinc-900">SEO fields</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>`SEO title` (`&lt;title&gt;`) is the browser/search title.</li>
-          <li>`Meta description` (`meta description`) is the search snippet text.</li>
-          <li>`Social share image` (`og:image`) is the preview image for links.</li>
-        </ul>
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm">
-        <p className="font-semibold text-zinc-900">Visible page content</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>`On-page title` (`H1`) is the main page heading.</li>
-          <li>`Landing hero copy` controls the visible `H2` and paragraph on the 3 landing pages.</li>
-          <li>`Page content` (`HTML body copy`) is the editable intro/body content.</li>
-          <li>`Page FAQs` lets you choose shared FAQ library items for that specific page.</li>
-          <li>Extra content images can be inserted into the HTML body.</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function PageBodyHint() {
-  return (
-    <details className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-      <summary className="cursor-pointer font-semibold text-zinc-900">Starter HTML example</summary>
-      <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
-{`<p>Intro paragraph explaining the page topic and offer.</p>
-<h2>Main section heading</h2>
-<p>Supporting content paragraph.</p>
-<ul>
-  <li>Key point one</li>
-  <li>Key point two</li>
-</ul>
-<p><a href="/contact">Call to action link</a></p>`}
-      </pre>
-    </details>
   );
 }
 
@@ -146,10 +91,21 @@ function PageFaqSelector({
     return null;
   }
 
+  const selectedCount = selectedIds.length;
+
   return (
-    <div className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-zinc-900">Page FAQs</h3>
+    <details className="rounded-xl border border-zinc-200 bg-zinc-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-zinc-900">Page FAQs</h3>
+          <p className="text-xs text-zinc-600">
+            {selectedCount === 0 ? "No FAQs selected" : `${selectedCount} selected`}
+          </p>
+        </div>
+        <span className="text-xs font-semibold text-zinc-500">▾</span>
+      </summary>
+
+      <div className="space-y-4 border-t border-zinc-200 px-4 py-4">
         <p className="text-sm text-zinc-600">
           Choose which FAQ library items appear at the bottom of this page. Edit the master FAQ content in{" "}
           <Link href="/admin/settings/faqs" className="font-semibold text-[#ff6f95] hover:text-[#ff4f80]">
@@ -157,189 +113,53 @@ function PageFaqSelector({
           </Link>
           .
         </p>
-      </div>
 
-      <label className="block space-y-1 text-sm text-zinc-700">
-        <span className="text-xs text-zinc-500">FAQ section heading (optional)</span>
-        <input
-          type="text"
-          name="faqHeading"
-          defaultValue={faqHeading ?? ""}
-          readOnly={readOnly}
-          placeholder="Common Questions"
-          className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
-        />
-      </label>
+        <label className="block space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">FAQ section heading (optional)</span>
+          <input
+            type="text"
+            name="faqHeading"
+            defaultValue={faqHeading ?? ""}
+            readOnly={readOnly}
+            placeholder="Common Questions"
+            className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+          />
+        </label>
 
-      {faqItems.length === 0 ? (
-        <p className="text-sm text-zinc-500">No FAQ items are available yet. Add them in FAQ Settings first.</p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {faqItems.map((item) => {
-            const checked = selectedIds.includes(item.id);
-            return (
-              <label
-                key={item.id}
-                className={`rounded-lg border px-3 py-3 text-sm ${
-                  checked ? "border-[#ffb0c7] bg-white" : "border-zinc-200 bg-white"
-                } ${readOnly ? "opacity-75" : ""}`}
-              >
-                <span className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    name="faqItemIds"
-                    value={item.id}
-                    defaultChecked={checked}
-                    disabled={readOnly}
-                    className="mt-1 h-4 w-4"
-                  />
-                  <span className="space-y-1">
-                    <span className="block font-semibold text-zinc-900">{item.question}</span>
-                    <span className="block text-xs text-zinc-500">Library item</span>
+        {faqItems.length === 0 ? (
+          <p className="text-sm text-zinc-500">No FAQ items are available yet. Add them in FAQ Settings first.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {faqItems.map((item) => {
+              const checked = selectedIds.includes(item.id);
+              return (
+                <label
+                  key={item.id}
+                  className={`rounded-lg border px-3 py-3 text-sm ${
+                    checked ? "border-[#ffb0c7] bg-white" : "border-zinc-200 bg-white"
+                  } ${readOnly ? "opacity-75" : ""}`}
+                >
+                  <span className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      name="faqItemIds"
+                      value={item.id}
+                      defaultChecked={checked}
+                      disabled={readOnly}
+                      className="mt-1 h-4 w-4"
+                    />
+                    <span className="space-y-1">
+                      <span className="block font-semibold text-zinc-900">{item.question}</span>
+                      <span className="block text-xs text-zinc-500">Library item</span>
+                    </span>
                   </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RedirectsSection({
-  canWriteSeo,
-  redirects,
-}: {
-  canWriteSeo: boolean;
-  redirects: Awaited<ReturnType<typeof listSiteRedirects>>;
-}) {
-  return (
-    <div className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-zinc-900">Launch Redirects</h2>
-        <p className="text-sm text-zinc-600">
-          Use redirects to preserve old URLs when the new site goes live. This is for launch protection, not page editing.
-        </p>
-      </div>
-
-      {canWriteSeo ? (
-        <form action={saveSiteRedirectAction} className="grid gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[1.4fr,1.6fr,120px,auto] md:items-end">
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Old URL path</span>
-            <input
-              type="text"
-              name="sourcePath"
-              placeholder="/product/wedding-candy"
-              className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-mono"
-            />
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">New destination</span>
-            <input
-              type="text"
-              name="destinationPath"
-              placeholder="/design/wedding-candy"
-              className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-mono"
-            />
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Status</span>
-            <select name="statusCode" defaultValue="301" className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm">
-              <option value="301">301</option>
-              <option value="302">302</option>
-            </select>
-          </label>
-          <div className="space-y-3">
-            <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
-              <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4" />
-              Active
-            </label>
-            <button
-              type="submit"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-            >
-              Save redirect
-            </button>
+                </label>
+              );
+            })}
           </div>
-        </form>
-      ) : null}
-
-      {redirects.length === 0 ? (
-        <p className="text-sm text-zinc-500">No redirects added yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {redirects.map((redirect) => (
-            <div key={redirect.sourcePath} className="rounded-xl border border-zinc-200 p-4">
-              <form action={saveSiteRedirectAction} className="grid gap-3 md:grid-cols-[1.2fr,1.4fr,120px,auto,auto] md:items-end">
-                <label className="space-y-1 text-sm text-zinc-700">
-                  <span className="text-xs text-zinc-500">Old URL path</span>
-                  <input
-                    type="text"
-                    name="sourcePath"
-                    defaultValue={redirect.sourcePath}
-                    readOnly={!canWriteSeo}
-                    className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-                <label className="space-y-1 text-sm text-zinc-700">
-                  <span className="text-xs text-zinc-500">New destination</span>
-                  <input
-                    type="text"
-                    name="destinationPath"
-                    defaultValue={redirect.destinationPath}
-                    readOnly={!canWriteSeo}
-                    className="w-full rounded border border-zinc-200 px-3 py-2 text-sm font-mono"
-                  />
-                </label>
-                <label className="space-y-1 text-sm text-zinc-700">
-                  <span className="text-xs text-zinc-500">Status</span>
-                  <select
-                    name="statusCode"
-                    defaultValue={String(redirect.statusCode)}
-                    disabled={!canWriteSeo}
-                    className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="301">301</option>
-                    <option value="302">302</option>
-                  </select>
-                </label>
-                <label className="inline-flex items-center gap-2 text-sm text-zinc-700 md:pb-2">
-                  <input type="checkbox" name="isActive" defaultChecked={redirect.isActive} disabled={!canWriteSeo} className="h-4 w-4" />
-                  Active
-                </label>
-                {canWriteSeo ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="submit"
-                      className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : null}
-              </form>
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-zinc-500">
-                  Updated: {redirect.updatedAt ? new Date(redirect.updatedAt).toLocaleString("en-AU") : "Not recorded"}
-                </p>
-                {canWriteSeo ? (
-                  <form action={deleteSiteRedirectAction}>
-                    <input type="hidden" name="sourcePath" value={redirect.sourcePath} />
-                    <button
-                      type="submit"
-                      className="rounded border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -347,12 +167,10 @@ function SitePageCard({
   page,
   canWriteSeo,
   faqItems,
-  defaultOpen = false,
 }: {
   page: Awaited<ReturnType<typeof getManagedSitePages>>[number];
   canWriteSeo: boolean;
   faqItems: Awaited<ReturnType<typeof getManagedFaqItems>>;
-  defaultOpen?: boolean;
 }) {
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
     page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number],
@@ -360,7 +178,7 @@ function SitePageCard({
   const isTermsPage = page.slug === "terms-and-conditions";
 
   return (
-    <details open={defaultOpen} className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
+    <details className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
       <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Site page</p>
@@ -498,21 +316,34 @@ function SitePageCard({
                       defaultValue={page.bodyHtml}
                       rows={12}
                       readOnly={!canWriteSeo}
-                      placeholder="<p>Start writing the page content here.</p>"
+                      placeholder="Write the page content here."
                     />
                   </label>
-                  <PageBodyHint />
                 </>
               )}
             </div>
           </div>
 
           {hasLandingGallery ? (
-            <LandingGalleryEditor
-              slug={page.slug}
-              imageUrls={page.galleryImageUrls}
-              readOnly={!canWriteSeo}
-            />
+            <details className="rounded-xl border border-zinc-200 bg-zinc-50">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold text-zinc-900">Landing page mini gallery</h3>
+                  <p className="text-xs text-zinc-600">
+                    {page.galleryImageUrls.length === 0 ? "No gallery images" : `${page.galleryImageUrls.length} images`}
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-zinc-500">▾</span>
+              </summary>
+
+              <div className="border-t border-zinc-200 px-4 py-4">
+                <LandingGalleryEditor
+                  slug={page.slug}
+                  imageUrls={page.galleryImageUrls}
+                  readOnly={!canWriteSeo}
+                />
+              </div>
+            </details>
           ) : null}
 
           <PageFaqSelector
@@ -667,7 +498,6 @@ export default async function AdminManagedPagesPage() {
   const pages = await getManagedSitePages(EDITABLE_SITE_PAGE_SLUGS);
   const faqItems = await getManagedFaqItems();
   const premadeProducts = await getPremadeCandies();
-  const redirects = await listSiteRedirects();
   const canWriteSeo = session.user.canWriteSeo;
 
   const mainPages = pages.filter((page) =>
@@ -678,16 +508,6 @@ export default async function AdminManagedPagesPage() {
   );
   const policyPages = pages.filter((page) =>
     ["privacy", "terms-and-conditions"].includes(page.slug),
-  );
-
-  const overviewSection = (
-    <AdminSection
-      eyebrow="Overview"
-      title="SEO Editor Guide"
-      description="This screen edits the SEO fields and content for the site pages that already exist. It does not create new pages or change page layouts."
-    >
-      <EditorGuide />
-    </AdminSection>
   );
 
   const pagesSection = (
@@ -702,13 +522,12 @@ export default async function AdminManagedPagesPage() {
             <h3 className="text-lg font-semibold text-zinc-900">Main Pages</h3>
             <p className="text-sm text-zinc-600">Core pages customers use most often.</p>
           </div>
-          {mainPages.map((page, index) => (
+          {mainPages.map((page) => (
             <SitePageCard
               key={page.slug}
               page={page}
               canWriteSeo={canWriteSeo}
               faqItems={faqItems}
-              defaultOpen={index === 0}
             />
           ))}
         </div>
@@ -735,16 +554,6 @@ export default async function AdminManagedPagesPage() {
           ))}
         </div>
       </div>
-    </AdminSection>
-  );
-
-  const redirectsSection = (
-    <AdminSection
-      eyebrow="Launch"
-      title="Redirects"
-      description="Use redirects to preserve old URLs during launch and migration."
-    >
-      <RedirectsSection canWriteSeo={canWriteSeo} redirects={redirects} />
     </AdminSection>
   );
 
@@ -781,11 +590,8 @@ export default async function AdminManagedPagesPage() {
       <SeoAdminWorkspace
         pageCount={pages.length}
         productCount={premadeProducts.length}
-        redirectCount={redirects.length}
-        overview={overviewSection}
         pages={pagesSection}
         productPages={premadeProductsSection}
-        redirects={redirectsSection}
       />
     </section>
   );

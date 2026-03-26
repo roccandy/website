@@ -1,17 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
-
-const SNIPPETS = [
-  { label: "Paragraph", value: "<p>Write paragraph here.</p>" },
-  { label: "H2", value: "<h2>Section heading</h2>" },
-  { label: "H3", value: "<h3>Supporting heading</h3>" },
-  { label: "List", value: "<ul>\n  <li>Point one</li>\n  <li>Point two</li>\n</ul>" },
-  { label: "Link", value: '<p><a href="/contact">Link text</a></p>' },
-  { label: "Image", value: '<p><img src="https://example.com/image.jpg" alt="Describe the image" /></p>' },
-  { label: "FAQ", value: "<p><strong>Question?</strong><br />Answer.</p>" },
-  { label: "CTA", value: '<p><a href="/design" class="cta-link">Start designing</a></p>' },
-];
+import { useState } from "react";
 
 type Props = {
   name: string;
@@ -30,23 +19,6 @@ export function HtmlEditorField({
 }: Props) {
   const [value, setValue] = useState(defaultValue);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const insertSnippet = (snippet: string) => {
-    if (readOnly || !textareaRef.current) return;
-
-    const textarea = textareaRef.current;
-    const start = textarea.selectionStart ?? value.length;
-    const end = textarea.selectionEnd ?? value.length;
-    const next = `${value.slice(0, start)}${snippet}${value.slice(end)}`;
-    setValue(next);
-
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const cursor = start + snippet.length;
-      textarea.setSelectionRange(cursor, cursor);
-    });
-  };
 
   return (
     <div className="space-y-3">
@@ -67,26 +39,11 @@ export function HtmlEditorField({
             Preview
           </button>
         </div>
-        {!readOnly ? (
-          <div className="flex flex-wrap gap-2">
-            {SNIPPETS.map((snippet) => (
-              <button
-                key={snippet.label}
-                type="button"
-                onClick={() => insertSnippet(snippet.value)}
-                className="rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-900"
-              >
-                {snippet.label}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
       <p className="text-xs text-zinc-500">Use `H2` and `H3` only here. The page `H1` is already provided by the site template.</p>
 
       {mode === "edit" ? (
         <textarea
-          ref={textareaRef}
           name={name}
           value={value}
           onChange={(event) => setValue(event.target.value)}
