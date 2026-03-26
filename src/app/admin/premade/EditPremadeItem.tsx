@@ -363,11 +363,6 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 <span className="text-sm font-semibold text-zinc-900">{item.name}</span>
-                {item.short_name?.trim() ? (
-                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
-                    CTA: {item.short_name}
-                  </span>
-                ) : null}
                 <span>{weightLabel}</span>
                 <span className="font-semibold text-zinc-900">${Number(item.price).toFixed(2)}</span>
                 {item.approx_pcs ? <span>Approx {item.approx_pcs} pcs</span> : null}
@@ -472,7 +467,14 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
                 </span>
               ) : null}
             </div>
-            <div className="text-xs text-zinc-500">{item.description ? item.description : "No description."}</div>
+            <div className="flex flex-wrap items-start gap-2 text-xs text-zinc-500">
+              <span className="min-w-0 flex-1">{item.description ? item.description : "No description."}</span>
+              {item.short_name?.trim() ? (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
+                  CTA: View {item.short_name}
+                </span>
+              ) : null}
+            </div>
             {confirmDelete ? (
               <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-800">
                 <p className="font-semibold">Delete this item permanently?</p>
