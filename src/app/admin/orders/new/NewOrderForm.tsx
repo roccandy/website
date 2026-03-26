@@ -24,13 +24,6 @@ const STATES = [
   { value: "WA", label: "WA" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
-  { value: "unassigned", label: "Unassigned" },
-  { value: "scheduled", label: "Scheduled" },
-  { value: "archived", label: "Archived" },
-];
-
 const JACKET_OPTIONS = [
   { value: "", label: "Single colour" },
   { value: "two_colour", label: "Two colour" },

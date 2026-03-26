@@ -25,11 +25,6 @@ const sora = Sora({
   weight: ["400", "600", "700"],
 });
 const previewDimensions = { width: 350, height: 260 };
-const RING_CENTER = { x: 544.367, y: 659.802 };
-const RING_OUTER_R = 532;
-const RING_INNER_R = 445;
-const RING_STROKE_R = (RING_OUTER_R + RING_INNER_R) / 2;
-const RING_STROKE_WIDTH = RING_OUTER_R - RING_INNER_R;
 const CANVAS_WIDTH = 1772;
 const CANVAS_HEIGHT = 1300;
 const SVG_VIEW_BOX = `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`;

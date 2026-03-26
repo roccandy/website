@@ -216,12 +216,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const { data: paletteRows } = await client.from("color_palette").select("category,shade,hex");
   const paletteHexMap = buildPaletteHexMap(paletteRows ?? []);
 
-  const { data: orderSlots } = await client.from("order_slots").select("slot_id").eq("order_id", order.id);
-  const slotIds = (orderSlots ?? []).map((slot) => slot.slot_id);
-  const { data: slots } =
-    slotIds.length > 0
-      ? await client.from("production_slots").select("slot_date,slot_index").in("id", slotIds)
-      : { data: [] };
   const textColorHex = order.text_color || "#b7b7b7";
   const heartColorHex = order.heart_color || textColorHex;
   const textColorDisplay = resolveColorDisplay(textColorHex, paletteHexMap);

@@ -31,6 +31,7 @@ These items are already implemented in code:
 - [x] Static public assets have long-lived cache headers, and Next image delivery is configured for modern formats plus a higher cache TTL.
 - [x] The homepage feature video now uses a re-encoded full-length web asset at roughly `3.1 MB` instead of the older `10 MB` file, while still eager-loading for fast playback.
 - [x] Cart state no longer wraps the entire app in the root layout, and the cart drawer now loads as a deferred client chunk instead of inflating the main public render path.
+- [x] Unused starter SVGs, dead GSAP-based components, and superseded homepage media variants have been removed from the repo.
 - [x] SEO/admin workspace for fixed site pages.
 - [x] Site pages can now select shared FAQ library items to render page-specific FAQ sections without duplicating FAQ copy.
 - [x] SEO role with read-only access outside SEO-editable sections.
@@ -58,6 +59,7 @@ The current live Supabase project has been checked directly against the app.
 - [x] Public helper functions `is_admin` and `set_admin_users_updated_at` now use an explicit `search_path` to satisfy Security Advisor hardening warnings.
 - [x] The schema health check currently returns all `OK` on the live project.
 - [x] Redundant duplicate policies on `orders` and `production_slots` have a cleanup script.
+- [x] Cleanup audit found no safe public-table deletions to make right now; the remaining legacy-looking table (`user_roles`) is still intentionally used by `is_admin()` for RLS.
 - [ ] The database permission model still uses `is_admin(auth.uid())` for RLS.
 - [ ] The website admin login uses `admin_users` via NextAuth, not Supabase Auth.
 

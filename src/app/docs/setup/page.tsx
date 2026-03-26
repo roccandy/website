@@ -10,19 +10,20 @@ export default function SetupGuide() {
       <div className="mx-auto max-w-3xl px-6 py-16 space-y-6">
         <div className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">Setup</p>
-          <h1 className="text-4xl font-semibold tracking-tight">Project wiring checklist</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Project setup checklist</h1>
           <p className="text-sm text-zinc-600">
-            Add your environment keys, prepare Supabase tables, and scaffold admin auth before
-            building features.
+            The current Roc Candy stack uses Next.js, Supabase, custom admin auth, and connected
+            payment providers. Use this as the high-level setup reference rather than the older
+            starter-app notes.
           </p>
         </div>
         <ol className="space-y-3 text-sm text-zinc-700">
-          <li>1) Duplicate `.env.local.example` to `.env.local` and fill Supabase URL/keys.</li>
-          <li>2) In Supabase, create tables: products, pricing_rules, orders, production_slots, and user_roles.</li>
-          <li>3) Enable Row Level Security; allow public read on products/pricing_rules, lock writes to admins.</li>
-          <li>4) Add an auth provider (Clerk or NextAuth magic links) and restrict `/admin` routes to admins.</li>
-          <li>5) Build the pricing editor, orders list, and production schedule views on top of Supabase.</li>
-          <li>6) Deploy to Vercel, add env vars, and point your domain.</li>
+          <li>1) Populate `.env.local` / production env vars for Supabase, NextAuth, payments, email, analytics, and Woo.</li>
+          <li>2) Keep the live Supabase schema aligned with the SQL files in `docs/sql/` and verify it with the schema health check.</li>
+          <li>3) Use the custom admin login backed by `admin_users`; do not assume Supabase Auth is the active website admin flow.</li>
+          <li>4) Treat <code>docs/launch-checklist.md</code> as the real launch document and <code>docs/seo-recommendations-checklist.md</code> as the SEO gap tracker.</li>
+          <li>5) Validate payments, Woo order mirroring, emails, redirects, and GA4/Ads/Search Console before cutover.</li>
+          <li>6) Launch only after the real domain, production env vars, and redirect map are all ready.</li>
         </ol>
       </div>
     </main>

@@ -148,6 +148,7 @@ export async function POST(req: Request) {
       }
       if (result.error.message?.includes("label_image_url")) {
         const { label_image_url, ...payloadWithoutLabel } = payload;
+        void label_image_url;
         payload = payloadWithoutLabel;
         insertError = result.error;
         continue;
