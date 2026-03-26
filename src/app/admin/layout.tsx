@@ -1,54 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AdminSidebar } from "@/app/admin/AdminSidebar";
 import { ToastProvider } from "@/components/Toast";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
+import { buildAdminNavSections, isSeoFocusedUser } from "@/app/admin/adminNavigation";
 import { getAdminSession } from "@/lib/adminAuth";
-
-const baseNavSections = [
-  {
-    label: "Orders",
-    items: [
-      { label: "Production Schedule", href: "/admin/orders" },
-      { label: "Pre-made Orders", href: "/admin/orders/additional-items" },
-      { label: "All Orders / Refunds", href: "/admin/orders/archived" },
-    ],
-  },
-  {
-    label: "Catalog",
-    items: [{ label: "Pre-made Candy", href: "/admin/premade" }],
-  },
-  {
-    label: "Pricing",
-    items: [
-      { label: "Base Pricing", href: "/admin/pricing" },
-      { label: "Label Pricing", href: "/admin/labels" },
-      { label: "Extras Pricing", href: "/admin/settings/extras" },
-    ],
-  },
-  {
-    label: "Packaging",
-    items: [
-      { label: "Packaging Options & Pricing", href: "/admin/packaging" },
-      { label: "Labels", href: "/admin/packaging/labels" },
-    ],
-  },
-  {
-    label: "Site settings",
-    items: [
-      { label: "Colour Palette", href: "/admin/settings/palette" },
-      { label: "Production Settings", href: "/admin/settings/production" },
-      { label: "FAQs", href: "/admin/settings/faqs" },
-      { label: "Privacy Policy", href: "/admin/settings/privacy" },
-      { label: "Terms and Conditions", href: "/admin/settings/terms" },
-      { label: "Content & SEO Pages", href: "/admin/settings/pages" },
-      { label: "Candy Flavours", href: "/admin/flavors" },
-    ],
-  },
-];
 
 const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_SQUARE_ENV ?? "production").toLowerCase() === "sandbox" ||
@@ -93,26 +53,40 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
-  const navSections = session.user.canManageUsers
-    ? [
-        ...baseNavSections,
-        {
-          label: "Users",
-          items: [{ label: "Admin Users", href: "/admin/settings/users" }],
-        },
-      ]
-    : baseNavSections;
+  const navSections = buildAdminNavSections(session.user);
+  const seoFocused = isSeoFocusedUser(session.user);
+  const roleLabel =
+    session.user.role === "admin"
+      ? "Full admin"
+      : session.user.role === "editor"
+        ? "Editor"
+        : session.user.role === "seo"
+          ? "SEO editor"
+          : "Viewer";
 
   return (
     <ToastProvider>
       <AdminBodyAttributes />
       <AdminQueryToast />
-      <div className="min-h-screen bg-white text-zinc-900">
-        <header className="border-b border-zinc-200">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-            <Link href="/admin" className="text-sm font-medium text-zinc-700 hover:text-zinc-900">
-              Home
-            </Link>
+      <div className="min-h-screen bg-zinc-100 text-zinc-900">
+        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur">
+          <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
+            <div className="flex items-center gap-3">
+              <Link href="/admin" className="rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-white">
+                {seoFocused ? "SEO Workspace" : "Roc Candy Admin"}
+              </Link>
+              <span className="hidden rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">
+                {roleLabel}
+              </span>
+              {seoFocused ? (
+                <Link
+                  href="/admin/settings/pages"
+                  className="hidden rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-white lg:inline-flex"
+                >
+                  Open Site Pages & SEO
+                </Link>
+              ) : null}
+            </div>
             <AdminNav sections={navSections} />
             <div className="flex items-center gap-3">
               <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-right leading-tight">
@@ -133,26 +107,29 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </header>
         {PAYMENTS_SANDBOX_MODE ? (
           <div className="border-b border-amber-300 bg-amber-50">
-            <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800">
+            <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800 lg:px-6">
               Sandbox mode active: payments are test-only in this environment
             </div>
           </div>
         ) : null}
         {!session.user.canWrite && !session.user.canWriteSeo ? (
           <div className="border-b border-sky-300 bg-sky-50">
-            <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800">
+            <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800 lg:px-6">
               Read-only access: this user can view admin pages but cannot make changes
             </div>
           </div>
         ) : null}
         {!session.user.canWrite && session.user.canWriteSeo ? (
           <div className="border-b border-emerald-300 bg-emerald-50">
-            <div className="mx-auto max-w-6xl px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">
+            <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800 lg:px-6">
               SEO editor access: content & SEO pages, FAQs, privacy, and terms are writable. Other admin areas are read-only.
             </div>
           </div>
         ) : null}
-        <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        <div className="mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6">
+          <AdminSidebar sections={navSections} user={session.user} />
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
       </div>
     </ToastProvider>
   );
