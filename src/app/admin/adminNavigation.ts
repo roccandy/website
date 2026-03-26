@@ -178,14 +178,3 @@ export function getAdminNavToneClasses(tone: AdminNavSection["tone"]): AdminNavT
       };
   }
 }
-
-export function flattenAdminNavItems(sections: AdminNavSection[]) {
-  return sections.flatMap((section) =>
-    section.items.map((item) => ({
-      ...item,
-      sectionKey: section.key,
-      sectionLabel: section.label,
-      sectionTone: section.tone,
-    })),
-  );
-}
