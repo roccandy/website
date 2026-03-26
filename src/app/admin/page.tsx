@@ -33,6 +33,10 @@ function getAdminOrderLabel(order: { order_number: string | null; title: string 
   return order.title?.trim() || order.customer_name?.trim() || `Order ${order.order_number ?? ""}`.trim();
 }
 
+function makePremadeGroupKey(order: { order_number: string | null; id: string }) {
+  return (order.order_number?.trim() || order.id).replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
 export default async function AdminHome() {
   const session = await requireAdminSession();
   const orders = await getOrders();
@@ -45,7 +49,25 @@ export default async function AdminHome() {
   const unassignedCustomOrders = sortOrdersForAdminHome(
     orders.filter((order) => isVisibleOnProductionSchedule(order) && order.status === "unassigned"),
   ).slice(0, 6);
-  const pendingPremadeOrders = sortOrdersForAdminHome(orders.filter(isVisibleOnPremadeOrders)).slice(0, 6);
+  const pendingPremadeGroups = Array.from(
+    sortOrdersForAdminHome(orders.filter(isVisibleOnPremadeOrders)).reduce(
+      (map, order) => {
+        const key = makePremadeGroupKey(order);
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            order,
+            count: 1,
+          });
+        } else {
+          const current = map.get(key);
+          if (current) current.count += 1;
+        }
+        return map;
+      },
+      new Map<string, { key: string; order: (typeof orders)[number]; count: number }>(),
+    ).values(),
+  ).slice(0, 6);
 
   return (
     <section className="space-y-6">
@@ -53,9 +75,7 @@ export default async function AdminHome() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Needs action</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
-              {seoFocused ? "Orders queue" : "Live order queue"}
-            </h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Unassigned orders</h1>
           </div>
           {seoFocused ? (
             <Link
@@ -71,7 +91,7 @@ export default async function AdminHome() {
           <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-zinc-900">Custom unassigned</p>
+                <p className="text-sm font-semibold text-zinc-900">Custom</p>
                 <p className="text-2xl font-semibold tracking-tight text-zinc-900">{unassignedCustomOrders.length}</p>
               </div>
               <Link
@@ -84,8 +104,9 @@ export default async function AdminHome() {
             <div className="mt-4 space-y-2">
               {unassignedCustomOrders.length ? (
                 unassignedCustomOrders.map((order) => (
-                  <div
+                  <Link
                     key={order.id}
+                    href={`/admin/orders?selected=${encodeURIComponent(order.id)}#order-${order.id}`}
                     className="flex items-center justify-between gap-3 rounded-2xl border border-amber-100 bg-white px-3 py-2"
                   >
                     <div className="min-w-0">
@@ -96,7 +117,7 @@ export default async function AdminHome() {
                     <span className="shrink-0 text-xs font-medium text-zinc-500">
                       {formatShortDate(order.due_date) ?? "No date"}
                     </span>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-amber-200 bg-white px-3 py-4 text-sm text-zinc-500">
@@ -109,8 +130,8 @@ export default async function AdminHome() {
           <div className="rounded-3xl border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-white p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-zinc-900">Pre-made pending</p>
-                <p className="text-2xl font-semibold tracking-tight text-zinc-900">{pendingPremadeOrders.length}</p>
+                <p className="text-sm font-semibold text-zinc-900">Pre-made</p>
+                <p className="text-2xl font-semibold tracking-tight text-zinc-900">{pendingPremadeGroups.length}</p>
               </div>
               <Link
                 href="/admin/orders/additional-items"
@@ -120,21 +141,23 @@ export default async function AdminHome() {
               </Link>
             </div>
             <div className="mt-4 space-y-2">
-              {pendingPremadeOrders.length ? (
-                pendingPremadeOrders.map((order) => (
-                  <div
-                    key={order.id}
+              {pendingPremadeGroups.length ? (
+                pendingPremadeGroups.map(({ key, order, count }) => (
+                  <Link
+                    key={key}
+                    href={`/admin/orders/additional-items?focus=${encodeURIComponent(key)}#premade-group-${key}`}
                     className="flex items-center justify-between gap-3 rounded-2xl border border-rose-100 bg-white px-3 py-2"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-zinc-900">
                         #{order.order_number ?? "?"} {getAdminOrderLabel(order)}
                       </p>
+                      {count > 1 ? <p className="text-xs text-zinc-500">{count} items</p> : null}
                     </div>
                     <span className="shrink-0 text-xs font-medium text-zinc-500">
                       {formatShortDate(order.due_date) ?? "No date"}
                     </span>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-rose-200 bg-white px-3 py-4 text-sm text-zinc-500">

@@ -54,6 +54,7 @@ type Props = {
   flavors: Flavor[];
   palette: ColorPaletteRow[];
   toast?: { tone: "success" | "error"; message: string } | null;
+  initialSelectedId?: string | null;
 };
 
 const JACKET_OPTIONS = [
@@ -76,10 +77,11 @@ export function OrdersTable({
   flavors,
   palette,
   toast,
+  initialSelectedId = null,
 }: Props) {
   const router = useRouter();
   const toastRef = useRef<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [pickupMode, setPickupMode] = useState<"on" | "off">("off");
   const [jacketMode, setJacketMode] = useState<string>("");
   const [textColorValue, setTextColorValue] = useState("");
@@ -175,6 +177,12 @@ export function OrdersTable({
     }
     router.replace("/admin/orders");
   }, [router, toast]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const row = document.getElementById(`order-${selectedId}`);
+    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [selectedId]);
 
   useEffect(() => {
     if (!showJacketColorTwo) {
@@ -366,6 +374,7 @@ export function OrdersTable({
                 return (
                   <Fragment key={order.id}>
                     <tr
+                      id={`order-${order.id}`}
                       className={`cursor-pointer bg-white hover:bg-zinc-50 ${
                         selectedId === order.id ? "bg-zinc-50" : ""
                       }`}

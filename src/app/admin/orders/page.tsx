@@ -24,7 +24,7 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-type SearchParams = { toast?: string; message?: string };
+type SearchParams = { toast?: string; message?: string; selected?: string };
 type ToastTone = "success" | "error";
 
 export default async function OrdersPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
@@ -33,6 +33,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const toastTone = resolvedSearchParams?.toast;
   const toastMessage = resolvedSearchParams?.message;
+  const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
   const tone: ToastTone | null = toastTone === "success" || toastTone === "error" ? toastTone : null;
   const toast = tone && toastMessage ? { tone, message: toastMessage } : null;
 
@@ -119,6 +120,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         flavors={flavors}
         palette={palette}
         toast={toast}
+        initialSelectedId={selectedOrderId}
       />
     </section>
   );

@@ -9,6 +9,10 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+type SearchParams = {
+  focus?: string;
+};
+
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
   try {
@@ -69,9 +73,11 @@ const shippedOnLabel = (shippedAt: Date | null) => {
   return `Shipped on ${formatDate(shippedAt.toISOString())}`;
 };
 
-export default async function AdditionalItemsPage() {
+export default async function AdditionalItemsPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const focusedGroup = resolvedSearchParams?.focus?.trim() || null;
 
   const orders = await getOrders();
   const additionalItems = orders
@@ -179,9 +185,16 @@ export default async function AdditionalItemsPage() {
                 totals.length > 0 ? formatMoney(totals.reduce((sum, value) => sum + value, 0)) : "-";
               const orderedDate = group.latestDate ? formatDate(group.latestDate) : "";
               const shippedAt = isShipped ? resolveShippedAt(groupOrders) : null;
+              const groupAnchor = `premade-group-${(group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+              const groupKey = (group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-");
+              const isFocused = focusedGroup === groupKey;
 
               return (
-                <tr key={`${orderNumber}-${orderIds}`} className="bg-white">
+                <tr
+                  key={`${orderNumber}-${orderIds}`}
+                  id={groupAnchor}
+                  className={isFocused ? "bg-rose-50" : "bg-white"}
+                >
                   <td className="px-3 py-2 font-semibold text-zinc-900">{orderNumber}</td>
                   <td className="px-3 py-2 text-zinc-800">
                     <div className="space-y-2">
