@@ -90,6 +90,7 @@ export type Flavor = {
 export type PremadeCandy = {
   id: string;
   name: string;
+  short_name: string | null;
   description: string;
   weight_g: number;
   price: number;

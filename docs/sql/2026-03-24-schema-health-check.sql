@@ -299,6 +299,14 @@ with checks as (
     )
 
   union all
+  select 'premade_candies.short_name',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'premade_candies' and column_name = 'short_name'
+    )
+
+  union all
   select 'premade_candies.seo_title',
     exists (
       select 1

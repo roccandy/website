@@ -145,6 +145,7 @@ export async function uploadPremadeImageAction(formData: FormData): Promise<Prem
 
 export async function insertPremadeCandy(payload: {
   name: string;
+  short_name?: string | null;
   description: string;
   weight_g: number;
   price: number;
@@ -202,6 +203,7 @@ export async function insertPremadeCandy(payload: {
     .from("premade_candies")
     .insert({
       name,
+      short_name: payload.short_name?.trim() || null,
       description,
       weight_g: payload.weight_g,
       price: payload.price,
@@ -231,6 +233,7 @@ export async function insertPremadeCandy(payload: {
 export async function updatePremadeCandy(payload: {
   id: string;
   name: string;
+  short_name?: string | null;
   description: string;
   weight_g: number;
   price: number;
@@ -269,6 +272,7 @@ export async function updatePremadeCandy(payload: {
 
   const update: {
     name: string;
+    short_name: string | null;
     description: string;
     weight_g: number;
     price: number;
@@ -284,6 +288,7 @@ export async function updatePremadeCandy(payload: {
     product_condition: string | null;
   } = {
     name,
+    short_name: payload.short_name?.trim() || null,
     description,
     weight_g: payload.weight_g,
     price: payload.price,

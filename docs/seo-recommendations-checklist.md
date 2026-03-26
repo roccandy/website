@@ -56,6 +56,7 @@ How to use it:
 | Social links in the footer | Implemented | Footer includes Facebook, Instagram, phone, and email links. | Pending | No major work needed beyond launch QA. |
 | Strip banner at the top like `Free Delivery Australia-Wide` | Partially implemented | There is a top links bar, but not really the promo banner he described. | Pending | Decide whether to replace/augment the current top bar with a real promo strip. |
 | Add USPs across all top-level pages | Implemented | The homepage, key top-level pages, and main landing/fixed public pages now share a consistent USP block highlighting Vegan, Gluten Free, Dairy Free, Handmade, Aust Made, and Free Delivery. | Done | Do a final content/design QA pass on the live domain after launch. |
+| Use specific anchor text for pre-made product links | Implemented | Pre-made products now support an optional admin-editable short link label, and the shop-page CTA uses `View {short label}` with fallback to the full product name. | Done | Enter short labels only for products where the full name makes the CTA too long. |
 
 ## Notes
 

@@ -127,6 +127,8 @@ export default async function PremadePage() {
                 const imageUrl = buildPremadeImageUrl(item.image_path);
                 const weightLabel = formatPremadeWeight(Number(item.weight_g));
                 const titleLine = weightLabel ? `${weightLabel} ${item.name}` : item.name;
+                const shortLinkLabel = item.short_name?.trim() || item.name;
+                const viewLabel = `View ${shortLinkLabel}`;
                 const flavorLabel = formatPremadeFlavors(item.flavors ?? null);
                 const itemHref = buildPremadeItemPath(item);
                 const effectivePrice = resolvePremadePrice(item);
@@ -143,7 +145,7 @@ export default async function PremadePage() {
                         </span>
                       ) : null}
                       {imageUrl ? (
-                        <Link href={itemHref} aria-label={`View ${item.name}`}>
+                        <Link href={itemHref} aria-label={viewLabel}>
                           <Image
                             src={imageUrl}
                             alt={item.name}
@@ -186,7 +188,7 @@ export default async function PremadePage() {
                         href={itemHref}
                         className="mt-1 inline-block text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-800"
                       >
-                        View product page
+                        {viewLabel}
                       </Link>
                     </div>
                   </article>

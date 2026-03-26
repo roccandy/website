@@ -34,6 +34,7 @@ function resolveDefaultText(value: string | null | undefined, fallback: string) 
 type PremadeItem = {
   id: string;
   name: string;
+  short_name: string | null;
   description: string;
   weight_g: number;
   price: number;
@@ -75,6 +76,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
     return initialWeightUnit === "kg" ? weight / 1000 : weight;
   }, [item.weight_g, initialWeightUnit]);
   const [name, setName] = useState(item.name);
+  const [shortName, setShortName] = useState(item.short_name ?? "");
   const [description, setDescription] = useState(item.description);
   const [weightValue, setWeightValue] = useState(String(initialWeightValue));
   const [weightUnit, setWeightUnit] = useState<"g" | "kg">(initialWeightUnit);
@@ -109,6 +111,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   useEffect(() => {
     if (isEditing) return;
     setName(item.name);
+    setShortName(item.short_name ?? "");
     setDescription(item.description);
     setWeightUnit(initialWeightUnit);
     setWeightValue(String(initialWeightValue));
@@ -132,6 +135,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   }, [
     isEditing,
     item.name,
+    item.short_name,
     item.description,
     item.weight_g,
     item.price,
@@ -255,6 +259,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
       const { error: updateError } = await updatePremadeCandy({
         id: item.id,
         name: trimmedName,
+        short_name: shortName.trim() || null,
         description: trimmedDescription,
         weight_g,
         price: priceNumber,
@@ -358,6 +363,11 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                 <span className="text-sm font-semibold text-zinc-900">{item.name}</span>
+                {item.short_name?.trim() ? (
+                  <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
+                    CTA: {item.short_name}
+                  </span>
+                ) : null}
                 <span>{weightLabel}</span>
                 <span className="font-semibold text-zinc-900">${Number(item.price).toFixed(2)}</span>
                 {item.approx_pcs ? <span>Approx {item.approx_pcs} pcs</span> : null}
@@ -568,6 +578,19 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
               onChange={(event) => setName(event.target.value)}
               className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
+          </label>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Short link label
+            <input
+              type="text"
+              value={shortName}
+              onChange={(event) => setShortName(event.target.value)}
+              className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              placeholder="e.g., Baby Boy Candy"
+            />
+            <span className="mt-1 block text-[11px] normal-case tracking-normal text-zinc-500">
+              Optional. Used for short CTA text on the shop page.
+            </span>
           </label>
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
             Description

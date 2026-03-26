@@ -19,6 +19,7 @@ Related docs:
 - [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql)
 - [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql)
 - [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql)
+- [2026-03-26-premade-candies-short-name.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-26-premade-candies-short-name.sql)
 
 ## Current Repo Status
 
@@ -54,6 +55,7 @@ These items are already implemented in code:
 - [x] Stateful designer URLs are treated as utility URLs with canonical/noindex behavior pointing back to the main landing pages.
 - [x] Individual pre-made product pages with Product schema.
 - [x] Per-product SEO fields for pre-made product pages in the SEO workspace.
+- [x] Pre-made products now support an optional admin-editable short link label for shorter product CTAs/anchor text on the shop page.
 - [x] Ecommerce events for `view_item` on pre-made product pages, plus `add_to_cart`, `begin_checkout`, and `purchase`.
 - [x] Analytics loader now prefers GTM over direct GA4 when both IDs are configured, reducing duplicate tracking risk.
 
@@ -120,6 +122,7 @@ If you want the shortest realistic list between now and launch, it is:
 - [x] Confirm the live project includes the outcomes from [2026-03-10-site-redirects.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-10-site-redirects.sql).
 - [x] Confirm the live project includes the outcomes from [2026-03-24-premade-candies-seo-fields.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-premade-candies-seo-fields.sql).
 - [x] Apply [2026-03-25-site-pages-faq-selection.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-25-site-pages-faq-selection.sql) to add page-level FAQ selection fields.
+- [x] Apply [2026-03-26-premade-candies-short-name.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-26-premade-candies-short-name.sql) to add an optional short CTA/link label for pre-made products.
 - [ ] Confirm the `SEO` role appears in the admin users screen.
 - [ ] Assign the SEO person the `SEO` role.
 - [ ] Confirm the SEO user can access `/admin/settings/pages`.
