@@ -72,16 +72,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur">
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
-              <Link href="/admin" className="rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-white">
+              <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">
                 {seoFocused ? "SEO Workspace" : "Roc Candy Admin"}
               </Link>
-              <span className="hidden rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">
+              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">
                 {roleLabel}
               </span>
               {seoFocused ? (
                 <Link
                   href="/admin/settings/pages"
-                  className="hidden rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-white lg:inline-flex"
+                  className="hidden text-xs font-semibold text-rose-700 transition hover:text-rose-900 lg:inline-flex"
                 >
                   Open Site Pages & SEO
                 </Link>

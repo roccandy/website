@@ -2,220 +2,86 @@ import Link from "next/link";
 import { AdminQuickSearch } from "@/app/admin/AdminQuickSearch";
 import {
   buildAdminNavSections,
-  type AdminNavItem,
-  type AdminNavSection,
   getAdminNavToneClasses,
-  isSeoEditableAdminHref,
   isSeoFocusedUser,
 } from "@/app/admin/adminNavigation";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getOrders } from "@/lib/data";
 import { isVisibleOnPremadeOrders, isVisibleOnProductionSchedule } from "./orders/scheduleVisibility";
 
-function getAccessLabel(canWrite: boolean, canWriteSeo: boolean, href: string) {
-  if (canWrite) return "Edit";
-  if (canWriteSeo && isSeoEditableAdminHref(href)) return "Edit";
-  return "View";
-}
-
-function getPriorityItems(sections: AdminNavSection[], hrefs: string[]) {
-  const itemsByHref = new Map<string, AdminNavItem>();
-
-  for (const section of sections) {
-    for (const item of section.items) {
-      itemsByHref.set(item.href, item);
-    }
-  }
-
-  return hrefs
-    .map((href) => {
-      const item = itemsByHref.get(href);
-      return item ? { href, item } : null;
-    })
-    .filter((entry): entry is { href: string; item: AdminNavItem } => Boolean(entry));
-}
-
 export default async function AdminHome() {
   const session = await requireAdminSession();
   const orders = await getOrders();
   const sections = buildAdminNavSections(session.user);
   const seoFocused = isSeoFocusedUser(session.user);
-  const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
   const outstandingCounts: Record<string, number> = {
     "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,
     "/admin/orders/additional-items": orders.filter(isVisibleOnPremadeOrders).length,
   };
 
-  const startHere = seoFocused
-    ? getPriorityItems(sections, [
-        "/admin/settings/pages",
-        "/admin/settings/faqs",
-        "/admin/settings/privacy",
-        "/admin/settings/terms",
-      ])
-    : getPriorityItems(sections, [
-        "/admin/orders",
-        "/admin/orders/additional-items",
-        "/admin/orders/archived",
-        "/admin/settings/pages",
-      ]);
-
-  const seoSection = sections.find((section) => section.key === "content-seo");
-  const nonSeoSections = sections.filter((section) => section.key !== "content-seo");
-
   return (
-    <section className="space-y-8">
-      <div className="rounded-[2rem] border border-zinc-200 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 p-6 shadow-sm lg:p-8">
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)]">
-          <div className="space-y-5">
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                  {seoFocused ? "SEO Workspace" : "Admin Dashboard"}
-                </span>
-                <span className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.26em] text-zinc-500">
-                  {session.user.role}
-                  {session.user.isBootstrap ? " · bootstrap" : ""}
-                </span>
-              </div>
-              <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">
-                {seoFocused ? "SEO Workspace" : "Roc Candy Admin"}
-              </h1>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  {seoFocused ? "Primary area" : "Custom orders live"}
-                </p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-                  {seoFocused ? "Content & SEO" : outstandingCounts["/admin/orders"]}
-                </p>
-              </div>
-              <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-                  {seoFocused ? "Edit scope" : "Pre-made orders live"}
-                </p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-                  {seoFocused ? "SEO only" : outstandingCounts["/admin/orders/additional-items"]}
-                </p>
-              </div>
-              <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500">Signed in as</p>
-                <p className="mt-2 text-lg font-semibold tracking-tight text-zinc-900">{signedInDisplay}</p>
-              </div>
-            </div>
-          </div>
-
-          <AdminQuickSearch sections={sections} />
-        </div>
-      </div>
-
-      <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-            {seoFocused ? "Pinned" : "Quick links"}
-          </p>
-          <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            {seoFocused ? "Main SEO pages" : "Most used pages"}
-          </h2>
-        </div>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-          {startHere.map(({ href, item }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group rounded-3xl border border-zinc-200 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-base font-semibold text-zinc-900">{item.label}</p>
-                  {outstandingCounts[href] ? (
-                    <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold leading-none text-white">
-                      {outstandingCounts[href]}
-                    </span>
-                  ) : null}
-                </div>
-                <span className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500 transition group-hover:border-zinc-300 group-hover:text-zinc-700">
-                  {getAccessLabel(session.user.canWrite, session.user.canWriteSeo, href)}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {seoFocused && seoSection ? (
+    <section className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
-          <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">SEO</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900">Editing pages</h2>
-          </div>
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            {seoSection.items.map((item) => {
-              const toneClasses = getAdminNavToneClasses(seoSection.tone);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-3xl border bg-gradient-to-br p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${toneClasses.border} ${toneClasses.panel}`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-base font-semibold text-zinc-900">{item.label}</p>
-                    <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badge}`}>
-                      Edit
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">
+              {seoFocused ? "SEO Workspace" : "Roc Candy Admin"}
+            </h1>
+            {seoFocused ? (
+              <Link
+                href="/admin/settings/pages"
+                className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-white"
+              >
+                Site Pages & SEO
+              </Link>
+            ) : null}
           </div>
         </div>
-      ) : null}
+        <AdminQuickSearch sections={sections} />
+      </div>
 
-      <div className="space-y-6">
-        {(seoFocused ? nonSeoSections : sections).map((section) => {
+      <div className="space-y-4">
+        {sections.map((section) => {
           const toneClasses = getAdminNavToneClasses(section.tone);
 
           return (
-            <div key={section.key} className="rounded-[2rem] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badgeMuted}`}>
+            <div key={section.key} className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm lg:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-semibold text-zinc-900">{section.label}</h2>
+                  {seoFocused && section.key !== "content-seo" ? (
+                    <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                      View only
+                    </span>
+                  ) : null}
+                </div>
+                {section.key === "operations" ? (
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badge}`}>
+                    Daily
+                  </span>
+                ) : section.key === "content-seo" ? (
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badge}`}>
+                    SEO
+                  </span>
+                ) : (
+                  <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badgeMuted}`}>
                       {section.label}
                     </span>
-                    {seoFocused ? (
-                      <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                        View-only here
-                      </span>
-                    ) : null}
-                  </div>
-                  <h2 className="text-xl font-semibold text-zinc-900">{section.label}</h2>
-                </div>
+                )}
               </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 {section.items.map((item) => (
                   <Link
                     key={`${section.key}-${item.href}`}
                     href={item.href}
-                    className="group rounded-3xl border border-zinc-200 bg-zinc-50/60 p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-white hover:shadow-sm"
+                    className="inline-flex min-h-12 items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-semibold text-zinc-800 transition hover:border-zinc-300 hover:bg-white"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
-                        {outstandingCounts[item.href] ? (
-                          <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold leading-none text-white">
-                            {outstandingCounts[item.href]}
-                          </span>
-                        ) : null}
-                      </div>
-                      <span className="inline-flex rounded-full border border-zinc-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500 transition group-hover:border-zinc-300 group-hover:text-zinc-700">
-                        {getAccessLabel(session.user.canWrite, session.user.canWriteSeo, item.href)}
+                    <span>{item.label}</span>
+                    {outstandingCounts[item.href] ? (
+                      <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold leading-none text-white">
+                        {outstandingCounts[item.href]}
                       </span>
-                    </div>
+                    ) : null}
                   </Link>
                 ))}
               </div>
