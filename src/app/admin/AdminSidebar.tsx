@@ -32,7 +32,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
               className={`rounded-3xl border bg-gradient-to-br p-4 shadow-sm transition ${
                 isPrimarySection
                   ? `${toneClasses.border} ${toneClasses.panel}`
-                  : "border-zinc-200 from-white via-white to-zinc-50 opacity-80"
+                  : "border-zinc-200 from-zinc-50 via-zinc-50 to-white opacity-65"
               }`}
             >
               <div className="flex items-center justify-between gap-3">
