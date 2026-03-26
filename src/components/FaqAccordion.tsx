@@ -15,7 +15,7 @@ function toSentenceCase(value: string) {
 }
 
 export default function FaqAccordion({ items }: Props) {
-  const [openIndex, setOpenIndex] = useState(0);
+  const [openIndex, setOpenIndex] = useState(-1);
 
   return (
     <div className="space-y-3">
