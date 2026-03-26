@@ -49,10 +49,7 @@ export function AdminNav({ sections }: { sections: AdminNavSection[] }) {
               return (
                 <div key={section.key} className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">{section.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-500">{section.description}</p>
-                    </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">{section.label}</p>
                     <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badgeMuted}`}>
                       {section.items.length}
                     </span>
@@ -70,7 +67,6 @@ export function AdminNav({ sections }: { sections: AdminNavSection[] }) {
                         }`}
                       >
                         <p className="font-semibold">{item.label}</p>
-                        <p className="mt-1 text-xs leading-5 text-zinc-500">{item.description}</p>
                       </Link>
                     ))}
                   </div>

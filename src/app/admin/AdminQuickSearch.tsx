@@ -32,12 +32,7 @@ export function AdminQuickSearch({ sections }: AdminQuickSearchProps) {
 
   return (
     <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="space-y-1">
-        <p className="text-sm font-semibold text-zinc-900">Find a page fast</p>
-        <p className="text-xs leading-5 text-zinc-500">
-          Search by page name, setting, or workflow. This does not change any routes, it just makes them easier to find.
-        </p>
-      </div>
+      <p className="text-sm font-semibold text-zinc-900">Find a page fast</p>
       <label className="mt-4 block">
         <span className="sr-only">Find admin page</span>
         <input
@@ -57,13 +52,10 @@ export function AdminQuickSearch({ sections }: AdminQuickSearchProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-2xl border border-zinc-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-sm"
+                className="rounded-2xl border border-zinc-200 bg-white p-3 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-sm"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
-                    <p className="text-xs leading-5 text-zinc-500">{item.description}</p>
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
                   <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${toneClasses.badgeMuted}`}>
                     {item.sectionLabel}
                   </span>
@@ -73,9 +65,7 @@ export function AdminQuickSearch({ sections }: AdminQuickSearchProps) {
           })
         ) : (
           <div className="sm:col-span-2 rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
-            No matching admin page found. Try broader terms like <span className="font-medium text-zinc-700">pages</span>,{" "}
-            <span className="font-medium text-zinc-700">orders</span>, or{" "}
-            <span className="font-medium text-zinc-700">packaging</span>.
+            No matching admin page found.
           </div>
         )}
       </div>
