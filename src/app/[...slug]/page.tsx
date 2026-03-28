@@ -23,6 +23,7 @@ import {
   getManagedSitePageFaqSection,
 } from "@/lib/sitePages";
 import { buildDesignerPath } from "@/lib/designUrls";
+import { buildLandingGalleryRows } from "@/lib/landingGallery";
 
 type LandingPageConfig = {
   intro: string;
@@ -97,19 +98,6 @@ function resolveGalleryImages(primary: string[], fallback: string[]) {
   }
 
   return resolved;
-}
-
-function buildGalleryRows(images: string[]) {
-  if (images.length === 0) return [];
-
-  const firstRow = images.filter((_, index) => index % 2 === 0);
-  const secondRow = images.filter((_, index) => index % 2 === 1);
-
-  if (secondRow.length === 0) {
-    return [firstRow];
-  }
-
-  return [firstRow, secondRow];
 }
 
 export const revalidate = 300;
@@ -192,7 +180,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls)
     : [];
-  const landingGalleryRows = buildGalleryRows(landingGalleryImages);
+  const landingGalleryRows = landingConfig ? buildLandingGalleryRows(page.slug, landingGalleryImages) : [];
 
   return (
     <main className="landing-bg min-h-screen bg-white text-zinc-900">

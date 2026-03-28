@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import { analyzeImageOptimization, type ImageOptimizationSummary } from "@/lib/clientImageOptimization";
 import {
+  getLandingGalleryVariantLabel,
+  getLandingGalleryVariantOptions,
+} from "@/lib/landingGallery";
+import {
   bulkUploadLandingGalleryImagesAction,
   type LandingGalleryBulkUploadActionState,
 } from "./actions";
@@ -93,8 +97,20 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
     INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE
   );
   const [isBulkUploading, startBulkUpload] = useTransition();
+  const uploadTargetOptions = useMemo(() => getLandingGalleryVariantOptions(slug), [slug]);
+  const [uploadTarget, setUploadTarget] = useState<string>(uploadTargetOptions[0]?.key ?? "");
 
   const selectedCount = useMemo(() => slots.filter((slot) => Boolean(slot.url)).length, [slots]);
+
+  useEffect(() => {
+    if (uploadTargetOptions.length === 0) {
+      if (uploadTarget) setUploadTarget("");
+      return;
+    }
+    if (!uploadTargetOptions.some((option) => option.key === uploadTarget)) {
+      setUploadTarget(uploadTargetOptions[0]?.key ?? "");
+    }
+  }, [uploadTarget, uploadTargetOptions]);
 
   useEffect(() => {
     if (uploadState.status !== "success" || !uploadState.uploaded?.length || !uploadState.requestId) return;
@@ -167,6 +183,26 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
           </div>
 
           <div className="space-y-3">
+            {uploadTargetOptions.length > 0 ? (
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Upload row</span>
+                <select
+                  value={uploadTarget}
+                  onChange={(event) => setUploadTarget(event.currentTarget.value)}
+                  className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+                >
+                  {uploadTargetOptions.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.uploadLabel}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-zinc-500">
+                  This controls which row the image appears in on the live landing page.
+                </span>
+              </label>
+            ) : null}
+
             <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Choose images</span>
               <input
@@ -267,6 +303,9 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
                   startBulkUpload(async () => {
                     const formData = new FormData();
                     formData.set("slug", slug);
+                    if (uploadTarget) {
+                      formData.set("landingGalleryTarget", uploadTarget);
+                    }
                     selectedFiles.forEach((file) => formData.append("landingGalleryFiles", file));
                     const result = await bulkUploadLandingGalleryImagesAction(formData);
                     setUploadState(result);
@@ -284,6 +323,7 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {slots.map((slot, index) => {
+          const variantLabel = getLandingGalleryVariantLabel(slug, slot.url);
           return (
             <div
               key={`${slug}-gallery-slot-${index}`}
@@ -294,11 +334,18 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Slot {index + 1}</p>
-                  {slot.url && slot.sizeBytes !== null ? (
-                    <span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-700 ring-1 ring-zinc-200">
-                      {formatBytes(slot.sizeBytes)}
-                    </span>
-                  ) : null}
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    {variantLabel ? (
+                      <span className="rounded-full bg-pink-50 px-2 py-1 text-[10px] font-semibold text-pink-700 ring-1 ring-pink-200">
+                        {variantLabel}
+                      </span>
+                    ) : null}
+                    {slot.url && slot.sizeBytes !== null ? (
+                      <span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-700 ring-1 ring-zinc-200">
+                        {formatBytes(slot.sizeBytes)}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div
                   className="aspect-[4/3] w-full rounded-lg bg-zinc-100 bg-cover bg-center bg-no-repeat ring-1 ring-zinc-200"

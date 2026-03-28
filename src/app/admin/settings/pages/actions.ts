@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
+import { resolveLandingGalleryUploadPath } from "@/lib/landingGallery";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
@@ -128,6 +129,7 @@ export async function bulkUploadLandingGalleryImagesAction(
   try {
     await requireAdminSeoWriteAccess({ onDenied: "throw" });
     const slug = normalizeField(formData.get("slug"));
+    const uploadTarget = normalizeField(formData.get("landingGalleryTarget"));
     const files = formData
       .getAll("landingGalleryFiles")
       .filter((entry): entry is File => entry instanceof File && entry.size > 0);
@@ -151,8 +153,9 @@ export async function bulkUploadLandingGalleryImagesAction(
     }
 
     const uploaded = [];
+    const uploadPath = resolveLandingGalleryUploadPath(slug, uploadTarget);
     for (const file of files) {
-      const result = await uploadSeoImage(file, "library");
+      const result = await uploadSeoImage(file, uploadPath);
       if (!result) continue;
       const storedName = result.path.split("/").pop() ?? file.name;
       uploaded.push({
