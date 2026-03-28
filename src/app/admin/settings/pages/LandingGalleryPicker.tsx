@@ -132,6 +132,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
           Upload one or many images straight into this gallery, then reorder or remove them here. No image URLs are
           needed.
         </p>
+        <p className="text-xs text-zinc-500">Best results: upload landscape images cropped to 4:3, such as 1600 x 1200 px.</p>
         <p className="text-xs text-zinc-500">Selected: {selectedCount}</p>
       </div>
 
@@ -255,7 +256,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
               >
                 {isBulkUploading ? "Uploading..." : `Upload ${selectedFiles.length || ""} image${selectedFiles.length === 1 ? "" : "s"}`.trim()}
               </button>
-              <p className="self-center text-xs text-zinc-500">Each image can be up to 5 MB. Bulk uploads must stay under 24 MB total. Save the page after upload to keep the new gallery order.</p>
+              <p className="self-center text-xs text-zinc-500">Use 4:3 landscape images where possible. Each image can be up to 5 MB. Bulk uploads must stay under 24 MB total. Save the page after upload to keep the new gallery order.</p>
             </div>
           </div>
         </div>
@@ -273,7 +274,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
               <div className="space-y-1">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Slot {index + 1}</p>
                 <div
-                  className="aspect-[4/3] w-full rounded-lg border border-zinc-200 bg-white bg-contain bg-center bg-no-repeat"
+                  className="aspect-[4/3] w-full rounded-lg bg-zinc-100 bg-cover bg-center bg-no-repeat ring-1 ring-zinc-200"
                   style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
                 >
                   {!imageUrl ? (

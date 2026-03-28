@@ -260,17 +260,17 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                           key={`${imageUrl}-${rowIndex}-${imageIndex}`}
                           href={landingConfig.primaryCta.href}
                           aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
-                          className={`block shrink-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm transition hover:-translate-y-1 hover:border-zinc-300 hover:shadow-md ${
+                          className={`block shrink-0 overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-zinc-200/80 transition hover:-translate-y-1 hover:ring-zinc-300 hover:shadow-md ${
                             rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
                           } w-[240px]`}
                         >
-                          <div className="aspect-[4/3] overflow-hidden bg-white p-4">
+                          <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
                             <Image
                               src={imageUrl}
                               alt={`${page.title} gallery image ${imageIndex + 1}`}
-                              width={660}
-                              height={520}
-                              className="h-full w-full object-contain object-center"
+                              fill
+                              sizes={rowIndex === 0 ? "(min-width: 768px) 300px, 240px" : "(min-width: 768px) 330px, 240px"}
+                              className="object-cover object-center"
                               priority={rowIndex === 0 && imageIndex < row.length}
                             />
                           </div>
