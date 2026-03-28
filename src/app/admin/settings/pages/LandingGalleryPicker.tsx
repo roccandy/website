@@ -113,11 +113,12 @@ export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
   }, [uploadTarget, uploadTargetOptions]);
 
   useEffect(() => {
-    if (uploadState.status !== "success" || !uploadState.uploaded?.length || !uploadState.requestId) return;
+    const uploaded = uploadState.uploaded;
+    if (uploadState.status !== "success" || !uploaded?.length || !uploadState.requestId) return;
     if (appliedRequestRef.current === uploadState.requestId) return;
 
     appliedRequestRef.current = uploadState.requestId;
-    setSlots((current) => appendUploadedImagesToSlots(current, uploadState.uploaded));
+    setSlots((current) => appendUploadedImagesToSlots(current, uploaded));
     setSelectedFiles([]);
     setSelectedSummaries([]);
     setAnalysisError(null);
