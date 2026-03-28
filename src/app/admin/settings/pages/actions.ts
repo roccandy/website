@@ -18,6 +18,7 @@ export type LandingGalleryBulkUploadActionState = {
         name: string;
         path: string;
         publicUrl: string;
+        sizeBytes: number | null;
         updatedAt: string | null;
       }>
     | null;
@@ -158,6 +159,7 @@ export async function bulkUploadLandingGalleryImagesAction(
         name: storedName,
         path: result.path,
         publicUrl: result.publicUrl,
+        sizeBytes: result.sizeBytes,
         updatedAt: null,
       });
     }

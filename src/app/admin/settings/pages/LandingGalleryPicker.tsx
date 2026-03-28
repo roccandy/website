@@ -10,8 +10,16 @@ import {
 
 type Props = {
   slug: string;
-  initialImageUrls: string[];
+  initialImages: Array<{
+    url: string;
+    sizeBytes: number | null;
+  }>;
   readOnly: boolean;
+};
+
+type GallerySlot = {
+  url: string;
+  sizeBytes: number | null;
 };
 
 const MAX_SINGLE_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -30,28 +38,39 @@ function formatBytes(bytes: number) {
   return `${value.toFixed(precision)} ${units[unitIndex]}`;
 }
 
-function buildInitialSlots(imageUrls: string[]) {
-  return imageUrls.length > 0 ? imageUrls : [""];
+function buildInitialSlots(images: Props["initialImages"]): GallerySlot[] {
+  return images.length > 0 ? images.map((image) => ({ url: image.url, sizeBytes: image.sizeBytes })) : [{ url: "", sizeBytes: null }];
 }
 
-function appendUploadedUrlsToSlots(current: string[], nextUrls: string[]) {
-  if (nextUrls.length === 0) return current;
+function appendUploadedImagesToSlots(
+  current: GallerySlot[],
+  nextImages: Array<{ publicUrl: string; sizeBytes: number | null }>
+) {
+  if (nextImages.length === 0) return current;
 
   const nextSlots = [...current];
   let uploadIndex = 0;
 
-  for (let slotIndex = 0; slotIndex < nextSlots.length && uploadIndex < nextUrls.length; slotIndex += 1) {
-    if (!nextSlots[slotIndex]) {
-      nextSlots[slotIndex] = nextUrls[uploadIndex] ?? "";
+  for (let slotIndex = 0; slotIndex < nextSlots.length && uploadIndex < nextImages.length; slotIndex += 1) {
+    if (!nextSlots[slotIndex]?.url) {
+      nextSlots[slotIndex] = {
+        url: nextImages[uploadIndex]?.publicUrl ?? "",
+        sizeBytes: nextImages[uploadIndex]?.sizeBytes ?? null,
+      };
       uploadIndex += 1;
     }
   }
 
-  if (uploadIndex < nextUrls.length) {
-    nextSlots.push(...nextUrls.slice(uploadIndex));
+  if (uploadIndex < nextImages.length) {
+    nextSlots.push(
+      ...nextImages.slice(uploadIndex).map((image) => ({
+        url: image.publicUrl,
+        sizeBytes: image.sizeBytes ?? null,
+      }))
+    );
   }
 
-  return nextSlots.length > 0 ? nextSlots : [""];
+  return nextSlots.length > 0 ? nextSlots : [{ url: "", sizeBytes: null }];
 }
 
 const INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE: LandingGalleryBulkUploadActionState = {
@@ -61,8 +80,8 @@ const INITIAL_LANDING_GALLERY_BULK_UPLOAD_STATE: LandingGalleryBulkUploadActionS
   requestId: null,
 };
 
-export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props) {
-  const [slots, setSlots] = useState<string[]>(() => buildInitialSlots(initialImageUrls));
+export function LandingGalleryPicker({ slug, initialImages, readOnly }: Props) {
+  const [slots, setSlots] = useState<GallerySlot[]>(() => buildInitialSlots(initialImages));
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedSummaries, setSelectedSummaries] = useState<ImageOptimizationSummary[]>([]);
   const [isAnalysingFiles, setIsAnalysingFiles] = useState(false);
@@ -75,15 +94,14 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
   );
   const [isBulkUploading, startBulkUpload] = useTransition();
 
-  const selectedCount = useMemo(() => slots.filter(Boolean).length, [slots]);
+  const selectedCount = useMemo(() => slots.filter((slot) => Boolean(slot.url)).length, [slots]);
 
   useEffect(() => {
     if (uploadState.status !== "success" || !uploadState.uploaded?.length || !uploadState.requestId) return;
     if (appliedRequestRef.current === uploadState.requestId) return;
 
     appliedRequestRef.current = uploadState.requestId;
-    const uploadedUrls = uploadState.uploaded.map((image) => image.publicUrl);
-    setSlots((current) => appendUploadedUrlsToSlots(current, uploadedUrls));
+    setSlots((current) => appendUploadedImagesToSlots(current, uploadState.uploaded));
     setSelectedFiles([]);
     setSelectedSummaries([]);
     setAnalysisError(null);
@@ -94,7 +112,9 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
   }, [uploadState]);
 
   const updateSlot = (index: number, nextValue: string) => {
-    setSlots((current) => current.map((value, slotIndex) => (slotIndex === index ? nextValue : value)));
+    setSlots((current) =>
+      current.map((slot, slotIndex) => (slotIndex === index ? { url: nextValue, sizeBytes: null } : slot))
+    );
   };
 
   const clearSlot = (index: number) => {
@@ -104,12 +124,12 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
   const removeSlot = (index: number) => {
     setSlots((current) => {
       const next = current.filter((_, slotIndex) => slotIndex !== index);
-      return next.length > 0 ? next : [""];
+      return next.length > 0 ? next : [{ url: "", sizeBytes: null }];
     });
   };
 
   const addSlot = () => {
-    setSlots((current) => [...current, ""]);
+    setSlots((current) => [...current, { url: "", sizeBytes: null }]);
   };
 
   const moveSlot = (index: number, direction: -1 | 1) => {
@@ -263,21 +283,28 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {slots.map((imageUrl, index) => {
+        {slots.map((slot, index) => {
           return (
             <div
               key={`${slug}-gallery-slot-${index}`}
               className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm"
             >
-              <input type="hidden" name="galleryImageUrls" value={imageUrl} readOnly />
+              <input type="hidden" name="galleryImageUrls" value={slot.url} readOnly />
 
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Slot {index + 1}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Slot {index + 1}</p>
+                  {slot.url && slot.sizeBytes !== null ? (
+                    <span className="rounded-full bg-zinc-100 px-2 py-1 text-[10px] font-semibold text-zinc-700 ring-1 ring-zinc-200">
+                      {formatBytes(slot.sizeBytes)}
+                    </span>
+                  ) : null}
+                </div>
                 <div
                   className="aspect-[4/3] w-full rounded-lg bg-zinc-100 bg-cover bg-center bg-no-repeat ring-1 ring-zinc-200"
-                  style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+                  style={slot.url ? { backgroundImage: `url("${slot.url}")` } : undefined}
                 >
-                  {!imageUrl ? (
+                  {!slot.url ? (
                     <div className="flex h-full items-center justify-center text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
                       Empty
                     </div>
@@ -290,7 +317,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
                   <button
                     type="button"
                     onClick={() => clearSlot(index)}
-                    disabled={!imageUrl}
+                    disabled={!slot.url}
                     className="rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Clear
@@ -314,7 +341,7 @@ export function LandingGalleryPicker({ slug, initialImageUrls, readOnly }: Props
                   <button
                     type="button"
                     onClick={() => removeSlot(index)}
-                    disabled={slots.length === 1 && !imageUrl}
+                    disabled={slots.length === 1 && !slot.url}
                     className="rounded border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Remove slot

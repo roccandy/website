@@ -1,11 +1,14 @@
+import { stat } from "fs/promises";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { join } from "path";
 import type { ReactNode } from "react";
 import { authOptions } from "@/lib/auth";
 import { getPremadeCandies } from "@/lib/data";
 import { getManagedFaqItems } from "@/lib/faqs";
 import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
+import { listBucketObjectInfo } from "@/lib/storageObjects";
 import {
   buildManagedSitePageHref,
   EDITABLE_SITE_PAGE_SLUGS,
@@ -64,14 +67,50 @@ function ImagePreview({ imageUrl }: { imageUrl: string | null | undefined }) {
 
 function LandingGalleryEditor({
   slug,
-  imageUrls,
+  images,
   readOnly,
 }: {
   slug: string;
-  imageUrls: string[];
+  images: Array<{
+    url: string;
+    sizeBytes: number | null;
+  }>;
   readOnly: boolean;
 }) {
-  return <LandingGalleryPicker slug={slug} initialImageUrls={imageUrls} readOnly={readOnly} />;
+  return <LandingGalleryPicker slug={slug} initialImages={images} readOnly={readOnly} />;
+}
+
+const SEO_IMAGE_PUBLIC_PATH_SEGMENT = "/storage/v1/object/public/seo-images/";
+
+function extractSeoImagePathFromUrl(imageUrl: string) {
+  try {
+    const resolved = new URL(imageUrl);
+    const index = resolved.pathname.indexOf(SEO_IMAGE_PUBLIC_PATH_SEGMENT);
+    if (index === -1) return null;
+    return decodeURIComponent(resolved.pathname.slice(index + SEO_IMAGE_PUBLIC_PATH_SEGMENT.length));
+  } catch {
+    return null;
+  }
+}
+
+async function resolveGalleryImageSizeBytes(
+  imageUrl: string,
+  seoImageSizeByPath: Map<string, number | null>
+): Promise<number | null> {
+  if (!imageUrl) return null;
+
+  if (imageUrl.startsWith("/")) {
+    try {
+      const info = await stat(join(process.cwd(), "public", imageUrl.replace(/^\/+/, "")));
+      return info.size;
+    } catch {
+      return null;
+    }
+  }
+
+  const seoImagePath = extractSeoImagePathFromUrl(imageUrl);
+  if (!seoImagePath) return null;
+  return seoImageSizeByPath.get(seoImagePath) ?? null;
 }
 
 function PageFaqSelector({
@@ -167,15 +206,21 @@ function SitePageCard({
   page,
   canWriteSeo,
   faqItems,
+  imageSizeBytesByUrl,
 }: {
   page: Awaited<ReturnType<typeof getManagedSitePages>>[number];
   canWriteSeo: boolean;
   faqItems: Awaited<ReturnType<typeof getManagedFaqItems>>;
+  imageSizeBytesByUrl: Map<string, number | null>;
 }) {
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
     page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number],
   );
   const isTermsPage = page.slug === "terms-and-conditions";
+  const landingGalleryImages = page.galleryImageUrls.map((url) => ({
+    url,
+    sizeBytes: imageSizeBytesByUrl.get(url) ?? null,
+  }));
 
   return (
     <details className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -339,7 +384,7 @@ function SitePageCard({
               <div className="border-t border-zinc-200 px-4 py-4">
                 <LandingGalleryEditor
                   slug={page.slug}
-                  imageUrls={page.galleryImageUrls}
+                  images={landingGalleryImages}
                   readOnly={!canWriteSeo}
                 />
               </div>
@@ -499,6 +544,30 @@ export default async function AdminManagedPagesPage() {
   const faqItems = await getManagedFaqItems();
   const premadeProducts = await getPremadeCandies();
   const canWriteSeo = session.user.canWriteSeo;
+  const galleryImageUrls = Array.from(
+    new Set(
+      pages
+        .filter((page) =>
+          LANDING_GALLERY_PAGE_SLUGS.includes(page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number])
+        )
+        .flatMap((page) => page.galleryImageUrls)
+        .filter(Boolean)
+    )
+  );
+  let seoImageSizeByPath = new Map<string, number | null>();
+  try {
+    const seoImageObjects = await listBucketObjectInfo("seo-images");
+    seoImageSizeByPath = new Map(seoImageObjects.map((item) => [item.path, item.sizeBytes]));
+  } catch {
+    seoImageSizeByPath = new Map();
+  }
+  const imageSizeEntries = await Promise.all(
+    galleryImageUrls.map(async (imageUrl) => [
+      imageUrl,
+      await resolveGalleryImageSizeBytes(imageUrl, seoImageSizeByPath),
+    ] as const)
+  );
+  const imageSizeBytesByUrl = new Map(imageSizeEntries);
 
   const mainPages = pages.filter((page) =>
     ["home", "about", "faq", "blog", "design", "pre-made-candy"].includes(page.slug),
@@ -528,6 +597,7 @@ export default async function AdminManagedPagesPage() {
               page={page}
               canWriteSeo={canWriteSeo}
               faqItems={faqItems}
+              imageSizeBytesByUrl={imageSizeBytesByUrl}
             />
           ))}
         </div>
@@ -538,7 +608,13 @@ export default async function AdminManagedPagesPage() {
             <p className="text-sm text-zinc-600">Fixed marketing and SEO pages already linked from the site.</p>
           </div>
           {landingPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} faqItems={faqItems} />
+            <SitePageCard
+              key={page.slug}
+              page={page}
+              canWriteSeo={canWriteSeo}
+              faqItems={faqItems}
+              imageSizeBytesByUrl={imageSizeBytesByUrl}
+            />
           ))}
         </div>
 
@@ -550,7 +626,13 @@ export default async function AdminManagedPagesPage() {
             </p>
           </div>
           {policyPages.map((page) => (
-            <SitePageCard key={page.slug} page={page} canWriteSeo={canWriteSeo} faqItems={faqItems} />
+            <SitePageCard
+              key={page.slug}
+              page={page}
+              canWriteSeo={canWriteSeo}
+              faqItems={faqItems}
+              imageSizeBytesByUrl={imageSizeBytesByUrl}
+            />
           ))}
         </div>
       </div>

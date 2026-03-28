@@ -88,5 +88,6 @@ export async function uploadSeoImage(file: File, slugPath: string) {
   return {
     path: objectPath,
     publicUrl: data.publicUrl,
+    sizeBytes: optimized.buffer.byteLength,
   };
 }
