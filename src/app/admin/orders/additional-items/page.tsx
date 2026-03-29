@@ -1,4 +1,4 @@
-import { getOrders } from "@/lib/data";
+import { getOrders, getOrderSlots, getProductionSlots } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -6,6 +6,7 @@ import Link from "next/link";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";
 import { PremadeGroupShipButton } from "./PremadeGroupShipButton";
+import { dateKey, getScheduleStatus } from "../productionScheduleShared";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -81,7 +82,15 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const focusedGroup = resolvedSearchParams?.focus?.trim() || null;
 
-  const orders = await getOrders();
+  const [orders, assignments, slots] = await Promise.all([getOrders(), getOrderSlots(), getProductionSlots()]);
+  const todayKey = dateKey(new Date());
+  const slotById = new Map(slots.map((slot) => [slot.id, slot]));
+  const assignmentByOrderId = new Map<string, (typeof assignments)[number]>();
+  assignments.forEach((assignment) => {
+    if (!assignmentByOrderId.has(assignment.order_id)) {
+      assignmentByOrderId.set(assignment.order_id, assignment);
+    }
+  });
   const additionalItems = orders
     .filter((order) => order.design_type === "premade")
     .filter((order) => shouldShowPremade(order))
@@ -204,6 +213,30 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                       return true;
                     })
                   : [];
+              const companionScheduleIssue = (() => {
+                for (const companionOrder of companionOrders) {
+                  const assignment = assignmentByOrderId.get(companionOrder.id);
+                  const assignedSlotDate = assignment ? slotById.get(assignment.slot_id)?.slot_date ?? null : null;
+                  const scheduleStatus = getScheduleStatus(companionOrder, assignedSlotDate, todayKey);
+                  const href = `/admin/orders?selected=${encodeURIComponent(companionOrder.id)}`;
+
+                  if (scheduleStatus === "unassigned") {
+                    return {
+                      href,
+                      message: "Order is unassigned, please update the production schedule or cancel.",
+                    };
+                  }
+
+                  if (scheduleStatus === "scheduled" && assignedSlotDate && assignedSlotDate > todayKey) {
+                    return {
+                      href,
+                      message: "Order is scheduled for a future date, please update the production schedule or cancel.",
+                    };
+                  }
+                }
+
+                return null;
+              })();
               const companionOrderIds = companionOrders.map((order) => order.id).join(",");
               const companionLabel = (() => {
                 if (companionOrders.length === 0) return null;
@@ -296,6 +329,8 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                         companionLabel={companionLabel ?? undefined}
                         companionActionLabel={companionLabel ? completionActionLabel : undefined}
                         buttonLabel={primaryActionLabel}
+                        companionScheduleHref={companionScheduleIssue?.href}
+                        companionScheduleMessage={companionScheduleIssue?.message}
                       />
                     )}
                   </td>

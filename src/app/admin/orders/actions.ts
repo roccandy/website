@@ -857,6 +857,43 @@ export async function markAdditionalItemsShipped(formData: FormData) {
   if (error) throw new Error(error.message);
 
   if (includeCompanion && companionOrderIds.length > 0) {
+    const { data: companionAssignments, error: companionAssignmentsError } = await client
+      .from("order_slots")
+      .select("order_id,slot_id")
+      .in("order_id", companionOrderIds);
+    if (companionAssignmentsError) throw new Error(companionAssignmentsError.message);
+
+    const slotIds = Array.from(
+      new Set((companionAssignments ?? []).map((assignment) => assignment.slot_id).filter(Boolean)),
+    );
+    const slotDateById = new Map<string, string>();
+    if (slotIds.length > 0) {
+      const { data: companionSlots, error: companionSlotsError } = await client
+        .from("production_slots")
+        .select("id,slot_date")
+        .in("id", slotIds);
+      if (companionSlotsError) throw new Error(companionSlotsError.message);
+      (companionSlots ?? []).forEach((slot) => {
+        slotDateById.set(slot.id, slot.slot_date);
+      });
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${`${today.getMonth() + 1}`.padStart(2, "0")}-${`${today.getDate()}`.padStart(2, "0")}`;
+    for (const companionOrderId of companionOrderIds) {
+      const assignment = (companionAssignments ?? []).find((item) => item.order_id === companionOrderId);
+      if (!assignment) {
+        throw new Error("Linked custom order is unassigned and must be updated in the production schedule first.");
+      }
+      const slotDate = slotDateById.get(assignment.slot_id);
+      if (!slotDate) {
+        throw new Error("Linked custom order assignment is invalid and must be updated in the production schedule first.");
+      }
+      if (slotDate > todayKey) {
+        throw new Error("Linked custom order is scheduled for a future date and must be updated in the production schedule first.");
+      }
+    }
+
     const { count: refundedCompanionCount, error: refundedCompanionError } = await client
       .from("orders")
       .select("id", { count: "exact", head: true })
