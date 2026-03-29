@@ -25,13 +25,6 @@ const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
 };
-const getTodayKey = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = `${now.getMonth() + 1}`.padStart(2, "0");
-  const day = `${now.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 const isNoProductionDay = (slotDate: string, settings: Awaited<ReturnType<typeof getSettings>>) => {
   const date = new Date(`${slotDate}T00:00:00`);
@@ -46,11 +39,6 @@ const isNoProductionDay = (slotDate: string, settings: Awaited<ReturnType<typeof
 };
 
 async function assertAssignableDate(slotDate: string, client: typeof supabaseAdminClient) {
-  const todayKey = getTodayKey();
-  if (slotDate < todayKey) {
-    throw new Error("Cannot assign orders to past dates.");
-  }
-
   const settings = await getSettings();
   const { data: blocks, error } = await client
     .from("production_blocks")

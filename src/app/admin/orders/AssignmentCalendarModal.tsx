@@ -92,7 +92,7 @@ export default function AssignmentCalendarModal({
 
         const isPast = status.key < todayKey;
         const isCurrentAssignment = assignment?.slot?.slot_date === status.key;
-        const disabled = isPast || status.blocked || availableSlotIndex === null;
+        const disabled = status.blocked || availableSlotIndex === null;
 
         let helper = `${openSlotCount} of ${slotsPerDay} open`;
         if (status.blocked) helper = status.reason ?? "Blocked";
@@ -105,6 +105,7 @@ export default function AssignmentCalendarModal({
           key: status.key,
           helper,
           disabled,
+          isPast,
           isCurrentAssignment,
           availableSlotIndex,
           blocked: status.blocked,
@@ -241,6 +242,12 @@ export default function AssignmentCalendarModal({
                   disabled={item.disabled || isPending || item.availableSlotIndex === null}
                   onClick={() => {
                     if (!item.availableSlotIndex) return;
+                    if (item.isPast) {
+                      const confirmed = window.confirm(
+                        "This date is in the past. Assigning an order to a past production day should only be used for backfilling. Continue?",
+                      );
+                      if (!confirmed) return;
+                    }
                     startTransition(async () => {
                       const formData = new FormData();
                       formData.set("order_id", order.id);
@@ -271,6 +278,8 @@ export default function AssignmentCalendarModal({
                   className={`min-h-[5rem] rounded-xl border px-2 py-1.5 text-left transition ${
                     item.disabled
                       ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
+                      : item.isPast
+                        ? "border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50"
                       : item.isCurrentAssignment
                         ? "border-blue-300 bg-blue-50 text-blue-900"
                         : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"

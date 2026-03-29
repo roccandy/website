@@ -234,7 +234,7 @@ export default function ProductionScheduleSection({
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
-                        const canReassignSlotOrder = key >= todayKey;
+                        const canDragSlotOrder = key >= todayKey;
                         return (
                           <div
                             key={slotKey}
@@ -277,7 +277,7 @@ export default function ProductionScheduleSection({
                           >
                             {assignment && order ? (
                               <div
-                                draggable={canReassignSlotOrder}
+                                draggable={canDragSlotOrder}
                                 onDragStart={() => {
                                   setDraggingAssignmentId(assignment.id);
                                   setHoveredDropSlotKey(null);
@@ -330,15 +330,13 @@ export default function ProductionScheduleSection({
                                       </button>
                                     </form>
                                   ) : null}
-                                  {canReassignSlotOrder ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setAssignmentModalOrderId(order.id)}
-                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[9px] font-semibold text-blue-700 hover:border-blue-300"
-                                    >
-                                      Change assignment
-                                    </button>
-                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() => setAssignmentModalOrderId(order.id)}
+                                    className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[9px] font-semibold text-blue-700 hover:border-blue-300"
+                                  >
+                                    Change assignment
+                                  </button>
                                 </div>
                               </div>
                             ) : (
@@ -346,11 +344,10 @@ export default function ProductionScheduleSection({
                                 <span className="text-[9px] font-medium text-zinc-400">Empty</span>
                                 <button
                                   type="button"
-                                  disabled={key < todayKey}
                                   onClick={() => setSlotPicker({ date: key, slotIndex })}
                                   className={`rounded px-2 py-1 text-[9px] font-semibold ${
                                     key < todayKey
-                                      ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
+                                      ? "border border-zinc-200 bg-zinc-100 text-zinc-400 hover:border-zinc-300"
                                       : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
                                   }`}
                                 >
@@ -405,7 +402,7 @@ export default function ProductionScheduleSection({
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
-                        const canReassignSlotOrder = key >= todayKey;
+                        const canDragSlotOrder = key >= todayKey;
                         return (
                           <div
                             key={slotKey}
@@ -448,7 +445,7 @@ export default function ProductionScheduleSection({
                           >
                             {assignment && order ? (
                               <div
-                                draggable={canReassignSlotOrder}
+                                draggable={canDragSlotOrder}
                                 onDragStart={() => {
                                   setDraggingAssignmentId(assignment.id);
                                   setHoveredDropSlotKey(null);
@@ -501,15 +498,13 @@ export default function ProductionScheduleSection({
                                         </button>
                                       </form>
                                     ) : null}
-                                    {canReassignSlotOrder ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => setAssignmentModalOrderId(order.id)}
-                                        className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold text-blue-700 hover:border-blue-300"
-                                      >
-                                        Change assignment
-                                      </button>
-                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() => setAssignmentModalOrderId(order.id)}
+                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold text-blue-700 hover:border-blue-300"
+                                    >
+                                      Change assignment
+                                    </button>
                                   </div>
                                 </div>
                               </div>
@@ -518,11 +513,10 @@ export default function ProductionScheduleSection({
                                 <span className="text-zinc-400">Empty</span>
                                 <button
                                   type="button"
-                                  disabled={key < todayKey}
                                   onClick={() => setSlotPicker({ date: key, slotIndex })}
                                   className={`rounded px-2 py-1 text-[11px] font-semibold ${
                                     key < todayKey
-                                      ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
+                                      ? "border border-zinc-200 bg-zinc-100 text-zinc-400 hover:border-zinc-300"
                                       : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
                                   }`}
                                 >
@@ -558,6 +552,11 @@ export default function ProductionScheduleSection({
               </button>
             </div>
             <div className="mt-3 space-y-2">
+              {slotPicker.date < todayKey ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  This day is in the past. Only assign here if you are backfilling production history.
+                </p>
+              ) : null}
               {unassignedOrders.length === 0 ? (
                 <p className="text-xs text-zinc-500">No unassigned orders.</p>
               ) : (
@@ -575,6 +574,12 @@ export default function ProductionScheduleSection({
                       <button
                         type="button"
                         onClick={() => {
+                          if (slotPicker.date < todayKey) {
+                            const confirmed = window.confirm(
+                              "This date is in the past. Assigning an order to a past production day should only be used for backfilling. Continue?",
+                            );
+                            if (!confirmed) return;
+                          }
                           startDropTransition(async () => {
                             const formData = new FormData();
                             formData.set("order_id", order.id);
