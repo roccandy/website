@@ -65,6 +65,7 @@ const formatStatusLabel = (status: string) =>
   status === "pending completion" ? "pending" : status.replace(/_/g, " ");
 const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
 const isResettableCompletedOrder = (order: OrderRow) => order.status === "archived" || order.status === "shipped";
+const isRefundableOrder = (order: OrderRow) => Boolean(order.paid_at && order.payment_transaction_id && !order.refunded_at);
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -419,16 +420,30 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                               ? `#${order.id.slice(0, 8)}`
                               : "";
                           return (
-                            <div key={order.id} className="space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold text-zinc-900">{title}</p>
-                                {order.refunded_at ? (
-                                  <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                                    Refunded
-                                  </span>
-                                ) : null}
+                            <div key={order.id} className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-semibold text-zinc-900">{title}</p>
+                                  {order.refunded_at ? (
+                                    <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                                      Refunded
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <p className="text-xs text-zinc-500">{lineNumber}</p>
                               </div>
-                              <p className="text-xs text-zinc-500">{lineNumber}</p>
+                              {isRefundableOrder(order) ? (
+                                <div className="shrink-0">
+                                  <RefundForm
+                                    orderId={order.id}
+                                    orderNumber={order.order_number}
+                                    amount={order.total_price}
+                                    action={refundOrder}
+                                    redirectTo={redirectTo}
+                                    compact
+                                  />
+                                </div>
+                              ) : null}
                             </div>
                           );
                         })}
@@ -470,23 +485,8 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                 </button>
                               </form>
                             ))}
-                          {group.visibleOrders
-                            .filter((order) => order.paid_at && order.payment_transaction_id && !order.refunded_at)
-                            .map((order) => (
-                              <RefundForm
-                                key={`refund-${order.id}`}
-                                orderId={order.id}
-                                orderNumber={order.order_number}
-                                amount={order.total_price}
-                                action={refundOrder}
-                                redirectTo={redirectTo}
-                                compact
-                              />
-                            ))}
                           {group.visibleOrders.every(
-                            (order) =>
-                              !isResettableCompletedOrder(order) &&
-                              !(order.paid_at && order.payment_transaction_id && !order.refunded_at),
+                            (order) => !isResettableCompletedOrder(order),
                           ) ? (
                             <span className="text-xs text-zinc-400">-</span>
                           ) : null}
