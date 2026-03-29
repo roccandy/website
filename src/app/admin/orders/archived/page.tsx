@@ -29,7 +29,8 @@ type VisibleSubgroup = {
   label: string;
   allRefunded: boolean;
   partiallyRefunded: boolean;
-  shippedAt: string | null;
+  completedAt: string | null;
+  completionLabel: string | null;
   isCompleted: boolean;
   latestCompletedAt: number | null;
   earliestDueAt: number | null;
@@ -62,6 +63,7 @@ const formatDateTime = (iso: string | null) => {
 const resolvePremadeStatus = (status: string | null | undefined) => (status === "shipped" ? "shipped" : "pending");
 const formatStatusLabel = (status: string) =>
   status === "pending completion" ? "pending" : status.replace(/_/g, " ");
+const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -105,6 +107,11 @@ const toTime = (value: string | null | undefined) => {
   const time = new Date(value).getTime();
   return Number.isFinite(time) ? time : null;
 };
+
+const latestIsoValue = (values: (string | null | undefined)[]) =>
+  values
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => compareNullableDesc(toTime(a), toTime(b)))[0] ?? null;
 
 const compareNullableAsc = (a: number | null, b: number | null) => {
   if (a === null && b === null) return 0;
@@ -221,6 +228,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
           const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
           const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length;
           const partiallyRefunded = refundedCount > 0 && !allRefunded;
+          const isPickup = subgroup.orders.every((order) => order.pickup);
           const completionTimes = subgroup.orders
             .map((order) => toTime(resolveCompletedAt(order)))
             .filter((value): value is number => value !== null);
@@ -237,12 +245,8 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             label: subgroup.suffix ? `-${subgroup.suffix}` : "order",
             allRefunded,
             partiallyRefunded,
-            shippedAt:
-              subgroup.orders
-                .map((order) => order.shipped_at)
-                .filter(Boolean)
-                .sort()
-                .pop() ?? null,
+            completedAt: latestIsoValue(subgroup.orders.map((order) => resolveCompletedAt(order))),
+            completionLabel: isCompleted ? formatCompletionLabel(isPickup) : null,
             isCompleted,
             latestCompletedAt: completionTimes.length > 0 ? Math.max(...completionTimes) : null,
             earliestDueAt: dueTimes.length > 0 ? Math.min(...dueTimes) : null,
@@ -439,10 +443,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                             ? "Refunded"
                             : subgroup.partiallyRefunded
                               ? "Partially refunded"
-                              : subgroup.statusLabel}
+                              : subgroup.completionLabel ?? subgroup.statusLabel}
                         </span>
-                        {subgroup.shippedAt ? (
-                          <div className="text-xs text-zinc-500">Shipped on {formatDateTime(subgroup.shippedAt)}</div>
+                        {subgroup.completedAt && subgroup.completionLabel ? (
+                          <div className="text-xs text-zinc-500">
+                            {subgroup.completionLabel} on {formatDateTime(subgroup.completedAt)}
+                          </div>
                         ) : null}
                       </div>
                     </td>
