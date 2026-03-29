@@ -718,19 +718,50 @@ export async function deleteAssignment(formData: FormData) {
 async function completeOrder(formData: FormData, inlineResponse: boolean) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
+  const includeCompanion = formData.get("include_companion")?.toString() === "on";
+  const companionOrderIds = (formData.get("companion_order_ids")?.toString() || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
   try {
     if (!orderId) throw new Error("Missing order id");
 
     const client = supabaseAdminClient;
+    const completedAt = new Date().toISOString();
+
+    if (includeCompanion && companionOrderIds.length > 0) {
+      const { count: refundedCompanionCount, error: refundedCompanionError } = await client
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .in("id", companionOrderIds)
+        .eq("design_type", "premade")
+        .not("refunded_at", "is", null);
+      if (refundedCompanionError) throw new Error(refundedCompanionError.message);
+      if (refundedCompanionCount && refundedCompanionCount > 0) {
+        throw new Error("Refunded split items cannot be completed.");
+      }
+    }
+
     const { error } = await client
       .from("orders")
-      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .update({ status: "archived", archived_at: completedAt })
       .eq("id", orderId);
     if (error) throw new Error(error.message);
+
+    if (includeCompanion && companionOrderIds.length > 0) {
+      const { error: companionError } = await client
+        .from("orders")
+        .update({ status: "shipped", shipped_at: completedAt })
+        .in("id", companionOrderIds)
+        .eq("design_type", "premade");
+      if (companionError) throw new Error(companionError.message);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to complete order.";
     if (inlineResponse) {
       revalidatePath(ORDERS_PATH);
+      revalidatePath(ADDITIONAL_ITEMS_PATH);
+      revalidatePath("/admin/orders/archived");
       return { ok: false, tone: "error" as const, message };
     }
     throw error;
@@ -738,8 +769,12 @@ async function completeOrder(formData: FormData, inlineResponse: boolean) {
 
   if (inlineResponse) {
     revalidatePath(ORDERS_PATH);
+    revalidatePath(ADDITIONAL_ITEMS_PATH);
+    revalidatePath("/admin/orders/archived");
     return { ok: true, tone: "success" as const, message: "Order completed." };
   }
+  revalidatePath(ADDITIONAL_ITEMS_PATH);
+  revalidatePath("/admin/orders/archived");
   redirect(ORDERS_PATH);
 }
 

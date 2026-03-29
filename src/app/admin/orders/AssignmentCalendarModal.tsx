@@ -12,12 +12,14 @@ import {
   formatMonthLabel,
   formatScheduleStatusLabel,
   getScheduleStatus,
+  getPremadeSiblingMeta,
   isScheduleDateBlocked,
   weightLabel,
 } from "./productionScheduleShared";
 
 type Props = {
   order: OrderRow;
+  allOrders: OrderRow[];
   assignment?: { assignment: OrderSlot; slot: ProductionSlot | null } | null;
   assignments: OrderSlot[];
   slots: ProductionSlot[];
@@ -45,6 +47,7 @@ function buildMonthCells(month: Date) {
 
 export default function AssignmentCalendarModal({
   order,
+  allOrders,
   assignment = null,
   assignments,
   slots,
@@ -118,6 +121,7 @@ export default function AssignmentCalendarModal({
   const actionLabel = assignment ? "Change assignment" : "Assign";
   const scheduleStatus = getScheduleStatus(order, assignment?.slot?.slot_date ?? null, todayKey);
   const canCompleteOrder = canCompleteOrderForSlotDate(order, assignment?.slot?.slot_date ?? null);
+  const premadeSiblingMeta = useMemo(() => getPremadeSiblingMeta(allOrders, order), [allOrders, order]);
   const emitToast = (tone: "success" | "error", message: string) => {
     window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
   };
@@ -149,6 +153,15 @@ export default function AssignmentCalendarModal({
                   startTransition(async () => {
                     const formData = new FormData();
                     formData.set("order_id", order.id);
+                    if (premadeSiblingMeta?.shouldPromptForCompanion) {
+                      const includeCompanion = window.confirm(
+                        `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
+                      );
+                      if (includeCompanion) {
+                        formData.set("include_companion", "on");
+                        formData.set("companion_order_ids", premadeSiblingMeta.companionOrderIds);
+                      }
+                    }
                     const result = await archiveOrderInline(formData);
                     if (result?.message) {
                       emitToast(result.tone, result.message);

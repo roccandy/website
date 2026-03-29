@@ -1,4 +1,5 @@
 import type { OrderRow, OrderSlot, PackagingOption, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
+import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 
 export const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -129,6 +130,48 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
 
 export const completionActionLabel = (order: OrderRow) =>
   order.pickup ? "Mark as collected" : "Mark as delivered";
+
+const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
+
+const summarizeSiblingLabel = (orders: OrderRow[]) => {
+  const labels = orders
+    .map((order) => order.title?.trim() || order.order_description?.trim() || null)
+    .filter((value): value is string => Boolean(value));
+
+  if (labels.length === 0) return "the other item in the order";
+  if (labels.length === 1) return labels[0];
+  return `${labels[0]} and ${labels.length - 1} more item${labels.length > 2 ? "s" : ""}`;
+};
+
+export const getPremadeSiblingMeta = (orders: OrderRow[], currentOrder: OrderRow) => {
+  const baseOrderNumber = normalizeBaseOrderNumber(currentOrder.order_number);
+  if (!baseOrderNumber) return null;
+
+  const premadeOrders = orders.filter((order) => {
+    if (order.id === currentOrder.id) return false;
+    if (normalizeBaseOrderNumber(order.order_number) !== baseOrderNumber) return false;
+    return order.design_type === "premade";
+  });
+
+  if (premadeOrders.length === 0) return null;
+
+  const focusSource = premadeOrders.find((order) => order.order_number?.trim()) ?? premadeOrders[0];
+  const focusKey = sanitizeFocusKey((focusSource.order_number?.trim() || focusSource.id || "group").trim());
+  const activeCompanionOrders = premadeOrders.filter((order) => !order.refunded_at && order.status !== "shipped");
+  const companionOrderIds = activeCompanionOrders.map((order) => order.id).join(",");
+  const actionLabel = premadeOrders.every((order) => order.pickup) ? "collected" : "shipped";
+
+  return {
+    baseOrderNumber,
+    focusKey,
+    href: `/admin/orders/additional-items?focus=${encodeURIComponent(focusKey)}`,
+    hasCompanion: true,
+    companionOrderIds,
+    companionLabel: summarizeSiblingLabel(activeCompanionOrders),
+    companionActionLabel: actionLabel,
+    shouldPromptForCompanion: activeCompanionOrders.length > 0,
+  };
+};
 
 export const isOpenOverride = (reason: string | null | undefined) =>
   reason?.trim().toLowerCase() === "open override";

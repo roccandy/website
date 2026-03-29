@@ -37,6 +37,7 @@ import {
   formatQuantity,
   formatScheduleStatusLabel,
   getScheduleStatus,
+  getPremadeSiblingMeta,
   splitCustomerName,
   statusBadge,
   weightLabel,
@@ -402,6 +403,7 @@ export function OrdersTable({
                 const assignedSlotDate = assignmentByOrderId.get(order.id)?.slot?.slot_date ?? null;
                 const scheduleStatus = getScheduleStatus(order, assignedSlotDate);
                 const canCompleteFromSchedule = canCompleteOrderForSlotDate(order, assignedSlotDate);
+                const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -432,6 +434,15 @@ export function OrdersTable({
                           >
                             {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
+                          {premadeSiblingMeta ? (
+                            <a
+                              href={premadeSiblingMeta.href}
+                              onClick={(event) => event.stopPropagation()}
+                              className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-700 transition hover:border-fuchsia-300"
+                            >
+                              Pre-made
+                            </a>
+                          ) : null}
                           {order.refunded_at ? (
                             <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
                               Refunded
@@ -1064,10 +1075,26 @@ export function OrdersTable({
                                           );
                                           if (!confirmed) {
                                             event.preventDefault();
+                                            return;
                                           }
+                                          const includeCompanionInput = event.currentTarget.elements.namedItem(
+                                            "include_companion",
+                                          ) as HTMLInputElement | null;
+                                          if (!includeCompanionInput) return;
+                                          if (!premadeSiblingMeta?.shouldPromptForCompanion) {
+                                            includeCompanionInput.value = "";
+                                            return;
+                                          }
+                                          includeCompanionInput.value = window.confirm(
+                                            `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
+                                          )
+                                            ? "on"
+                                            : "";
                                         }}
                                       >
                                         <input type="hidden" name="order_id" value={order.id} />
+                                        <input type="hidden" name="companion_order_ids" value={premadeSiblingMeta?.companionOrderIds ?? ""} />
+                                        <input type="hidden" name="include_companion" value="" />
                                         <button
                                           type="submit"
                                           className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
@@ -1113,6 +1140,7 @@ export function OrdersTable({
       {assignmentModalOrder ? (
         <AssignmentCalendarModal
           order={assignmentModalOrder}
+          allOrders={orders}
           assignment={assignmentModalAssignment}
           assignments={assignments}
           slots={slots}
