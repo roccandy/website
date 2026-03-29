@@ -17,6 +17,7 @@ import { archiveOrder, upsertOrder } from "./actions";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
+import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildColorOptions,
   buildPaletteOptions,
@@ -1067,41 +1068,14 @@ export function OrdersTable({
                                       <span className="text-xs text-zinc-500">Print unavailable</span>
                                     )}
                                     {canCompleteFromSchedule ? (
-                                      <form
+                                      <SplitAwareActionForm
                                         action={archiveOrder}
-                                        onSubmit={(event) => {
-                                          const confirmed = window.confirm(
-                                            `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                          );
-                                          if (!confirmed) {
-                                            event.preventDefault();
-                                            return;
-                                          }
-                                          const includeCompanionInput = event.currentTarget.elements.namedItem(
-                                            "include_companion",
-                                          ) as HTMLInputElement | null;
-                                          if (!includeCompanionInput) return;
-                                          if (!premadeSiblingMeta?.shouldPromptForCompanion) {
-                                            includeCompanionInput.value = "";
-                                            return;
-                                          }
-                                          includeCompanionInput.value = window.confirm(
-                                            `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
-                                          )
-                                            ? "on"
-                                            : "";
-                                        }}
-                                      >
-                                        <input type="hidden" name="order_id" value={order.id} />
-                                        <input type="hidden" name="companion_order_ids" value={premadeSiblingMeta?.companionOrderIds ?? ""} />
-                                        <input type="hidden" name="include_companion" value="" />
-                                        <button
-                                          type="submit"
-                                          className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                        >
-                                          {completionActionLabel(order)}
-                                        </button>
-                                      </form>
+                                        hiddenFields={[{ name: "order_id", value: order.id }]}
+                                        buttonLabel={completionActionLabel(order)}
+                                        buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                        companionMeta={premadeSiblingMeta}
+                                      />
                                     ) : null}
                                   </div>
                                 </form>

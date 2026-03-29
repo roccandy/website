@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 import { addManualBlock, archiveOrder, assignOrderToSlot } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
+import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildAssignmentBySlotKey,
   buildSlotIdByKey,
@@ -312,41 +313,14 @@ export default function ProductionScheduleSection({
                                     </a>
                                   ) : null}
                                   {canCompleteSlotOrder ? (
-                                    <form
+                                    <SplitAwareActionForm
                                       action={archiveOrder}
-                                      onSubmit={(event) => {
-                                        const confirmed = window.confirm(
-                                          `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                        );
-                                        if (!confirmed) {
-                                          event.preventDefault();
-                                          return;
-                                        }
-                                        const includeCompanionInput = event.currentTarget.elements.namedItem(
-                                          "include_companion",
-                                        ) as HTMLInputElement | null;
-                                        if (!includeCompanionInput) return;
-                                        if (!premadeSiblingMeta?.shouldPromptForCompanion) {
-                                          includeCompanionInput.value = "";
-                                          return;
-                                        }
-                                        includeCompanionInput.value = window.confirm(
-                                          `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
-                                        )
-                                          ? "on"
-                                          : "";
-                                      }}
-                                    >
-                                      <input type="hidden" name="order_id" value={order.id} />
-                                      <input type="hidden" name="companion_order_ids" value={premadeSiblingMeta?.companionOrderIds ?? ""} />
-                                      <input type="hidden" name="include_companion" value="" />
-                                      <button
-                                        type="submit"
-                                        className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[9px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                      >
-                                        {completionActionLabel(order)}
-                                      </button>
-                                    </form>
+                                      hiddenFields={[{ name: "order_id", value: order.id }]}
+                                      buttonLabel={completionActionLabel(order)}
+                                      buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[9px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                      confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                      companionMeta={premadeSiblingMeta}
+                                    />
                                   ) : null}
                                   <button
                                     type="button"
@@ -497,41 +471,14 @@ export default function ProductionScheduleSection({
                                       </a>
                                     ) : null}
                                     {canCompleteSlotOrder ? (
-                                      <form
+                                      <SplitAwareActionForm
                                         action={archiveOrder}
-                                      onSubmit={(event) => {
-                                          const confirmed = window.confirm(
-                                            `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                          );
-                                          if (!confirmed) {
-                                            event.preventDefault();
-                                            return;
-                                          }
-                                          const includeCompanionInput = event.currentTarget.elements.namedItem(
-                                            "include_companion",
-                                          ) as HTMLInputElement | null;
-                                          if (!includeCompanionInput) return;
-                                          if (!premadeSiblingMeta?.shouldPromptForCompanion) {
-                                            includeCompanionInput.value = "";
-                                            return;
-                                          }
-                                          includeCompanionInput.value = window.confirm(
-                                            `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
-                                          )
-                                            ? "on"
-                                            : "";
-                                        }}
-                                      >
-                                        <input type="hidden" name="order_id" value={order.id} />
-                                        <input type="hidden" name="companion_order_ids" value={premadeSiblingMeta?.companionOrderIds ?? ""} />
-                                        <input type="hidden" name="include_companion" value="" />
-                                        <button
-                                          type="submit"
-                                          className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                        >
-                                          {completionActionLabel(order)}
-                                        </button>
-                                      </form>
+                                        hiddenFields={[{ name: "order_id", value: order.id }]}
+                                        buttonLabel={completionActionLabel(order)}
+                                        buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                        companionMeta={premadeSiblingMeta}
+                                      />
                                     ) : null}
                                     <button
                                       type="button"

@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actions";
+import SplitOrderDecisionModal from "./SplitOrderDecisionModal";
 import {
   canCompleteOrderForSlotDate,
   completionActionLabel,
@@ -63,6 +64,7 @@ export default function AssignmentCalendarModal({
     return new Date();
   });
   const [isPending, startTransition] = useTransition();
+  const [splitPromptOpen, setSplitPromptOpen] = useState(false);
   const todayKey = dateKey(new Date());
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
 
@@ -125,13 +127,33 @@ export default function AssignmentCalendarModal({
   const emitToast = (tone: "success" | "error", message: string) => {
     window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
   };
+  const completeOrder = (includeCompanion: boolean) => {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("order_id", order.id);
+      if (includeCompanion && premadeSiblingMeta?.shouldPromptForCompanion) {
+        formData.set("include_companion", "on");
+        formData.set("companion_order_ids", premadeSiblingMeta.companionOrderIds);
+      }
+      const result = await archiveOrderInline(formData);
+      if (result?.message) {
+        emitToast(result.tone, result.message);
+      }
+      if (result?.ok) {
+        setSplitPromptOpen(false);
+        onClose();
+        router.refresh();
+      }
+    });
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+        <div
+          className="w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg"
+          onClick={(event) => event.stopPropagation()}
+        >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{actionLabel}</p>
@@ -146,31 +168,15 @@ export default function AssignmentCalendarModal({
                 type="button"
                 disabled={isPending}
                 onClick={() => {
+                  if (premadeSiblingMeta?.shouldPromptForCompanion) {
+                    setSplitPromptOpen(true);
+                    return;
+                  }
                   const confirmed = window.confirm(
                     `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`,
                   );
                   if (!confirmed) return;
-                  startTransition(async () => {
-                    const formData = new FormData();
-                    formData.set("order_id", order.id);
-                    if (premadeSiblingMeta?.shouldPromptForCompanion) {
-                      const includeCompanion = window.confirm(
-                        `Order #${premadeSiblingMeta.baseOrderNumber} has multiple items. Would you like to mark ${premadeSiblingMeta.companionLabel} as ${premadeSiblingMeta.companionActionLabel} too?`,
-                      );
-                      if (includeCompanion) {
-                        formData.set("include_companion", "on");
-                        formData.set("companion_order_ids", premadeSiblingMeta.companionOrderIds);
-                      }
-                    }
-                    const result = await archiveOrderInline(formData);
-                    if (result?.message) {
-                      emitToast(result.tone, result.message);
-                    }
-                    if (result?.ok) {
-                      onClose();
-                      router.refresh();
-                    }
-                  });
+                  completeOrder(false);
                 }}
                 className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
               >
@@ -306,7 +312,19 @@ export default function AssignmentCalendarModal({
             })}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      {premadeSiblingMeta ? (
+        <SplitOrderDecisionModal
+          open={splitPromptOpen}
+          baseOrderNumber={premadeSiblingMeta.baseOrderNumber}
+          companionLabel={premadeSiblingMeta.companionLabel}
+          companionActionLabel={premadeSiblingMeta.companionActionLabel}
+          onYes={() => completeOrder(true)}
+          onNo={() => completeOrder(false)}
+          onCancel={() => setSplitPromptOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
