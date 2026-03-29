@@ -3,8 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
-import { assignOrderToSlot, deleteAssignment } from "./actions";
+import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actions";
 import {
+  canCompleteOrderForSlotDate,
+  completionActionLabel,
   dateKey,
   findFirstAvailableSlotIndexForDate,
   formatMonthLabel,
@@ -113,6 +115,7 @@ export default function AssignmentCalendarModal({
 
   const actionLabel = assignment ? "Change assignment" : "Assign";
   const scheduleStatus = getScheduleStatus(order, assignment?.slot?.slot_date ?? null, todayKey);
+  const canCompleteOrder = canCompleteOrderForSlotDate(order, assignment?.slot?.slot_date ?? null);
   const emitToast = (tone: "success" | "error", message: string) => {
     window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
   };
@@ -132,6 +135,33 @@ export default function AssignmentCalendarModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {canCompleteOrder ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`,
+                  );
+                  if (!confirmed) return;
+                  startTransition(async () => {
+                    const formData = new FormData();
+                    formData.set("order_id", order.id);
+                    const result = await archiveOrderInline(formData);
+                    if (result?.message) {
+                      emitToast(result.tone, result.message);
+                    }
+                    if (result?.ok) {
+                      onClose();
+                      router.refresh();
+                    }
+                  });
+                }}
+                className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
+              >
+                {completionActionLabel(order)}
+              </button>
+            ) : null}
             {assignment?.assignment.id ? (
               <button
                 type="button"

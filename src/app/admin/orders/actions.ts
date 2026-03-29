@@ -707,16 +707,37 @@ export async function deleteAssignment(formData: FormData) {
   redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
 }
 
-export async function archiveOrder(formData: FormData) {
+async function completeOrder(formData: FormData, inlineResponse: boolean) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
-  if (!orderId) throw new Error("Missing order id");
+  try {
+    if (!orderId) throw new Error("Missing order id");
 
-  const client = supabaseAdminClient;
-  const { error } = await client.from("orders").update({ status: "archived" }).eq("id", orderId);
-  if (error) throw new Error(error.message);
+    const client = supabaseAdminClient;
+    const { error } = await client.from("orders").update({ status: "archived" }).eq("id", orderId);
+    if (error) throw new Error(error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to complete order.";
+    if (inlineResponse) {
+      revalidatePath(ORDERS_PATH);
+      return { ok: false, tone: "error" as const, message };
+    }
+    throw error;
+  }
 
+  if (inlineResponse) {
+    revalidatePath(ORDERS_PATH);
+    return { ok: true, tone: "success" as const, message: "Order completed." };
+  }
   redirect(ORDERS_PATH);
+}
+
+export async function archiveOrder(formData: FormData) {
+  await completeOrder(formData, false);
+}
+
+export async function archiveOrderInline(formData: FormData) {
+  return completeOrder(formData, true);
 }
 
 export async function unarchiveOrder(formData: FormData) {
