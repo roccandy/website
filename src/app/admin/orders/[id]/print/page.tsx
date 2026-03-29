@@ -109,10 +109,10 @@ const CARD_CLASS = "rounded-2xl border border-zinc-200 p-4 print:p-2";
 const SECTION_HEADING_CLASS = "text-[11px] uppercase tracking-[0.22em] text-zinc-500";
 const SECTION_BODY_CLASS = "mt-3 space-y-2 print:mt-1 print:space-y-1";
 const INLINE_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1";
-const INLINE_LABEL_CLASS = "text-[10px] uppercase tracking-[0.18em] text-zinc-500";
+const INLINE_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
 const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
 const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[24px] leading-[1.15]";
-const SPEC_LABEL_CLASS = "text-[24px] font-semibold uppercase tracking-[0.04em] text-zinc-500";
+const SPEC_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
 const SPEC_VALUE_CLASS = "text-[24px] font-semibold text-zinc-900";
 
 type ColorDisplay = {
@@ -245,6 +245,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     if (order.jacket === "two_colour") return "2 Colour";
     if (order.jacket === "pinstripe") return "Single Colour + Pinstripe";
     return "Single Colour";
+  })();
+  const packagingSummary = (() => {
+    const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
+    const quantityLabel = Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0 ? ` (Qty: ${Number(order.quantity)})` : "";
+    return `${packagingLabel}${quantityLabel}`;
   })();
 
   const showJacketColorOne =
@@ -447,7 +452,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </div>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
-                <span className={SPEC_VALUE_CLASS}>{formatPackagingOptionLabel(packaging) || "N/A"}</span>
+                <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
               </p>
             </div>
           </div>
