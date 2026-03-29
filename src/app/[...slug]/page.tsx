@@ -88,6 +88,18 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   },
 };
 
+const BODY_HTML_CLASS = `
+  max-w-none space-y-4 text-base leading-relaxed text-zinc-700
+  [&_p]:my-0
+  [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
+  [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
+  [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
+  [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
+  [&_li]:my-1
+  [&_strong]:font-semibold [&_strong]:text-zinc-900
+  [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
+`;
+
 function resolveGalleryImages(primary: string[], fallback: string[]) {
   const base = primary.length > 0 ? primary : fallback;
   if (base.length === 0) return [];
@@ -281,24 +293,13 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
           )}
           {landingConfig ? (
             page.bodyHtml ? (
-              <article
-                className="sr-only"
-                dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
-              />
+              <section className="mx-auto max-w-3xl rounded-3xl border border-zinc-200 bg-white/90 px-6 py-8 text-left shadow-sm md:px-8">
+                <article className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: page.bodyHtml }} />
+              </section>
             ) : null
           ) : (
             <article
-              className="
-                max-w-none space-y-4 text-base leading-relaxed text-zinc-700
-                [&_p]:my-0
-                [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
-                [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
-                [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
-                [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
-                [&_li]:my-1
-                [&_strong]:font-semibold [&_strong]:text-zinc-900
-                [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
-              "
+              className={BODY_HTML_CLASS}
               dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
             />
           )}
