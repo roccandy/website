@@ -412,7 +412,9 @@ export function OrdersTable({
                       </td>
                       <td className="px-3 py-2 text-zinc-800">{order.title ?? "Untitled"}</td>
                       <td className="px-3 py-2 text-zinc-700">{formatDate(order.due_date)}</td>
-                      <td className="px-3 py-2 text-zinc-700">{formatOrderDescription(order)}</td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        {formatOrderDescription(order, packagingById.get(order.packaging_option_id ?? "") ?? null)}
+                      </td>
                       <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
                       <td className="px-3 py-2 text-zinc-700">{order.pickup ? "Pickup" : "Delivery"}</td>
                       <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>

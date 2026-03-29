@@ -6,6 +6,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
+import { formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
 import { PrintButton } from "./PrintButton";
 
 type Params = {
@@ -211,7 +212,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     );
   }
 
-  const { data: packagingOptions } = await client.from("packaging_options").select("id,type");
+  const { data: packagingOptions } = await client.from("packaging_options").select("id,type,size");
   const packaging = packagingOptions?.find((opt) => opt.id === order.packaging_option_id) ?? null;
   const { data: paletteRows } = await client.from("color_palette").select("category,shade,hex");
   const paletteHexMap = buildPaletteHexMap(paletteRows ?? []);
@@ -446,7 +447,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </div>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
-                <span className={SPEC_VALUE_CLASS}>{packaging ? packaging.type : "N/A"}</span>
+                <span className={SPEC_VALUE_CLASS}>{formatPackagingOptionLabel(packaging) || "N/A"}</span>
               </p>
             </div>
           </div>

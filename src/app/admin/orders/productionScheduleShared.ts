@@ -1,4 +1,4 @@
-import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
+import type { OrderRow, OrderSlot, PackagingOption, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 
 export const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -35,9 +35,28 @@ export const formatQuantity = (quantity: number | null | undefined) => {
   return Number.isInteger(value) ? `${value}` : `${value.toFixed(2)}`;
 };
 
-export const formatOrderDescription = (order: OrderRow) => {
+export const formatPackagingOptionLabel = (
+  option: Pick<PackagingOption, "type" | "size"> | null | undefined,
+) => {
+  if (!option) return "";
+  const type = option.type?.trim() ?? "";
+  const size = option.size?.trim() ?? "";
+  if (!type) return size;
+  if (!size) return type;
+  const normalizedSize = type.toLowerCase().includes("jar")
+    ? size.replace(/\s*\(?\d+\s*g\)?$/i, "").trim() || size
+    : size;
+  return `${type} - ${normalizedSize}`;
+};
+
+export const formatOrderDescription = (order: OrderRow, packagingOption?: PackagingOption | null) => {
   const description = order.order_description?.trim() ?? "";
   const qty = formatQuantity(order.quantity);
+  const packagingLabel = formatPackagingOptionLabel(packagingOption);
+  if (!description) {
+    if (packagingLabel && qty) return `${packagingLabel} (Qty: ${qty})`;
+    if (packagingLabel) return packagingLabel;
+  }
   if (!qty) return description;
   return description ? `${description} (Qty: ${qty})` : `Qty: ${qty}`;
 };
