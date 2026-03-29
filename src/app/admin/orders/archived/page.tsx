@@ -404,6 +404,9 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                   : subgroup.isPremadeGroup
                     ? premadeStatusBadge(subgroup.status)
                     : scheduleStatusBadge(subgroup.status);
+                const subgroupResettableOrders = subgroup.orders.filter((order) => isResettableCompletedOrder(order));
+                const subgroupRefundableOrders = subgroup.orders.filter((order) => isRefundableOrder(order));
+                const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
 
                 return (
                   <tr key={rowKey} className="bg-white">
@@ -455,40 +458,76 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       </div>
                     </td>
                     <td className={`w-44 max-w-44 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
-                      <div className="space-y-2">
-                        {subgroup.orders.map((order) => {
-                          const hasReset = isResettableCompletedOrder(order);
-                          const hasRefund = isRefundableOrder(order);
+                      {subgroup.isPremadeGroup ? (
+                        <div className="space-y-2">
+                          {subgroupResettableOrders.length > 0 ? (
+                            <form action={unarchiveOrder}>
+                              <input type="hidden" name="order_id" value={subgroupResettableOrders[0]?.id ?? ""} />
+                              <input
+                                type="hidden"
+                                name="order_ids"
+                                value={subgroupResettableOrders.map((order) => order.id).join(",")}
+                              />
+                              <input type="hidden" name="redirect_to" value={redirectTo} />
+                              <button
+                                type="submit"
+                                className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                              >
+                                Mark as pending
+                              </button>
+                            </form>
+                          ) : null}
+                          {subgroupRefundableOrders.length > 0 ? (
+                            <RefundForm
+                              orderId={subgroupRefundableOrders[0]?.id ?? ""}
+                              orderIds={subgroupRefundableOrders.map((order) => order.id)}
+                              orderNumber={subgroupRefundableOrders[0]?.order_number}
+                              amount={subgroupRefundAmount}
+                              action={refundOrder}
+                              redirectTo={redirectTo}
+                              compact
+                            />
+                          ) : null}
+                          {subgroupResettableOrders.length === 0 && subgroupRefundableOrders.length === 0 ? (
+                            <span className="text-xs text-zinc-400">-</span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {subgroup.orders.map((order) => {
+                            const hasReset = isResettableCompletedOrder(order);
+                            const hasRefund = isRefundableOrder(order);
 
-                          return (
-                            <div key={`actions-${order.id}`} className="space-y-1">
-                              {hasReset ? (
-                                <form action={unarchiveOrder}>
-                                  <input type="hidden" name="order_id" value={order.id} />
-                                  <input type="hidden" name="redirect_to" value={redirectTo} />
-                                  <button
-                                    type="submit"
-                                    className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                  >
-                                    Mark as pending
-                                  </button>
-                                </form>
-                              ) : null}
-                              {hasRefund ? (
-                                <RefundForm
-                                  orderId={order.id}
-                                  orderNumber={order.order_number}
-                                  amount={order.total_price}
-                                  action={refundOrder}
-                                  redirectTo={redirectTo}
-                                  compact
-                                />
-                              ) : null}
-                              {!hasReset && !hasRefund ? <span className="text-xs text-zinc-400">-</span> : null}
-                            </div>
-                          );
-                        })}
-                      </div>
+                            return (
+                              <div key={`actions-${order.id}`} className="space-y-1">
+                                {hasReset ? (
+                                  <form action={unarchiveOrder}>
+                                    <input type="hidden" name="order_id" value={order.id} />
+                                    <input type="hidden" name="redirect_to" value={redirectTo} />
+                                    <button
+                                      type="submit"
+                                      className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                    >
+                                      Mark as pending
+                                    </button>
+                                  </form>
+                                ) : null}
+                                {hasRefund ? (
+                                  <RefundForm
+                                    orderId={order.id}
+                                    orderNumber={order.order_number}
+                                    amount={order.total_price}
+                                    action={refundOrder}
+                                    redirectTo={redirectTo}
+                                    compact
+                                  />
+                                ) : null}
+                                {!hasReset && !hasRefund ? <span className="text-xs text-zinc-400">-</span> : null}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );

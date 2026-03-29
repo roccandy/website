@@ -11,6 +11,13 @@ type RefundPersistenceInput = {
   refundedAt?: string;
 };
 
+type GroupRefundPersistenceInput = {
+  client: ServerClient;
+  orders: OrderRow[];
+  refundReason: string | null;
+  refundedAt?: string;
+};
+
 type RefundPersistenceResult = {
   sharedPayment: boolean;
   fullyRefundedPayment: boolean;
@@ -112,6 +119,83 @@ export async function persistOrderRefund({
         .map((relatedOrder) => relatedOrder.woo_order_id)
         .filter((wooOrderId): wooOrderId is string => Boolean(wooOrderId))
     )
+  );
+
+  for (const wooOrderId of wooOrderIds) {
+    await updateWooOrder(wooOrderId, { status: "refunded" });
+  }
+
+  return { sharedPayment, fullyRefundedPayment };
+}
+
+export async function persistOrderRefunds({
+  client,
+  orders,
+  refundReason,
+  refundedAt = new Date().toISOString(),
+}: GroupRefundPersistenceInput): Promise<RefundPersistenceResult> {
+  const normalizedOrders = orders.filter(Boolean);
+  if (normalizedOrders.length === 0) {
+    throw new Error("No orders to refund.");
+  }
+
+  const provider = normalizedOrders[0]?.payment_provider;
+  const transactionId = normalizedOrders[0]?.payment_transaction_id;
+  if (!provider || !transactionId) {
+    throw new Error("Payment details missing.");
+  }
+
+  const hasMismatchedPayment = normalizedOrders.some(
+    (order) => order.payment_provider !== provider || order.payment_transaction_id !== transactionId,
+  );
+  if (hasMismatchedPayment) {
+    throw new Error("Orders must share the same payment to refund together.");
+  }
+
+  const { data: relatedOrders, error: relatedOrdersError } = await client
+    .from("orders")
+    .select("id,woo_order_id,refunded_at")
+    .eq("payment_provider", provider)
+    .eq("payment_transaction_id", transactionId);
+
+  if (relatedOrdersError) {
+    throw new Error(relatedOrdersError.message);
+  }
+
+  const normalizedRelatedOrders = relatedOrders ?? [];
+  const refundedOrderIds = new Set(normalizedOrders.map((order) => order.id));
+  const sharedPayment = normalizedRelatedOrders.length > 1;
+  const remainingRelatedOrders = normalizedRelatedOrders.filter(
+    (relatedOrder) => !refundedOrderIds.has(relatedOrder.id) && !relatedOrder.refunded_at,
+  );
+  const fullyRefundedPayment = remainingRelatedOrders.length === 0;
+  const wooOrderStatus = fullyRefundedPayment ? "refunded" : "partially-refunded";
+
+  for (const order of normalizedOrders) {
+    await updateRefundRecord(client, order.id, refundedAt, refundReason, wooOrderStatus);
+  }
+
+  if (!fullyRefundedPayment) {
+    return { sharedPayment, fullyRefundedPayment };
+  }
+
+  const relatedOrderIds = normalizedRelatedOrders.map((relatedOrder) => relatedOrder.id);
+  if (relatedOrderIds.length > 1) {
+    const { error: updateRelatedStatusError } = await client
+      .from("orders")
+      .update({ woo_order_status: "refunded" })
+      .in("id", relatedOrderIds);
+    if (updateRelatedStatusError) {
+      throw new Error(updateRelatedStatusError.message);
+    }
+  }
+
+  const wooOrderIds = Array.from(
+    new Set(
+      normalizedRelatedOrders
+        .map((relatedOrder) => relatedOrder.woo_order_id)
+        .filter((wooOrderId): wooOrderId is string => Boolean(wooOrderId)),
+    ),
   );
 
   for (const wooOrderId of wooOrderIds) {

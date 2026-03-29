@@ -4,6 +4,7 @@ import { useState } from "react";
 
 type RefundFormProps = {
   orderId: string;
+  orderIds?: string[];
   orderNumber?: string | null;
   amount?: number | null;
   helperText?: string | null;
@@ -22,6 +23,7 @@ const formatAmount = (value: number | null | undefined) => {
 
 export function RefundForm({
   orderId,
+  orderIds,
   orderNumber,
   amount,
   helperText,
@@ -54,6 +56,7 @@ export function RefundForm({
             </div>
             <form action={action} className="mt-4 space-y-3">
               <input type="hidden" name="id" value={orderId} />
+              {orderIds && orderIds.length > 1 ? <input type="hidden" name="ids" value={orderIds.join(",")} /> : null}
               {redirectTo ? <input type="hidden" name="redirect_to" value={redirectTo} /> : null}
               <input type="hidden" name="refund_reason" value={reason} />
               <input

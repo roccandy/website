@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
-import { persistOrderRefund } from "@/lib/orderRefunds";
+import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -401,7 +401,12 @@ export async function upsertOrder(formData: FormData) {
 
 export async function refundOrder(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
-  const id = formData.get("id")?.toString() || null;
+  const idsRaw = formData.get("ids")?.toString() || "";
+  const ids = idsRaw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const id = formData.get("id")?.toString() || ids[0] || null;
   const refundReasonRaw = formData.get("refund_reason")?.toString() || null;
   const refundReason = refundReasonRaw ? refundReasonRaw.trim().slice(0, 255) : null;
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
@@ -410,18 +415,31 @@ export async function refundOrder(formData: FormData) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
   }
   const client = supabaseAdminClient;
-  const { data: order, error } = await client.from("orders").select("*").eq("id", id).maybeSingle();
-  if (error || !order) {
+  const orderIds = Array.from(new Set(ids.length > 0 ? ids : [id]));
+  const orderQuery =
+    orderIds.length > 1
+      ? client.from("orders").select("*").in("id", orderIds)
+      : client.from("orders").select("*").eq("id", orderIds[0]!).maybeSingle();
+  const { data: orderData, error } = await orderQuery;
+  const orders = Array.isArray(orderData) ? orderData : orderData ? [orderData] : [];
+  if (error || orders.length === 0) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
   }
 
-  const provider = order.payment_provider;
-  const transactionId = order.payment_transaction_id;
+  const provider = orders[0]?.payment_provider;
+  const transactionId = orders[0]?.payment_transaction_id;
   if (!provider || !transactionId) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20payment%20details`);
   }
 
-  const amount = Number(order.total_price ?? 0);
+  const samePayment = orders.every(
+    (order) => order.payment_provider === provider && order.payment_transaction_id === transactionId,
+  );
+  if (!samePayment) {
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Orders%20must%20share%20the%20same%20payment`);
+  }
+
+  const amount = orders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
   if (!Number.isFinite(amount) || amount <= 0) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
   }
@@ -435,23 +453,31 @@ export async function refundOrder(formData: FormData) {
       redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
     }
 
-    const refundResult = await persistOrderRefund({
-      client,
-      order,
-      refundReason,
-    });
+    const refundResult =
+      orders.length > 1
+        ? await persistOrderRefunds({
+            client,
+            orders,
+            refundReason,
+          })
+        : await persistOrderRefund({
+            client,
+            order: orders[0]!,
+            refundReason,
+          });
 
-    if (order.customer_email) {
-      await sendCustomerRefundEmail([order.customer_email], {
-        orderNumber: order.order_number ?? null,
-        amount: Number(order.total_price ?? 0),
-        paymentMethod: order.payment_method ?? order.payment_provider ?? null,
+    const recipientEmails = Array.from(new Set(orders.map((order) => order.customer_email).filter(Boolean)));
+    if (recipientEmails.length > 0) {
+      await sendCustomerRefundEmail(recipientEmails, {
+        orderNumber: orders[0]?.order_number ?? null,
+        amount,
+        paymentMethod: orders[0]?.payment_method ?? orders[0]?.payment_provider ?? null,
       });
     }
 
     const successMessage =
       refundResult.sharedPayment && !refundResult.fullyRefundedPayment
-        ? `Refund processed for #${order.order_number}. Other split items on this payment can still be refunded separately.`
+        ? `Refund processed for #${orders[0]?.order_number}. Other split items on this payment can still be refunded separately.`
         : "Refund processed";
     redirect(`${redirectBase}?toast_success=${encodeURIComponent(successMessage)}`);
   } catch (error) {
@@ -789,26 +815,50 @@ export async function archiveOrderInline(formData: FormData) {
 export async function unarchiveOrder(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
+  const orderIdsRaw = formData.get("order_ids")?.toString() || "";
+  const orderIds = Array.from(
+    new Set(
+      orderIdsRaw
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+  const targetOrderIds = orderIds.length > 0 ? orderIds : orderId ? [orderId] : [];
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
   const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : "/admin/orders/archived";
-  if (!orderId) throw new Error("Missing order id");
+  if (targetOrderIds.length === 0) throw new Error("Missing order id");
 
   const client = supabaseAdminClient;
-  const { data: existing, error: existingError } = await client
+  const { data: existingRows, error: existingError } = await client
     .from("orders")
     .select("id, design_type, status")
-    .eq("id", orderId)
-    .maybeSingle();
+    .in("id", targetOrderIds);
   if (existingError) throw new Error(existingError.message);
-  if (!existing) throw new Error("Order not found.");
+  if (!existingRows || existingRows.length === 0) throw new Error("Order not found.");
 
-  const resetPayload =
-    existing.design_type === "premade" || existing.status === "shipped"
-      ? { status: "pending", shipped_at: null }
-      : { status: "pending", archived_at: null };
+  const premadeIds = existingRows
+    .filter((order) => order.design_type === "premade" || order.status === "shipped")
+    .map((order) => order.id);
+  const customIds = existingRows
+    .filter((order) => order.design_type !== "premade" && order.status !== "shipped")
+    .map((order) => order.id);
 
-  const { error } = await client.from("orders").update(resetPayload).eq("id", orderId);
-  if (error) throw new Error(error.message);
+  if (premadeIds.length > 0) {
+    const { error } = await client
+      .from("orders")
+      .update({ status: "pending", shipped_at: null })
+      .in("id", premadeIds);
+    if (error) throw new Error(error.message);
+  }
+
+  if (customIds.length > 0) {
+    const { error } = await client
+      .from("orders")
+      .update({ status: "pending", archived_at: null })
+      .in("id", customIds);
+    if (error) throw new Error(error.message);
+  }
 
   revalidatePath(ORDERS_PATH);
   revalidatePath(ADDITIONAL_ITEMS_PATH);
