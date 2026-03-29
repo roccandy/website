@@ -9,6 +9,7 @@ type RefundFormProps = {
   helperText?: string | null;
   action: (formData: FormData) => void;
   redirectTo?: string;
+  compact?: boolean;
 };
 
 const formatAmount = (value: number | null | undefined) => {
@@ -26,11 +27,13 @@ export function RefundForm({
   helperText,
   action,
   redirectTo,
+  compact = false,
 }: RefundFormProps) {
   const [reason, setReason] = useState("");
   const label = orderNumber ? `#${orderNumber}` : "payment";
   const amountLabel = formatAmount(amount);
   const refundLabel = amountLabel ? `Refund ${label} (${amountLabel})` : `Refund ${label}`;
+  const buttonLabel = compact ? `Refund ${label}` : refundLabel;
 
   return (
     <form
@@ -56,7 +59,7 @@ export function RefundForm({
         type="submit"
         className="inline-flex items-center rounded-md border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 hover:border-rose-300 hover:text-rose-800"
       >
-        {refundLabel}
+        {buttonLabel}
       </button>
     </form>
   );

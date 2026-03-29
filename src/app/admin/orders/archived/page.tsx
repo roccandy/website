@@ -379,7 +379,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
               <th className="px-3 py-3 text-left">Order weight</th>
               <th className="px-3 py-3 text-left">Customer</th>
               <th className="px-3 py-3 text-left">Status</th>
-              <th className="px-3 py-3 text-left">Actions</th>
+              <th className="w-44 px-3 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -446,7 +446,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                         ) : null}
                       </div>
                     </td>
-                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
+                    <td className={`w-44 max-w-44 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
                       {showGroupCells ? (
                         <div className="space-y-2">
                           {group.visibleOrders
@@ -459,7 +459,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   type="submit"
                                   className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                                 >
-                                  Unarchive {order.order_number ? `#${order.order_number}` : ""}
+                                  Unarchive
                                 </button>
                               </form>
                             ))}
@@ -478,6 +478,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                 }
                                 action={refundOrder}
                                 redirectTo={redirectTo}
+                                compact
                               />
                             ))}
                           {group.visibleOrders.every(
