@@ -171,9 +171,9 @@ export default function ProductionScheduleSection({
           </div>
         </div>
         {viewMode === "calendar" ? (
-          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             {visibleCalendarDays.length === 0 ? (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 md:col-span-2 xl:col-span-4">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 sm:col-span-2 lg:col-span-5">
                 No production days are visible for this month.
               </div>
             ) : (
@@ -183,7 +183,7 @@ export default function ProductionScheduleSection({
                 return (
                   <div
                     key={key}
-                    className={`min-h-[180px] rounded-lg border bg-white px-3 py-3 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
+                    className={`rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -204,7 +204,7 @@ export default function ProductionScheduleSection({
                         </button>
                       </form>
                     </div>
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-2 space-y-1.5">
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
                         const slotIndex = idx + 1;
                         const slotKey = `${key}:${slotIndex}`;
@@ -218,7 +218,7 @@ export default function ProductionScheduleSection({
                         return (
                           <div
                             key={slotKey}
-                            className={`rounded border border-dashed border-zinc-200 p-1.5 ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            className={`rounded border border-dashed border-zinc-200 p-1 ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
                             onDragOver={(event) => {
                               if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
                               event.preventDefault();
@@ -255,25 +255,25 @@ export default function ProductionScheduleSection({
                                 draggable={canReassignSlotOrder}
                                 onDragStart={() => setDraggingAssignmentId(assignment.id)}
                                 onDragEnd={() => setDraggingAssignmentId(null)}
-                                className={`rounded-md border px-2.5 py-2 text-[11px] ${statusCard(
+                                className={`rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
                                   getScheduleStatus(order, key, todayKey),
                                 )}`}
                               >
                                 <div className="min-w-0">
                                   <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                  <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-zinc-900">{title}</p>
-                                  <div className="mt-1 space-y-0.5 text-[10px] text-zinc-700">
+                                  <p className="mt-0.5 break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
+                                  <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
                                     <p>{weightLabel(order.total_weight_kg)}</p>
                                     <p>Due {formatDate(order.due_date)}</p>
                                   </div>
                                 </div>
-                                <div className="mt-2 flex flex-col items-stretch gap-1">
+                                <div className="mt-1.5 flex flex-col items-stretch gap-1">
                                   {printTarget ? (
                                     <a
                                       href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[10px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                      className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[9px] font-semibold text-zinc-700 hover:border-zinc-300"
                                     >
                                       Print order
                                     </a>
@@ -293,7 +293,7 @@ export default function ProductionScheduleSection({
                                       <input type="hidden" name="order_id" value={order.id} />
                                       <button
                                         type="submit"
-                                        className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                        className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[9px] font-semibold text-emerald-700 hover:border-emerald-300"
                                       >
                                         {completionActionLabel(order)}
                                       </button>
@@ -303,7 +303,7 @@ export default function ProductionScheduleSection({
                                     <button
                                       type="button"
                                       onClick={() => setAssignmentModalOrderId(order.id)}
-                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[10px] font-semibold text-blue-700 hover:border-blue-300"
+                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[9px] font-semibold text-blue-700 hover:border-blue-300"
                                     >
                                       Change assignment
                                     </button>
@@ -312,12 +312,12 @@ export default function ProductionScheduleSection({
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-2 rounded px-1 py-0.5">
-                                <span className="text-[10px] font-medium text-zinc-400">Empty</span>
+                                <span className="text-[9px] font-medium text-zinc-400">Empty</span>
                                 <button
                                   type="button"
                                   disabled={key < todayKey}
                                   onClick={() => setSlotPicker({ date: key, slotIndex })}
-                                  className={`rounded px-2 py-1 text-[10px] font-semibold ${
+                                  className={`rounded px-2 py-1 text-[9px] font-semibold ${
                                     key < todayKey
                                       ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
                                       : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
