@@ -111,9 +111,9 @@ const SECTION_BODY_CLASS = "mt-3 space-y-2 print:mt-1 print:space-y-1";
 const INLINE_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1";
 const INLINE_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
 const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
-const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[24px] leading-[1.15]";
+const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[20px] leading-[1.15]";
 const SPEC_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
-const SPEC_VALUE_CLASS = "text-[24px] font-semibold text-zinc-900";
+const SPEC_VALUE_CLASS = "text-[20px] font-semibold text-zinc-900";
 
 type ColorDisplay = {
   label: string;
