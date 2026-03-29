@@ -84,7 +84,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
           <h2 className="text-3xl font-semibold">Production Schedule</h2>
-          <p className="text-sm text-zinc-600">Current custom orders that still need production attention.</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
