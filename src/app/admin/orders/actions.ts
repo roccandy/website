@@ -23,6 +23,53 @@ const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
 };
+const getTodayKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const isNoProductionDay = (slotDate: string, settings: Awaited<ReturnType<typeof getSettings>>) => {
+  const date = new Date(`${slotDate}T00:00:00`);
+  const day = date.getDay();
+  if (day === 0) return settings.no_production_sun;
+  if (day === 1) return settings.no_production_mon;
+  if (day === 2) return settings.no_production_tue;
+  if (day === 3) return settings.no_production_wed;
+  if (day === 4) return settings.no_production_thu;
+  if (day === 5) return settings.no_production_fri;
+  return settings.no_production_sat;
+};
+
+async function assertAssignableDate(slotDate: string, client: typeof supabaseAdminClient) {
+  const todayKey = getTodayKey();
+  if (slotDate < todayKey) {
+    throw new Error("Cannot assign orders to past dates.");
+  }
+
+  const settings = await getSettings();
+  const { data: blocks, error } = await client
+    .from("production_blocks")
+    .select("reason")
+    .lte("start_date", slotDate)
+    .gte("end_date", slotDate);
+  if (error) throw new Error(error.message);
+
+  const hasOpenOverride = (blocks ?? []).some((block) => (block.reason ?? "").trim().toLowerCase() === OPEN_OVERRIDE_REASON.toLowerCase());
+  const manualBlock = (blocks ?? []).find(
+    (block) => (block.reason ?? "").trim().toLowerCase() !== OPEN_OVERRIDE_REASON.toLowerCase(),
+  );
+
+  if (manualBlock) {
+    throw new Error(manualBlock.reason || "This production date is blocked.");
+  }
+
+  if (isNoProductionDay(slotDate, settings) && !hasOpenOverride) {
+    throw new Error("This production date is unavailable.");
+  }
+}
 
 const isOrderNumberConflict = (error: { code?: string | null; message?: string | null }) => {
   if (error.code === "23505") return true;
@@ -445,24 +492,17 @@ export async function assignOrderToSlot(formData: FormData) {
     const slot_index_input = formData.get("slot_index");
     const slot_index = slot_index_input !== null ? Number(slot_index_input) : NaN;
     const requestedKgAssigned = Number(formData.get("kg_assigned") || 0);
-    const todayKey = (() => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = `${now.getMonth() + 1}`.padStart(2, "0");
-      const day = `${now.getDate()}`.padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    })();
-
     if (!order_id) throw new Error("Order is required.");
     if (!slot_id && (!slot_date || !Number.isFinite(slot_index))) {
       throw new Error("Slot date and index are required.");
     }
-    if (slot_date && slot_date < todayKey) {
-      throw new Error("Cannot assign orders to past dates.");
-    }
 
     const client = supabaseAdminClient;
     let resolvedSlotId = slot_id;
+
+    if (slot_date) {
+      await assertAssignableDate(slot_date, client);
+    }
 
     const { data: order, error: orderError } = await client
       .from("orders")
@@ -531,8 +571,8 @@ export async function assignOrderToSlot(formData: FormData) {
         .eq("id", resolvedSlotId)
         .maybeSingle();
       if (slotDateError) throw new Error(slotDateError.message);
-      if (slotDateRow?.slot_date && slotDateRow.slot_date < todayKey) {
-        throw new Error("Cannot assign orders to past dates.");
+      if (slotDateRow?.slot_date) {
+        await assertAssignableDate(slotDateRow.slot_date, client);
       }
     }
 

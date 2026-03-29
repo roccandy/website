@@ -1,4 +1,4 @@
-import type { OrderRow } from "@/lib/data";
+import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 
 export const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -113,3 +113,91 @@ export const isOpenOverride = (reason: string | null | undefined) =>
 
 export const isManualBlock = (reason: string | null | undefined) =>
   reason?.trim().toLowerCase() === "manual block";
+
+export const isBlockedByDefault = (date: Date, settings: SettingsRow) => {
+  const day = date.getDay();
+  if (day === 0) return settings.no_production_sun;
+  if (day === 1) return settings.no_production_mon;
+  if (day === 2) return settings.no_production_tue;
+  if (day === 3) return settings.no_production_wed;
+  if (day === 4) return settings.no_production_thu;
+  if (day === 5) return settings.no_production_fri;
+  return settings.no_production_sat;
+};
+
+export const blockReasonForDate = (key: string, blocks: ProductionBlock[]) => {
+  const explicit = blocks.find(
+    (block) => key >= block.start_date && key <= block.end_date && !isOpenOverride(block.reason),
+  );
+  return explicit?.reason ?? null;
+};
+
+export const hasOpenOverrideForDate = (key: string, blocks: ProductionBlock[]) =>
+  blocks.some((block) => key >= block.start_date && key <= block.end_date && isOpenOverride(block.reason));
+
+export const isScheduleDateBlocked = (date: Date, settings: SettingsRow, blocks: ProductionBlock[]) => {
+  const key = dateKey(date);
+  const defaultBlocked = isBlockedByDefault(date, settings);
+  const reason = blockReasonForDate(key, blocks);
+  const hasOpenOverride = hasOpenOverrideForDate(key, blocks);
+
+  return {
+    key,
+    defaultBlocked,
+    reason,
+    hasOpenOverride,
+    blocked: (defaultBlocked && !hasOpenOverride) || Boolean(reason),
+  };
+};
+
+export const buildSlotIdByKey = (slots: ProductionSlot[]) => {
+  const map = new Map<string, string>();
+  slots.forEach((slot) => {
+    const key = `${slot.slot_date}:${slot.slot_index}`;
+    if (!map.has(key)) {
+      map.set(key, slot.id);
+    }
+  });
+  return map;
+};
+
+export const buildAssignmentBySlotKey = (assignments: OrderSlot[], slots: ProductionSlot[]) => {
+  const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
+  const map = new Map<string, OrderSlot>();
+  assignments.forEach((assignment) => {
+    const slot = slotMap.get(assignment.slot_id);
+    if (!slot) return;
+    map.set(`${slot.slot_date}:${slot.slot_index}`, assignment);
+  });
+  return map;
+};
+
+export const findFirstAvailableSlotIndexForDate = ({
+  date,
+  slotsPerDay,
+  assignments,
+  slots,
+  ignoreAssignmentId,
+}: {
+  date: string;
+  slotsPerDay: number;
+  assignments: OrderSlot[];
+  slots: ProductionSlot[];
+  ignoreAssignmentId?: string | null;
+}) => {
+  const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
+  const occupied = new Set<number>();
+
+  assignments.forEach((assignment) => {
+    if (ignoreAssignmentId && assignment.id === ignoreAssignmentId) return;
+    const slot = slotMap.get(assignment.slot_id);
+    if (!slot || slot.slot_date !== date) return;
+    occupied.add(slot.slot_index);
+  });
+
+  for (let slotIndex = 1; slotIndex <= slotsPerDay; slotIndex += 1) {
+    if (!occupied.has(slotIndex)) return slotIndex;
+  }
+
+  return null;
+};

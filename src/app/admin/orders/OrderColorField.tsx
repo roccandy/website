@@ -61,7 +61,7 @@ export default function OrderColorField({
     const swatchTextColor = showPreview ? getContrastTextColor(normalized) : "#111827";
     return (
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{label}</p>
+        <p className="text-sm text-zinc-500 capitalize">{label}</p>
         {showPreview ? (
           <div className="relative mt-1">
             <div
@@ -69,7 +69,7 @@ export default function OrderColorField({
               style={{ backgroundColor: normalized }}
             />
             <span
-              className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-[11px] font-semibold"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-sm font-semibold capitalize"
               style={{
                 color: swatchTextColor,
                 textShadow:
@@ -82,7 +82,7 @@ export default function OrderColorField({
             </span>
           </div>
         ) : (
-          <p className="mt-1 text-sm text-zinc-900">{swatchLabel}</p>
+          <p className="mt-1 text-sm font-semibold text-zinc-900 capitalize">{swatchLabel}</p>
         )}
       </div>
     );

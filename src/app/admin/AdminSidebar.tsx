@@ -21,8 +21,8 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
   const seoFocused = isSeoFocusedUser(user);
 
   return (
-    <aside className="hidden lg:block lg:w-80 lg:flex-none">
-      <div className="sticky top-24 space-y-4">
+    <aside className="hidden lg:block lg:w-64 lg:flex-none">
+      <div className="sticky top-24 space-y-3">
         {sections.map((section) => {
           const toneClasses = getAdminNavToneClasses(section.tone);
           const isPrimarySection = !seoFocused || section.key === "content-seo";
@@ -30,7 +30,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
           return (
             <div
               key={section.key}
-              className={`rounded-3xl border bg-gradient-to-br p-4 shadow-sm transition ${
+              className={`rounded-3xl border bg-gradient-to-br p-3 shadow-sm transition ${
                 isPrimarySection
                   ? `${toneClasses.border} ${toneClasses.panel}`
                   : "border-zinc-200 from-zinc-50 via-zinc-50 to-white opacity-65"
@@ -49,7 +49,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
                   </span>
                 ) : null}
               </div>
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 space-y-1.5">
                 {section.items.map((item) => {
                   const active = pathname === item.href;
                   const writable =

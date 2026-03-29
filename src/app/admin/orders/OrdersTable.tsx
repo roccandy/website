@@ -17,6 +17,7 @@ import type { PricingBreakdown } from "@/lib/pricing";
 import { archiveOrder, upsertOrder } from "./actions";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
+import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import {
   buildColorOptions,
   buildPaletteOptions,
@@ -93,6 +94,8 @@ export function OrdersTable({
   const [packagingType, setPackagingType] = useState("");
   const [packagingSize, setPackagingSize] = useState("");
   const [quantityInput, setQuantityInput] = useState("");
+  const [showAllOrders, setShowAllOrders] = useState(false);
+  const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [textColorCustom, setTextColorCustom] = useState(false);
   const [heartColorCustom, setHeartColorCustom] = useState(false);
   const [jacketColorOneCustom, setJacketColorOneCustom] = useState(false);
@@ -346,6 +349,20 @@ export function OrdersTable({
     () => listOrders.filter((order) => (assignmentsByOrderId.get(order.id) ?? []).length === 0),
     [assignmentsByOrderId, listOrders]
   );
+  const visibleListOrders = useMemo(
+    () =>
+      showAllOrders || (selectedId ? !listOrders.slice(0, 15).some((order) => order.id === selectedId) : false)
+        ? listOrders
+        : listOrders.slice(0, 15),
+    [listOrders, selectedId, showAllOrders],
+  );
+  const assignmentModalOrder = useMemo(
+    () => orders.find((order) => order.id === assignmentModalOrderId) ?? null,
+    [assignmentModalOrderId, orders],
+  );
+  const assignmentModalAssignment = assignmentModalOrder
+    ? assignmentByOrderId.get(assignmentModalOrder.id) ?? null
+    : null;
   const renderColorField = (props: Omit<OrderColorFieldProps, "isEditing">) => (
     <OrderColorField {...props} isEditing={isEditing} />
   );
@@ -366,7 +383,7 @@ export function OrdersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {listOrders.map((order) => {
+              {visibleListOrders.map((order) => {
                 const printTarget = order.id ?? order.order_number;
                 const assignedSlotDate = assignmentByOrderId.get(order.id)?.slot?.slot_date ?? null;
                 const scheduleStatus = getScheduleStatus(order, assignedSlotDate);
@@ -443,6 +460,17 @@ export function OrdersTable({
                                 order.flavor && !flavors.some((item) => item.name === order.flavor)
                                   ? [order.flavor, ...flavors.map((item) => item.name)]
                                   : flavors.map((item) => item.name);
+                              const detailSectionLabelClass = isEditing
+                                ? "text-xs uppercase tracking-[0.2em] text-zinc-500"
+                                : "text-sm text-zinc-500 capitalize";
+                              const detailLabelClass = isEditing
+                                ? "block text-[11px] uppercase tracking-[0.18em] text-zinc-400"
+                                : "block text-sm text-zinc-500 capitalize";
+                              const detailMetaClass = isEditing
+                                ? "text-[11px] uppercase tracking-[0.18em] text-zinc-400"
+                                : "text-sm text-zinc-500 capitalize";
+                              const detailValueClass = "mt-1 text-sm font-semibold text-zinc-900 capitalize";
+                              const detailBodyValueClass = "text-sm font-semibold text-zinc-900 capitalize";
 
                               return (
                                 <form key={`${order.id}-${editKey}`} action={upsertOrder} className="space-y-4">
@@ -454,9 +482,9 @@ export function OrdersTable({
                                   <fieldset disabled={!isEditing} className="space-y-4">
                                   <div className="grid gap-6 md:grid-cols-3">
                                     <div className="space-y-3">
-                                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Customer details</p>
+                                      <p className={detailSectionLabelClass}>Customer details</p>
                                       <div className="space-y-2">
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Delivery / Pickup
                                           {isEditing ? (
                                             <select
@@ -471,13 +499,13 @@ export function OrdersTable({
                                               <option value="on">Pickup</option>
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">
+                                            <p className={detailValueClass}>
                                               {pickupMode === "on" ? "Pickup" : "Delivery"}
                                             </p>
                                           )}
                                         </label>
                                         <div className="grid gap-2 md:grid-cols-2">
-                                          <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                          <label className={detailLabelClass}>
                                             First name
                                             {isEditing ? (
                                               <input
@@ -486,10 +514,10 @@ export function OrdersTable({
                                                 className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                               />
                                             ) : (
-                                              <p className="mt-1 text-sm text-zinc-900">{firstNameValue || "-"}</p>
+                                              <p className={detailValueClass}>{firstNameValue || "-"}</p>
                                             )}
                                           </label>
-                                          <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                          <label className={detailLabelClass}>
                                             Last name
                                             {isEditing ? (
                                               <input
@@ -498,11 +526,11 @@ export function OrdersTable({
                                                 className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                               />
                                             ) : (
-                                              <p className="mt-1 text-sm text-zinc-900">{lastNameValue || "-"}</p>
+                                              <p className={detailValueClass}>{lastNameValue || "-"}</p>
                                             )}
                                           </label>
                                         </div>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Email
                                           {isEditing ? (
                                             <input
@@ -512,10 +540,10 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{order.customer_email ?? "-"}</p>
+                                            <p className={detailValueClass}>{order.customer_email ?? "-"}</p>
                                           )}
                                         </label>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Phone
                                           {isEditing ? (
                                             <input
@@ -525,11 +553,11 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{order.phone ?? "-"}</p>
+                                            <p className={detailValueClass}>{order.phone ?? "-"}</p>
                                           )}
                                         </label>
                                         <div>
-                                          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">Address</p>
+                                          <p className={detailMetaClass}>Address</p>
                                           {isDelivery ? (
                                             isEditing ? (
                                               <div className="mt-1 space-y-2">
@@ -567,7 +595,7 @@ export function OrdersTable({
                                                 </div>
                                               </div>
                                             ) : (
-                                              <div className="mt-1 space-y-1 text-sm text-zinc-900">
+                                              <div className={`mt-1 space-y-1 ${detailBodyValueClass}`}>
                                                 <p>{order.address_line1?.trim() || "-"}</p>
                                                 {order.address_line2?.trim() ? <p>{order.address_line2.trim()}</p> : null}
                                                 <p>
@@ -578,7 +606,7 @@ export function OrdersTable({
                                             )
                                           ) : (
                                             <>
-                                              <p className="mt-1 text-xs text-zinc-500">Pickup</p>
+                                              <p className={detailValueClass}>Pickup</p>
                                               <input type="hidden" name="address_line1" value="" />
                                               <input type="hidden" name="address_line2" value="" />
                                               <input type="hidden" name="suburb" value="" />
@@ -591,11 +619,11 @@ export function OrdersTable({
                                     </div>
 
                                     <div className="space-y-3">
-                                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Order details</p>
+                                      <p className={detailSectionLabelClass}>Order details</p>
                                       <div className="space-y-2">
                                         <div>
-                                          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">Order #</p>
-                                          <p className="mt-1 text-sm font-semibold text-zinc-900">
+                                          <p className={detailMetaClass}>Order #</p>
+                                          <p className={detailValueClass}>
                                             {order.order_number
                                               ? `#${order.order_number}`
                                               : order.id
@@ -603,7 +631,7 @@ export function OrdersTable({
                                                 : "-"}
                                           </p>
                                         </div>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Date required
                                           {isEditing ? (
                                             <input
@@ -613,18 +641,18 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{formatDate(order.due_date) || "-"}</p>
+                                            <p className={detailValueClass}>{formatDate(order.due_date) || "-"}</p>
                                           )}
                                         </label>
                                         <div>
-                                          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                          <p className={detailMetaClass}>
                                             Date ordered
                                           </p>
-                                          <p className="mt-1 text-sm text-zinc-900">
+                                          <p className={detailValueClass}>
                                             {formatDate(order.created_at) || "-"}
                                           </p>
                                         </div>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Order weight (g)
                                           {isEditing ? (
                                             <input
@@ -636,10 +664,10 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{weightG ? `${weightG}` : "-"}</p>
+                                            <p className={detailValueClass}>{weightG ? `${weightG}` : "-"}</p>
                                           )}
                                         </label>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Flavour
                                           {isEditing ? (
                                             <select
@@ -655,15 +683,15 @@ export function OrdersTable({
                                               ))}
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{order.flavor ?? "-"}</p>
+                                            <p className={detailValueClass}>{order.flavor ?? "-"}</p>
                                           )}
                                         </label>
                                       </div>
                                       <div className="space-y-2">
-                                        <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <p className={detailMetaClass}>
                                           Colours & info
                                         </p>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Text / design
                                           {isEditing ? (
                                             <input
@@ -672,10 +700,10 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{order.design_text ?? "-"}</p>
+                                            <p className={detailValueClass}>{order.design_text ?? "-"}</p>
                                           )}
                                         </label>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Jacket
                                           {isEditing ? (
                                             <select
@@ -691,7 +719,7 @@ export function OrdersTable({
                                               ))}
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">
+                                            <p className={detailValueClass}>
                                               {jacketLabelByValue.get(jacketMode) ?? jacketMode ?? "-"}
                                             </p>
                                           )}
@@ -768,9 +796,9 @@ export function OrdersTable({
                                     </div>
 
                                     <div className="space-y-3">
-                                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging info</p>
+                                      <p className={detailSectionLabelClass}>Packaging info</p>
                                       <div className="space-y-2">
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Order type
                                           {isEditing ? (
                                             <select
@@ -787,14 +815,14 @@ export function OrdersTable({
                                               ))}
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">
+                                            <p className={detailValueClass}>
                                               {orderCategoryId
                                                 ? categoryLabelById.get(orderCategoryId) ?? orderCategoryId
                                                 : "-"}
                                             </p>
                                           )}
                                         </label>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Packaging type
                                           {isEditing ? (
                                             <select
@@ -817,10 +845,10 @@ export function OrdersTable({
                                               ))}
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">{packagingType || "-"}</p>
+                                            <p className={detailValueClass}>{packagingType || "-"}</p>
                                           )}
                                         </label>
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Packaging size
                                           {isEditing ? (
                                             <select
@@ -843,13 +871,13 @@ export function OrdersTable({
                                               ))}
                                             </select>
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">
+                                            <p className={detailValueClass}>
                                               {packagingSize ? formatSizeLabel(packagingType, packagingSize) : "-"}
                                             </p>
                                           )}
                                         </label>
                                         <input type="hidden" name="packaging_option_id" value={selectedPackagingOptionId} />
-                                        <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                        <label className={detailLabelClass}>
                                           Quantity
                                           {isEditing ? (
                                             <input
@@ -862,7 +890,7 @@ export function OrdersTable({
                                               className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
                                             />
                                           ) : (
-                                            <p className="mt-1 text-sm text-zinc-900">
+                                            <p className={detailValueClass}>
                                               {formatQuantity(Number(quantityInput) || order.quantity) || "-"}
                                             </p>
                                           )}
@@ -873,7 +901,7 @@ export function OrdersTable({
                                           ) : null}
                                         </label>
                                         {isJarOption ? (
-                                          <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                          <label className={detailLabelClass}>
                                             Lid colour
                                             {isEditing ? (
                                               <select
@@ -893,7 +921,7 @@ export function OrdersTable({
                                                 ))}
                                               </select>
                                             ) : (
-                                              <p className="mt-1 text-sm text-zinc-900">{jarLidColorValue || "-"}</p>
+                                              <p className={detailValueClass}>{jarLidColorValue || "-"}</p>
                                             )}
                                           </label>
                                         ) : (
@@ -901,12 +929,12 @@ export function OrdersTable({
                                         )}
                                       </div>
                                       <div className="space-y-2">
-                                        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pricing details</p>
+                                        <p className={detailSectionLabelClass}>Pricing details</p>
                                         <div>
-                                          <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+                                          <p className={detailMetaClass}>
                                             Payment method
                                           </p>
-                                          <p className="mt-1 text-sm text-zinc-900">{order.payment_method ?? "-"}</p>
+                                          <p className={detailValueClass}>{order.payment_method ?? "-"}</p>
                                         </div>
                                         {pricing ? (
                                           <div className="space-y-1 text-xs text-zinc-600">
@@ -930,8 +958,8 @@ export function OrdersTable({
 
                                   {order.notes && (
                                     <div>
-                                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Notes</p>
-                                      <p>{order.notes}</p>
+                                      <p className={detailSectionLabelClass}>Notes</p>
+                                      <p className={detailBodyValueClass}>{order.notes}</p>
                                     </div>
                                   )}
                                   </fieldset>
@@ -969,6 +997,25 @@ export function OrdersTable({
                                         Edit
                                       </button>
                                     )}
+                                    <button
+                                      type="button"
+                                      onClick={() => setAssignmentModalOrderId(order.id)}
+                                      className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
+                                    >
+                                      {assignedSlotDate ? "Change assignment" : "Assign"}
+                                    </button>
+                                    {printTarget ? (
+                                      <a
+                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                      >
+                                        Print order
+                                      </a>
+                                    ) : (
+                                      <span className="text-xs text-zinc-500">Print unavailable</span>
+                                    )}
                                     {canCompleteFromSchedule ? (
                                       <form
                                         action={archiveOrder}
@@ -990,18 +1037,6 @@ export function OrdersTable({
                                         </button>
                                       </form>
                                     ) : null}
-                                    {printTarget ? (
-                                      <a
-                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                      >
-                                        Print order
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs text-zinc-500">Print unavailable</span>
-                                    )}
                                   </div>
                                 </form>
                               );
@@ -1016,6 +1051,17 @@ export function OrdersTable({
             </tbody>
           </table>
       </div>
+      {listOrders.length > 15 ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowAllOrders((current) => !current)}
+            className="rounded border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+          >
+            {showAllOrders ? "Show fewer orders" : `Show all ${listOrders.length} orders`}
+          </button>
+        </div>
+      ) : null}
 
       <ProductionScheduleSection
         orders={orders}
@@ -1025,6 +1071,17 @@ export function OrdersTable({
         settings={settings}
         unassignedOrders={unassignedOrders}
       />
+      {assignmentModalOrder ? (
+        <AssignmentCalendarModal
+          order={assignmentModalOrder}
+          assignment={assignmentModalAssignment}
+          assignments={assignments}
+          slots={slots}
+          blocks={blocks}
+          settings={settings}
+          onClose={() => setAssignmentModalOrderId(null)}
+        />
+      ) : null}
     </div>
   );
 }

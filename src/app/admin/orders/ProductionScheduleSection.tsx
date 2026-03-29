@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
-import { addManualBlock, addOpenOverride, archiveOrder, assignOrderToSlot, deleteAssignment, removeManualBlock } from "./actions";
+import { addManualBlock, archiveOrder, assignOrderToSlot } from "./actions";
+import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import {
+  buildAssignmentBySlotKey,
+  buildSlotIdByKey,
   canCompleteOrderForSlotDate,
   completionActionLabel,
   dateKey,
@@ -11,8 +14,7 @@ import {
   formatMonthLabel,
   formatOrderDescription,
   getScheduleStatus,
-  isManualBlock,
-  isOpenOverride,
+  isScheduleDateBlocked,
   statusCard,
   weightLabel,
 } from "./productionScheduleShared";
@@ -26,11 +28,6 @@ type Props = {
   unassignedOrders: OrderRow[];
 };
 
-const blockedStyle = {
-  backgroundImage:
-    "repeating-linear-gradient(135deg, rgba(250, 204, 21, 0.35) 0 12px, rgba(17, 24, 39, 0.18) 12px 24px)",
-};
-
 export default function ProductionScheduleSection({
   orders,
   slots,
@@ -42,61 +39,27 @@ export default function ProductionScheduleSection({
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "week">("week");
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
+  const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
+  const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
+  const [isDropPending, startDropTransition] = useTransition();
 
   const todayKey = dateKey(new Date());
   const ordersById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
   const slotMap = useMemo(() => new Map(slots.map((slot) => [slot.id, slot])), [slots]);
-  const blockRanges = useMemo(
-    () =>
-      blocks.map((block) => ({
-        id: block.id,
-        start: block.start_date,
-        end: block.end_date,
-        reason: block.reason,
-      })),
-    [blocks],
-  );
-
-  const isBlockedByDefault = (date: Date) => {
-    const day = date.getDay();
-    if (day === 0) return settings.no_production_sun;
-    if (day === 1) return settings.no_production_mon;
-    if (day === 2) return settings.no_production_tue;
-    if (day === 3) return settings.no_production_wed;
-    if (day === 4) return settings.no_production_thu;
-    if (day === 5) return settings.no_production_fri;
-    return settings.no_production_sat;
-  };
-
-  const blockReasonForDate = (key: string) => {
-    const matches = blockRanges.filter((block) => key >= block.start && key <= block.end);
-    const explicit = matches.find((block) => !isOpenOverride(block.reason));
-    return explicit ? explicit.reason : null;
-  };
-
-  const hasOpenOverrideForDate = (key: string) =>
-    blockRanges.some((block) => key >= block.start && key <= block.end && isOpenOverride(block.reason));
-
-  const assignmentBySlotKey = useMemo(() => {
-    const map = new Map<string, OrderSlot>();
+  const assignmentBySlotKey = useMemo(() => buildAssignmentBySlotKey(assignments, slots), [assignments, slots]);
+  const slotIdByKey = useMemo(() => buildSlotIdByKey(slots), [slots]);
+  const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
+  const assignmentByOrderId = useMemo(() => {
+    const map = new Map<string, { assignment: OrderSlot; slot: ProductionSlot | null }>();
     assignments.forEach((assignment) => {
-      const slot = slotMap.get(assignment.slot_id);
-      if (!slot) return;
-      map.set(`${slot.slot_date}:${slot.slot_index}`, assignment);
+      if (map.has(assignment.order_id)) return;
+      map.set(assignment.order_id, {
+        assignment,
+        slot: slotMap.get(assignment.slot_id) ?? null,
+      });
     });
     return map;
   }, [assignments, slotMap]);
-
-  const slotIdByKey = useMemo(() => {
-    const map = new Map<string, string>();
-    slots.forEach((slot) => {
-      const key = `${slot.slot_date}:${slot.slot_index}`;
-      if (!map.has(key)) {
-        map.set(key, slot.id);
-      }
-    });
-    return map;
-  }, [slots]);
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -107,6 +70,14 @@ export default function ProductionScheduleSection({
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
     return Array.from({ length: totalCells }, (_, idx) => new Date(year, month, idx - startOffset + 1));
   }, [calendarMonth]);
+  const visibleCalendarDays = useMemo(
+    () =>
+      calendarDays.filter((day) => {
+        if (day.getMonth() !== calendarMonth.getMonth()) return false;
+        return !isScheduleDateBlocked(day, settings, blocks).blocked;
+      }),
+    [blocks, calendarDays, calendarMonth, settings],
+  );
 
   const weekDays = useMemo(() => {
     const anchor = new Date(calendarMonth);
@@ -117,8 +88,19 @@ export default function ProductionScheduleSection({
       return next;
     });
   }, [calendarMonth]);
+  const visibleWeekDays = useMemo(
+    () => weekDays.filter((day) => !isScheduleDateBlocked(day, settings, blocks).blocked),
+    [blocks, settings, weekDays],
+  );
 
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
+  const assignmentModalOrder = useMemo(
+    () => orders.find((order) => order.id === assignmentModalOrderId) ?? null,
+    [assignmentModalOrderId, orders],
+  );
+  const assignmentModalAssignment = assignmentModalOrder
+    ? assignmentByOrderId.get(assignmentModalOrder.id) ?? null
+    : null;
 
   const movePrev = () => {
     if (viewMode === "calendar") {
@@ -141,6 +123,7 @@ export default function ProductionScheduleSection({
   };
 
   const closeSlotPicker = () => setSlotPicker(null);
+  const closeAssignmentModal = () => setAssignmentModalOrderId(null);
 
   return (
     <>
@@ -188,200 +171,189 @@ export default function ProductionScheduleSection({
           </div>
         </div>
         {viewMode === "calendar" ? (
-          <>
-            <div className="mt-3 grid grid-cols-7 gap-2 text-[11px] uppercase tracking-[0.2em] text-zinc-400">
-              {"Mon Tue Wed Thu Fri Sat Sun".split(" ").map((day) => (
-                <div key={day} className="text-center">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-2 grid grid-cols-7 gap-2">
-              {calendarDays.map((day) => {
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {visibleCalendarDays.length === 0 ? (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 md:col-span-2 xl:col-span-4">
+                No production days are visible for this month.
+              </div>
+            ) : (
+              visibleCalendarDays.map((day) => {
                 const key = dateKey(day);
-                const inMonth = day.getMonth() === calendarMonth.getMonth();
-                const defaultBlocked = isBlockedByDefault(day);
-                const reason = blockReasonForDate(key);
-                const hasOpenOverride = hasOpenOverrideForDate(key);
-                const blocked = (defaultBlocked && !hasOpenOverride) || Boolean(reason);
-                const blockedLabel = reason ?? "Blocked";
                 const isToday = dateKey(new Date()) === key;
                 return (
                   <div
                     key={key}
-                    className={`min-h-[140px] rounded-lg border px-2 py-2 ${
-                      inMonth ? "border-zinc-200" : "border-zinc-100 text-zinc-300"
-                    } ${blocked ? "border-zinc-300 bg-white" : "bg-white"} ${isToday ? "ring-2 ring-slate-900" : ""}`}
-                    style={blocked ? blockedStyle : undefined}
+                    className={`min-h-[180px] rounded-lg border bg-white px-3 py-3 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
                   >
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={`${inMonth ? "text-zinc-700" : "text-zinc-300"}`}>{day.getDate()}</span>
-                      {!blocked ? (
-                        <form action={addManualBlock}>
-                          <input type="hidden" name="date" value={key} />
-                          <button
-                            type="submit"
-                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
-                          >
-                            Block
-                          </button>
-                        </form>
-                      ) : null}
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                          {day.toLocaleDateString(undefined, { weekday: "short" })}
+                        </p>
+                        <p className="text-sm font-semibold text-zinc-900">
+                          {day.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                        </p>
+                      </div>
+                      <form action={addManualBlock}>
+                        <input type="hidden" name="date" value={key} />
+                        <button
+                          type="submit"
+                          className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
+                        >
+                          Block
+                        </button>
+                      </form>
                     </div>
-                    <div className="mt-2 space-y-2">
-                      {blocked ? (
-                        <div className="rounded border border-dashed border-zinc-300 bg-white/80 px-2 py-2 text-[10px]">
-                          <p className="font-semibold text-zinc-700">{blockedLabel}</p>
-                          {defaultBlocked && !reason && !hasOpenOverride && (
-                            <form action={addOpenOverride} className="mt-2">
-                              <input type="hidden" name="date" value={key} />
-                              <button
-                                type="submit"
-                                className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
+                    <div className="mt-3 space-y-2">
+                      {Array.from({ length: slotsPerDay }, (_, idx) => {
+                        const slotIndex = idx + 1;
+                        const slotKey = `${key}:${slotIndex}`;
+                        const assignment = assignmentBySlotKey.get(slotKey);
+                        const order = assignment ? ordersById.get(assignment.order_id) : null;
+                        const printTarget = order?.id ?? order?.order_number;
+                        const title =
+                          order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
+                        const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
+                        const canReassignSlotOrder = key >= todayKey;
+                        return (
+                          <div
+                            key={slotKey}
+                            className={`rounded border border-dashed border-zinc-200 p-1.5 ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            onDragOver={(event) => {
+                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
+                              event.preventDefault();
+                            }}
+                            onDrop={(event) => {
+                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
+                              event.preventDefault();
+                              const draggedAssignment = assignmentById.get(draggingAssignmentId);
+                              if (!draggedAssignment) return;
+                              const draggedOrder = ordersById.get(draggedAssignment.order_id);
+                              if (!draggedOrder) return;
+                              startDropTransition(async () => {
+                                const formData = new FormData();
+                                formData.set("assignment_id", draggedAssignment.id);
+                                formData.set("order_id", draggedOrder.id);
+                                formData.set("slot_id", slotIdByKey.get(slotKey) ?? "");
+                                formData.set("slot_date", key);
+                                formData.set("slot_index", String(slotIndex));
+                                formData.set(
+                                  "kg_assigned",
+                                  String(
+                                    Number.isFinite(Number(draggedOrder.total_weight_kg)) && Number(draggedOrder.total_weight_kg) > 0
+                                      ? Number(draggedOrder.total_weight_kg)
+                                      : 0.01,
+                                  ),
+                                );
+                                setDraggingAssignmentId(null);
+                                await assignOrderToSlot(formData);
+                              });
+                            }}
+                          >
+                            {assignment && order ? (
+                              <div
+                                draggable={canReassignSlotOrder}
+                                onDragStart={() => setDraggingAssignmentId(assignment.id)}
+                                onDragEnd={() => setDraggingAssignmentId(null)}
+                                className={`rounded-md border px-2.5 py-2 text-[11px] ${statusCard(
+                                  getScheduleStatus(order, key, todayKey),
+                                )}`}
                               >
-                                Unblock
-                              </button>
-                            </form>
-                          )}
-                          {reason && isManualBlock(reason) && (
-                            <form action={removeManualBlock} className="mt-2">
-                              <input type="hidden" name="date" value={key} />
-                              <button
-                                type="submit"
-                                className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
-                              >
-                                Unblock
-                              </button>
-                            </form>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          {Array.from({ length: slotsPerDay }, (_, idx) => {
-                            const slotIndex = idx + 1;
-                            const slotKey = `${key}:${slotIndex}`;
-                            const assignment = assignmentBySlotKey.get(slotKey);
-                            const order = assignment ? ordersById.get(assignment.order_id) : null;
-                            const printTarget = order?.id ?? order?.order_number;
-                            const title =
-                              order?.title ||
-                              (order ? formatOrderDescription(order) : "") ||
-                              order?.order_number ||
-                              "Order";
-                            const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
-                            const canUnassignSlotOrder = key >= todayKey;
-                            return (
-                              <div key={slotKey} className="rounded border border-dashed border-zinc-200 p-1.5">
-                                {assignment && order ? (
-                                  <div
-                                    className={`rounded-md border px-2.5 py-2 text-[11px] ${statusCard(
-                                      getScheduleStatus(order, key, todayKey),
-                                    )}`}
-                                  >
-                                    <div className="min-w-0">
-                                      <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                      <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-zinc-900">{title}</p>
-                                      <div className="mt-1 space-y-0.5 text-[10px] text-zinc-700">
-                                        <p>{weightLabel(order.total_weight_kg)}</p>
-                                        <p>Due {formatDate(order.due_date)}</p>
-                                      </div>
-                                    </div>
-                                    <div className="mt-2 flex flex-col items-stretch gap-1">
-                                      {printTarget ? (
-                                        <a
-                                          href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[10px] font-semibold text-zinc-700 hover:border-zinc-300"
-                                        >
-                                          Print order
-                                        </a>
-                                      ) : null}
-                                      {canCompleteSlotOrder ? (
-                                        <form
-                                          action={archiveOrder}
-                                          onSubmit={(event) => {
-                                            const confirmed = window.confirm(
-                                              `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                            );
-                                            if (!confirmed) {
-                                              event.preventDefault();
-                                            }
-                                          }}
-                                        >
-                                          <input type="hidden" name="order_id" value={order.id} />
-                                          <button
-                                            type="submit"
-                                            className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                          >
-                                            {completionActionLabel(order)}
-                                          </button>
-                                        </form>
-                                      ) : null}
-                                      {canUnassignSlotOrder ? (
-                                        <form action={deleteAssignment}>
-                                          <input type="hidden" name="assignment_id" value={assignment.id} />
-                                          <button
-                                            type="submit"
-                                            className="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[10px] font-semibold text-rose-700 hover:border-rose-300"
-                                          >
-                                            Unassign
-                                          </button>
-                                        </form>
-                                      ) : null}
-                                    </div>
+                                <div className="min-w-0">
+                                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
+                                  <p className="mt-0.5 break-words text-sm font-semibold leading-tight text-zinc-900">{title}</p>
+                                  <div className="mt-1 space-y-0.5 text-[10px] text-zinc-700">
+                                    <p>{weightLabel(order.total_weight_kg)}</p>
+                                    <p>Due {formatDate(order.due_date)}</p>
                                   </div>
-                                ) : (
-                                  <div className="flex items-center justify-between gap-2 rounded px-1 py-0.5">
-                                    <span className="text-[10px] font-medium text-zinc-400">Empty</span>
+                                </div>
+                                <div className="mt-2 flex flex-col items-stretch gap-1">
+                                  {printTarget ? (
+                                    <a
+                                      href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[10px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                    >
+                                      Print order
+                                    </a>
+                                  ) : null}
+                                  {canCompleteSlotOrder ? (
+                                    <form
+                                      action={archiveOrder}
+                                      onSubmit={(event) => {
+                                        const confirmed = window.confirm(
+                                          `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                        );
+                                        if (!confirmed) {
+                                          event.preventDefault();
+                                        }
+                                      }}
+                                    >
+                                      <input type="hidden" name="order_id" value={order.id} />
+                                      <button
+                                        type="submit"
+                                        className="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[10px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                      >
+                                        {completionActionLabel(order)}
+                                      </button>
+                                    </form>
+                                  ) : null}
+                                  {canReassignSlotOrder ? (
                                     <button
                                       type="button"
-                                      disabled={key < todayKey}
-                                      onClick={() => setSlotPicker({ date: key, slotIndex })}
-                                      className={`rounded px-2 py-1 text-[10px] font-semibold ${
-                                        key < todayKey
-                                          ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
-                                          : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
-                                      }`}
+                                      onClick={() => setAssignmentModalOrderId(order.id)}
+                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[10px] font-semibold text-blue-700 hover:border-blue-300"
                                     >
-                                      {key < todayKey ? "Past date" : "Assign"}
+                                      Change assignment
                                     </button>
-                                  </div>
-                                )}
+                                  ) : null}
+                                </div>
                               </div>
-                            );
-                          })}
-                        </>
-                      )}
+                            ) : (
+                              <div className="flex items-center justify-between gap-2 rounded px-1 py-0.5">
+                                <span className="text-[10px] font-medium text-zinc-400">Empty</span>
+                                <button
+                                  type="button"
+                                  disabled={key < todayKey}
+                                  onClick={() => setSlotPicker({ date: key, slotIndex })}
+                                  className={`rounded px-2 py-1 text-[10px] font-semibold ${
+                                    key < todayKey
+                                      ? "border border-zinc-200 bg-zinc-100 text-zinc-400"
+                                      : "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
+                                  }`}
+                                >
+                                  {key < todayKey ? "Past date" : "Assign"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          </>
+              })
+            )}
+          </div>
         ) : (
           <div className="mt-3 space-y-3">
-            {weekDays.map((day) => {
-              const key = dateKey(day);
-              const defaultBlocked = isBlockedByDefault(day);
-              const reason = blockReasonForDate(key);
-              const hasOpenOverride = hasOpenOverrideForDate(key);
-              const blocked = (defaultBlocked && !hasOpenOverride) || Boolean(reason);
-              const blockedLabel = reason ?? "Blocked";
-              const isToday = dateKey(new Date()) === key;
-              const label = day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
-              return (
-                <div
-                  key={key}
-                  className={`rounded-lg border px-3 py-3 ${
-                    blocked ? "border-zinc-300 bg-white" : "border-zinc-200 bg-white"
-                  } ${isToday ? "ring-2 ring-slate-900" : ""}`}
-                  style={blocked ? blockedStyle : undefined}
-                >
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-zinc-900">{label}</span>
-                    {!blocked ? (
+            {visibleWeekDays.length === 0 ? (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
+                No production days are visible in this range.
+              </div>
+            ) : (
+              visibleWeekDays.map((day) => {
+                const key = dateKey(day);
+                const isToday = dateKey(new Date()) === key;
+                const label = day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-lg border px-3 py-3 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200 bg-white"}`}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-semibold text-zinc-900">{label}</span>
                       <form action={addManualBlock}>
                         <input type="hidden" name="date" value={key} />
                         <button
@@ -391,35 +363,7 @@ export default function ProductionScheduleSection({
                           Block day
                         </button>
                       </form>
-                    ) : null}
-                  </div>
-                  {blocked ? (
-                    <div className="mt-3 rounded border border-dashed border-zinc-300 bg-white/80 px-3 py-2 text-xs">
-                      <p className="font-semibold text-zinc-700">{blockedLabel}</p>
-                      {defaultBlocked && !reason && !hasOpenOverride && (
-                        <form action={addOpenOverride} className="mt-2">
-                          <input type="hidden" name="date" value={key} />
-                          <button
-                            type="submit"
-                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300"
-                          >
-                            Unblock
-                          </button>
-                        </form>
-                      )}
-                      {reason && isManualBlock(reason) && (
-                        <form action={removeManualBlock} className="mt-2">
-                          <input type="hidden" name="date" value={key} />
-                          <button
-                            type="submit"
-                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300"
-                          >
-                            Unblock
-                          </button>
-                        </form>
-                      )}
                     </div>
-                  ) : (
                     <div className="mt-3 grid gap-2">
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
                         const slotIndex = idx + 1;
@@ -430,11 +374,49 @@ export default function ProductionScheduleSection({
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
-                        const canUnassignSlotOrder = key >= todayKey;
+                        const canReassignSlotOrder = key >= todayKey;
                         return (
-                          <div key={slotKey} className="rounded border border-dashed border-zinc-200 px-3 py-2 text-xs">
+                          <div
+                            key={slotKey}
+                            className={`rounded border border-dashed border-zinc-200 px-3 py-2 text-xs ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            onDragOver={(event) => {
+                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
+                              event.preventDefault();
+                            }}
+                            onDrop={(event) => {
+                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
+                              event.preventDefault();
+                              const draggedAssignment = assignmentById.get(draggingAssignmentId);
+                              if (!draggedAssignment) return;
+                              const draggedOrder = ordersById.get(draggedAssignment.order_id);
+                              if (!draggedOrder) return;
+                              startDropTransition(async () => {
+                                const formData = new FormData();
+                                formData.set("assignment_id", draggedAssignment.id);
+                                formData.set("order_id", draggedOrder.id);
+                                formData.set("slot_id", slotIdByKey.get(slotKey) ?? "");
+                                formData.set("slot_date", key);
+                                formData.set("slot_index", String(slotIndex));
+                                formData.set(
+                                  "kg_assigned",
+                                  String(
+                                    Number.isFinite(Number(draggedOrder.total_weight_kg)) && Number(draggedOrder.total_weight_kg) > 0
+                                      ? Number(draggedOrder.total_weight_kg)
+                                      : 0.01,
+                                  ),
+                                );
+                                setDraggingAssignmentId(null);
+                                await assignOrderToSlot(formData);
+                              });
+                            }}
+                          >
                             {assignment && order ? (
-                              <div className={`mt-1 rounded-md border px-3 py-2 ${statusCard(getScheduleStatus(order, key, todayKey))}`}>
+                              <div
+                                draggable={canReassignSlotOrder}
+                                onDragStart={() => setDraggingAssignmentId(assignment.id)}
+                                onDragEnd={() => setDraggingAssignmentId(null)}
+                                className={`mt-1 rounded-md border px-3 py-2 ${statusCard(getScheduleStatus(order, key, todayKey))}`}
+                              >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
@@ -477,16 +459,14 @@ export default function ProductionScheduleSection({
                                         </button>
                                       </form>
                                     ) : null}
-                                    {canUnassignSlotOrder ? (
-                                      <form action={deleteAssignment}>
-                                        <input type="hidden" name="assignment_id" value={assignment.id} />
-                                        <button
-                                          type="submit"
-                                          className="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[11px] font-semibold text-rose-700 hover:border-rose-300"
-                                        >
-                                          Unassign
-                                        </button>
-                                      </form>
+                                    {canReassignSlotOrder ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => setAssignmentModalOrderId(order.id)}
+                                        className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold text-blue-700 hover:border-blue-300"
+                                      >
+                                        Change assignment
+                                      </button>
                                     ) : null}
                                   </div>
                                 </div>
@@ -512,10 +492,10 @@ export default function ProductionScheduleSection({
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -569,6 +549,17 @@ export default function ProductionScheduleSection({
           </div>
         </div>
       )}
+      {assignmentModalOrder ? (
+        <AssignmentCalendarModal
+          order={assignmentModalOrder}
+          assignment={assignmentModalAssignment}
+          assignments={assignments}
+          slots={slots}
+          blocks={blocks}
+          settings={settings}
+          onClose={closeAssignmentModal}
+        />
+      ) : null}
     </>
   );
 }
