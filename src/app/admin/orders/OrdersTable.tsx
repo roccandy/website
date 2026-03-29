@@ -164,8 +164,12 @@ export function OrdersTable({
 
   useEffect(() => {
     if (!selectedId) return;
-    const row = document.getElementById(`order-${selectedId}`);
-    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+    const frame = window.requestAnimationFrame(() => {
+      const target =
+        document.getElementById(`order-detail-${selectedId}`) ?? document.getElementById(`order-${selectedId}`);
+      target?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [selectedId]);
 
   useEffect(() => {
@@ -411,7 +415,10 @@ export function OrdersTable({
                     {selectedId === order.id && (
                       <tr className="bg-white">
                         <td colSpan={7} className="px-3 pb-4">
-                          <div className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+                          <div
+                            id={`order-detail-${order.id}`}
+                            className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700"
+                          >
                             {(() => {
                               const nameFallback = splitCustomerName(order.customer_name);
                               const firstNameValue = (order.first_name ?? nameFallback.first).trim();
