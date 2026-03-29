@@ -900,6 +900,8 @@ export async function markAdditionalItemsShipped(formData: FormData) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const redirectCandidate = formData.get("redirect_to")?.toString() || "";
+  const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ADDITIONAL_ITEMS_PATH;
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
   const client = supabaseAdminClient;
@@ -977,7 +979,7 @@ export async function markAdditionalItemsShipped(formData: FormData) {
 
   revalidatePath(ORDERS_PATH);
   revalidatePath("/admin/orders/archived");
-  redirect(ADDITIONAL_ITEMS_PATH);
+  redirect(redirectBase);
 }
 
 export async function markAdditionalItemsPending(formData: FormData) {

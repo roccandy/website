@@ -15,6 +15,7 @@ type PremadeGroupShipButtonProps = {
   buttonLabel: string;
   companionScheduleHref?: string;
   companionScheduleMessage?: string;
+  redirectTo?: string;
 };
 
 export function PremadeGroupShipButton({
@@ -27,6 +28,7 @@ export function PremadeGroupShipButton({
   buttonLabel,
   companionScheduleHref,
   companionScheduleMessage,
+  redirectTo,
 }: PremadeGroupShipButtonProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -67,6 +69,7 @@ export function PremadeGroupShipButton({
         <input type="hidden" name="companion_order_ids" value={companionOrderIds ?? ""} />
         <input ref={includeCompanionRef} type="hidden" name="include_companion" value="" />
         <input ref={promptHandledRef} type="hidden" name="_split_prompt_handled" value="" />
+        {redirectTo ? <input type="hidden" name="redirect_to" value={redirectTo} /> : null}
         <button
           type="submit"
           className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"

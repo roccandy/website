@@ -3,8 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { refundOrder, unarchiveOrder } from "../actions";
+import { archiveOrderInline, markAdditionalItemsShipped, refundOrder, unarchiveOrder } from "../actions";
 import { RefundForm } from "../RefundForm";
+import SplitAwareActionForm from "../SplitAwareActionForm";
+import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButton";
+import { completionActionLabel, getPremadeSiblingMeta, getScheduleStatus } from "../productionScheduleShared";
 
 export const metadata = {
   title: "All Orders | Roc Candy Admin",
@@ -65,7 +68,9 @@ const formatStatusLabel = (status: string) =>
   status === "pending completion" ? "pending" : status.replace(/_/g, " ");
 const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
 const isResettableCompletedOrder = (order: OrderRow) => order.status === "archived" || order.status === "shipped";
-const isRefundableOrder = (order: OrderRow) => Boolean(order.paid_at && order.payment_transaction_id && !order.refunded_at);
+const isRefundableOrder = (order: OrderRow) =>
+  Boolean(order.paid_at && order.payment_transaction_id && !order.refunded_at && !isResettableCompletedOrder(order));
+const isCompletablePremadeOrder = (order: OrderRow) => order.design_type === "premade" && order.status !== "shipped" && !order.refunded_at;
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -406,7 +411,65 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                     : scheduleStatusBadge(subgroup.status);
                 const subgroupResettableOrders = subgroup.orders.filter((order) => isResettableCompletedOrder(order));
                 const subgroupRefundableOrders = subgroup.orders.filter((order) => isRefundableOrder(order));
+                const subgroupCompletablePremadeOrders = subgroup.orders.filter((order) => isCompletablePremadeOrder(order));
                 const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
+                const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Mark as collected" : "Mark as delivered";
+                const baseOrderNumber = normalizeOrderNumber(subgroup.orders[0]?.order_number) ?? group.orderNumber ?? null;
+                const companionOrders =
+                  subgroup.isPremadeGroup && baseOrderNumber
+                    ? orders.filter((order) => {
+                        if (normalizeOrderNumber(order.order_number) !== baseOrderNumber) return false;
+                        if (subgroup.orders.some((subgroupOrder) => subgroupOrder.id === order.id)) return false;
+                        if (order.design_type === "premade") return false;
+                        if (order.refunded_at) return false;
+                        if (order.status === "archived") return false;
+                        return true;
+                      })
+                    : [];
+                const companionScheduleIssue =
+                  subgroup.isPremadeGroup && companionOrders.length > 0
+                    ? (() => {
+                        for (const companionOrder of companionOrders) {
+                          const assignment = assignmentByOrderId.get(companionOrder.id);
+                          const assignedSlotDate = assignment ? slotMap.get(assignment.slot_id)?.slot_date ?? null : null;
+                          const scheduleStatus = getScheduleStatus(companionOrder, assignedSlotDate, todayKey);
+                          const href = `/admin/orders?selected=${encodeURIComponent(companionOrder.id)}`;
+
+                          if (scheduleStatus === "unassigned") {
+                            return {
+                              href,
+                              message: "Order is unassigned, please update the production schedule or cancel.",
+                            };
+                          }
+
+                          if (scheduleStatus === "scheduled" && assignedSlotDate && assignedSlotDate > todayKey) {
+                            return {
+                              href,
+                              message: "Order is scheduled for a future date, please update the production schedule or cancel.",
+                            };
+                          }
+                        }
+
+                        return null;
+                      })()
+                    : null;
+                const companionLabel =
+                  companionOrders.length > 0
+                    ? (() => {
+                        const labels = companionOrders
+                          .map(
+                            (order) =>
+                              order.title?.trim() ||
+                              order.order_description?.trim() ||
+                              `Order #${order.order_number || baseOrderNumber}`,
+                          )
+                          .filter(Boolean);
+                        if (labels.length === 0) return "the other item in the order";
+                        if (labels.length === 1) return labels[0];
+                        return `${labels[0]} and ${labels.length - 1} more item${labels.length > 2 ? "s" : ""}`;
+                      })()
+                    : null;
+                const companionOrderIds = companionOrders.map((order) => order.id).join(",");
 
                 return (
                   <tr key={rowKey} className="bg-white">
@@ -460,6 +523,20 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                     <td className={`w-44 max-w-44 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
                       {subgroup.isPremadeGroup ? (
                         <div className="space-y-2">
+                          {subgroup.status === "pending" && subgroupCompletablePremadeOrders.length > 0 ? (
+                            <PremadeGroupShipButton
+                              action={markAdditionalItemsShipped}
+                              orderIds={subgroupCompletablePremadeOrders.map((order) => order.id).join(",")}
+                              companionOrderIds={companionOrderIds || undefined}
+                              baseOrderNumber={baseOrderNumber ?? subgroup.orders[0]?.order_number ?? ""}
+                              companionLabel={companionLabel ?? undefined}
+                              companionActionLabel={subgroup.orders.every((order) => order.pickup) ? "collected" : "delivered"}
+                              buttonLabel={premadeCompletionLabel}
+                              companionScheduleHref={companionScheduleIssue?.href}
+                              companionScheduleMessage={companionScheduleIssue?.message}
+                              redirectTo={redirectTo}
+                            />
+                          ) : null}
                           {subgroupResettableOrders.length > 0 ? (
                             <form action={unarchiveOrder}>
                               <input type="hidden" name="order_id" value={subgroupResettableOrders[0]?.id ?? ""} />
@@ -488,7 +565,9 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                               compact
                             />
                           ) : null}
-                          {subgroupResettableOrders.length === 0 && subgroupRefundableOrders.length === 0 ? (
+                          {subgroupCompletablePremadeOrders.length === 0 &&
+                          subgroupResettableOrders.length === 0 &&
+                          subgroupRefundableOrders.length === 0 ? (
                             <span className="text-xs text-zinc-400">-</span>
                           ) : null}
                         </div>
@@ -497,9 +576,24 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                           {subgroup.orders.map((order) => {
                             const hasReset = isResettableCompletedOrder(order);
                             const hasRefund = isRefundableOrder(order);
+                            const assignedSlotDate = assignmentByOrderId.get(order.id)
+                              ? slotMap.get(assignmentByOrderId.get(order.id)!.slot_id)?.slot_date ?? null
+                              : null;
+                            const canComplete = getScheduleStatus(order, assignedSlotDate, todayKey) === "pending completion" && !order.refunded_at;
+                            const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
 
                             return (
                               <div key={`actions-${order.id}`} className="space-y-1">
+                                {canComplete ? (
+                                  <SplitAwareActionForm
+                                    action={archiveOrderInline}
+                                    hiddenFields={[{ name: "order_id", value: order.id }]}
+                                    buttonLabel={completionActionLabel(order)}
+                                    buttonClassName="inline-flex items-center rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                    confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order?`}
+                                    companionMeta={premadeSiblingMeta}
+                                  />
+                                ) : null}
                                 {hasReset ? (
                                   <form action={unarchiveOrder}>
                                     <input type="hidden" name="order_id" value={order.id} />
@@ -522,7 +616,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                     compact
                                   />
                                 ) : null}
-                                {!hasReset && !hasRefund ? <span className="text-xs text-zinc-400">-</span> : null}
+                                {!canComplete && !hasReset && !hasRefund ? <span className="text-xs text-zinc-400">-</span> : null}
                               </div>
                             );
                           })}
