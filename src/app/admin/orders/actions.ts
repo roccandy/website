@@ -180,6 +180,10 @@ export async function upsertOrder(formData: FormData) {
   const resolvedWeightKg = Number.isFinite(total_weight_kg)
     ? total_weight_kg
     : existing?.total_weight_kg ?? NaN;
+  const syncedTitleFromDesignText =
+    id && design_text !== null && design_text !== (existing?.design_text ?? null)
+      ? design_text
+      : null;
   try {
     if (!Number.isFinite(resolvedWeightKg) || resolvedWeightKg <= 0) {
       throw new Error("Order weight is required.");
@@ -191,7 +195,7 @@ export async function upsertOrder(formData: FormData) {
     }
 
     const basePayload = {
-      title: title ?? existing?.title ?? null,
+      title: title ?? syncedTitleFromDesignText ?? existing?.title ?? null,
       order_description: order_description ?? existing?.order_description ?? null,
       customer_name: resolvedCustomerName,
       customer_email: customer_email ?? existing?.customer_email ?? null,
