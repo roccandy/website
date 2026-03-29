@@ -702,7 +702,10 @@ async function completeOrder(formData: FormData, inlineResponse: boolean) {
     if (!orderId) throw new Error("Missing order id");
 
     const client = supabaseAdminClient;
-    const { error } = await client.from("orders").update({ status: "archived" }).eq("id", orderId);
+    const { error } = await client
+      .from("orders")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("id", orderId);
     if (error) throw new Error(error.message);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to complete order.";
@@ -731,13 +734,18 @@ export async function archiveOrderInline(formData: FormData) {
 export async function unarchiveOrder(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString();
+  const redirectCandidate = formData.get("redirect_to")?.toString() || "";
+  const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : "/admin/orders/archived";
   if (!orderId) throw new Error("Missing order id");
 
   const client = supabaseAdminClient;
-  const { error } = await client.from("orders").update({ status: "pending" }).eq("id", orderId);
+  const { error } = await client
+    .from("orders")
+    .update({ status: "pending", archived_at: null })
+    .eq("id", orderId);
   if (error) throw new Error(error.message);
 
-  redirect("/admin/orders/archived");
+  redirect(redirectBase);
 }
 
 export async function markAdditionalItemShipped(formData: FormData) {

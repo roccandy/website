@@ -1,4 +1,4 @@
-﻿import { getOrders, getOrderSlots, getProductionSlots } from "@/lib/data";
+import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -6,9 +6,40 @@ import Link from "next/link";
 import { refundOrder, unarchiveOrder } from "../actions";
 import { RefundForm } from "../RefundForm";
 
+export const metadata = {
+  title: "All Orders | Roc Candy Admin",
+};
+
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+type SearchParams = {
+  view?: string | string[] | undefined;
+};
+
+type FilterView = "all" | "archived" | "uncompleted";
+
+type VisibleSubgroup = {
+  suffix: string | null;
+  orders: OrderRow[];
+  isPremadeGroup: boolean;
+  status: string;
+  statusLabel: string;
+  label: string;
+  allRefunded: boolean;
+  partiallyRefunded: boolean;
+  shippedAt: string | null;
+  isCompleted: boolean;
+  latestCompletedAt: number | null;
+  earliestDueAt: number | null;
+};
+
+const FILTER_OPTIONS: { value: FilterView; label: string }[] = [
+  { value: "all", label: "All orders" },
+  { value: "archived", label: "Archived orders" },
+  { value: "uncompleted", label: "Uncompleted orders" },
+];
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -69,9 +100,45 @@ const weightLabel = (kg: number | null | undefined) => {
   return `${(Number(kg) * 1000).toFixed(0)} g`;
 };
 
-export default async function AllOrdersPage() {
+const toTime = (value: string | null | undefined) => {
+  if (!value) return null;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : null;
+};
+
+const compareNullableAsc = (a: number | null, b: number | null) => {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a - b;
+};
+
+const compareNullableDesc = (a: number | null, b: number | null) => {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return b - a;
+};
+
+const resolveFilterView = (value: string | string[] | undefined): FilterView => {
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  if (firstValue === "archived" || firstValue === "uncompleted") return firstValue;
+  return "all";
+};
+
+const buildViewHref = (view: FilterView) =>
+  view === "all" ? "/admin/orders/archived" : `/admin/orders/archived?view=${view}`;
+
+const resolveCompletedAt = (order: OrderRow) =>
+  order.refunded_at ?? (order.design_type === "premade" ? order.shipped_at : order.archived_at);
+
+export default async function AllOrdersPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
+
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+  const activeView = resolveFilterView(resolvedSearchParams?.view);
+  const redirectTo = buildViewHref(activeView);
 
   const [orders, slots, assignments] = await Promise.all([getOrders(), getProductionSlots(), getOrderSlots()]);
   const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
@@ -105,51 +172,201 @@ export default async function AllOrdersPage() {
     }
     scheduleStatusById.set(order.id, "scheduled");
   });
-  const allOrders = [...orders].sort((a, b) => {
-    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return bTime - aTime;
-  });
+
   const groupedOrders = new Map<
     string,
     {
       baseOrderNumber: string | null;
-      orders: typeof allOrders;
-      latestDate: string | null;
+      orders: OrderRow[];
     }
   >();
-  allOrders.forEach((order) => {
+
+  orders.forEach((order) => {
     const baseNumber = normalizeOrderNumber(order.order_number);
     const key = baseNumber ? `order:${baseNumber}` : `id:${order.id}`;
-    const group = groupedOrders.get(key) ?? { baseOrderNumber: baseNumber, orders: [], latestDate: null };
+    const group = groupedOrders.get(key) ?? { baseOrderNumber: baseNumber, orders: [] };
     group.orders.push(order);
-    if (order.created_at && (!group.latestDate || order.created_at > group.latestDate)) {
-      group.latestDate = order.created_at;
-    }
     groupedOrders.set(key, group);
   });
-  const groupedList = Array.from(groupedOrders.values()).sort((a, b) => {
-    const aTime = a.latestDate ? new Date(a.latestDate).getTime() : 0;
-    const bTime = b.latestDate ? new Date(b.latestDate).getTime() : 0;
-    return bTime - aTime;
-  });
+
+  const groupedList = Array.from(groupedOrders.values())
+    .map((group, groupIndex) => {
+      const subgroupMap = new Map<string, { suffix: string | null; orders: OrderRow[] }>();
+      group.orders.forEach((order) => {
+        const suffix = getOrderSuffix(order.order_number);
+        const key = suffix ?? "main";
+        const subgroup = subgroupMap.get(key) ?? { suffix, orders: [] };
+        subgroup.orders.push(order);
+        subgroupMap.set(key, subgroup);
+      });
+
+      const subgroupList = Array.from(subgroupMap.values()).sort((a, b) => {
+        const rank = (suffix: string | null) => (suffix === "a" ? 0 : suffix === "b" ? 1 : 2);
+        return rank(a.suffix) - rank(b.suffix);
+      });
+
+      const visibleSubgroups: VisibleSubgroup[] = subgroupList
+        .map((subgroup) => {
+          const isPremadeGroup = subgroup.orders.every((order) => order.design_type === "premade");
+          const statusList = subgroup.orders.map((order) =>
+            isPremadeGroup
+              ? resolvePremadeStatus(order.status)
+              : scheduleStatusById.get(order.id) ?? order.status ?? "pending",
+          );
+          const status = isPremadeGroup
+            ? statusList.every((value) => value === "shipped")
+              ? "shipped"
+              : "pending"
+            : resolveScheduleGroupStatus(statusList);
+          const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
+          const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length;
+          const partiallyRefunded = refundedCount > 0 && !allRefunded;
+          const completionTimes = subgroup.orders
+            .map((order) => toTime(resolveCompletedAt(order)))
+            .filter((value): value is number => value !== null);
+          const dueTimes = subgroup.orders
+            .map((order) => toTime(order.due_date))
+            .filter((value): value is number => value !== null);
+          const isCompleted = allRefunded || (isPremadeGroup ? status === "shipped" : status === "archived");
+
+          return {
+            ...subgroup,
+            isPremadeGroup,
+            status,
+            statusLabel: formatStatusLabel(status),
+            label: subgroup.suffix ? `-${subgroup.suffix}` : "order",
+            allRefunded,
+            partiallyRefunded,
+            shippedAt:
+              subgroup.orders
+                .map((order) => order.shipped_at)
+                .filter(Boolean)
+                .sort()
+                .pop() ?? null,
+            isCompleted,
+            latestCompletedAt: completionTimes.length > 0 ? Math.max(...completionTimes) : null,
+            earliestDueAt: dueTimes.length > 0 ? Math.min(...dueTimes) : null,
+          };
+        })
+        .filter((subgroup) => {
+          if (activeView === "archived") return subgroup.isCompleted;
+          if (activeView === "uncompleted") return !subgroup.isCompleted;
+          return true;
+        });
+
+      if (visibleSubgroups.length === 0) return null;
+
+      const visibleOrders = visibleSubgroups.flatMap((subgroup) => subgroup.orders);
+      const firstOrder = visibleOrders[0] ?? group.orders[0] ?? null;
+      const orderNumber = group.baseOrderNumber
+        ? `#${group.baseOrderNumber}`
+        : firstOrder?.id
+          ? `#${firstOrder.id.slice(0, 8)}`
+          : "";
+      const customers = visibleOrders
+        .map((order) => order.customer_name ?? [order.first_name, order.last_name].filter(Boolean).join(" "))
+        .filter((name) => name && name.trim());
+      const uniqueCustomers = Array.from(new Set(customers));
+      const customer = uniqueCustomers.length <= 1 ? uniqueCustomers[0] ?? "" : "Multiple";
+      const dueDates = visibleOrders.map((order) => order.due_date).filter(Boolean);
+      const uniqueDueDates = Array.from(new Set(dueDates));
+      const dueDate = uniqueDueDates.length <= 1 ? formatDate(uniqueDueDates[0] ?? null) : "Multiple";
+      const totalWeight = visibleOrders.reduce((sum, order) => sum + Number(order.total_weight_kg || 0), 0);
+      const weight = totalWeight > 0 ? weightLabel(totalWeight) : "";
+      const latestCompletedAt = visibleSubgroups
+        .map((subgroup) => subgroup.latestCompletedAt)
+        .filter((value): value is number => value !== null)
+        .reduce<number | null>((latest, value) => (latest === null || value > latest ? value : latest), null);
+      const earliestDueAt = visibleSubgroups
+        .map((subgroup) => subgroup.earliestDueAt)
+        .filter((value): value is number => value !== null)
+        .reduce<number | null>((earliest, value) => (earliest === null || value < earliest ? value : earliest), null);
+      const latestCreatedAt = visibleOrders
+        .map((order) => toTime(order.created_at))
+        .filter((value): value is number => value !== null)
+        .reduce<number | null>((latest, value) => (latest === null || value > latest ? value : latest), null);
+      const isCompleted = visibleSubgroups.every((subgroup) => subgroup.isCompleted);
+      const sharedPaymentOrderIds = new Set(
+        group.orders
+          .filter(
+            (order) =>
+              Boolean(order.payment_provider) &&
+              Boolean(order.payment_transaction_id) &&
+              group.orders.some(
+                (candidate) =>
+                  candidate.id !== order.id &&
+                  candidate.payment_provider === order.payment_provider &&
+                  candidate.payment_transaction_id === order.payment_transaction_id,
+              ),
+          )
+          .map((order) => order.id),
+      );
+
+      return {
+        groupIndex,
+        orderNumber,
+        customer,
+        dueDate,
+        weight,
+        visibleOrders,
+        visibleSubgroups,
+        latestCompletedAt,
+        earliestDueAt,
+        latestCreatedAt,
+        isCompleted,
+        sharedPaymentOrderIds,
+      };
+    })
+    .filter((group): group is NonNullable<typeof group> => group !== null)
+    .sort((a, b) => {
+      if (activeView === "archived") {
+        return compareNullableDesc(a.latestCompletedAt, b.latestCompletedAt) || compareNullableDesc(a.latestCreatedAt, b.latestCreatedAt);
+      }
+      if (activeView === "uncompleted") {
+        return compareNullableAsc(a.earliestDueAt, b.earliestDueAt) || compareNullableDesc(a.latestCreatedAt, b.latestCreatedAt);
+      }
+      if (a.isCompleted !== b.isCompleted) {
+        return a.isCompleted ? -1 : 1;
+      }
+      return a.isCompleted
+        ? compareNullableDesc(a.latestCompletedAt, b.latestCompletedAt) || compareNullableDesc(a.latestCreatedAt, b.latestCreatedAt)
+        : compareNullableAsc(a.earliestDueAt, b.earliestDueAt) || compareNullableDesc(a.latestCreatedAt, b.latestCreatedAt);
+    });
 
   return (
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-        <h2 className="text-3xl font-semibold">All Orders / Refunds</h2>
-        <p className="text-sm text-zinc-600">Every order across custom and premade entries.</p>
+        <h2 className="text-3xl font-semibold">All Orders</h2>
+        <p className="text-sm text-zinc-600">Custom and pre-made order history.</p>
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-zinc-500">{groupedList.length} orders</span>
-        <Link
-          href="/admin/orders"
-          className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-        >
-          Back to schedule
-        </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
+          {FILTER_OPTIONS.map((option) => {
+            const isActive = activeView === option.value;
+            return (
+              <Link
+                key={option.value}
+                href={buildViewHref(option.value)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  isActive ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                }`}
+              >
+                {option.label}
+              </Link>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-zinc-500">{groupedList.length} orders</span>
+          <Link
+            href="/admin/orders"
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+          >
+            Back to schedule
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -166,74 +383,8 @@ export default async function AllOrdersPage() {
             </tr>
           </thead>
           <tbody>
-            {groupedList.flatMap((group, groupIndex) => {
-              const groupOrders = group.orders;
-              const firstOrder = groupOrders[0];
-              const orderNumber = group.baseOrderNumber
-                ? `#${group.baseOrderNumber}`
-                : firstOrder?.id
-                  ? `#${firstOrder.id.slice(0, 8)}`
-                  : "";
-              const customers = groupOrders
-                .map((order) => order.customer_name ?? [order.first_name, order.last_name].filter(Boolean).join(" "))
-                .filter((name) => name && name.trim());
-              const uniqueCustomers = Array.from(new Set(customers));
-              const customer = uniqueCustomers.length <= 1 ? uniqueCustomers[0] ?? "" : "Multiple";
-              const dueDates = groupOrders.map((order) => order.due_date).filter(Boolean);
-              const uniqueDueDates = Array.from(new Set(dueDates));
-              const dueDate = uniqueDueDates.length <= 1 ? formatDate(uniqueDueDates[0] ?? null) : "Multiple";
-              const totalWeight = groupOrders.reduce((sum, order) => sum + Number(order.total_weight_kg || 0), 0);
-              const weight = totalWeight > 0 ? weightLabel(totalWeight) : "";
-              const sharedPaymentOrderIds = new Set(
-                groupOrders
-                  .filter(
-                    (order) =>
-                      Boolean(order.payment_provider) &&
-                      Boolean(order.payment_transaction_id) &&
-                      groupOrders.some(
-                        (candidate) =>
-                          candidate.id !== order.id &&
-                          candidate.payment_provider === order.payment_provider &&
-                          candidate.payment_transaction_id === order.payment_transaction_id
-                      )
-                  )
-                  .map((order) => order.id)
-              );
-              const subgroupMap = new Map<string, { suffix: string | null; orders: typeof groupOrders }>();
-              groupOrders.forEach((order) => {
-                const suffix = getOrderSuffix(order.order_number);
-                const key = suffix ?? "main";
-                const subgroup = subgroupMap.get(key) ?? { suffix, orders: [] };
-                subgroup.orders.push(order);
-                subgroupMap.set(key, subgroup);
-              });
-              const subgroupList = Array.from(subgroupMap.values()).sort((a, b) => {
-                const rank = (suffix: string | null) => (suffix === "a" ? 0 : suffix === "b" ? 1 : 2);
-                return rank(a.suffix) - rank(b.suffix);
-              });
-                const subgroupSummaries = subgroupList.map((subgroup) => {
-                  const isPremadeGroup = subgroup.orders.every((order) => order.design_type === "premade");
-                  const statusList = subgroup.orders.map((order) =>
-                    isPremadeGroup
-                      ? resolvePremadeStatus(order.status)
-                    : scheduleStatusById.get(order.id) ?? order.status ?? "pending"
-                );
-                const status = isPremadeGroup
-                  ? statusList.every((value) => value === "shipped")
-                    ? "shipped"
-                    : "pending"
-                  : resolveScheduleGroupStatus(statusList);
-                const label = subgroup.suffix ? `-${subgroup.suffix}` : "order";
-                  return {
-                    ...subgroup,
-                    isPremadeGroup,
-                    status,
-                    statusLabel: formatStatusLabel(status),
-                    hasRefunded: subgroup.orders.some((order) => Boolean(order.refunded_at)),
-                    label,
-                  };
-                });
-              return subgroupSummaries.map((subgroup, subgroupIndex) => {
+            {groupedList.flatMap((group, groupIndex) =>
+              group.visibleSubgroups.map((subgroup, subgroupIndex) => {
                 const rowBorderClass =
                   groupIndex > 0 && subgroupIndex === 0
                     ? "border-t-2 border-zinc-200"
@@ -241,24 +392,17 @@ export default async function AllOrdersPage() {
                       ? "border-t border-zinc-100"
                       : "";
                 const showGroupCells = subgroupIndex === 0;
-                const rowKey = `${orderNumber || firstOrder?.id || groupIndex}-${subgroup.label}`;
-                const shippedAt = subgroup.orders
-                  .map((order) => order.shipped_at)
-                  .filter(Boolean)
-                  .sort()
-                  .pop() ?? null;
-                const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
-                const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length;
-                const partiallyRefunded = refundedCount > 0 && !allRefunded;
-                const badge = allRefunded
+                const rowKey = `${group.orderNumber || group.visibleOrders[0]?.id || groupIndex}-${subgroup.label}`;
+                const badge = subgroup.allRefunded
                   ? "border-rose-200 bg-rose-50 text-rose-700"
                   : subgroup.isPremadeGroup
                     ? premadeStatusBadge(subgroup.status)
                     : scheduleStatusBadge(subgroup.status);
+
                 return (
                   <tr key={rowKey} className="bg-white">
                     <td className={`px-3 py-2 font-semibold text-zinc-900 ${rowBorderClass}`}>
-                      {showGroupCells ? orderNumber : ""}
+                      {showGroupCells ? group.orderNumber : ""}
                     </td>
                     <td className={`px-3 py-2 text-zinc-800 ${rowBorderClass}`}>
                       <div className="space-y-2">
@@ -285,25 +429,32 @@ export default async function AllOrdersPage() {
                         })}
                       </div>
                     </td>
-                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? dueDate : ""}</td>
-                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? weight : ""}</td>
-                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? customer : ""}</td>
+                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.dueDate : ""}</td>
+                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.weight : ""}</td>
+                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.customer : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       <div className="space-y-1">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
-                          {allRefunded ? "Refunded" : partiallyRefunded ? "Partially refunded" : subgroup.statusLabel}
+                          {subgroup.allRefunded
+                            ? "Refunded"
+                            : subgroup.partiallyRefunded
+                              ? "Partially refunded"
+                              : subgroup.statusLabel}
                         </span>
-                        {shippedAt ? <div className="text-xs text-zinc-500">Shipped on {formatDateTime(shippedAt)}</div> : null}
+                        {subgroup.shippedAt ? (
+                          <div className="text-xs text-zinc-500">Shipped on {formatDateTime(subgroup.shippedAt)}</div>
+                        ) : null}
                       </div>
                     </td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       {showGroupCells ? (
                         <div className="space-y-2">
-                          {groupOrders
+                          {group.visibleOrders
                             .filter((order) => order.status === "archived")
                             .map((order) => (
                               <form key={`unarchive-${order.id}`} action={unarchiveOrder}>
                                 <input type="hidden" name="order_id" value={order.id} />
+                                <input type="hidden" name="redirect_to" value={redirectTo} />
                                 <button
                                   type="submit"
                                   className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
@@ -312,7 +463,7 @@ export default async function AllOrdersPage() {
                                 </button>
                               </form>
                             ))}
-                          {groupOrders
+                          {group.visibleOrders
                             .filter((order) => order.paid_at && order.payment_transaction_id && !order.refunded_at)
                             .map((order) => (
                               <RefundForm
@@ -321,18 +472,18 @@ export default async function AllOrdersPage() {
                                 orderNumber={order.order_number}
                                 amount={order.total_price}
                                 helperText={
-                                  sharedPaymentOrderIds.has(order.id)
+                                  group.sharedPaymentOrderIds.has(order.id)
                                     ? "This refunds only this split order from the shared payment. The sibling split item can be refunded separately."
                                     : null
                                 }
                                 action={refundOrder}
-                                redirectTo="/admin/orders/archived"
+                                redirectTo={redirectTo}
                               />
                             ))}
-                          {groupOrders.every(
+                          {group.visibleOrders.every(
                             (order) =>
                               order.status !== "archived" &&
-                              !(order.paid_at && order.payment_transaction_id && !order.refunded_at)
+                              !(order.paid_at && order.payment_transaction_id && !order.refunded_at),
                           ) ? (
                             <span className="text-xs text-zinc-400">-</span>
                           ) : null}
@@ -341,12 +492,12 @@ export default async function AllOrdersPage() {
                     </td>
                   </tr>
                 );
-              });
-            })}
+              }),
+            )}
             {groupedList.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-3 py-6 text-center text-sm text-zinc-500">
-                  No orders yet.
+                  No orders in this view.
                 </td>
               </tr>
             )}

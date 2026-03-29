@@ -307,6 +307,14 @@ with checks as (
     )
 
   union all
+  select 'orders.archived_at',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'orders' and column_name = 'archived_at'
+    )
+
+  union all
   select 'premade_candies.seo_title',
     exists (
       select 1
