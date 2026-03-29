@@ -89,6 +89,9 @@ export const getScheduleStatus = (
   return "scheduled";
 };
 
+export const formatScheduleStatusLabel = (status: string) =>
+  status === "pending completion" ? "pending" : status.replace(/_/g, " ");
+
 export const statusBadge = (status: string) => {
   if (status === "archived") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";

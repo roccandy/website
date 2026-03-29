@@ -10,6 +10,7 @@ import {
   dateKey,
   findFirstAvailableSlotIndexForDate,
   formatMonthLabel,
+  formatScheduleStatusLabel,
   getScheduleStatus,
   isScheduleDateBlocked,
   weightLabel,
@@ -132,7 +133,7 @@ export default function AssignmentCalendarModal({
             <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{actionLabel}</p>
             <h3 className="text-lg font-semibold text-zinc-900">{order.title ?? "Untitled order"}</h3>
             <p className="text-sm text-zinc-600">
-              {weightLabel(order.total_weight_kg) || "Weight not set"} · {scheduleStatus}
+              {weightLabel(order.total_weight_kg) || "Weight not set"} · {formatScheduleStatusLabel(scheduleStatus)}
             </p>
           </div>
           <div className="flex items-center gap-2">

@@ -29,7 +29,8 @@ const formatDateTime = (iso: string | null) => {
 };
 
 const resolvePremadeStatus = (status: string | null | undefined) => (status === "shipped" ? "shipped" : "pending");
-const formatStatusLabel = (status: string) => status.replace(/_/g, " ");
+const formatStatusLabel = (status: string) =>
+  status === "pending completion" ? "pending" : status.replace(/_/g, " ");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;

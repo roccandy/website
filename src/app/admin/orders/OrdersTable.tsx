@@ -35,6 +35,7 @@ import {
   formatMoney,
   formatOrderDescription,
   formatQuantity,
+  formatScheduleStatusLabel,
   getScheduleStatus,
   splitCustomerName,
   statusBadge,
@@ -429,7 +430,7 @@ export function OrdersTable({
                               scheduleStatus
                             )}`}
                           >
-                            {scheduleStatus}
+                            {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
                           {order.refunded_at ? (
                             <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
