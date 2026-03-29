@@ -120,7 +120,7 @@ export default function AssignmentCalendarModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-lg"
+        className="w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -184,19 +184,19 @@ export default function AssignmentCalendarModal({
           </button>
         </div>
 
-        <div className="mt-4 space-y-2 overflow-x-auto">
-          <div className="grid min-w-[56rem] grid-cols-7 gap-2">
+        <div className="mt-4 space-y-1.5">
+          <div className="grid grid-cols-7 gap-1.5">
             {WEEKDAY_LABELS.map((label) => (
               <div
                 key={label}
-                className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500"
+                className="rounded-lg border border-zinc-200 bg-zinc-50 px-1.5 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500"
               >
                 {label}
               </div>
             ))}
             {dayCards.map((item, index) => {
               if (!item) {
-                return <div key={`blank-${index}`} className="min-h-[5.5rem] rounded-lg border border-transparent bg-transparent" />;
+                return <div key={`blank-${index}`} className="min-h-[5rem] rounded-lg border border-transparent bg-transparent" />;
               }
 
               const label = item.day.toLocaleDateString(undefined, {
@@ -238,7 +238,7 @@ export default function AssignmentCalendarModal({
                       }
                     });
                   }}
-                  className={`min-h-[5.5rem] rounded-xl border px-2.5 py-2 text-left transition ${
+                  className={`min-h-[5rem] rounded-xl border px-2 py-1.5 text-left transition ${
                     item.disabled
                       ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
                       : item.isCurrentAssignment
@@ -246,8 +246,8 @@ export default function AssignmentCalendarModal({
                         : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
                   }`}
                 >
-                  <p className="text-sm font-semibold">{label}</p>
-                  <p className="mt-1 text-[11px] font-medium leading-snug">{item.helper}</p>
+                  <p className="text-[13px] font-semibold">{label}</p>
+                  <p className="mt-0.5 text-[10px] font-medium leading-snug">{item.helper}</p>
                 </button>
               );
             })}
