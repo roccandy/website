@@ -47,7 +47,8 @@ export default function OrderColorField({
 }: OrderColorFieldProps) {
   const isCustomMode = isCustom;
   const normalized = value.trim();
-  const showPreview = !isCustomMode && isHexColor(normalized);
+  const canPreviewColor = isHexColor(normalized);
+  const showSelectPreview = !isCustomMode && canPreviewColor;
   const placeholder = format === "hex" ? "#000000" : format === "rgb" ? "255, 0, 0" : "0, 100, 100, 0";
 
   if (!isEditing) {
@@ -58,11 +59,11 @@ export default function OrderColorField({
       if (option?.label && option.label !== "Custom") return option.label;
       return normalized.toUpperCase();
     })();
-    const swatchTextColor = showPreview ? getContrastTextColor(normalized) : "#111827";
+    const swatchTextColor = canPreviewColor ? getContrastTextColor(normalized) : "#111827";
     return (
       <div>
         <p className="text-sm text-zinc-500 capitalize">{label}</p>
-        {showPreview ? (
+        {canPreviewColor ? (
           <div className="relative mt-1">
             <div
               className="flex h-9 w-full items-center justify-center rounded border border-zinc-200"
@@ -123,7 +124,7 @@ export default function OrderColorField({
         ))}
       </select>
       <input type="hidden" name={name} value={value} />
-      {showPreview && (
+      {showSelectPreview && (
         <div
           className="mt-2 h-9 w-full rounded border border-zinc-200"
           style={{ backgroundColor: normalized }}
