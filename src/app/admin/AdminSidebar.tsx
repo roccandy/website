@@ -21,7 +21,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
   const seoFocused = isSeoFocusedUser(user);
 
   return (
-    <aside className="hidden lg:block lg:w-64 lg:flex-none">
+    <aside className="hidden print:hidden lg:block lg:w-64 lg:flex-none">
       <div className="sticky top-24 space-y-3">
         {sections.map((section) => {
           const toneClasses = getAdminNavToneClasses(section.tone);

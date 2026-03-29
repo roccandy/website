@@ -68,8 +68,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <ToastProvider>
       <AdminBodyAttributes />
       <AdminQueryToast />
-      <div className="min-h-screen bg-zinc-100 text-zinc-900">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur">
+      <div className="min-h-screen bg-zinc-100 text-zinc-900 print:min-h-0 print:bg-white">
+        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden">
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
               <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">
@@ -106,29 +106,29 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         </header>
         {PAYMENTS_SANDBOX_MODE ? (
-          <div className="border-b border-amber-300 bg-amber-50">
+          <div className="border-b border-amber-300 bg-amber-50 print:hidden">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800 lg:px-6">
               Sandbox mode active: payments are test-only in this environment
             </div>
           </div>
         ) : null}
         {!session.user.canWrite && !session.user.canWriteSeo ? (
-          <div className="border-b border-sky-300 bg-sky-50">
+          <div className="border-b border-sky-300 bg-sky-50 print:hidden">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800 lg:px-6">
               Read-only access: this user can view admin pages but cannot make changes beyond their own password
             </div>
           </div>
         ) : null}
         {!session.user.canWrite && session.user.canWriteSeo ? (
-          <div className="border-b border-emerald-300 bg-emerald-50">
+          <div className="border-b border-emerald-300 bg-emerald-50 print:hidden">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800 lg:px-6">
               SEO editor access: content & SEO pages, FAQs, privacy, and terms are writable. Other admin areas are read-only, aside from their own password.
             </div>
           </div>
         ) : null}
-        <div className="mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6">
+        <div className="mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6 print:block print:max-w-none print:px-0 print:py-0">
           <AdminSidebar sections={navSections} user={session.user} />
-          <main className="min-w-0 flex-1">{children}</main>
+          <main className="min-w-0 flex-1 print:w-full">{children}</main>
         </div>
       </div>
     </ToastProvider>
