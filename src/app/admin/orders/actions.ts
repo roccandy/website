@@ -797,9 +797,15 @@ export async function markAdditionalItemsShipped(formData: FormData) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const includeCompanion = formData.get("include_companion")?.toString() === "on";
+  const companionOrderIds = (formData.get("companion_order_ids")?.toString() || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
   if (orderIds.length === 0) throw new Error("Missing order ids");
 
   const client = supabaseAdminClient;
+  const completedAt = new Date().toISOString();
   const { count: refundedCount, error: refundedError } = await client
     .from("orders")
     .select("id", { count: "exact", head: true })
@@ -810,11 +816,32 @@ export async function markAdditionalItemsShipped(formData: FormData) {
   if (refundedCount && refundedCount > 0) throw new Error("Refunded orders cannot be shipped.");
   const { error } = await client
     .from("orders")
-    .update({ status: "shipped", shipped_at: new Date().toISOString() })
+    .update({ status: "shipped", shipped_at: completedAt })
     .in("id", orderIds)
     .eq("design_type", "premade");
   if (error) throw new Error(error.message);
 
+  if (includeCompanion && companionOrderIds.length > 0) {
+    const { count: refundedCompanionCount, error: refundedCompanionError } = await client
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .in("id", companionOrderIds)
+      .not("refunded_at", "is", null);
+    if (refundedCompanionError) throw new Error(refundedCompanionError.message);
+    if (refundedCompanionCount && refundedCompanionCount > 0) {
+      throw new Error("Refunded split items cannot be completed.");
+    }
+
+    const { error: companionError } = await client
+      .from("orders")
+      .update({ status: "archived", archived_at: completedAt })
+      .in("id", companionOrderIds)
+      .neq("design_type", "premade");
+    if (companionError) throw new Error(companionError.message);
+  }
+
+  revalidatePath(ORDERS_PATH);
+  revalidatePath("/admin/orders/archived");
   redirect(ADDITIONAL_ITEMS_PATH);
 }
 

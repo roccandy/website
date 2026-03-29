@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";
+import { PremadeGroupShipButton } from "./PremadeGroupShipButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -165,6 +167,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
               const statuses = groupOrders.map((order) => (order.status ?? "pending").toString());
               const isShipped = statuses.length > 0 && statuses.every((status) => status === "shipped");
               const isRefunded = groupOrders.some((order) => Boolean(order.refunded_at));
+              const pickup = groupOrders.every((order) => Boolean(order.pickup));
               const status = isRefunded
                 ? "refunded"
                 : isShipped
@@ -172,7 +175,8 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                   : statuses.includes("pending")
                     ? "pending"
                     : statuses[0] ?? "pending";
-              const statusLabel = status.replace(/_/g, " ");
+              const statusLabel =
+                status === "shipped" && pickup ? "collected" : status.replace(/_/g, " ");
               const quoteOrders = groupOrders.map((order) => order.notes?.trim()).filter(Boolean);
               const quoteOrder = quoteOrders.length > 0 ? Array.from(new Set(quoteOrders)).join(" | ") : "-";
               const orderIds = groupOrders.map((order) => order.id).filter(Boolean).join(",");
@@ -188,6 +192,36 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
               const groupAnchor = `premade-group-${(group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
               const groupKey = (group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-");
               const isFocused = focusedGroup === groupKey;
+              const baseOrderNumber = normalizeBaseOrderNumber(group.orderNumber ?? firstOrder?.order_number) ?? null;
+              const companionOrders =
+                baseOrderNumber
+                  ? orders.filter((order) => {
+                      if (normalizeBaseOrderNumber(order.order_number) !== baseOrderNumber) return false;
+                      if (groupOrders.some((groupOrder) => groupOrder.id === order.id)) return false;
+                      if (order.design_type === "premade") return false;
+                      if (order.refunded_at) return false;
+                      if (order.status === "archived") return false;
+                      return true;
+                    })
+                  : [];
+              const companionOrderIds = companionOrders.map((order) => order.id).join(",");
+              const companionLabel = (() => {
+                if (companionOrders.length === 0) return null;
+                const labels = companionOrders
+                  .map((order) => order.title?.trim() || order.order_description?.trim() || `Order #${order.order_number || baseOrderNumber}`)
+                  .filter(Boolean);
+                if (labels.length === 0) return "the other item in the order";
+                if (labels.length === 1) return labels[0];
+                return `${labels[0]} and ${labels.length - 1} more item${labels.length > 2 ? "s" : ""}`;
+              })();
+              const completionActionLabel = pickup ? "collected" : "delivered";
+              const primaryActionLabel = pickup ? "Mark collected" : "Mark shipped";
+              const completedButtonLabel = pickup ? "Collected" : "Shipped";
+              const completedDateLabel = (() => {
+                const label = shippedOnLabel(shippedAt);
+                if (!label) return null;
+                return pickup ? label.replace(/^Shipped on/i, "Collected on") : label;
+              })();
 
               return (
                 <tr
@@ -224,8 +258,8 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                     {status === "shipped" ? (
                       <div className="space-y-1">
                         {renderCountdown(shippedAt)}
-                        {shippedOnLabel(shippedAt) ? (
-                          <div className="text-xs text-zinc-500">{shippedOnLabel(shippedAt)}</div>
+                        {completedDateLabel ? (
+                          <div className="text-xs text-zinc-500">{completedDateLabel}</div>
                         ) : null}
                       </div>
                     ) : (
@@ -250,19 +284,19 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                           type="submit"
                           className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
                         >
-                          Shipped
+                          {completedButtonLabel}
                         </button>
                       </form>
                     ) : (
-                      <form action={markAdditionalItemsShipped}>
-                        <input type="hidden" name="order_ids" value={orderIds} />
-                        <button
-                          type="submit"
-                          className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
-                        >
-                          Mark shipped
-                        </button>
-                      </form>
+                      <PremadeGroupShipButton
+                        action={markAdditionalItemsShipped}
+                        orderIds={orderIds}
+                        companionOrderIds={companionOrderIds}
+                        baseOrderNumber={baseOrderNumber ?? group.orderNumber ?? firstOrder?.order_number ?? orderNumber.replace(/^#/, "")}
+                        companionLabel={companionLabel ?? undefined}
+                        companionActionLabel={companionLabel ? completionActionLabel : undefined}
+                        buttonLabel={primaryActionLabel}
+                      />
                     )}
                   </td>
                 </tr>
