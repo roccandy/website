@@ -23,11 +23,21 @@ type Props = {
   onClose: () => void;
 };
 
-function buildMonthDays(month: Date) {
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function buildMonthCells(month: Date) {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
+  const start = new Date(year, monthIndex, 1);
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, index) => new Date(year, monthIndex, index + 1));
+  const startOffset = (start.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) return null;
+    return new Date(year, monthIndex, dayNumber);
+  });
 }
 
 export default function AssignmentCalendarModal({
@@ -50,11 +60,12 @@ export default function AssignmentCalendarModal({
   const todayKey = dateKey(new Date());
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
 
-  const monthDays = useMemo(() => buildMonthDays(calendarMonth), [calendarMonth]);
+  const monthCells = useMemo(() => buildMonthCells(calendarMonth), [calendarMonth]);
 
   const dayCards = useMemo(
     () =>
-      monthDays.map((day) => {
+      monthCells.map((day) => {
+        if (!day) return null;
         const status = isScheduleDateBlocked(day, settings, blocks);
         const availableSlotIndex = status.blocked
           ? null
@@ -97,7 +108,7 @@ export default function AssignmentCalendarModal({
           blocked: status.blocked,
         };
       }),
-    [assignment?.assignment.id, assignment?.slot?.slot_date, assignments, blocks, monthDays, settings, slots, slotsPerDay, todayKey],
+    [assignment?.assignment.id, assignment?.slot?.slot_date, assignments, blocks, monthCells, settings, slots, slotsPerDay, todayKey],
   );
 
   const actionLabel = assignment ? "Change assignment" : "Assign";
@@ -173,61 +184,74 @@ export default function AssignmentCalendarModal({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {dayCards.map((item) => {
-            const label = item.day.toLocaleDateString(undefined, {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-            });
-
-            return (
-              <button
-                key={item.key}
-                type="button"
-                disabled={item.disabled || isPending || item.availableSlotIndex === null}
-                onClick={() => {
-                  if (!item.availableSlotIndex) return;
-                  startTransition(async () => {
-                    const formData = new FormData();
-                    formData.set("order_id", order.id);
-                    formData.set("slot_date", item.key);
-                    formData.set("slot_index", String(item.availableSlotIndex));
-                    formData.set("response_mode", "inline");
-                    formData.set(
-                      "kg_assigned",
-                      String(
-                        Number.isFinite(Number(order.total_weight_kg)) && Number(order.total_weight_kg) > 0
-                          ? Number(order.total_weight_kg)
-                          : 0.01,
-                      ),
-                    );
-                    if (assignment?.assignment.id) {
-                      formData.set("assignment_id", assignment.assignment.id);
-                    }
-                    const result = await assignOrderToSlot(formData);
-                    if (result?.message) {
-                      emitToast(result.tone, result.message);
-                    }
-                    if (result?.ok) {
-                      onClose();
-                      router.refresh();
-                    }
-                  });
-                }}
-                className={`rounded-xl border px-4 py-3 text-left transition ${
-                  item.disabled
-                    ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
-                    : item.isCurrentAssignment
-                      ? "border-blue-300 bg-blue-50 text-blue-900"
-                      : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
-                }`}
+        <div className="mt-4 space-y-2 overflow-x-auto">
+          <div className="grid min-w-[56rem] grid-cols-7 gap-2">
+            {WEEKDAY_LABELS.map((label) => (
+              <div
+                key={label}
+                className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-center text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500"
               >
-                <p className="text-sm font-semibold">{label}</p>
-                <p className="mt-1 text-xs font-medium">{item.helper}</p>
-              </button>
-            );
-          })}
+                {label}
+              </div>
+            ))}
+            {dayCards.map((item, index) => {
+              if (!item) {
+                return <div key={`blank-${index}`} className="min-h-[5.5rem] rounded-lg border border-transparent bg-transparent" />;
+              }
+
+              const label = item.day.toLocaleDateString(undefined, {
+                day: "numeric",
+                month: "short",
+              });
+
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  disabled={item.disabled || isPending || item.availableSlotIndex === null}
+                  onClick={() => {
+                    if (!item.availableSlotIndex) return;
+                    startTransition(async () => {
+                      const formData = new FormData();
+                      formData.set("order_id", order.id);
+                      formData.set("slot_date", item.key);
+                      formData.set("slot_index", String(item.availableSlotIndex));
+                      formData.set("response_mode", "inline");
+                      formData.set(
+                        "kg_assigned",
+                        String(
+                          Number.isFinite(Number(order.total_weight_kg)) && Number(order.total_weight_kg) > 0
+                            ? Number(order.total_weight_kg)
+                            : 0.01,
+                        ),
+                      );
+                      if (assignment?.assignment.id) {
+                        formData.set("assignment_id", assignment.assignment.id);
+                      }
+                      const result = await assignOrderToSlot(formData);
+                      if (result?.message) {
+                        emitToast(result.tone, result.message);
+                      }
+                      if (result?.ok) {
+                        onClose();
+                        router.refresh();
+                      }
+                    });
+                  }}
+                  className={`min-h-[5.5rem] rounded-xl border px-2.5 py-2 text-left transition ${
+                    item.disabled
+                      ? "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
+                      : item.isCurrentAssignment
+                        ? "border-blue-300 bg-blue-50 text-blue-900"
+                        : "border-zinc-200 bg-white text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{label}</p>
+                  <p className="mt-1 text-[11px] font-medium leading-snug">{item.helper}</p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
