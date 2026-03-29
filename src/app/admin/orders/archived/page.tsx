@@ -471,11 +471,6 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                 orderId={order.id}
                                 orderNumber={order.order_number}
                                 amount={order.total_price}
-                                helperText={
-                                  group.sharedPaymentOrderIds.has(order.id)
-                                    ? "This refunds only this split order from the shared payment. The sibling split item can be refunded separately."
-                                    : null
-                                }
                                 action={refundOrder}
                                 redirectTo={redirectTo}
                                 compact
