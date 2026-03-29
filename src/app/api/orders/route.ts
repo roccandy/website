@@ -78,7 +78,12 @@ export async function POST(req: Request) {
     if (!order_number) {
       order_number = await generateOrderNumber();
     }
-    const title = body.title?.trim() || null;
+    const organizationName = body.organizationName?.trim() || null;
+    const isBranded = body.categoryId === "branded" || body.designType === "branded";
+    if (isBranded && !organizationName) {
+      return NextResponse.json({ error: "Organisation name is required for branded candy orders." }, { status: 400 });
+    }
+    const title = isBranded ? organizationName : body.title?.trim() || null;
     const order_description = body.description?.trim() || null;
     const due_date = body.dateRequired || null;
     const pickup = Boolean(body.pickup);
@@ -103,7 +108,7 @@ export async function POST(req: Request) {
       first_name: body.firstName?.trim() || null,
       last_name: body.lastName?.trim() || null,
       phone: body.phone?.trim() || null,
-      organization_name: body.organizationName?.trim() || null,
+      organization_name: organizationName,
       address_line1: body.addressLine1?.trim() || null,
       address_line2: body.addressLine2?.trim() || null,
       suburb: body.suburb?.trim() || null,

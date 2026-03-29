@@ -109,6 +109,11 @@ function assertBasePayload(body: CheckoutOrderPayload) {
   if (customItems.length === 0 && premadeItems.length === 0) {
     throw new Error("Cart is empty.");
   }
+
+  const hasBrandedCustomItems = customItems.some((item) => item.categoryId === "branded" || item.designType === "branded");
+  if (hasBrandedCustomItems && !body.customer.organizationName?.trim()) {
+    throw new Error("Organisation name is required for branded candy orders.");
+  }
 }
 
 async function buildCustomItemLine(
@@ -164,6 +169,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
   const customer = body.customer;
+  const organizationName = customer.organizationName?.trim() || null;
   const billing = buildBilling(customer, pickup);
   const lineItems: WooLineItem[] = [];
   let premadeSubtotal = 0;
@@ -181,14 +187,14 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     lineItems.push(lineItem);
     orderPayloads.push({
       order_number: orderNumbers.customOrderNumber,
-      title: item.title?.trim() || null,
+      title: item.categoryId === "branded" || item.designType === "branded" ? organizationName : item.title?.trim() || null,
       order_description: item.description?.trim() || null,
       customer_name: `${customer.firstName.trim()} ${customer.lastName.trim()}`.trim(),
       customer_email: customer.email.trim(),
       first_name: customer.firstName.trim(),
       last_name: customer.lastName.trim(),
       phone: customer.phone.trim(),
-      organization_name: customer.organizationName?.trim() || null,
+      organization_name: organizationName,
       address_line1: pickup ? null : customer.addressLine1?.trim() || null,
       address_line2: pickup ? null : customer.addressLine2?.trim() || null,
       suburb: pickup ? null : customer.suburb?.trim() || null,

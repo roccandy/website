@@ -1122,6 +1122,7 @@ export function CheckoutClient({
   const hasCustomItems = customItems.length > 0;
   const hasPremadeItems = premadeItems.length > 0;
   const hasItems = hasCustomItems || hasPremadeItems;
+  const hasBrandedCustomItems = customItems.some((item) => item.categoryId === "branded" || item.designType === "branded");
   const isDueDateBlocked = useMemo(
     () => Boolean(dueDate && isDateBlocked(dueDate, quoteBlocks)),
     [dueDate, quoteBlocks]
@@ -1328,6 +1329,7 @@ export function CheckoutClient({
     if (!lastName.trim()) missing.push("surname");
     if (!email.trim()) missing.push("email address");
     if (!phone.trim()) missing.push("phone number");
+    if (hasBrandedCustomItems && !organizationName.trim()) missing.push("organisation name");
     if (!pickup) {
       if (!addressLine1.trim()) missing.push("address line 1");
       if (!suburb.trim()) missing.push("suburb or town");
@@ -1735,7 +1737,7 @@ export function CheckoutClient({
                 </label>
               </div>
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                Organisation name
+                Organisation name{hasBrandedCustomItems ? "*" : ""}
                 <input
                   value={organizationName}
                   onChange={(event) => setOrganizationName(event.target.value)}
