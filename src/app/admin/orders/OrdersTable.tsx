@@ -391,13 +391,18 @@ export function OrdersTable({
                                 ? `#${order.id.slice(0, 8)}`
                                 : "-"}
                           </span>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadge(
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAssignmentModalOrderId(order.id);
+                            }}
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition hover:opacity-85 ${statusBadge(
                               scheduleStatus
                             )}`}
                           >
                             {scheduleStatus}
-                          </span>
+                          </button>
                           {order.refunded_at ? (
                             <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
                               Refunded
