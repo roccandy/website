@@ -794,12 +794,25 @@ export async function unarchiveOrder(formData: FormData) {
   if (!orderId) throw new Error("Missing order id");
 
   const client = supabaseAdminClient;
-  const { error } = await client
+  const { data: existing, error: existingError } = await client
     .from("orders")
-    .update({ status: "pending", archived_at: null })
-    .eq("id", orderId);
+    .select("id, design_type, status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (existingError) throw new Error(existingError.message);
+  if (!existing) throw new Error("Order not found.");
+
+  const resetPayload =
+    existing.design_type === "premade" || existing.status === "shipped"
+      ? { status: "pending", shipped_at: null }
+      : { status: "pending", archived_at: null };
+
+  const { error } = await client.from("orders").update(resetPayload).eq("id", orderId);
   if (error) throw new Error(error.message);
 
+  revalidatePath(ORDERS_PATH);
+  revalidatePath(ADDITIONAL_ITEMS_PATH);
+  revalidatePath("/admin/orders/archived");
   redirect(redirectBase);
 }
 

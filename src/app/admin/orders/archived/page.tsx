@@ -64,6 +64,7 @@ const resolvePremadeStatus = (status: string | null | undefined) => (status === 
 const formatStatusLabel = (status: string) =>
   status === "pending completion" ? "pending" : status.replace(/_/g, " ");
 const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
+const isResettableCompletedOrder = (order: OrderRow) => order.status === "archived" || order.status === "shipped";
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -456,7 +457,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       {showGroupCells ? (
                         <div className="space-y-2">
                           {group.visibleOrders
-                            .filter((order) => order.status === "archived")
+                            .filter((order) => isResettableCompletedOrder(order))
                             .map((order) => (
                               <form key={`unarchive-${order.id}`} action={unarchiveOrder}>
                                 <input type="hidden" name="order_id" value={order.id} />
@@ -465,7 +466,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   type="submit"
                                   className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                                 >
-                                  Unarchive
+                                  Mark as pending
                                 </button>
                               </form>
                             ))}
@@ -484,7 +485,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                             ))}
                           {group.visibleOrders.every(
                             (order) =>
-                              order.status !== "archived" &&
+                              !isResettableCompletedOrder(order) &&
                               !(order.paid_at && order.payment_transaction_id && !order.refunded_at),
                           ) ? (
                             <span className="text-xs text-zinc-400">-</span>
