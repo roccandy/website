@@ -63,6 +63,9 @@ const JACKET_OPTIONS = [
   { value: "two_colour_pinstripe", label: "Two colour + Pin stripe" },
   { value: "rainbow", label: "Rainbow" },
 ];
+const WEDDING_HEART = "❤️";
+const normalizeWeddingHeartText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s*[♥❤]\s*/g, ` ${WEDDING_HEART} `).replace(/\s+/g, " ").trim();
 
 export function OrdersTable({
   orders,
@@ -128,7 +131,11 @@ export function OrdersTable({
     setPackagingType(nextPackagingOption?.type ?? "");
     setPackagingSize(nextPackagingOption?.size ?? "");
     setQuantityInput(order.quantity ? String(order.quantity) : "");
-    setDesignTextInput(order.design_text ?? "");
+    setDesignTextInput(
+      nextCategoryId.startsWith("weddings")
+        ? normalizeWeddingHeartText(order.design_text)
+        : (order.design_text ?? ""),
+    );
     setTextColorValue(nextTextColor);
     setHeartColorValue(nextHeartColor);
     setJacketColorOneValue(nextJacketColorOne);
@@ -356,7 +363,7 @@ export function OrdersTable({
   );
   const insertWeddingHeart = useCallback(() => {
     const input = designTextInputRef.current;
-    const heart = "♥";
+    const heart = WEDDING_HEART;
     if (!input) {
       setDesignTextInput((current) => `${current}${current ? " " : ""}${heart}`);
       return;
@@ -726,7 +733,7 @@ export function OrdersTable({
                                                   aria-label="Insert heart"
                                                   title="Insert heart"
                                                 >
-                                                  ♥
+                                                  {WEDDING_HEART}
                                                 </button>
                                               ) : null}
                                             </div>
