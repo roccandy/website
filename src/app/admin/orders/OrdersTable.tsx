@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ColorPaletteRow,
   Category,
@@ -89,6 +89,7 @@ export function OrdersTable({
   const [packagingType, setPackagingType] = useState("");
   const [packagingSize, setPackagingSize] = useState("");
   const [quantityInput, setQuantityInput] = useState("");
+  const [designTextInput, setDesignTextInput] = useState("");
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [textColorCustom, setTextColorCustom] = useState(false);
@@ -105,6 +106,7 @@ export function OrdersTable({
   const [jacketColorTwoInput, setJacketColorTwoInput] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [editKey, setEditKey] = useState(0);
+  const designTextInputRef = useRef<HTMLInputElement | null>(null);
   const selected = useMemo(() => orders.find((o) => o.id === selectedId) ?? null, [orders, selectedId]);
   const showJacketColorTwo = jacketMode === "two_colour" || jacketMode === "two_colour_pinstripe";
   const colorOptions = useMemo(() => buildPaletteOptions(palette), [palette]);
@@ -126,6 +128,7 @@ export function OrdersTable({
     setPackagingType(nextPackagingOption?.type ?? "");
     setPackagingSize(nextPackagingOption?.size ?? "");
     setQuantityInput(order.quantity ? String(order.quantity) : "");
+    setDesignTextInput(order.design_text ?? "");
     setTextColorValue(nextTextColor);
     setHeartColorValue(nextHeartColor);
     setJacketColorOneValue(nextJacketColorOne);
@@ -351,6 +354,24 @@ export function OrdersTable({
   const renderColorField = (props: Omit<OrderColorFieldProps, "isEditing">) => (
     <OrderColorField {...props} isEditing={isEditing} />
   );
+  const insertWeddingHeart = useCallback(() => {
+    const input = designTextInputRef.current;
+    const heart = "♥";
+    if (!input) {
+      setDesignTextInput((current) => `${current}${current ? " " : ""}${heart}`);
+      return;
+    }
+
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const nextValue = `${designTextInput.slice(0, start)}${heart}${designTextInput.slice(end)}`;
+    setDesignTextInput(nextValue);
+
+    queueMicrotask(() => {
+      input.focus();
+      input.setSelectionRange(start + heart.length, start + heart.length);
+    });
+  }, [designTextInput]);
 
   return (
     <div className="space-y-4">
@@ -689,11 +710,26 @@ export function OrdersTable({
                                         <label className={detailLabelClass}>
                                           Text / design
                                           {isEditing ? (
-                                            <input
-                                              name="design_text"
-                                              defaultValue={order.design_text ?? ""}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
-                                            />
+                                            <div className="mt-1 flex items-center gap-2">
+                                              <input
+                                                ref={designTextInputRef}
+                                                name="design_text"
+                                                value={designTextInput}
+                                                onChange={(event) => setDesignTextInput(event.target.value)}
+                                                className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              />
+                                              {isWedding ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={insertWeddingHeart}
+                                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-base font-semibold text-rose-700 hover:border-rose-300"
+                                                  aria-label="Insert heart"
+                                                  title="Insert heart"
+                                                >
+                                                  ♥
+                                                </button>
+                                              ) : null}
+                                            </div>
                                           ) : (
                                             <p className={detailValueClass}>{order.design_text ?? "-"}</p>
                                           )}
