@@ -38,7 +38,7 @@ type VisibleSubgroup = {
 
 const FILTER_OPTIONS: { value: FilterView; label: string }[] = [
   { value: "all", label: "All orders" },
-  { value: "archived", label: "Archived orders" },
+  { value: "archived", label: "Completed orders" },
   { value: "uncompleted", label: "Uncompleted orders" },
 ];
 
