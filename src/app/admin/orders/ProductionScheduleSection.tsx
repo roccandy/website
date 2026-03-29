@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
-import { addManualBlock, archiveOrder, assignOrderToSlot } from "./actions";
+import { addManualBlock, archiveOrderInline, assignOrderToSlot } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
@@ -314,7 +314,7 @@ export default function ProductionScheduleSection({
                                   ) : null}
                                   {canCompleteSlotOrder ? (
                                     <SplitAwareActionForm
-                                      action={archiveOrder}
+                                      action={archiveOrderInline}
                                       hiddenFields={[{ name: "order_id", value: order.id }]}
                                       buttonLabel={completionActionLabel(order)}
                                       buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[9px] font-semibold text-emerald-700 hover:border-emerald-300"
@@ -472,7 +472,7 @@ export default function ProductionScheduleSection({
                                     ) : null}
                                     {canCompleteSlotOrder ? (
                                       <SplitAwareActionForm
-                                        action={archiveOrder}
+                                        action={archiveOrderInline}
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
                                         buttonLabel={completionActionLabel(order)}
                                         buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"

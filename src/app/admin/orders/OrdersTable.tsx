@@ -13,7 +13,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { archiveOrder, upsertOrder } from "./actions";
+import { archiveOrderInline, upsertOrder } from "./actions";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -1069,7 +1069,7 @@ export function OrdersTable({
                                     )}
                                     {canCompleteFromSchedule ? (
                                       <SplitAwareActionForm
-                                        action={archiveOrder}
+                                        action={archiveOrderInline}
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
                                         buttonLabel={completionActionLabel(order)}
                                         buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
