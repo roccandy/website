@@ -173,7 +173,7 @@ export default function AssignmentCalendarModal({
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {dayCards.map((item) => {
             const label = item.day.toLocaleDateString(undefined, {
               weekday: "short",
