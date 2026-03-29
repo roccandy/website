@@ -588,11 +588,11 @@ export async function assignOrderToSlot(formData: FormData) {
       .eq("order_id", order_id);
     if (orderAssignmentsError) throw new Error(orderAssignmentsError.message);
 
-    const existingOrderAssignment = orderAssignments[0];
-    const previousForAssignment =
+    const existingOrderAssignment =
       assignmentId
-        ? slotAssignments.find((a) => a.id === assignmentId)?.kg_assigned ?? 0
-        : existingOrderAssignment?.kg_assigned ?? 0;
+        ? orderAssignments.find((assignment) => assignment.id === assignmentId) ?? null
+        : orderAssignments[0] ?? null;
+    const previousForAssignment = existingOrderAssignment?.kg_assigned ?? 0;
 
     const orderUsed =
       orderAssignments.reduce((sum, a) => sum + Number(a.kg_assigned || 0), 0) -
