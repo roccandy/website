@@ -4,6 +4,7 @@ import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { getOrdersRecipients, sendCustomerRefundEmail, sendOrderEmail } from "@/lib/email";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
@@ -19,6 +20,7 @@ const toastRedirect = (base: string, tone: "success" | "error", message: string)
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
 const isInvalidIntegerInputError = (message: string) =>
   message.toLowerCase().includes("invalid input syntax for type integer");
+const isInlineResponse = (formData: FormData) => formData.get("response_mode")?.toString() === "inline";
 const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
@@ -484,6 +486,7 @@ export async function upsertSlot(formData: FormData) {
 
 export async function assignOrderToSlot(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
+  const inlineResponse = isInlineResponse(formData);
   try {
     const assignmentId = formData.get("assignment_id")?.toString() || undefined;
     const order_id = formData.get("order_id")?.toString();
@@ -645,14 +648,23 @@ export async function assignOrderToSlot(formData: FormData) {
     if (statusError) throw new Error(statusError.message);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to assign order.";
+    if (inlineResponse) {
+      revalidatePath(ORDERS_PATH);
+      return { ok: false, tone: "error" as const, message };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
+  if (inlineResponse) {
+    revalidatePath(ORDERS_PATH);
+    return { ok: true, tone: "success" as const, message: "Order assigned." };
+  }
   redirect(toastRedirect(ORDERS_PATH, "success", "Order assigned."));
 }
 
 export async function deleteAssignment(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
+  const inlineResponse = isInlineResponse(formData);
   try {
     const assignmentId = formData.get("assignment_id")?.toString();
     if (!assignmentId) throw new Error("Missing assignment id");
@@ -677,9 +689,17 @@ export async function deleteAssignment(formData: FormData) {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to unassign order.";
+    if (inlineResponse) {
+      revalidatePath(ORDERS_PATH);
+      return { ok: false, tone: "error" as const, message };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
+  if (inlineResponse) {
+    revalidatePath(ORDERS_PATH);
+    return { ok: true, tone: "success" as const, message: "Order unassigned." };
+  }
   redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
 }
 

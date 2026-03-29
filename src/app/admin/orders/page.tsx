@@ -24,18 +24,13 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-type SearchParams = { toast?: string; message?: string; selected?: string };
-type ToastTone = "success" | "error";
+type SearchParams = { selected?: string };
 
 export default async function OrdersPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
   const resolvedSearchParams = await Promise.resolve(searchParams);
-  const toastTone = resolvedSearchParams?.toast;
-  const toastMessage = resolvedSearchParams?.message;
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
-  const tone: ToastTone | null = toastTone === "success" || toastTone === "error" ? toastTone : null;
-  const toast = tone && toastMessage ? { tone, message: toastMessage } : null;
 
   const [orders, slots, assignments, blocks, pricingContext, flavors, palette, categories, quoteBlocks] =
     await Promise.all([
@@ -119,7 +114,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         pricingBreakdowns={pricingByOrderId}
         flavors={flavors}
         palette={palette}
-        toast={toast}
         initialSelectedId={selectedOrderId}
       />
     </section>

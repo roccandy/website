@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 import { addManualBlock, archiveOrder, assignOrderToSlot } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -36,11 +37,13 @@ export default function ProductionScheduleSection({
   settings,
   unassignedOrders,
 }: Props) {
+  const router = useRouter();
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "week">("week");
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
+  const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
 
   const todayKey = dateKey(new Date());
@@ -124,6 +127,23 @@ export default function ProductionScheduleSection({
 
   const closeSlotPicker = () => setSlotPicker(null);
   const closeAssignmentModal = () => setAssignmentModalOrderId(null);
+  const emitToast = (tone: "success" | "error", message: string) => {
+    window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
+  };
+  const refreshAfterAssignment = () => {
+    setHoveredDropSlotKey(null);
+    router.refresh();
+  };
+  const runAssignmentAction = async (formData: FormData) => {
+    formData.set("response_mode", "inline");
+    const result = await assignOrderToSlot(formData);
+    if (result?.message) {
+      emitToast(result.tone, result.message);
+    }
+    if (result?.ok) {
+      refreshAfterAssignment();
+    }
+  };
 
   return (
     <>
@@ -218,10 +238,15 @@ export default function ProductionScheduleSection({
                         return (
                           <div
                             key={slotKey}
-                            className={`rounded border border-dashed border-zinc-200 p-1 ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            className={`rounded border border-dashed p-1 ${
+                              hoveredDropSlotKey === slotKey
+                                ? "border-blue-500 ring-2 ring-blue-200"
+                                : "border-zinc-200"
+                            } ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
                             onDragOver={(event) => {
                               if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
                               event.preventDefault();
+                              if (hoveredDropSlotKey !== slotKey) setHoveredDropSlotKey(slotKey);
                             }}
                             onDrop={(event) => {
                               if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
@@ -246,15 +271,21 @@ export default function ProductionScheduleSection({
                                   ),
                                 );
                                 setDraggingAssignmentId(null);
-                                await assignOrderToSlot(formData);
+                                await runAssignmentAction(formData);
                               });
                             }}
                           >
                             {assignment && order ? (
                               <div
                                 draggable={canReassignSlotOrder}
-                                onDragStart={() => setDraggingAssignmentId(assignment.id)}
-                                onDragEnd={() => setDraggingAssignmentId(null)}
+                                onDragStart={() => {
+                                  setDraggingAssignmentId(assignment.id);
+                                  setHoveredDropSlotKey(null);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingAssignmentId(null);
+                                  setHoveredDropSlotKey(null);
+                                }}
                                 className={`rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
                                   getScheduleStatus(order, key, todayKey),
                                 )}`}
@@ -378,10 +409,15 @@ export default function ProductionScheduleSection({
                         return (
                           <div
                             key={slotKey}
-                            className={`rounded border border-dashed border-zinc-200 px-3 py-2 text-xs ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            className={`rounded border border-dashed px-3 py-2 text-xs ${
+                              hoveredDropSlotKey === slotKey
+                                ? "border-blue-500 ring-2 ring-blue-200"
+                                : "border-zinc-200"
+                            } ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
                             onDragOver={(event) => {
                               if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
                               event.preventDefault();
+                              if (hoveredDropSlotKey !== slotKey) setHoveredDropSlotKey(slotKey);
                             }}
                             onDrop={(event) => {
                               if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
@@ -406,15 +442,21 @@ export default function ProductionScheduleSection({
                                   ),
                                 );
                                 setDraggingAssignmentId(null);
-                                await assignOrderToSlot(formData);
+                                await runAssignmentAction(formData);
                               });
                             }}
                           >
                             {assignment && order ? (
                               <div
                                 draggable={canReassignSlotOrder}
-                                onDragStart={() => setDraggingAssignmentId(assignment.id)}
-                                onDragEnd={() => setDraggingAssignmentId(null)}
+                                onDragStart={() => {
+                                  setDraggingAssignmentId(assignment.id);
+                                  setHoveredDropSlotKey(null);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingAssignmentId(null);
+                                  setHoveredDropSlotKey(null);
+                                }}
                                 className={`mt-1 rounded-md border px-3 py-2 ${statusCard(getScheduleStatus(order, key, todayKey))}`}
                               >
                                 <div className="flex items-start justify-between gap-3">
@@ -529,19 +571,26 @@ export default function ProductionScheduleSection({
                       : 0.01;
 
                   return (
-                    <form key={order.id} action={assignOrderToSlot}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <input type="hidden" name="slot_id" value={selectedSlotId} />
-                      <input type="hidden" name="slot_date" value={slotPicker.date} />
-                      <input type="hidden" name="slot_index" value={slotPicker.slotIndex} />
-                      <input type="hidden" name="kg_assigned" value={assignableKg} />
+                    <div key={order.id}>
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={() => {
+                          startDropTransition(async () => {
+                            const formData = new FormData();
+                            formData.set("order_id", order.id);
+                            formData.set("slot_id", selectedSlotId);
+                            formData.set("slot_date", slotPicker.date);
+                            formData.set("slot_index", String(slotPicker.slotIndex));
+                            formData.set("kg_assigned", String(assignableKg));
+                            closeSlotPicker();
+                            await runAssignmentAction(formData);
+                          });
+                        }}
                         className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-xs font-semibold text-zinc-800 hover:border-zinc-300"
                       >
                         {order.title ?? "Untitled"}
                       </button>
-                    </form>
+                    </div>
                   );
                 })
               )}

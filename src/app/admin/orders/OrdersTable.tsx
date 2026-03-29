@@ -1,7 +1,6 @@
 ﻿"use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import type {
   ColorPaletteRow,
   Category,
@@ -54,7 +53,6 @@ type Props = {
   pricingBreakdowns: Record<string, PricingBreakdown | null>;
   flavors: Flavor[];
   palette: ColorPaletteRow[];
-  toast?: { tone: "success" | "error"; message: string } | null;
   initialSelectedId?: string | null;
 };
 
@@ -77,11 +75,8 @@ export function OrdersTable({
   pricingBreakdowns,
   flavors,
   palette,
-  toast,
   initialSelectedId = null,
 }: Props) {
-  const router = useRouter();
-  const toastRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [pickupMode, setPickupMode] = useState<"on" | "off">("off");
   const [jacketMode, setJacketMode] = useState<string>("");
@@ -166,20 +161,6 @@ export function OrdersTable({
       cancelled = true;
     };
   }, [selected, syncEditableState]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const key = `${toast.tone}:${toast.message}`;
-    if (toastRef.current === key) return;
-    toastRef.current = key;
-    try {
-      const evt = new CustomEvent("toast", { detail: { message: toast.message, tone: toast.tone } });
-      window.dispatchEvent(evt);
-    } catch {
-      // no-op
-    }
-    router.replace("/admin/orders");
-  }, [router, toast]);
 
   useEffect(() => {
     if (!selectedId) return;

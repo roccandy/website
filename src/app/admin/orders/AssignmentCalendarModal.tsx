@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
 import { assignOrderToSlot, deleteAssignment } from "./actions";
 import {
@@ -38,6 +39,7 @@ export default function AssignmentCalendarModal({
   settings,
   onClose,
 }: Props) {
+  const router = useRouter();
   const [calendarMonth, setCalendarMonth] = useState(() => {
     if (assignment?.slot?.slot_date) {
       return new Date(`${assignment.slot.slot_date}T00:00:00`);
@@ -100,6 +102,9 @@ export default function AssignmentCalendarModal({
 
   const actionLabel = assignment ? "Change assignment" : "Assign";
   const scheduleStatus = getScheduleStatus(order, assignment?.slot?.slot_date ?? null, todayKey);
+  const emitToast = (tone: "success" | "error", message: string) => {
+    window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -124,8 +129,15 @@ export default function AssignmentCalendarModal({
                   startTransition(async () => {
                     const formData = new FormData();
                     formData.set("assignment_id", assignment.assignment.id);
-                    onClose();
-                    await deleteAssignment(formData);
+                    formData.set("response_mode", "inline");
+                    const result = await deleteAssignment(formData);
+                    if (result?.message) {
+                      emitToast(result.tone, result.message);
+                    }
+                    if (result?.ok) {
+                      onClose();
+                      router.refresh();
+                    }
                   });
                 }}
                 className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300 disabled:opacity-50"
@@ -181,6 +193,7 @@ export default function AssignmentCalendarModal({
                     formData.set("order_id", order.id);
                     formData.set("slot_date", item.key);
                     formData.set("slot_index", String(item.availableSlotIndex));
+                    formData.set("response_mode", "inline");
                     formData.set(
                       "kg_assigned",
                       String(
@@ -192,8 +205,14 @@ export default function AssignmentCalendarModal({
                     if (assignment?.assignment.id) {
                       formData.set("assignment_id", assignment.assignment.id);
                     }
-                    onClose();
-                    await assignOrderToSlot(formData);
+                    const result = await assignOrderToSlot(formData);
+                    if (result?.message) {
+                      emitToast(result.tone, result.message);
+                    }
+                    if (result?.ok) {
+                      onClose();
+                      router.refresh();
+                    }
                   });
                 }}
                 className={`rounded-xl border px-4 py-3 text-left transition ${
