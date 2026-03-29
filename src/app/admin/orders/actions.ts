@@ -15,6 +15,7 @@ const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
 const OPEN_OVERRIDE_REASON = "Open override";
 const MANUAL_BLOCK_REASON = "Manual block";
 const QUOTE_BLOCK_REASON = "Front-end block";
+const INGREDIENT_LABELS_NOTE = "Ingredient labels requested.";
 const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
@@ -24,6 +25,20 @@ const isInlineResponse = (formData: FormData) => formData.get("response_mode")?.
 const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
+};
+
+const syncIngredientLabelsNote = (notes: string | null, enabled: boolean) => {
+  const existingLines = (notes ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => line.toLowerCase() !== INGREDIENT_LABELS_NOTE.toLowerCase());
+
+  if (enabled) {
+    existingLines.push(INGREDIENT_LABELS_NOTE);
+  }
+
+  return existingLines.length > 0 ? existingLines.join("\n") : null;
 };
 
 const isNoProductionDay = (slotDate: string, settings: Awaited<ReturnType<typeof getSettings>>) => {
@@ -128,6 +143,8 @@ export async function upsertOrder(formData: FormData) {
   const status = formData.get("status")?.toString() || null;
   const payment_method = formData.get("payment_method")?.toString() || null;
   const notes = formData.get("notes")?.toString() || null;
+  const hasIngredientLabelsControl = formData.has("ingredient_labels_opt_in");
+  const ingredientLabelsOptIn = formData.get("ingredient_labels_opt_in")?.toString() === "on";
   const pickup_raw = formData.get("pickup");
   const pickup = pickup_raw !== null ? pickup_raw === "on" : null;
   const state = formData.get("state")?.toString() || null;
@@ -152,6 +169,9 @@ export async function upsertOrder(formData: FormData) {
   const resolvedCustomerName = customer_name_raw ?? nameFromParts ?? existing?.customer_name ?? null;
   const resolvedTextColor = !isBranded ? text_color_raw ?? existing?.text_color ?? null : null;
   const resolvedHeartColor = isWedding ? heart_color_raw ?? existing?.heart_color ?? null : null;
+  const resolvedNotes = hasIngredientLabelsControl
+    ? syncIngredientLabelsNote(notes ?? existing?.notes ?? null, ingredientLabelsOptIn)
+    : notes ?? existing?.notes ?? null;
   const jacketType =
     jacket_type ??
     (jacket === "rainbow"
@@ -206,7 +226,7 @@ export async function upsertOrder(formData: FormData) {
       total_price: total_price ?? existing?.total_price ?? null,
       status: status ?? existing?.status ?? "pending",
       payment_method: payment_method ?? existing?.payment_method ?? null,
-      notes: notes ?? existing?.notes ?? null,
+      notes: resolvedNotes,
       pickup: pickup ?? existing?.pickup ?? false,
       state: state ?? existing?.state ?? null,
       first_name: first_name ?? existing?.first_name ?? null,

@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
   analyzeImageOptimization,
+  fileToDataUrl,
   optimizeBrowserImageToDataUrl,
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
-import type { Category, ColorPaletteRow, Flavor, PackagingOption, PremadeCandy } from "@/lib/data";
+import type { Category, ColorPaletteRow, Flavor, PackagingOption, PremadeCandy, SettingsRow } from "@/lib/data";
 import { upsertOrder } from "../actions";
 import { paletteSections } from "@/app/admin/settings/palette";
 
@@ -284,9 +286,10 @@ type Props = {
   flavors: Flavor[];
   palette: ColorPaletteRow[];
   premadeCandies: PremadeCandy[];
+  settings: SettingsRow;
 };
 
-export function NewOrderForm({ categories, packagingOptions, flavors, palette, premadeCandies }: Props) {
+export function NewOrderForm({ categories, packagingOptions, flavors, palette, premadeCandies, settings }: Props) {
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
@@ -295,6 +298,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const [packagingOptionId, setPackagingOptionId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [labelsCount, setLabelsCount] = useState("");
+  const [labelsCountTouched, setLabelsCountTouched] = useState(false);
   const [jacket, setJacket] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priceValue, setPriceValue] = useState("");
@@ -316,7 +320,12 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
+  const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(false);
+  const [labelFileName, setLabelFileName] = useState("");
   const [labelImageUrl, setLabelImageUrl] = useState("");
+  const [labelImageError, setLabelImageError] = useState<string | null>(null);
+  const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
@@ -336,11 +345,31 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
-  const isBulkSelected = selectedPackagingOption?.type?.toLowerCase() === "bulk";
+  const packageTypeLabel = useMemo(() => {
+    const raw = selectedPackagingOption?.type?.trim().toLowerCase();
+    return raw || "package";
+  }, [selectedPackagingOption?.type]);
   const premadeOptions = useMemo(
     () => premadeCandies.filter((item) => item.is_active),
     [premadeCandies]
   );
+  const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
+  const premadeSubtotal = useMemo(
+    () =>
+      premadeSelections.reduce((sum, selection) => {
+        const premade = premadeOptions.find((item) => item.id === selection.id);
+        const quantityValue = Number(selection.quantity);
+        if (!premade || !Number.isFinite(quantityValue) || quantityValue <= 0) return sum;
+        const unitPrice = Number(premade.price);
+        return Number.isFinite(unitPrice) ? sum + unitPrice * quantityValue : sum;
+      }, 0),
+    [premadeOptions, premadeSelections],
+  );
+  const customPriceNumber = Number(priceValue);
+  const combinedPriceNumber =
+    (Number.isFinite(customPriceNumber) ? customPriceNumber : 0) + premadeSubtotal;
+  const formatMoney = (value: number | null | undefined) =>
+    Number.isFinite(value ?? NaN) ? `$${Number(value).toFixed(2)}` : "$0.00";
   const addPremadeSelection = () => {
     setPremadeSelections((prev) => [...prev, { id: "", quantity: "1" }]);
   };
@@ -416,6 +445,57 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
       setIsOptimisingLogo(false);
     }
   };
+  const handleLabelUpload = async (file?: File | null) => {
+    if (!file) {
+      setLabelFileName("");
+      setLabelImageUrl("");
+      setLabelImageError(null);
+      setLabelImageSummary(null);
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLabelFileName("");
+      setLabelImageUrl("");
+      setLabelImageError("File is too large. Max 2MB.");
+      setLabelImageSummary(null);
+      return;
+    }
+    setLabelFileName(file.name);
+    try {
+      setIsOptimisingLabelImage(true);
+      const summary =
+        file.type === "application/pdf"
+          ? {
+              originalType: "PDF",
+              originalBytes: file.size,
+              finalType: "PDF",
+              finalBytes: file.size,
+            }
+          : await analyzeImageOptimization(file, {
+              maxWidth: 1800,
+              maxHeight: 1800,
+              quality: 0.82,
+            });
+      const result =
+        file.type === "application/pdf"
+          ? await fileToDataUrl(file)
+          : await optimizeBrowserImageToDataUrl(file, {
+              maxWidth: 1800,
+              maxHeight: 1800,
+              quality: 0.82,
+            });
+      setLabelImageUrl(result);
+      setLabelImageSummary(summary);
+      setLabelImageError(null);
+    } catch {
+      setLabelFileName("");
+      setLabelImageUrl("");
+      setLabelImageSummary(null);
+      setLabelImageError("Unable to read the file.");
+    } finally {
+      setIsOptimisingLabelImage(false);
+    }
+  };
   const openCustomPicker = (target: "heart" | "text" | "jacket1" | "jacket2", current: string) => {
     const normalized = normalizeHex(current, defaultJacketColor);
     setCustomTarget(target);
@@ -445,9 +525,14 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   }, [categoryId, packagingOptionId, filteredPackagingOptions]);
 
   useEffect(() => {
-    if (!packagingOptionId || isBulkSelected) return;
-    setLabelsCount(quantity ? quantity : "");
-  }, [packagingOptionId, isBulkSelected, quantity]);
+    if (!packagingOptionId) {
+      if (!labelsCountTouched) setLabelsCount("");
+      return;
+    }
+    if (!labelsCountTouched) {
+      setLabelsCount(quantity ? quantity : "");
+    }
+  }, [labelsCountTouched, packagingOptionId, quantity]);
 
   useEffect(() => {
     const qtyNumber = Number(quantity);
@@ -479,6 +564,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
         categoryId,
         packaging: [{ optionId: packagingOptionId, quantity: qtyNumber }],
         labelsCount: resolvedLabels,
+        ingredientLabelsCount: ingredientLabelsOptIn ? qtyNumber : 0,
         dueDate: dueDate || undefined,
         extras: extras.length ? extras : undefined,
       }),
@@ -511,10 +597,37 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
     return () => {
       active = false;
     };
-  }, [categoryId, packagingOptionId, quantity, labelsCount, jacket, dueDate]);
+  }, [categoryId, packagingOptionId, quantity, labelsCount, ingredientLabelsOptIn, jacket, dueDate]);
 
   return (
     <form action={upsertOrder} className="space-y-6">
+      <div className="sticky top-20 z-20">
+        <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-300">Order total</p>
+              <p className="mt-1 text-3xl font-semibold">{formatMoney(combinedPriceNumber)}</p>
+            </div>
+            <div className="grid flex-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Custom candy</p>
+                <p className="mt-1 text-sm font-semibold">{formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Pre-made add-ons</p>
+                <p className="mt-1 text-sm font-semibold">{formatMoney(premadeSubtotal)}</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Status</p>
+                <p className="mt-1 text-sm text-zinc-100">{isPricing ? "Calculating price..." : pricingError || "Price updates automatically."}</p>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="total_price" value={priceValue} />
+          <input type="hidden" name="ingredient_labels_opt_in" value={ingredientLabelsOptIn ? "on" : "off"} />
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <h3 className="text-base font-semibold text-zinc-900">Order details</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -590,10 +703,13 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
               name="labels_count"
               min={0}
               value={labelsCount}
-              onChange={(event) => setLabelsCount(event.target.value)}
-              readOnly={!isBulkSelected}
-              className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 read-only:bg-zinc-50 read-only:text-zinc-500"
+              onChange={(event) => {
+                setLabelsCountTouched(true);
+                setLabelsCount(event.target.value);
+              }}
+              className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
             />
+            <div className="mt-2 text-[11px] text-zinc-500">Defaults to the quantity, but can be edited manually.</div>
           </label>
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
             Date required
@@ -616,21 +732,6 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
               value={weightValue}
               className="mt-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"
             />
-          </label>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Total price ($)
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              name="total_price"
-              readOnly
-              value={priceValue}
-              className="mt-2 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900"
-            />
-            <div className="mt-2 text-[11px] text-zinc-500">
-              {isPricing ? "Calculating price..." : pricingError || "Price updates automatically."}
-            </div>
           </label>
           <input type="hidden" name="status" value="unassigned" />
         </div>
@@ -827,16 +928,87 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
               ) : null}
             </div>
           )}
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-            Label image URL
-            <input
-              type="url"
-              value={labelImageUrl}
-              onChange={(event) => setLabelImageUrl(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-              placeholder="https://"
-            />
-          </label>
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:col-span-2">
+            <div className="space-y-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label htmlFor="label-artwork-upload">Label artwork</label>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    id="label-artwork-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor="label-artwork-upload"
+                    className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+                  >
+                    {labelFileName ? "Change file" : "Choose file"}
+                  </label>
+                  {labelImageUrl ? (
+                    labelImageUrl.startsWith("data:image/") ? (
+                      <Image
+                        src={labelImageUrl}
+                        alt="Label preview"
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 rounded border border-zinc-200 object-cover"
+                        unoptimized
+                      />
+                    ) : labelImageUrl.startsWith("data:application/pdf") ? (
+                      <span className="inline-flex h-10 min-w-10 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
+                        PDF
+                      </span>
+                    ) : null
+                  ) : null}
+                  {labelFileName ? (
+                    <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
+                      {labelFileName}
+                    </span>
+                  ) : null}
+                  {labelImageUrl ? (
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
+                      Ready
+                    </span>
+                  ) : null}
+                </div>
+                {labelImageError ? (
+                  <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
+                ) : null}
+                {isOptimisingLabelImage ? (
+                  <div className="mt-2">
+                    <ImageOptimizationStatus
+                      summary={null}
+                      pendingLabel="Optimising artwork..."
+                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                    />
+                  </div>
+                ) : labelImageSummary ? (
+                  <div className="mt-2">
+                    <ImageOptimizationStatus
+                      summary={labelImageSummary}
+                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <label className="flex items-start gap-3 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  checked={ingredientLabelsOptIn}
+                  onChange={(event) => setIngredientLabelsOptIn(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                />
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-semibold text-zinc-900">Ingredient labels</span>
+                  <span className="block text-xs text-zinc-500">
+                    {`Add ingredient labels to each ${packageTypeLabel}. ${formatMoney(ingredientLabelPrice)} each.`}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
           <input type="hidden" name="design_type" value={categoryId} />
           <input type="hidden" name="design_text" value={designTextValue} />
           <input type="hidden" name="jacket_type" value={jacketTypeValue} />
