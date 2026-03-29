@@ -4,7 +4,7 @@ import "./globals.css";
 import { Analytics } from "@/components/Analytics";
 import { JsonLd } from "@/components/JsonLd";
 import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
-import SiteFooter from "@/components/SiteFooter";
+import ConditionalSiteFooter from "@/components/ConditionalSiteFooter";
 import {
   buildMetadata,
   buildOrganizationSchema,
@@ -87,7 +87,7 @@ export default function RootLayout({
         <MobileHeaderShrinkOnScroll />
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">{children}</div>
-          <SiteFooter />
+          <ConditionalSiteFooter />
         </div>
       </body>
     </html>
