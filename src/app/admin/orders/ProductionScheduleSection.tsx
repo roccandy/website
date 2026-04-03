@@ -295,14 +295,13 @@ export default function ProductionScheduleSection({
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                    <p className="mt-0.5 break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
+                                    <p className="break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
                                     <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
                                       <p>{weightLabel(order.total_weight_kg)}</p>
-                                      <p>Due {formatDate(order.due_date)}</p>
+                                      <p>{formatDate(order.due_date)}</p>
                                     </div>
                                   </div>
-                                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch gap-1">
+                                  <div className="flex w-[5.4rem] shrink-0 flex-col items-stretch gap-1">
                                     {printTarget ? (
                                       <a
                                         href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
@@ -322,7 +321,15 @@ export default function ProductionScheduleSection({
                                         confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
                                         companionMeta={premadeSiblingMeta}
                                       />
-                                    ) : null}
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[8px] font-semibold text-zinc-400"
+                                      >
+                                        {completionActionLabel(order)}
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => setAssignmentModalOrderId(order.id)}
@@ -453,8 +460,7 @@ export default function ProductionScheduleSection({
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                    <p className="mt-0.5 text-base font-semibold leading-tight text-zinc-900">{title}</p>
+                                    <p className="text-base font-semibold leading-tight text-zinc-900">{title}</p>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-700">
                                       <span>{weightLabel(order.total_weight_kg)}</span>
                                       <span>Due {formatDate(order.due_date)}</span>
@@ -481,7 +487,15 @@ export default function ProductionScheduleSection({
                                         confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
                                         companionMeta={premadeSiblingMeta}
                                       />
-                                    ) : null}
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled
+                                        className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[11px] font-semibold text-zinc-400"
+                                      >
+                                        {completionActionLabel(order)}
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => setAssignmentModalOrderId(order.id)}
