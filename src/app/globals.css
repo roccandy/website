@@ -89,6 +89,50 @@ body {
   );
 }
 
+:root .landing-bg-faded::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(100%, 1500px);
+  transform: translateX(-50%);
+  z-index: -2;
+  pointer-events: none;
+  background-image: url("/landing/hero-bg_3.webp");
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: center -18px;
+  opacity: 0.85;
+}
+
+:root .landing-bg-faded::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(100%, 1500px);
+  transform: translateX(-50%);
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    rgba(255, 255, 255, 0.998) 3.5%,
+    rgba(255, 255, 255, 0.92) 5.5%,
+    rgba(255, 255, 255, 0.66) 7.5%,
+    rgba(255, 255, 255, 0.28) 9%,
+    transparent 10%,
+    transparent 90%,
+    rgba(255, 255, 255, 0.28) 91%,
+    rgba(255, 255, 255, 0.66) 92.5%,
+    rgba(255, 255, 255, 0.92) 94.5%,
+    rgba(255, 255, 255, 0.998) 96.5%,
+    #fff 100%
+  );
+}
+
 :root .about-bg {
   position: relative;
   isolation: isolate;

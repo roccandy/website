@@ -196,7 +196,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingGalleryRows = landingConfig ? buildLandingGalleryRows(page.slug, landingGalleryImages) : [];
 
   return (
-    <main className="landing-bg min-h-screen bg-white text-zinc-900">
+    <main className={`landing-bg ${landingConfig ? "landing-bg-faded" : ""} min-h-screen bg-white text-zinc-900`}>
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
