@@ -55,7 +55,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const montserratLight = Montserrat({
   subsets: ["latin"],
-  weight: ["300"],
+  weight: ["300", "700"],
 });
 
 const CANDY_OPTIONS = [
@@ -103,7 +103,7 @@ export default async function Home() {
             <div className="space-y-6">
               <div className="space-y-1 text-center">
                 <h1
-                  className={`${montserratLight.className} mb-4 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
+                  className={`${montserratLight.className} mb-4 normal-case text-[64px] font-bold leading-tight tracking-tight text-[rgb(114,112,111)]`}
                 >
                   {homePage.title || "Personalised Rock Candy"}
                 </h1>
