@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Montserrat } from "next/font/google";
 import { notFound } from "next/navigation";
 import { PageFaqSection } from "@/components/PageFaqSection";
+import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { SiteUsps } from "@/components/SiteUsps";
@@ -227,6 +228,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                   >
                     {page.title}
                   </h1>
+                  <ProductionBlockoutBanner />
                   <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
                     {landingHeroSubheading}
                   </h2>
