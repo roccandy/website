@@ -46,57 +46,45 @@ body {
 }
 
 :root .landing-bg-home::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(100%, 1500px);
+  transform: translateX(-50%);
   z-index: -2;
-  background-size: 1500px auto;
+  pointer-events: none;
+  background-image: url("/landing/hero-bg.webp");
+  background-repeat: no-repeat;
+  background-size: 100% auto;
   background-position: center -18px;
   opacity: 0.85;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(0, 0, 0, 0.08) 6%,
-    rgba(0, 0, 0, 0.34) 10%,
-    rgba(0, 0, 0, 0.72) 14%,
-    #000 18%,
-    #000 82%,
-    rgba(0, 0, 0, 0.72) 86%,
-    rgba(0, 0, 0, 0.34) 90%,
-    rgba(0, 0, 0, 0.08) 94%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(0, 0, 0, 0.08) 6%,
-    rgba(0, 0, 0, 0.34) 10%,
-    rgba(0, 0, 0, 0.72) 14%,
-    #000 18%,
-    #000 82%,
-    rgba(0, 0, 0, 0.72) 86%,
-    rgba(0, 0, 0, 0.34) 90%,
-    rgba(0, 0, 0, 0.08) 94%,
-    transparent 100%
-  );
 }
 
 :root .landing-bg-home::after {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(100%, 1500px);
+  transform: translateX(-50%);
   z-index: -1;
   pointer-events: none;
   background: linear-gradient(
     to right,
     #fff 0%,
-    rgba(255, 255, 255, 0.995) 6%,
-    rgba(255, 255, 255, 0.9) 10%,
-    rgba(255, 255, 255, 0.64) 14%,
-    rgba(255, 255, 255, 0.26) 18%,
-    transparent 22%,
-    transparent 78%,
-    rgba(255, 255, 255, 0.26) 82%,
-    rgba(255, 255, 255, 0.64) 86%,
-    rgba(255, 255, 255, 0.9) 90%,
-    rgba(255, 255, 255, 0.995) 94%,
+    rgba(255, 255, 255, 0.998) 6%,
+    rgba(255, 255, 255, 0.92) 9%,
+    rgba(255, 255, 255, 0.66) 12%,
+    rgba(255, 255, 255, 0.28) 14%,
+    transparent 16%,
+    transparent 84%,
+    rgba(255, 255, 255, 0.28) 86%,
+    rgba(255, 255, 255, 0.66) 88%,
+    rgba(255, 255, 255, 0.92) 91%,
+    rgba(255, 255, 255, 0.998) 94%,
     #fff 100%
   );
 }
