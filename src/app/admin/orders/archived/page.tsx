@@ -413,7 +413,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                 const subgroupRefundableOrders = subgroup.orders.filter((order) => isRefundableOrder(order));
                 const subgroupCompletablePremadeOrders = subgroup.orders.filter((order) => isCompletablePremadeOrder(order));
                 const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
-                const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Mark as collected" : "Mark as delivered";
+                const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Collected" : "Delivered";
                 const baseOrderNumber = normalizeOrderNumber(subgroup.orders[0]?.order_number) ?? group.orderNumber ?? null;
                 const companionOrders =
                   subgroup.isPremadeGroup && baseOrderNumber

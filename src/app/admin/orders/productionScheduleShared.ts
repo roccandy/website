@@ -129,7 +129,7 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
 };
 
 export const completionActionLabel = (order: OrderRow) =>
-  order.pickup ? "Mark as collected" : "Mark as delivered";
+  order.pickup ? "Collected" : "Delivered";
 
 const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 

@@ -293,42 +293,44 @@ export default function ProductionScheduleSection({
                                   getScheduleStatus(order, key, todayKey),
                                 )}`}
                               >
-                                <div className="min-w-0">
-                                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
-                                  <p className="mt-0.5 break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
-                                  <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
-                                    <p>{weightLabel(order.total_weight_kg)}</p>
-                                    <p>Due {formatDate(order.due_date)}</p>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Title</p>
+                                    <p className="mt-0.5 break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
+                                    <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
+                                      <p>{weightLabel(order.total_weight_kg)}</p>
+                                      <p>Due {formatDate(order.due_date)}</p>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="mt-1.5 flex flex-col items-stretch gap-1">
-                                  {printTarget ? (
-                                    <a
-                                      href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[9px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                  <div className="flex w-[6.75rem] shrink-0 flex-col items-stretch gap-1">
+                                    {printTarget ? (
+                                      <a
+                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[8px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                      >
+                                        Print
+                                      </a>
+                                    ) : null}
+                                    {canCompleteSlotOrder ? (
+                                      <SplitAwareActionForm
+                                        action={archiveOrderInline}
+                                        hiddenFields={[{ name: "order_id", value: order.id }]}
+                                        buttonLabel={completionActionLabel(order)}
+                                        buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                        companionMeta={premadeSiblingMeta}
+                                      />
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() => setAssignmentModalOrderId(order.id)}
+                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[8px] font-semibold text-blue-700 hover:border-blue-300"
                                     >
-                                      Print order
-                                    </a>
-                                  ) : null}
-                                  {canCompleteSlotOrder ? (
-                                    <SplitAwareActionForm
-                                      action={archiveOrderInline}
-                                      hiddenFields={[{ name: "order_id", value: order.id }]}
-                                      buttonLabel={completionActionLabel(order)}
-                                      buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[9px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                      confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
-                                      companionMeta={premadeSiblingMeta}
-                                    />
-                                  ) : null}
-                                  <button
-                                    type="button"
-                                    onClick={() => setAssignmentModalOrderId(order.id)}
-                                    className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[9px] font-semibold text-blue-700 hover:border-blue-300"
-                                  >
-                                    Change assignment
-                                  </button>
+                                      Change
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             ) : (
@@ -485,7 +487,7 @@ export default function ProductionScheduleSection({
                                       onClick={() => setAssignmentModalOrderId(order.id)}
                                       className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold text-blue-700 hover:border-blue-300"
                                     >
-                                      Change assignment
+                                      Change
                                     </button>
                                   </div>
                                 </div>
