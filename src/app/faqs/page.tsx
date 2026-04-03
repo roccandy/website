@@ -95,7 +95,7 @@ export default async function FaqsPage() {
             />
           ) : null}
           <section className="space-y-4">
-            <h2 className="text-2xl font-semibold tracking-tight text-[rgb(114,112,111)]">Common Questions</h2>
+            <h2 className="normal-case text-2xl font-semibold tracking-tight text-[rgb(114,112,111)]">Common Questions</h2>
             <FaqAccordion items={faqItems} />
           </section>
         </div>
