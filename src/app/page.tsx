@@ -110,7 +110,7 @@ export default async function Home() {
                 <ProductionBlockoutBanner />
                 {homePage.bodyHtml ? (
                   <article
-                    className="mx-auto max-w-3xl space-y-1 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[28px] [&_h2]:font-medium [&_h2]:leading-[1.05] [&_p]:text-xl [&_p]:font-medium [&_p]:leading-[1.2]"
+                    className="mx-auto max-w-3xl space-y-1 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[30px] [&_h2]:font-medium [&_h2]:leading-[1.05] [&_p]:text-xl [&_p]:font-medium [&_p]:leading-[1.2]"
                     dangerouslySetInnerHTML={{ __html: homePage.bodyHtml }}
                   />
                 ) : null}
