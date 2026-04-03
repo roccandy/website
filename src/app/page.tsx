@@ -151,7 +151,7 @@ export default async function Home() {
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
                 poster="/landing/home-feature-poster.jpg"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover opacity-[0.85]"
                 eager
               />
             </div>
