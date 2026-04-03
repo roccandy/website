@@ -7,7 +7,7 @@ import { buildDesignerPath } from "@/lib/designUrls";
 const OPTIONS = [
   { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
   { label: "Text Candy", href: buildDesignerPath({ orderType: "text" }) },
-  { label: "Branded Logo Candy", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
+  { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
 ];
 
 export function DesignCtaModal() {
@@ -29,47 +29,36 @@ export function DesignCtaModal() {
   }, [expanded]);
 
   return (
-    <div ref={containerRef} className="mx-auto w-fit max-w-full">
-      <div
-        className={`overflow-hidden rounded-3xl bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)] transition-transform duration-200 ease-out ${
-          expanded ? "" : "hover:scale-[1.02]"
-        }`}
-      >
-        <div
-          className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${
-            expanded ? "max-h-0 opacity-0 pointer-events-none" : "max-h-20 opacity-100"
+    <div ref={containerRef} className="mx-auto w-full max-w-[36rem]">
+      <div className="relative h-14 sm:h-[3.75rem]">
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-expanded={expanded}
+          aria-controls="design-options"
+          className={`absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ff6f95] px-8 py-3 text-sm font-semibold normal-case tracking-normal text-white shadow-[0_10px_22px_rgba(114,112,111,0.16)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
+            expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
           }`}
         >
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            aria-expanded={expanded}
-            aria-controls="design-options"
-            className="inline-flex w-full items-center justify-center rounded-3xl bg-[#ff6f95] px-8 py-3 text-sm font-semibold normal-case tracking-normal text-white transition-colors hover:bg-[#ff4f80]"
-          >
-            Design Your Candy + Pricing
-          </button>
-        </div>
+          Design Your Candy + Pricing
+        </button>
+
         <div
           id="design-options"
           aria-hidden={!expanded}
-          className={`overflow-hidden transition-[max-height,opacity] duration-300 ease-out ${
-            expanded ? "max-h-[240px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+          className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 transition-all duration-300 ease-out ${
+            expanded ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
           }`}
         >
-          <div className="bg-transparent text-center">
-            <div>
-              {OPTIONS.map((option) => (
-                <Link
-                  key={option.href}
-                  href={option.href}
-                  className="block px-6 py-4 text-sm font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
-                >
-                  {option.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          {OPTIONS.map((option) => (
+            <Link
+              key={option.href}
+              href={option.href}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-[#ff6f95] px-3 py-3 text-xs font-semibold normal-case tracking-normal text-white shadow-[0_10px_22px_rgba(114,112,111,0.16)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#ff4f80] sm:px-5 sm:text-sm"
+            >
+              {option.label}
+            </Link>
+          ))}
         </div>
       </div>
     </div>

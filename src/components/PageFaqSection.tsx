@@ -17,7 +17,7 @@ export function PageFaqSection({
   return (
     <section className={`space-y-4 ${className}`.trim()}>
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">FAQs</p>
+        <p className="text-sm font-medium text-zinc-500">Frequently Asked Questions</p>
         <h2 className="text-2xl font-semibold tracking-tight text-[rgb(114,112,111)]">{heading}</h2>
       </div>
       <FaqAccordion items={items} />
