@@ -198,7 +198,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 </ul>
 <p><a href="${buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" })}">Start a wedding candy design</a> or <a href="/contact">contact us</a> if you need help with quantities and delivery timing.</p>
     `,
-    faqHeading: "Wedding Candy FAQs",
+    faqHeading: "Wedding candy questions",
     faqItemIds: [],
     seoTitle: "Wedding Candy Australia | Personalised Wedding Rock Candy | Roc Candy",
     metaDescription:
@@ -234,7 +234,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 <p>The designer includes different options depending on the length of text you want to use. Shorter text is usually the best option for visual clarity, but longer word ranges are also available.</p>
 <p><a href="${buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" })}">Start a custom text design</a> or <a href="/contact">contact us</a> if you want help choosing the right format.</p>
     `,
-    faqHeading: "Custom Text Candy FAQs",
+    faqHeading: "Custom text candy questions",
     faqItemIds: [],
     seoTitle: "Custom Text Rock Candy Australia | Personalised Letter Candy | Roc Candy",
     metaDescription:
@@ -270,7 +270,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
 </ul>
 <p><a href="${buildDesignerPath({ orderType: "branded", categoryId: "branded" })}">Start a branded candy design</a> or <a href="/contact">contact us</a> if you need advice on branding, quantities, or lead times.</p>
     `,
-    faqHeading: "Branded Candy FAQs",
+    faqHeading: "Branded candy questions",
     faqItemIds: [],
     seoTitle: "Branded Logo Candy Australia | Custom Rock Candy for Events | Roc Candy",
     metaDescription:
@@ -404,6 +404,18 @@ function normalizeOptionalText(value: string | null | undefined) {
   return normalized || null;
 }
 
+const LEGACY_FAQ_HEADING_MAP: Record<string, string> = {
+  "Wedding Candy FAQs": "Wedding candy questions",
+  "Custom Text Candy FAQs": "Custom text candy questions",
+  "Branded Candy FAQs": "Branded candy questions",
+};
+
+function normalizeFaqHeadingValue(value: string | null | undefined) {
+  const normalized = normalizeOptionalText(value);
+  if (!normalized) return null;
+  return LEGACY_FAQ_HEADING_MAP[normalized] ?? normalized;
+}
+
 function normalizeGalleryImageUrls(values: string[] | null | undefined) {
   return (values ?? [])
     .map((value) => normalizeText(value))
@@ -427,7 +439,7 @@ function normalizeRow(row: SitePageRow): ManagedSitePage {
     heroSubheading: normalizeOptionalText(row.hero_subheading),
     heroSupportingLine: normalizeOptionalText(row.hero_supporting_line),
     bodyHtml: normalizeText(row.body_html),
-    faqHeading: normalizeOptionalText(row.faq_heading),
+    faqHeading: normalizeFaqHeadingValue(row.faq_heading),
     faqItemIds: normalizeFaqItemIds(row.faq_item_ids),
     seoTitle: normalizeOptionalText(row.seo_title),
     metaDescription: normalizeOptionalText(row.meta_description),
