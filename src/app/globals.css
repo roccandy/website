@@ -48,30 +48,27 @@ body {
 :root .landing-bg-home::before {
   background-size: 1500px auto;
   background-position: center -18px;
-  filter: blur(16px);
-  opacity: 0.96;
-  transform: scale(1.035);
-  transform-origin: center top;
+  opacity: 1;
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    rgba(0, 0, 0, 0.18) 8%,
+    rgba(0, 0, 0, 0.18) 10%,
     rgba(0, 0, 0, 0.62) 18%,
-    #000 30%,
-    #000 70%,
+    #000 26%,
+    #000 74%,
     rgba(0, 0, 0, 0.62) 82%,
-    rgba(0, 0, 0, 0.18) 92%,
+    rgba(0, 0, 0, 0.18) 90%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    rgba(0, 0, 0, 0.18) 8%,
+    rgba(0, 0, 0, 0.18) 10%,
     rgba(0, 0, 0, 0.62) 18%,
-    #000 30%,
-    #000 70%,
+    #000 26%,
+    #000 74%,
     rgba(0, 0, 0, 0.62) 82%,
-    rgba(0, 0, 0, 0.18) 92%,
+    rgba(0, 0, 0, 0.18) 90%,
     transparent 100%
   );
 }
