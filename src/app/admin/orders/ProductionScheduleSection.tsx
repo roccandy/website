@@ -10,7 +10,6 @@ import {
   buildAssignmentBySlotKey,
   buildSlotIdByKey,
   canCompleteOrderForSlotDate,
-  completionActionLabel,
   dateKey,
   formatDate,
   formatMonthLabel,
@@ -18,6 +17,7 @@ import {
   getScheduleStatus,
   getPremadeSiblingMeta,
   isScheduleDateBlocked,
+  productionCompletionActionLabel,
   statusCard,
   weightLabel,
 } from "./productionScheduleShared";
@@ -316,7 +316,7 @@ export default function ProductionScheduleSection({
                                       <SplitAwareActionForm
                                         action={archiveOrderInline}
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
-                                        buttonLabel={completionActionLabel(order)}
+                                        buttonLabel={productionCompletionActionLabel(order)}
                                         buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
                                         confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
                                         companionMeta={premadeSiblingMeta}
@@ -327,7 +327,7 @@ export default function ProductionScheduleSection({
                                         disabled
                                         className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[8px] font-semibold text-zinc-400"
                                       >
-                                        {completionActionLabel(order)}
+                                        {productionCompletionActionLabel(order)}
                                       </button>
                                     )}
                                     <button
@@ -482,7 +482,7 @@ export default function ProductionScheduleSection({
                                       <SplitAwareActionForm
                                         action={archiveOrderInline}
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
-                                        buttonLabel={completionActionLabel(order)}
+                                        buttonLabel={productionCompletionActionLabel(order)}
                                         buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"
                                         confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
                                         companionMeta={premadeSiblingMeta}
@@ -493,7 +493,7 @@ export default function ProductionScheduleSection({
                                         disabled
                                         className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[11px] font-semibold text-zinc-400"
                                       >
-                                        {completionActionLabel(order)}
+                                        {productionCompletionActionLabel(order)}
                                       </button>
                                     )}
                                     <button

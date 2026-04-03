@@ -131,6 +131,9 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
 export const completionActionLabel = (order: OrderRow) =>
   order.pickup ? "Collected" : "Delivered";
 
+export const productionCompletionActionLabel = (order: OrderRow) =>
+  order.pickup ? "Mark collected" : "Mark delivered";
+
 const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
 const summarizeSiblingLabel = (orders: OrderRow[]) => {

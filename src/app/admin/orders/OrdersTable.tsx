@@ -30,7 +30,6 @@ import {
 } from "./orderColorUtils";
 import {
   canCompleteOrderForSlotDate,
-  completionActionLabel,
   formatDate,
   formatDateInput,
   formatMoney,
@@ -39,6 +38,7 @@ import {
   formatScheduleStatusLabel,
   getScheduleStatus,
   getPremadeSiblingMeta,
+  productionCompletionActionLabel,
   splitCustomerName,
   statusBadge,
   weightLabel,
@@ -1071,7 +1071,7 @@ export function OrdersTable({
                                       <SplitAwareActionForm
                                         action={archiveOrderInline}
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
-                                        buttonLabel={completionActionLabel(order)}
+                                        buttonLabel={productionCompletionActionLabel(order)}
                                         buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                                         confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
                                         companionMeta={premadeSiblingMeta}

@@ -7,7 +7,6 @@ import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actio
 import SplitOrderDecisionModal from "./SplitOrderDecisionModal";
 import {
   canCompleteOrderForSlotDate,
-  completionActionLabel,
   dateKey,
   findFirstAvailableSlotIndexForDate,
   formatMonthLabel,
@@ -15,6 +14,7 @@ import {
   getScheduleStatus,
   getPremadeSiblingMeta,
   isScheduleDateBlocked,
+  productionCompletionActionLabel,
   weightLabel,
 } from "./productionScheduleShared";
 
@@ -180,7 +180,7 @@ export default function AssignmentCalendarModal({
                 }}
                 className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300 disabled:opacity-50"
               >
-                {completionActionLabel(order)}
+                {productionCompletionActionLabel(order)}
               </button>
             ) : null}
             {assignment?.assignment.id ? (
