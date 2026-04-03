@@ -7,7 +7,7 @@ import { buildDesignerPath } from "@/lib/designUrls";
 const OPTIONS = [
   { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
   { label: "Text Candy", href: buildDesignerPath({ orderType: "text" }) },
-  { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
+  { label: "Branded Candy", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
 ];
 
 export function DesignCtaModal() {
@@ -46,19 +46,23 @@ export function DesignCtaModal() {
         <div
           id="design-options"
           aria-hidden={!expanded}
-          className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 transition-all duration-300 ease-out ${
+          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
             expanded ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
           }`}
         >
-          {OPTIONS.map((option) => (
-            <Link
-              key={option.href}
-              href={option.href}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-[#ff6f95] px-3 py-3 text-xs font-semibold normal-case tracking-normal text-white shadow-[0_10px_22px_rgba(114,112,111,0.16)] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#ff4f80] sm:px-5 sm:text-sm"
-            >
-              {option.label}
-            </Link>
-          ))}
+          <div className="inline-flex overflow-hidden rounded-full border border-zinc-200 bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)]">
+            {OPTIONS.map((option, index) => (
+              <Link
+                key={option.href}
+                href={option.href}
+                className={`inline-flex items-center justify-center whitespace-nowrap px-3 py-3 text-xs font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors duration-200 ease-out hover:bg-[#fff1f5] hover:text-[#ff4f80] sm:px-5 sm:text-sm ${
+                  index > 0 ? "border-l border-zinc-200" : ""
+                }`}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>
