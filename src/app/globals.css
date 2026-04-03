@@ -45,6 +45,37 @@ body {
   mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
 }
 
+:root .landing-bg-home::before {
+  background-size: 1500px auto;
+  background-position: center -18px;
+  filter: blur(16px);
+  opacity: 0.96;
+  transform: scale(1.035);
+  transform-origin: center top;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.18) 8%,
+    rgba(0, 0, 0, 0.62) 18%,
+    #000 30%,
+    #000 70%,
+    rgba(0, 0, 0, 0.62) 82%,
+    rgba(0, 0, 0, 0.18) 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.18) 8%,
+    rgba(0, 0, 0, 0.62) 18%,
+    #000 30%,
+    #000 70%,
+    rgba(0, 0, 0, 0.62) 82%,
+    rgba(0, 0, 0, 0.18) 92%,
+    transparent 100%
+  );
+}
+
 :root .about-bg {
   position: relative;
   isolation: isolate;

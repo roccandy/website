@@ -96,7 +96,7 @@ export default async function Home() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
 
-        <div className="landing-bg -mt-8 pt-8">
+        <div className="landing-bg landing-bg-home -mt-8 pt-8">
           <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
 
           <section className="grid items-center gap-20 lg:grid-cols-[1.2fr,0.8fr]">
@@ -147,17 +147,13 @@ export default async function Home() {
           </section>
 
           <section className="grid gap-5 md:grid-cols-2">
-            <div className="relative aspect-square overflow-hidden">
+            <div className="aspect-square overflow-hidden">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
                 poster="/landing/home-feature-poster.jpg"
-                className="h-full w-full scale-[1.02] object-cover opacity-[0.82]"
+                className="h-full w-full object-cover"
                 eager
               />
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-white via-white/75 to-transparent md:w-32" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-white via-white/75 to-transparent md:w-32" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/75 to-transparent md:h-32" />
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/70 via-white/20 to-transparent md:h-24" />
             </div>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
