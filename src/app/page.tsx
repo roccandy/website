@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
-import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
@@ -102,15 +101,14 @@ export default async function Home() {
             <div className="space-y-6">
               <div className="space-y-1 text-center">
                 <h1
-                  className={`${montserratLight.className} mb-4 normal-case text-[64px] font-normal leading-tight tracking-tight text-[rgb(114,112,111)]`}
+                  className={`${montserratLight.className} mb-4 normal-case text-[62px] font-normal leading-tight tracking-tight text-[rgb(114,112,111)]`}
                   style={{ fontWeight: 450 }}
                 >
                   {homePage.title || "Personalised Rock Candy"}
                 </h1>
-                <ProductionBlockoutBanner />
                 {homePage.bodyHtml ? (
                   <article
-                    className="mx-auto max-w-3xl space-y-1 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[30px] [&_h2]:font-medium [&_h2]:leading-[1.05] [&_p]:text-xl [&_p]:font-medium [&_p]:leading-[1.2]"
+                    className="mx-auto max-w-3xl space-y-1 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[28px] [&_h2]:font-medium [&_h2]:leading-[1.05] [&_p]:text-xl [&_p]:font-medium [&_p]:leading-[1.2]"
                     dangerouslySetInnerHTML={{ __html: homePage.bodyHtml }}
                   />
                 ) : null}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import HeaderMenu from "@/components/HeaderMenu";
 import HeaderNav from "@/components/HeaderNav";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
+import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 
 type PublicSiteHeaderProps = {
   enquiriesHref: string;
@@ -66,6 +67,7 @@ export default function PublicSiteHeader({
           </div>
         </div>
       </div>
+      <ProductionBlockoutBanner />
     </div>
   );
 }
