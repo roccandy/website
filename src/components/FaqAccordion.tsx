@@ -29,7 +29,7 @@ export default function FaqAccordion({ items }: Props) {
               onClick={() => setOpenIndex((current) => (current === index ? -1 : index))}
               className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
             >
-              <h3 className="normal-case text-base font-semibold text-zinc-900">{toSentenceCase(item.question)}</h3>
+              <h3 className="site-faq-question-title text-zinc-900">{toSentenceCase(item.question)}</h3>
               <span
                 aria-hidden="true"
                 className={`text-lg font-semibold text-[#ff6f95] transition-transform ${isOpen ? "rotate-180" : ""}`}

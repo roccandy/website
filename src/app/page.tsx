@@ -9,7 +9,6 @@ import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, 
 import { buildDesignerPath } from "@/lib/designUrls";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { DesignCtaModal } from "./DesignCtaModal";
-import { Montserrat } from "next/font/google";
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import type { Metadata } from "next";
 
@@ -52,10 +51,6 @@ export async function generateMetadata(): Promise<Metadata> {
   return metadata;
 }
 
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-});
-
 const CANDY_OPTIONS = [
   { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }), image: "/quote/subtypes/branded.jpg" },
   { label: "Both Names", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }), image: "/quote/subtypes/weddings-both-names.jpg" },
@@ -95,20 +90,19 @@ export default async function Home() {
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
 
         <div className="landing-bg landing-bg-home -mt-8 pt-8">
-          <div className="relative mx-auto max-w-6xl space-y-20 px-6 py-10 md:py-14">
+          <div className="site-page-frame site-page-stack-large relative mx-auto max-w-6xl">
 
-          <section className="grid items-center gap-20 lg:grid-cols-[1.2fr,0.8fr]">
-            <div className="space-y-6">
-              <div className="space-y-1 text-center">
+          <section className="site-home-hero-grid grid items-center lg:grid-cols-[1.2fr,0.8fr]">
+            <div className="site-home-hero-column">
+              <div className="site-home-hero-heading text-center">
                 <h1
-                  className={`${montserratLight.className} mb-4 normal-case text-[60px] font-normal leading-tight tracking-tight text-[rgb(114,112,111)]`}
-                  style={{ fontWeight: 450 }}
+                  className="site-hero-title site-home-hero-title text-[rgb(114,112,111)]"
                 >
                   {homePage.title || "Personalised Rock Candy"}
                 </h1>
                 {homePage.bodyHtml ? (
                   <article
-                    className="mx-auto max-w-3xl space-y-1 text-center text-[rgb(130,130,140)] [&_h2]:normal-case [&_h2]:text-[26px] [&_h2]:font-medium [&_h2]:leading-[1.05] [&_p]:text-xl [&_p]:font-medium [&_p]:leading-[1.2]"
+                    className="site-hero-copy site-home-hero-copy mx-auto max-w-3xl text-center text-[rgb(130,130,140)]"
                     dangerouslySetInnerHTML={{ __html: homePage.bodyHtml }}
                   />
                 ) : null}
@@ -116,12 +110,12 @@ export default async function Home() {
 
               <SiteUsps />
 
-              <div id="design" className="pt-6">
+              <div id="design" className="site-home-cta-wrap">
                 <DesignCtaModal />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <div className="site-home-option-grid grid grid-cols-2 md:grid-cols-3">
               {CANDY_OPTIONS.map((option) => (
                 <Link
                   key={option.label}
@@ -144,7 +138,7 @@ export default async function Home() {
             </div>
           </section>
 
-          <section className="grid gap-5 md:grid-cols-2">
+          <section className="site-home-secondary-grid grid md:grid-cols-2">
             <div className="aspect-square overflow-hidden">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
@@ -155,10 +149,10 @@ export default async function Home() {
             </div>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
-              <h2 className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+              <h2 className="site-section-title text-[rgb(114,112,111)]">
                 Custom Rock Candy
               </h2>
-              <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
+              <p className="site-home-card-copy normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you&apos;re planning a
                 wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
                 made to impress. From{" "}
@@ -184,10 +178,10 @@ export default async function Home() {
             </article>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
-              <h2 className="normal-case text-3xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+              <h2 className="site-section-title text-[rgb(114,112,111)]">
                 A little about us
               </h2>
-              <p className="mt-4 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
+              <p className="site-home-card-copy normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
                 We are very happy Australian artisan confectioners specialising in personalised and custom handmade
                 rock candies for all types of occasions. Established in 1999, our rock candy treats are vegan,
                 gluten-free and dairy-free. Each piece of candy is meticulously handcrafted with the finest
@@ -209,16 +203,16 @@ export default async function Home() {
           </section>
 
           <section id="contact" className="rounded-3xl border border-zinc-200 bg-zinc-900 p-8 text-white">
-            <div className="grid gap-6 md:grid-cols-[1.1fr,0.9fr] md:items-center">
-              <div className="space-y-3">
+            <div className="site-home-contact-grid grid md:grid-cols-[1.1fr,0.9fr] md:items-center">
+              <div className="site-home-contact-stack">
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/70">Contact</p>
-                <h2 className="text-2xl font-semibold">Tell us about your event or brand</h2>
+                <h2 className="site-subsection-title text-zinc-900">Tell us about your event or brand</h2>
                 <p className="text-sm text-white/80">
                   We will help with timeline, color selection, and delivery planning. Email us or call to lock in a
                   production slot.
                 </p>
               </div>
-              <div className="space-y-3 text-sm">
+              <div className="site-home-contact-stack text-sm">
                 <div>
                   <p className="text-white/60">Email</p>
                   <a href={enquiriesHref} className="font-semibold">

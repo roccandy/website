@@ -96,7 +96,7 @@ export function FrontEndCalendarButton({ blocks }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Quote tool calendar</p>
-                <h3 className="text-lg font-semibold text-zinc-900">Front-end calendar</h3>
+                <h3 className="admin-subsection-title text-zinc-900">Front-end calendar</h3>
               </div>
               <button
                 type="button"
@@ -275,4 +275,3 @@ export function FrontEndCalendarButton({ blocks }: Props) {
     </>
   );
 }
-

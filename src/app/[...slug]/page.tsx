@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Montserrat } from "next/font/google";
 import { notFound } from "next/navigation";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
@@ -31,11 +30,6 @@ type LandingPageConfig = {
   defaultGalleryImageUrls: string[];
   primaryCta: { label: string; href: string };
 };
-
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["300"],
-});
 
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
   "design/wedding-candy": {
@@ -89,15 +83,8 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
 };
 
 const BODY_HTML_CLASS = `
-  max-w-none space-y-4 text-base leading-relaxed text-zinc-700
-  [&_p]:my-0
-  [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
-  [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
-  [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
-  [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
-  [&_li]:my-1
-  [&_strong]:font-semibold [&_strong]:text-zinc-900
-  [&_a]:text-pink-500 [&_a]:underline-offset-2 hover:[&_a]:underline
+  site-rich-content
+  text-base leading-relaxed
 `;
 
 function resolveGalleryImages(primary: string[], fallback: string[]) {
@@ -217,17 +204,17 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className="mx-auto max-w-5xl space-y-6 px-6 py-10 md:py-14">
+        <div className="site-page-frame site-page-stack mx-auto max-w-5xl">
           {landingConfig ? (
-            <section className="space-y-10 text-center">
-              <div className="space-y-6">
-                <div className="space-y-1 text-center">
+            <section className="site-landing-hero-section text-center">
+              <div className="site-landing-hero-stack">
+                <div className="site-landing-hero-heading text-center">
                   <h1
-                    className={`${montserratLight.className} mb-4 normal-case text-[64px] font-light leading-tight tracking-tight text-[rgb(114,112,111)]`}
+                    className="site-hero-title site-landing-hero-title text-[rgb(114,112,111)]"
                   >
                     {page.title}
                   </h1>
-                  <h2 className="normal-case text-[28px] font-medium leading-tight text-[rgb(130,130,140)]">
+                  <h2 className="site-subsection-title text-[rgb(130,130,140)]">
                     {landingHeroSubheading}
                   </h2>
                   <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingHeroSupportingLine}</p>
@@ -245,11 +232,11 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                 </div>
               </div>
 
-              <div className="space-y-6 overflow-hidden px-1">
+              <div className="site-landing-gallery overflow-hidden px-1">
                 {landingGalleryRows.map((row, rowIndex) => (
-                  <div key={`gallery-row-${rowIndex}`} className="overflow-hidden py-2">
+                  <div key={`gallery-row-${rowIndex}`} className="site-landing-gallery-row overflow-hidden">
                     <div
-                      className={`flex w-max gap-6 ${rowIndex === 0 ? "animate-marquee" : "animate-marquee"}`}
+                      className={`site-landing-gallery-track flex w-max ${rowIndex === 0 ? "animate-marquee" : "animate-marquee"}`}
                       style={{
                         animationDuration: rowIndex === 0 ? "34s" : "38s",
                         animationDirection: rowIndex === 0 ? "normal" : "reverse",
@@ -282,13 +269,13 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               </div>
             </section>
           ) : (
-            <section className="space-y-3">
+            <section className="site-page-header">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Roc Candy</p>
-              <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+              <h1 className="site-page-title text-[rgb(114,112,111)]">
                 {page.title}
               </h1>
               {pageDescription ? <p className="max-w-3xl text-base text-zinc-600">{pageDescription}</p> : null}
-              <SiteUsps className="pt-3" />
+              <SiteUsps className="site-usp-offset" />
             </section>
           )}
           {landingConfig ? (

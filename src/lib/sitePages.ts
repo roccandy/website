@@ -112,7 +112,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: `
-<p class="normal-case text-2xl font-semibold leading-tight text-[#ff6f95]">Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!</p>
+<p><strong>Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!</strong></p>
 <p>Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays, christenings, and special event days such as NAIDOC, Pride, Idahobit, and R U OK? to name a few.</p>
 <p>At Roc Candy, we believe in the power of sweetness and the joy it brings to people's lives in a visual and tasty way. Our passion for crafting delectable handmade candies is matched only by our dedication to creating personalised treats that are as unique as the individuals who savor them.</p>
 <p>With our roots deeply embedded in the art of traditional candy-making, Roc Candy has evolved into a modern confectionery brand, combining time-honored techniques with innovative flavors and custom designs.</p>

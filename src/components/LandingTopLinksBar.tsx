@@ -30,7 +30,7 @@ export default function LandingTopLinksBar() {
       }`}
       aria-hidden={hidden}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-center gap-6 px-6 py-1 text-[11px] font-semibold tracking-[0.16em] text-[#ff6f95] md:text-xs">
+      <div className="site-top-links-row mx-auto flex max-w-6xl items-center justify-center px-6 text-[11px] font-semibold tracking-[0.16em] text-[#ff6f95] md:text-xs">
         {LINKS.map((link) => (
           <a key={link.href} href={link.href} className="transition-colors hover:text-[#ff4f80]">
             {link.label}

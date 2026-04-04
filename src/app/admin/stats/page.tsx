@@ -290,7 +290,7 @@ function SectionCard({
     <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div className="mb-5 space-y-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">{eyebrow}</p>
-        <h2 className="text-xl font-semibold tracking-tight text-zinc-900">{title}</h2>
+        <h2 className="admin-subsection-title text-zinc-900">{title}</h2>
       </div>
       {children}
     </section>
@@ -503,7 +503,7 @@ export default async function OrderStatsPage() {
               Secret stats room
             </div>
             <div className="space-y-2">
-              <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">Order Observatory</h1>
+              <h1 className="admin-page-title text-zinc-900">Order Observatory</h1>
               <p className="max-w-3xl text-sm leading-6 text-zinc-600">
                 A grouped view of how Roc Candy is selling, where orders are coming from, and what customers keep choosing.
                 Split orders are rolled up into one checkout where possible so the numbers stay readable.

@@ -24,7 +24,7 @@ export default async function LabelsPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Labels</p>
-        <h2 className="text-3xl font-semibold">Label settings</h2>
+        <h2 className="admin-page-title">Label settings</h2>
         <p className="text-sm text-zinc-600">Manage bulk label limits and ingredient label defaults.</p>
       </div>
 

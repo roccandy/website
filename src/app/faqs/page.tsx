@@ -5,15 +5,9 @@ import { SiteUsps } from "@/components/SiteUsps";
 import { getFaqContentItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage } from "@/lib/sitePages";
-import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
-
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["300"],
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const faqPage = await getManagedSitePage("faq");
@@ -79,23 +73,23 @@ export default async function FaqsPage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
-          <section className="space-y-2">
+        <div className="site-page-frame site-page-stack mx-auto max-w-4xl">
+          <section className="site-page-header-tight">
             <h1
-              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
+              className="site-page-title text-[rgb(114,112,111)]"
             >
               {faqPage.title || "Frequently Asked Questions"}
             </h1>
-            <SiteUsps className="pt-2" />
+            <SiteUsps className="site-usp-offset" />
           </section>
           {faqPage.bodyHtml ? (
             <article
-              className="max-w-none text-base leading-relaxed text-zinc-700 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+              className="site-rich-content text-base leading-relaxed"
               dangerouslySetInnerHTML={{ __html: faqPage.bodyHtml }}
             />
           ) : null}
-          <section className="space-y-4">
-            <h2 className="normal-case text-2xl font-semibold tracking-tight text-[rgb(114,112,111)]">Common Questions</h2>
+          <section className="site-faq-stack">
+            <h2 className="site-section-title text-[rgb(114,112,111)]">Common Questions</h2>
             <FaqAccordion items={faqItems} />
           </section>
         </div>

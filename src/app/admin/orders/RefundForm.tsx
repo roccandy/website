@@ -51,7 +51,7 @@ export function RefundForm({
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-zinc-950/35 px-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl">
             <div className="space-y-1">
-              <h3 className="text-base font-semibold text-zinc-900">{refundLabel}</h3>
+              <h3 className="admin-card-title text-zinc-900">{refundLabel}</h3>
               <p className="text-sm text-zinc-600">Add an optional refund reason, then confirm the refund.</p>
             </div>
             <form action={action} className="mt-4 space-y-3">

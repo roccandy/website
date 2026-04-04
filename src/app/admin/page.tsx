@@ -77,7 +77,7 @@ export default async function AdminHome() {
         <div className="rounded-[2rem] border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-white p-6 shadow-sm lg:p-8">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-rose-600">Editable</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Content & SEO</h1>
+            <h1 className="admin-page-title text-zinc-900">Content & SEO</h1>
           </div>
 
           <div className="mt-5 grid gap-4 xl:grid-cols-2">
@@ -100,7 +100,7 @@ export default async function AdminHome() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Needs action</p>
-              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Unassigned orders</h1>
+              <h1 className="admin-page-title text-zinc-900">Unassigned orders</h1>
             </div>
           </div>
 
@@ -201,7 +201,7 @@ export default async function AdminHome() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-semibold text-zinc-900">{section.label}</h2>
+                  <h2 className="admin-card-title text-zinc-900">{section.label}</h2>
                   {isSecondarySeoView ? (
                     <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
                       View only

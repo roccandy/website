@@ -20,7 +20,7 @@ export default async function PackagingLabelsPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Packaging / Labels</p>
-        <h2 className="text-3xl font-semibold">Label types</h2>
+        <h2 className="admin-page-title">Label types</h2>
         <p className="text-sm text-zinc-600">
           Create label options to use for packaging. Cost is for internal reference only.
         </p>

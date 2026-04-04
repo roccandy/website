@@ -174,7 +174,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
           className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]"
         />
 
-        <div className="relative mx-auto max-w-6xl space-y-8 px-6 py-10 md:py-14">
+        <div className="site-page-frame site-page-stack-large relative mx-auto max-w-6xl">
           <Link
             href="/pre-made-candy"
             className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/95 px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:text-zinc-900 hover:shadow-md"
@@ -183,7 +183,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
             <span>Back to all pre-made candy</span>
           </Link>
 
-          <section className="grid gap-8 rounded-3xl border border-zinc-200 bg-white/90 p-5 shadow-sm md:grid-cols-2 md:p-8">
+          <section className="site-product-feature-grid grid rounded-3xl border border-zinc-200 bg-white/90 p-5 shadow-sm md:grid-cols-2 md:p-8">
             <div className="relative overflow-hidden rounded-2xl bg-zinc-100">
               {imageUrl ? (
                 <Image
@@ -203,10 +203,10 @@ export default async function PremadeItemPage({ params }: PageProps) {
               ) : null}
             </div>
 
-            <div className="space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Pre-made candy</p>
-              <h1 className="text-3xl font-semibold tracking-tight text-[#ff6f95]">{item.name}</h1>
-              <div className="space-y-1">
+            <div className="site-product-detail-stack">
+              <p className="site-eyebrow text-zinc-500">Pre-made candy</p>
+              <h1 className="site-page-title text-[#ff6f95]">{item.name}</h1>
+              <div className="site-faq-heading-stack">
                 {showSalePrice ? (
                   <p className="text-sm text-zinc-400 line-through">{formatPremadeMoney(Number(item.price))}</p>
                 ) : null}
@@ -232,9 +232,9 @@ export default async function PremadeItemPage({ params }: PageProps) {
           </section>
 
           {related.length > 0 ? (
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold text-zinc-900">Related pre-made items</h2>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+            <section className="site-related-section">
+              <h2 className="site-small-title text-zinc-900">Related pre-made items</h2>
+              <div className="site-product-grid grid sm:grid-cols-2 md:grid-cols-4">
                 {related.map((relatedItem) => {
                   const relatedImage = buildPremadeImageUrl(relatedItem.image_path);
                   const relatedPrice = resolvePremadePrice(relatedItem);
@@ -256,7 +256,7 @@ export default async function PremadeItemPage({ params }: PageProps) {
                           />
                         ) : null}
                       </div>
-                      <div className="space-y-1 px-3 py-3">
+                      <div className="site-faq-heading-stack px-3 py-3">
                         <p className="text-sm font-semibold text-[#ff6f95]">{relatedItem.name}</p>
                         <p className="text-sm text-zinc-600">{formatPremadeMoney(relatedPrice)}</p>
                       </div>

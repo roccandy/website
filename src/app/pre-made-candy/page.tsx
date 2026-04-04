@@ -104,14 +104,14 @@ export default async function PremadePage() {
           className="sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_8px_18px_rgba(113,113,122,0.28)]"
         />
 
-        <div className="relative mx-auto max-w-6xl space-y-10 px-6 py-10 md:py-14">
-          <section className="space-y-3 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Shop</p>
-            <h1 className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">{page.title || "Pre-made candy"}</h1>
+        <div className="site-page-frame site-page-stack-large relative mx-auto max-w-6xl">
+          <section className="site-page-header text-center">
+            <p className="site-eyebrow text-zinc-500">Shop</p>
+            <h1 className="site-page-title text-[rgb(146,146,177)]">{page.title || "Pre-made candy"}</h1>
             <SiteUsps />
             {page.bodyHtml ? (
               <article
-                className="mx-auto max-w-3xl text-base leading-relaxed text-zinc-600 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+                className="site-rich-content mx-auto max-w-3xl text-base leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
               />
             ) : null}
@@ -122,7 +122,7 @@ export default async function PremadePage() {
               Pre-made items are being stocked. Check back soon.
             </div>
           ) : (
-            <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+            <section className="site-product-grid grid sm:grid-cols-2 md:grid-cols-4">
               {visible.map((item) => {
                 const imageUrl = buildPremadeImageUrl(item.image_path);
                 const weightLabel = formatPremadeWeight(Number(item.weight_g));
@@ -168,11 +168,11 @@ export default async function PremadePage() {
                         }}
                       />
                     </div>
-                    <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
+                    <div className="site-product-card-stack flex flex-1 flex-col px-4 py-3 text-center">
                       <Link href={itemHref} className="text-sm font-bold text-[#ff6f95] hover:text-[#ff4f80] hover:underline">
                         {titleLine}
                       </Link>
-                      <div className="space-y-0.5">
+                      <div className="site-product-card-meta">
                         {showSalePrice ? (
                           <p className="text-sm text-zinc-400 line-through">{formatPremadeMoney(Number(item.price))}</p>
                         ) : null}

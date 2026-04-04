@@ -15,10 +15,10 @@ export function PageFaqSection({
   if (items.length === 0) return null;
 
   return (
-    <section className={`space-y-4 ${className}`.trim()}>
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-zinc-500">Frequently Asked Questions</p>
-        <h2 className="normal-case text-2xl font-semibold tracking-tight text-[rgb(114,112,111)]">{heading}</h2>
+    <section className={`site-faq-stack ${className}`.trim()}>
+      <div className="site-faq-heading-stack">
+        <p className="site-eyebrow text-zinc-500">Frequently Asked Questions</p>
+        <h2 className="site-section-title text-[rgb(114,112,111)]">{heading}</h2>
       </div>
       <FaqAccordion items={items} />
     </section>

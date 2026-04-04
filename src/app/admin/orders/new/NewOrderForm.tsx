@@ -629,7 +629,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-semibold text-zinc-900">Order details</h3>
+        <h3 className="admin-card-title text-zinc-900">Order details</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
             Title
@@ -742,7 +742,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
           isDesignDisabled ? "pointer-events-none opacity-50" : ""
         }`}
       >
-        <h3 className="text-base font-semibold text-zinc-900">Candy design & flavor</h3>
+        <h3 className="admin-card-title text-zinc-900">Candy design & flavor</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {isWedding && (
             <>
@@ -1024,7 +1024,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-zinc-900">Pre-made add-ons</h3>
+            <h3 className="admin-card-title text-zinc-900">Pre-made add-ons</h3>
           </div>
           <button
             type="button"
@@ -1080,7 +1080,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
       </div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-semibold text-zinc-900">Customer details</h3>
+        <h3 className="admin-card-title text-zinc-900">Customer details</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
             Pickup or delivery
@@ -1150,7 +1150,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
 
       {showAddress && (
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h3 className="text-base font-semibold text-zinc-900">Delivery address</h3>
+          <h3 className="admin-card-title text-zinc-900">Delivery address</h3>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
               Address line 1
@@ -1199,7 +1199,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
       )}
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-semibold text-zinc-900">Notes</h3>
+        <h3 className="admin-card-title text-zinc-900">Notes</h3>
         <textarea
           name="notes"
           className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
@@ -1217,7 +1217,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
           >
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-zinc-900">Set a brand color</h3>
+                <h3 className="admin-subsection-title text-zinc-900">Set a brand color</h3>
               </div>
               <button
                 type="button"

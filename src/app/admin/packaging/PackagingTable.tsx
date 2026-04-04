@@ -575,7 +575,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Website package type order</p>
-            <h3 className="text-lg font-semibold text-zinc-900">Packaging types</h3>
+            <h3 className="admin-subsection-title text-zinc-900">Packaging types</h3>
             <p className="text-sm text-zinc-600">
               These are the unique package types shown on the design page. Drag them into the order you want customers
               to see.

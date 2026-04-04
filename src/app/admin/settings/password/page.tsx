@@ -12,7 +12,7 @@ export default async function AdminPasswordPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Site settings</p>
-        <h1 className="text-3xl font-semibold text-zinc-900">My password</h1>
+        <h1 className="admin-page-title text-zinc-900">My password</h1>
         <p className="text-sm text-zinc-600">Change the password for your own admin account.</p>
       </div>
 

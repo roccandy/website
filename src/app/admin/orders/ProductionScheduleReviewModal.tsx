@@ -23,7 +23,7 @@ export default function ProductionScheduleReviewModal({
       >
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Production schedule</p>
-          <h4 className="text-lg font-semibold text-zinc-900">Schedule update required</h4>
+          <h4 className="admin-subsection-title text-zinc-900">Schedule update required</h4>
           <p className="text-sm leading-relaxed text-zinc-600">{message}</p>
         </div>
 

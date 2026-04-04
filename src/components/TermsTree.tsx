@@ -25,7 +25,7 @@ export default function TermsTree({ items, depth = 0 }: Props) {
       <div className="space-y-8">
         {items.map((item) => (
           <section key={item.id} className="space-y-3">
-            <h2 className="text-xl font-semibold tracking-tight text-zinc-900">
+            <h2 className="site-small-title text-zinc-900">
               {item.marker ? `${item.marker} ` : ""}
               {item.title || "Untitled section"}
             </h2>

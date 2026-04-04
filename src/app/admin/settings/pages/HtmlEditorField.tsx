@@ -57,12 +57,8 @@ export function HtmlEditorField({
           {value.trim() ? (
             <div
               className="
-                max-w-none space-y-4 text-sm leading-relaxed text-zinc-700
-                [&_h2]:mt-6 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-zinc-900
-                [&_h3]:mt-4 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-zinc-900
-                [&_ul]:list-disc [&_ul]:pl-6
-                [&_ol]:list-decimal [&_ol]:pl-6
-                [&_a]:font-semibold [&_a]:text-[#ff6f95]
+                site-rich-content
+                space-y-4 text-sm leading-relaxed
                 [&_img]:max-h-56 [&_img]:rounded-lg
               "
               dangerouslySetInnerHTML={{ __html: value }}

@@ -36,14 +36,14 @@ export default async function PremadeAdminPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Pre-made</p>
-        <h2 className="text-3xl font-semibold">Pre-made candy</h2>
+        <h2 className="admin-page-title">Pre-made candy</h2>
         <p className="text-sm text-zinc-600">Add or update pre-made candy items for the shop page.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-base font-semibold text-zinc-900">Current items</h3>
+            <h3 className="admin-card-title text-zinc-900">Current items</h3>
             <PremadeSyncControls totalCount={sorted.length} />
           </div>
           {sorted.length === 0 ? (
@@ -62,7 +62,7 @@ export default async function PremadeAdminPage() {
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h3 className="text-base font-semibold text-zinc-900">Add new item</h3>
+          <h3 className="admin-card-title text-zinc-900">Add new item</h3>
           <AddPremadeForm flavorOptions={flavorOptions} />
         </div>
       </div>

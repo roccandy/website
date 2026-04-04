@@ -23,7 +23,7 @@ export default async function PricingPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Pricing</p>
-        <h2 className="text-3xl font-semibold">Weight-based pricing</h2>
+        <h2 className="admin-page-title">Weight-based pricing</h2>
         <p className="text-sm text-zinc-600">
           Edit tiers by category. For Per kg rows, the price is added on top of the prior flat tier
           for each kg above that tier min (e.g., $295 base + 2 x $50 for 5 kg).

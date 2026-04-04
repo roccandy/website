@@ -1147,7 +1147,7 @@ export function QuoteBuilder({
   return (
     <div className="relative space-y-6">
       <section className="pt-10 text-center lg:mx-auto lg:max-w-5xl">
-        <TitleTag className="normal-case text-[45px] font-medium tracking-tight text-[rgb(146,146,177)]">
+        <TitleTag className="site-page-title text-[rgb(146,146,177)]">
           {mainTitle}
         </TitleTag>
         <SiteUsps className="mt-3" />
@@ -1282,7 +1282,7 @@ export function QuoteBuilder({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold normal-case text-zinc-900">Packaging</h2>
+                    <h2 className="site-small-title text-zinc-900">Packaging</h2>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -1442,7 +1442,7 @@ export function QuoteBuilder({
             </div>
 
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-              <h2 className="text-lg font-semibold normal-case text-zinc-900">Labels (optional)</h2>
+              <h2 className="site-small-title text-zinc-900">Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
@@ -1670,7 +1670,7 @@ export function QuoteBuilder({
             className="mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible"
           >
           <div>
-            <h2 className="text-lg font-semibold normal-case text-zinc-900">Design</h2>
+            <h2 className="site-small-title text-zinc-900">Design</h2>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
@@ -1949,7 +1949,7 @@ export function QuoteBuilder({
           </div>
         </div>
           <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-            <h2 className="text-lg font-semibold normal-case text-zinc-900">Flavour</h2>
+            <h2 className="site-small-title text-zinc-900">Flavour</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {flavors.map((f) => {
                 const isActive = flavor === f.name;
@@ -1984,7 +1984,7 @@ export function QuoteBuilder({
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-zinc-900">Ready to continue?</h2>
+            <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
             <p className="mt-2 text-sm text-zinc-600">
               You can add delivery, payment, and contact details in the cart.
             </p>
@@ -2110,7 +2110,7 @@ export function QuoteBuilder({
           >
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-zinc-900">Set a brand color</h2>
+                    <h2 className="site-small-title text-zinc-900">Set a brand color</h2>
                   </div>
                   <button
                     type="button"

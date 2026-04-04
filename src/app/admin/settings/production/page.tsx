@@ -215,7 +215,7 @@ export default async function SettingsProductionPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
-          <h2 className="text-3xl font-semibold">Production settings</h2>
+          <h2 className="admin-page-title">Production settings</h2>
           <p className="text-sm text-zinc-600">Production options & Blocked Dates</p>
         </div>
         <Link
@@ -230,7 +230,7 @@ export default async function SettingsProductionPage() {
         action={updateProductionSettings}
         className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
       >
-        <h3 className="text-base font-semibold text-zinc-900">Production options</h3>
+        <h3 className="admin-card-title text-zinc-900">Production options</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm text-zinc-700">
             <span className="text-xs text-zinc-500">Slots per production day</span>
@@ -266,11 +266,11 @@ export default async function SettingsProductionPage() {
 
       <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-zinc-900">Blocked dates</h3>
+          <h3 className="admin-card-title text-zinc-900">Blocked dates</h3>
           <p className="text-xs text-zinc-500">Default no-production days and one-off blocks.</p>
         </div>
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-zinc-900">Default no-production days</h4>
+          <h4 className="admin-card-title text-zinc-900">Default no-production days</h4>
           <form action={updateDefaultNoProduction} className="space-y-3">
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {DEFAULT_NO_PRODUCTION_DAYS.map((day) => (
@@ -295,7 +295,7 @@ export default async function SettingsProductionPage() {
 
         <div className="space-y-3">
           <div>
-            <h4 className="text-sm font-semibold text-zinc-900">No-production blockouts</h4>
+            <h4 className="admin-card-title text-zinc-900">No-production blockouts</h4>
             <p className="text-xs text-zinc-500">
               Block dates for holidays etc. Any dates blocked here will show up on the website as
               {" "}

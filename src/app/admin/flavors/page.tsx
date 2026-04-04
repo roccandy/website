@@ -19,18 +19,18 @@ export default async function FlavorsPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Flavors</p>
-        <h2 className="text-3xl font-semibold">Candy flavors</h2>
+        <h2 className="admin-page-title">Candy flavors</h2>
         <p className="text-sm text-zinc-600">Manage the list of flavors customers can choose.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h3 className="text-base font-semibold text-zinc-900">Current flavors</h3>
+          <h3 className="admin-card-title text-zinc-900">Current flavors</h3>
           <FlavorAdminList items={flavors} />
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h3 className="text-base font-semibold text-zinc-900">Add flavor</h3>
+          <h3 className="admin-card-title text-zinc-900">Add flavor</h3>
           <AddFlavorForm />
         </div>
       </div>

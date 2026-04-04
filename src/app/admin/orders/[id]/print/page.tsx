@@ -190,7 +190,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   if (error || !order) {
     return (
       <div className="mx-auto max-w-2xl space-y-3 bg-white px-6 py-10 text-zinc-900">
-        <h1 className="text-2xl font-semibold">Order printout</h1>
+        <h1 className="admin-section-title">Order printout</h1>
         <p className="text-sm text-zinc-600">
           Unable to load this order. Please check the order id and try again.
         </p>
@@ -265,7 +265,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         }
       `}</style>
       <div className="flex items-center justify-between print:hidden">
-        <h1 className="text-2xl font-semibold">Order printout</h1>
+        <h1 className="admin-section-title">Order printout</h1>
         <PrintButton className="rounded border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300" />
       </div>
 

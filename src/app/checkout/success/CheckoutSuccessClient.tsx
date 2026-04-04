@@ -33,7 +33,7 @@ export function CheckoutSuccessClient() {
     return (
       <div className="rounded-3xl border border-zinc-200 bg-white/90 p-8 text-center shadow-lg">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Payment received</p>
-        <h1 className="mt-3 text-3xl font-semibold text-zinc-900">Thank you for your order!</h1>
+        <h1 className="site-page-title mt-3 text-zinc-900">Thank you for your order!</h1>
         <p className="mt-3 text-sm text-zinc-600">
           We&apos;ve received your payment. Please check your email for your full order details and confirmation.
         </p>
@@ -45,7 +45,7 @@ export function CheckoutSuccessClient() {
     <div className="space-y-6">
       <div className="rounded-3xl border border-emerald-200 bg-white/95 p-8 shadow-lg">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">Payment received</p>
-        <h1 className="mt-3 text-3xl font-semibold text-zinc-900">Thank you for your order!</h1>
+        <h1 className="site-page-title mt-3 text-zinc-900">Thank you for your order!</h1>
         <p className="mt-3 text-sm text-zinc-600">
           Your order has been confirmed. Please check your email for your confirmation and tax invoice.
         </p>
@@ -61,7 +61,7 @@ export function CheckoutSuccessClient() {
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
         <section className="rounded-3xl border border-zinc-200 bg-white/95 p-6 shadow-lg">
-          <h2 className="text-xl font-semibold text-zinc-900">Products ordered</h2>
+          <h2 className="site-small-title text-zinc-900">Products ordered</h2>
           <div className="mt-5 space-y-4">
             {summary.items.map((item) => (
               <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
@@ -92,7 +92,7 @@ export function CheckoutSuccessClient() {
 
         <aside className="space-y-6">
           <section className="rounded-3xl border border-zinc-200 bg-white/95 p-6 shadow-lg">
-            <h2 className="text-xl font-semibold text-zinc-900">Order information</h2>
+            <h2 className="site-small-title text-zinc-900">Order information</h2>
             <div className="mt-4 space-y-2 text-sm text-zinc-700">
               <p><span className="font-semibold">Date ordered:</span> {formatDate(summary.orderDateIso)}</p>
               <p><span className="font-semibold">Requested date:</span> {formatDate(summary.requestedDate)}</p>
@@ -108,7 +108,7 @@ export function CheckoutSuccessClient() {
           </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white/95 p-6 shadow-lg">
-            <h2 className="text-xl font-semibold text-zinc-900">Payment summary</h2>
+            <h2 className="site-small-title text-zinc-900">Payment summary</h2>
             <div className="mt-4 space-y-2 text-sm text-zinc-700">
               <div className="flex items-center justify-between gap-3">
                 <span>Subtotal</span>
@@ -134,7 +134,7 @@ export function CheckoutSuccessClient() {
           </section>
 
           <section className="rounded-3xl border border-zinc-200 bg-white/95 p-6 shadow-lg">
-            <h2 className="text-xl font-semibold text-zinc-900">What happens next</h2>
+            <h2 className="site-small-title text-zinc-900">What happens next</h2>
             <div className="mt-4 space-y-3 text-sm text-zinc-700">
               <p>We&apos;ve emailed your order confirmation and tax invoice to {summary.customer.email || "your email address"}.</p>
               <p>If anything looks incorrect, reply to that email and we&apos;ll help sort it out.</p>

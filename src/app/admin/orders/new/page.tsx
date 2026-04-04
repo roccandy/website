@@ -27,7 +27,7 @@ export default async function NewOrderPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-          <h2 className="text-3xl font-semibold">Create order</h2>
+          <h2 className="admin-page-title">Create order</h2>
           <p className="text-sm text-zinc-600">Add an order manually for email or phone requests.</p>
         </div>
         <Link

@@ -5,15 +5,9 @@ import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
-import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
-
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["300"],
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const blogPage = await getManagedSitePage("blog");
@@ -75,10 +69,10 @@ export default async function BlogPage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className="mx-auto max-w-4xl space-y-6 px-6 py-10 md:py-14">
-          <section className="space-y-2">
+        <div className="site-page-frame site-page-stack mx-auto max-w-4xl">
+          <section className="site-page-header-tight">
             <h1
-              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
+              className="site-page-title text-[rgb(114,112,111)]"
             >
               {blogPage.title || "Roc Candy Blog"}
             </h1>
@@ -87,21 +81,11 @@ export default async function BlogPage() {
                 {[blogPage.heroSubheading, blogPage.heroSupportingLine].filter(Boolean).join(" · ")}
               </p>
             ) : null}
-            <SiteUsps className="pt-2" />
+            <SiteUsps className="site-usp-offset" />
           </section>
 
           <article
-            className="
-              max-w-none space-y-5 text-base leading-relaxed text-zinc-700
-              [&_p]:my-0
-              [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:normal-case [&_h2]:tracking-tight [&_h2]:text-[rgb(114,112,111)]
-              [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:normal-case [&_h3]:tracking-tight [&_h3]:text-[rgb(114,112,111)]
-              [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
-              [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
-              [&_li]:my-1
-              [&_strong]:font-semibold [&_strong]:text-zinc-900
-              [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]
-            "
+            className="site-rich-content text-base leading-relaxed"
             dangerouslySetInnerHTML={{ __html: blogPage.bodyHtml }}
           />
           {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}

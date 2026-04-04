@@ -152,7 +152,7 @@ export default function ProductionScheduleSection({
       <div id="production-calendar" className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-zinc-900">Production Calendar</h3>
+            <h3 className="admin-card-title text-zinc-900">Production Calendar</h3>
           </div>
           <div className="flex items-center gap-2">
             <div className="inline-flex overflow-hidden rounded-full border border-zinc-200">
@@ -540,7 +540,7 @@ export default function ProductionScheduleSection({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-semibold text-zinc-900">Select order</h4>
+              <h4 className="admin-card-title text-zinc-900">Select order</h4>
               <button
                 type="button"
                 onClick={closeSlotPicker}

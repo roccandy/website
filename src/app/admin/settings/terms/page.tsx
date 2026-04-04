@@ -23,7 +23,7 @@ export default async function AdminTermsSettingsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Site Settings</p>
-          <h1 className="text-3xl font-semibold text-zinc-900">Terms and Conditions</h1>
+          <h1 className="admin-page-title text-zinc-900">Terms and Conditions</h1>
           <p className="text-sm text-zinc-600">
             This is the source of truth for the public terms page. Use nested items for numbering, sub-numbering, and
             lettered clauses.

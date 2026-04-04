@@ -256,7 +256,7 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Category</p>
-                  <h3 className="text-xl font-semibold text-zinc-900">{cat.name}</h3>
+                  <h3 className="admin-subsection-title text-zinc-900">{cat.name}</h3>
                   <p className="text-xs text-zinc-500">Ranges must cover 0-{maxTotalKg} kg contiguously.</p>
                 </div>
                 {status && (

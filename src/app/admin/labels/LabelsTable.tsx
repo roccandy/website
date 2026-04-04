@@ -132,7 +132,7 @@ export function LabelsTable({ ranges, settings, labelTypes }: Props) {
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-semibold text-zinc-900">Global label settings</h3>
+        <h3 className="admin-card-title text-zinc-900">Global label settings</h3>
         <form
           id="label-settings"
           data-label-form
@@ -206,7 +206,7 @@ export function LabelsTable({ ranges, settings, labelTypes }: Props) {
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-semibold text-zinc-900">Ingredient label settings</h3>
+        <h3 className="admin-card-title text-zinc-900">Ingredient label settings</h3>
         <form
           id="ingredient-label-settings"
           action={updateIngredientLabelSettings}

@@ -5,6 +5,8 @@ import { Analytics } from "@/components/Analytics";
 import { JsonLd } from "@/components/JsonLd";
 import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 import ConditionalSiteFooter from "@/components/ConditionalSiteFooter";
+import { SPACING_STYLE_VARS } from "@/lib/spacing";
+import { TYPOGRAPHY_STYLE_VARS } from "@/lib/typography";
 import {
   buildMetadata,
   buildOrganizationSchema,
@@ -65,6 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        style={{ ...TYPOGRAPHY_STYLE_VARS, ...SPACING_STYLE_VARS }}
         className={`${headingFont.variable} ${bodyFont.variable} antialiased`}
       >
         {gtmId ? (

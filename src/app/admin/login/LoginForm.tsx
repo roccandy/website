@@ -40,7 +40,7 @@ export function LoginForm() {
       <div className="mx-auto max-w-md px-6 py-16 space-y-6">
         <div className="space-y-2 text-center">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin</p>
-          <h1 className="text-3xl font-semibold">Sign in</h1>
+          <h1 className="admin-page-title">Sign in</h1>
           <p className="text-sm text-zinc-600">
             Enter the admin email and password to access pricing, packaging, labels, and settings.
           </p>

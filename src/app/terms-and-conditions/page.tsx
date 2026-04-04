@@ -4,15 +4,9 @@ import TermsTree from "@/components/TermsTree";
 import { getManagedSitePage } from "@/lib/sitePages";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
 import { getManagedTermsTree } from "@/lib/terms";
-import { Montserrat } from "next/font/google";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
-
-const montserratLight = Montserrat({
-  subsets: ["latin"],
-  weight: ["300"],
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const termsPage = await getManagedSitePage("terms-and-conditions");
@@ -63,7 +57,7 @@ export default async function TermsPage() {
         <div className="mx-auto max-w-4xl space-y-8 px-6 py-10 md:py-14">
           <section className="space-y-2">
             <h1
-              className={`${montserratLight.className} normal-case text-4xl font-light leading-tight tracking-tight text-[rgb(114,112,111)] md:text-5xl`}
+              className="site-page-title text-[rgb(114,112,111)]"
             >
               {termsPage.title || "Terms & Conditions"}
             </h1>

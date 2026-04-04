@@ -130,7 +130,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-        <h2 className="text-3xl font-semibold">Pre-made orders</h2>
+        <h2 className="admin-page-title">Pre-made orders</h2>
         <p className="text-sm text-zinc-600">Premade candy orders that need shipping updates.</p>
       </div>
 

@@ -10,7 +10,7 @@ export default function SetupGuide() {
       <div className="mx-auto max-w-3xl px-6 py-16 space-y-6">
         <div className="space-y-2">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-zinc-500">Setup</p>
-          <h1 className="text-4xl font-semibold tracking-tight">Project setup checklist</h1>
+          <h1 className="admin-page-title">Project setup checklist</h1>
           <p className="text-sm text-zinc-600">
             The current Roc Candy stack uses Next.js, Supabase, custom admin auth, and connected
             payment providers. Use this as the high-level setup reference rather than the older

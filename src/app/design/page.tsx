@@ -258,16 +258,16 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
 
         <div className="relative pb-16">
           <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 z-0 h-[300px] w-[1400px] max-w-full -translate-x-1/2 bg-top bg-no-repeat bg-contain opacity-95 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" style={{ backgroundImage: "url('/landing/design-top.webp')" }} />
-          <div className="relative z-10 mx-auto max-w-7xl px-6">
+          <div className="site-page-frame relative z-10 mx-auto max-w-7xl">
             {!initialOrderType ? (
-              <section className="mx-auto mb-8 max-w-4xl space-y-3 rounded-3xl border border-zinc-200 bg-white/90 p-6 text-center shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Designer</p>
-                <h1 className="normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)]">
+              <section className="site-page-header mx-auto mb-8 max-w-4xl rounded-3xl border border-zinc-200 bg-white/90 p-6 text-center shadow-sm">
+                <p className="site-eyebrow text-zinc-500">Designer</p>
+                <h1 className="site-page-title text-[rgb(114,112,111)]">
                   {designPage.title || "Design Your Candy"}
                 </h1>
                 {designPage.bodyHtml ? (
                   <article
-                    className="mx-auto max-w-3xl text-base leading-relaxed text-zinc-600 [&_a]:font-semibold [&_a]:text-[#ff6f95] hover:[&_a]:text-[#ff4f80]"
+                    className="site-rich-content mx-auto max-w-3xl text-base leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: designPage.bodyHtml }}
                   />
                 ) : null}

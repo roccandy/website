@@ -982,7 +982,7 @@ function CheckoutDatePicker({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs normal-case tracking-[0.08em] text-zinc-500">Select a date</p>
-                <h3 className="text-lg font-semibold text-zinc-900">Delivery or pickup date</h3>
+                <h3 className="site-small-title text-zinc-900">Delivery or pickup date</h3>
               </div>
               <button
                 type="button"
@@ -1553,7 +1553,7 @@ export function CheckoutClient({
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100">
               <div className="h-7 w-7 animate-spin rounded-full border-4 border-zinc-300 border-t-zinc-900" />
             </div>
-            <h2 className="mt-5 text-2xl font-semibold text-zinc-900">{paymentProcessing.title}</h2>
+            <h2 className="site-section-title mt-5 text-zinc-900">{paymentProcessing.title}</h2>
             <p className="mt-3 text-sm leading-6 text-zinc-600">{paymentProcessing.message}</p>
             <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
               This can take 10-20 seconds
@@ -1570,7 +1570,7 @@ export function CheckoutClient({
         <div className="space-y-4">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-zinc-900">Your cart</h2>
+              <h2 className="site-small-title text-zinc-900">Your cart</h2>
               {items.length > 0 ? (
                 <button
                   type="button"
@@ -1625,7 +1625,7 @@ export function CheckoutClient({
 
           <div className="flex justify-center">
             <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold normal-case text-zinc-900">Date & delivery</h3>
+            <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
             {productionBlockoutMessage ? (
               <p className="mt-2 text-sm font-semibold normal-case text-[#b23b67]">{productionBlockoutMessage}</p>
             ) : null}
@@ -1696,7 +1696,7 @@ export function CheckoutClient({
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="text-lg font-semibold normal-case text-zinc-900">Your details</h3>
+            <h3 className="site-small-title text-zinc-900">Your details</h3>
             <div className="mt-3 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
@@ -1803,7 +1803,7 @@ export function CheckoutClient({
 
           {!paymentSuccess ? (
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="text-lg font-semibold normal-case text-zinc-900">Payment method</h3>
+              <h3 className="site-small-title text-zinc-900">Payment method</h3>
               <label className="mt-3 block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Select payment method
                 <select
@@ -1846,7 +1846,7 @@ export function CheckoutClient({
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold normal-case text-zinc-900">Order summary</h2>
+          <h2 className="site-small-title text-zinc-900">Order summary</h2>
           <div className="mt-4 space-y-2 text-sm text-zinc-600">
             <div className="flex items-center justify-between">
               <span>Items</span>

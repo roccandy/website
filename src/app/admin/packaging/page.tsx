@@ -28,7 +28,7 @@ export default async function PackagingPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Packaging</p>
-        <h2 className="text-3xl font-semibold">Packaging options</h2>
+        <h2 className="admin-page-title">Packaging options</h2>
         <p className="text-sm text-zinc-600">Add or update packaging options in the table below.</p>
         <p className="text-sm text-zinc-600">Scroll down to upload or replace images for each packaging combination.</p>
       </div>

@@ -4,6 +4,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import HeaderNav from "@/components/HeaderNav";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
+import { getActiveProductionBlockoutMessage } from "@/lib/productionBlockout";
 
 type PublicSiteHeaderProps = {
   enquiriesHref: string;
@@ -15,17 +16,20 @@ type PublicSiteHeaderProps = {
 const DEFAULT_HEADER_CLASS_NAME =
   "sticky top-0 z-40 w-full border-b border-white/60 bg-white/90 backdrop-blur shadow-[0_4px_10px_rgba(63,63,70,0.36)]";
 
-export default function PublicSiteHeader({
+export default async function PublicSiteHeader({
   enquiriesHref,
   logoPriority = false,
   className = DEFAULT_HEADER_CLASS_NAME,
   dataQuoteHeader = false,
 }: PublicSiteHeaderProps) {
+  const blockoutMessage = await getActiveProductionBlockoutMessage();
+  const resolvedClassName = blockoutMessage ? className.replace(" shadow-[0_4px_10px_rgba(63,63,70,0.36)]", "") : className;
+
   return (
-    <div className={className} data-quote-header={dataQuoteHeader ? "true" : undefined}>
+    <div className={resolvedClassName} data-quote-header={dataQuoteHeader ? "true" : undefined}>
       <LandingTopLinksBar />
-      <div className="mx-auto w-full max-w-6xl px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="site-header-inner mx-auto w-full max-w-6xl px-6">
+        <div className="site-header-row flex flex-wrap items-center justify-between">
           <Link href="/" className="shrink-0">
             <Image
               src="/branding/logo-gold.svg"
@@ -38,7 +42,7 @@ export default function PublicSiteHeader({
             />
           </Link>
           <HeaderNav />
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="site-header-actions flex shrink-0 items-center">
             <a
               href={enquiriesHref}
               aria-label="Email Roc Candy"
@@ -67,7 +71,7 @@ export default function PublicSiteHeader({
           </div>
         </div>
       </div>
-      <ProductionBlockoutBanner />
+      <ProductionBlockoutBanner message={blockoutMessage} />
     </div>
   );
 }

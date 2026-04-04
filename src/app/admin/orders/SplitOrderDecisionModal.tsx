@@ -29,7 +29,7 @@ export default function SplitOrderDecisionModal({
       >
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Linked order items</p>
-          <h4 className="text-lg font-semibold text-zinc-900">Order #{baseOrderNumber} has multiple items</h4>
+          <h4 className="admin-subsection-title text-zinc-900">Order #{baseOrderNumber} has multiple items</h4>
           <p className="text-sm leading-relaxed text-zinc-600">
             Would you like to mark <span className="font-semibold text-zinc-900">{companionLabel}</span> as{" "}
             <span className="font-semibold text-zinc-900">{companionActionLabel}</span> too?

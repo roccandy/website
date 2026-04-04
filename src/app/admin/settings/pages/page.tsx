@@ -43,7 +43,7 @@ function AdminSection({
     <section className="space-y-4">
       <div className="space-y-1">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">{eyebrow}</p>
-        <h2 className="text-2xl font-semibold text-zinc-900">{title}</h2>
+        <h2 className="admin-section-title text-zinc-900">{title}</h2>
         <p className="max-w-3xl text-sm text-zinc-600">{description}</p>
       </div>
       {children}
@@ -136,7 +136,7 @@ function PageFaqSelector({
     <details className="rounded-xl border border-zinc-200 bg-zinc-50">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
         <div className="space-y-1">
-          <h3 className="text-base font-semibold text-zinc-900">Page FAQs</h3>
+          <h3 className="admin-card-title text-zinc-900">Page FAQs</h3>
           <p className="text-xs text-zinc-600">
             {selectedCount === 0 ? "No FAQs selected" : `${selectedCount} selected`}
           </p>
@@ -373,7 +373,7 @@ function SitePageCard({
             <details className="rounded-xl border border-zinc-200 bg-zinc-50">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-zinc-900">Landing page mini gallery</h3>
+                  <h3 className="admin-card-title text-zinc-900">Landing page mini gallery</h3>
                   <p className="text-xs text-zinc-600">
                     {page.galleryImageUrls.length === 0 ? "No gallery images" : `${page.galleryImageUrls.length} images`}
                   </p>
@@ -588,7 +588,7 @@ export default async function AdminManagedPagesPage() {
       <div className="space-y-6">
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-zinc-900">Main Pages</h3>
+            <h3 className="admin-subsection-title text-zinc-900">Main Pages</h3>
             <p className="text-sm text-zinc-600">Core pages customers use most often.</p>
           </div>
           {mainPages.map((page) => (
@@ -604,7 +604,7 @@ export default async function AdminManagedPagesPage() {
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-zinc-900">Landing Pages</h3>
+            <h3 className="admin-subsection-title text-zinc-900">Landing Pages</h3>
             <p className="text-sm text-zinc-600">Fixed marketing and SEO pages already linked from the site.</p>
           </div>
           {landingPages.map((page) => (
@@ -620,7 +620,7 @@ export default async function AdminManagedPagesPage() {
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <h3 className="text-lg font-semibold text-zinc-900">Policy Pages</h3>
+            <h3 className="admin-subsection-title text-zinc-900">Policy Pages</h3>
             <p className="text-sm text-zinc-600">
               Legal and policy pages. Privacy content is editable here. For Terms and Conditions, this screen only edits the page title and SEO metadata. The actual terms body text still lives in the separate Terms editor.
             </p>
@@ -662,7 +662,7 @@ export default async function AdminManagedPagesPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Site Settings</p>
-          <h1 className="text-3xl font-semibold text-zinc-900">Site Pages & SEO</h1>
+          <h1 className="admin-page-title text-zinc-900">Site Pages & SEO</h1>
           <p className="max-w-3xl text-sm text-zinc-600">
             Edit the SEO and visible content of the pages already on the site. Layout and styling stay controlled by the app.
           </p>

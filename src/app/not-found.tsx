@@ -38,8 +38,8 @@ export default function NotFound() {
       <div className="mx-auto max-w-5xl">
         <div className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-[linear-gradient(180deg,rgba(255,246,249,0.95),rgba(255,255,255,1))] px-8 py-10 shadow-sm md:px-12 md:py-14">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#ff6f95]">404</p>
-            <h1 className="mt-4 normal-case text-4xl font-semibold tracking-tight text-[rgb(114,112,111)] md:text-5xl">
+            <p className="site-eyebrow text-[#ff6f95]">404</p>
+            <h1 className="site-page-title mt-4 text-[rgb(114,112,111)]">
               This candy wandered off the tray
             </h1>
             <p className="mt-4 text-base leading-relaxed text-zinc-600 md:text-lg">
@@ -69,7 +69,7 @@ export default function NotFound() {
                 href={link.href}
                 className="rounded-2xl border border-zinc-200 bg-white px-5 py-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md"
               >
-                <p className="normal-case text-lg font-semibold text-[rgb(114,112,111)]">{link.title}</p>
+                <p className="site-small-title text-[rgb(114,112,111)]">{link.title}</p>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-600">{link.description}</p>
               </Link>
             ))}

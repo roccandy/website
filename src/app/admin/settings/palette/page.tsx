@@ -66,7 +66,7 @@ export default async function SettingsPalettePage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
-        <h2 className="text-3xl font-semibold">Colour palette</h2>
+        <h2 className="admin-page-title">Colour palette</h2>
         <p className="text-sm text-zinc-600">
           Update the palette used in order creation. Values are stored as hex and previewed with CMYK.
         </p>

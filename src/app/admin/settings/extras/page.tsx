@@ -47,7 +47,7 @@ export default async function SettingsExtrasPage() {
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
-        <h2 className="text-3xl font-semibold">Extras pricing</h2>
+        <h2 className="admin-page-title">Extras pricing</h2>
         <p className="text-sm text-zinc-600">Update jacket options, urgency fees, and transaction fee.</p>
       </div>
 
@@ -56,7 +56,7 @@ export default async function SettingsExtrasPage() {
         className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
       >
         <fieldset className="space-y-2 text-sm text-zinc-700">
-          <h3 className="text-base font-semibold text-zinc-900">Urgency fee</h3>
+          <h3 className="admin-card-title text-zinc-900">Urgency fee</h3>
           <label className="block">
             <span className="text-xs text-zinc-500">Urgency period (days)</span>
             <input
@@ -81,7 +81,7 @@ export default async function SettingsExtrasPage() {
         </fieldset>
 
         <fieldset className="space-y-2 text-sm text-zinc-700">
-          <h3 className="text-base font-semibold text-zinc-900">Transaction fee</h3>
+          <h3 className="admin-card-title text-zinc-900">Transaction fee</h3>
           <label className="block">
             <span className="text-xs text-zinc-500">Transaction fee (%)</span>
             <input
@@ -96,7 +96,7 @@ export default async function SettingsExtrasPage() {
         </fieldset>
 
         <fieldset className="space-y-2 text-sm text-zinc-700">
-          <h3 className="text-base font-semibold text-zinc-900">Jacket pricing options</h3>
+          <h3 className="admin-card-title text-zinc-900">Jacket pricing options</h3>
           <div className="grid gap-3">
             <label className="block">
               <span className="text-xs text-zinc-500">Rainbow ($)</span>

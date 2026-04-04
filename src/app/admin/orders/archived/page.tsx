@@ -348,7 +348,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
     <section className="space-y-6">
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-        <h2 className="text-3xl font-semibold">All Orders</h2>
+        <h2 className="admin-page-title">All Orders</h2>
         <p className="text-sm text-zinc-600">Custom and pre-made order history.</p>
       </div>
 

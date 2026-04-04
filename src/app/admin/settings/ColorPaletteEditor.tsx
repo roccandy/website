@@ -75,7 +75,7 @@ export function ColorPaletteEditor({ initialValues }: ColorPaletteEditorProps) {
       {paletteSections.map((section) => (
         <div key={section.title} className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-zinc-900">{section.title}</h4>
+            <h4 className="admin-card-title text-zinc-900">{section.title}</h4>
             <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-400">Dark / Core / Light</span>
           </div>
           <div className="grid gap-3 md:grid-cols-3">

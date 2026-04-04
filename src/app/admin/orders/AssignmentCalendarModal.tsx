@@ -157,7 +157,7 @@ export default function AssignmentCalendarModal({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{actionLabel}</p>
-            <h3 className="text-lg font-semibold text-zinc-900">{order.title ?? "Untitled order"}</h3>
+            <h3 className="admin-subsection-title text-zinc-900">{order.title ?? "Untitled order"}</h3>
             <p className="text-sm text-zinc-600">
               {weightLabel(order.total_weight_kg) || "Weight not set"} · {formatScheduleStatusLabel(scheduleStatus)}
             </p>
