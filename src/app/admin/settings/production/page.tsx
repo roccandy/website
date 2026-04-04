@@ -1,6 +1,7 @@
 import { getProductionBlocks, getSettings } from "@/lib/data";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -17,6 +18,21 @@ const DEFAULT_NO_PRODUCTION_DAYS = [
   { name: "no_production_sat", label: "Saturday" },
   { name: "no_production_sun", label: "Sunday" },
 ] as const;
+
+function revalidateProductionBlockoutPages() {
+  revalidatePath("/admin/settings/production");
+  revalidatePath("/");
+  revalidatePath("/about");
+  revalidatePath("/blog");
+  revalidatePath("/faqs");
+  revalidatePath("/privacy");
+  revalidatePath("/terms-and-conditions");
+  revalidatePath("/design");
+  revalidatePath("/pre-made-candy");
+  revalidatePath("/pre-made-candy/[item]", "page");
+  revalidatePath("/checkout");
+  revalidatePath("/[...slug]", "page");
+}
 
 async function updateProductionSettings(formData: FormData) {
   "use server";
@@ -38,6 +54,7 @@ async function updateProductionSettings(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
@@ -62,6 +79,7 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
@@ -95,6 +113,7 @@ async function updateDefaultNoProduction(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
@@ -123,6 +142,7 @@ async function addBlock(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
@@ -141,6 +161,7 @@ async function deleteBlock(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
@@ -176,6 +197,7 @@ async function updateBlock(formData: FormData) {
     throw new Error(error.message);
   }
 
+  revalidateProductionBlockoutPages();
   redirect("/admin/settings/production");
 }
 
