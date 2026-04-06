@@ -13,6 +13,8 @@ import {
   buildManagedSitePageHref,
   EDITABLE_SITE_PAGE_SLUGS,
   getManagedSitePages,
+  HERO_INTRO_SITE_PAGE_SLUGS,
+  HERO_ONLY_SITE_PAGE_SLUGS,
   LANDING_GALLERY_PAGE_SLUGS,
 } from "@/lib/sitePages";
 import {
@@ -202,6 +204,13 @@ function PageFaqSelector({
   );
 }
 
+function normalizePlainTextFromHtml(value: string) {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function SitePageCard({
   page,
   canWriteSeo,
@@ -216,7 +225,15 @@ function SitePageCard({
   const hasLandingGallery = LANDING_GALLERY_PAGE_SLUGS.includes(
     page.slug as (typeof LANDING_GALLERY_PAGE_SLUGS)[number],
   );
+  const usesHeroIntroFields = HERO_INTRO_SITE_PAGE_SLUGS.includes(
+    page.slug as (typeof HERO_INTRO_SITE_PAGE_SLUGS)[number],
+  );
+  const hidesBodyContentEditor = HERO_ONLY_SITE_PAGE_SLUGS.includes(
+    page.slug as (typeof HERO_ONLY_SITE_PAGE_SLUGS)[number],
+  );
   const isTermsPage = page.slug === "terms-and-conditions";
+  const derivedHeroSupportingLine =
+    page.heroSupportingLine?.trim() || (hidesBodyContentEditor ? normalizePlainTextFromHtml(page.bodyHtml) : "");
   const landingGalleryImages = page.galleryImageUrls.map((url) => ({
     url,
     sizeBytes: imageSizeBytesByUrl.get(url) ?? null,
@@ -276,10 +293,10 @@ function SitePageCard({
             </label>
           </div>
 
-          {hasLandingGallery ? (
+          {usesHeroIntroFields ? (
             <div className="grid gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-2">
               <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Landing hero subheading (H2)</span>
+                <span className="text-xs text-zinc-500">Hero subheading (H2)</span>
                 <input
                   type="text"
                   name="heroSubheading"
@@ -289,11 +306,11 @@ function SitePageCard({
                 />
               </label>
               <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Landing hero supporting line (paragraph)</span>
-                <input
-                  type="text"
+                <span className="text-xs text-zinc-500">Hero supporting line (paragraph)</span>
+                <textarea
                   name="heroSupportingLine"
-                  defaultValue={page.heroSupportingLine ?? ""}
+                  defaultValue={derivedHeroSupportingLine}
+                  rows={3}
                   readOnly={!canWriteSeo}
                   className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
                 />
@@ -350,6 +367,13 @@ function SitePageCard({
                   </p>
                   <p className="mt-2 text-xs leading-relaxed text-amber-800">
                     To edit the actual Terms and Conditions text shown on the website, go to <span className="font-semibold">Admin / Settings / Terms</span>.
+                  </p>
+                </div>
+              ) : hidesBodyContentEditor ? (
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+                  <p className="font-semibold">This page does not use a separate body content block.</p>
+                  <p className="mt-1 text-xs leading-relaxed text-sky-800">
+                    Use the <span className="font-semibold">Hero subheading</span> and <span className="font-semibold">Hero supporting line</span> fields above for the visible intro text. The pre-made collection page goes straight from the hero into the product grid and FAQs.
                   </p>
                 </div>
               ) : (

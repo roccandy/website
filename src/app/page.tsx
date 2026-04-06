@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import AutoplayOnViewVideo from "@/components/AutoplayOnViewVideo";
+import { AnimatedHeading } from "@/components/AnimatedHeading";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
@@ -90,16 +91,17 @@ export default async function Home() {
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
 
         <div className="landing-bg landing-bg-home -mt-8 pt-8">
-          <div className="site-page-frame site-page-stack-large relative mx-auto max-w-6xl">
+          <div className="site-page-frame relative mx-auto max-w-6xl">
 
-          <section className="site-home-hero-grid grid items-center lg:grid-cols-[1.2fr,0.8fr]">
+          <section className="site-home-hero-section site-home-hero-grid grid items-center lg:grid-cols-[1.2fr,0.8fr]">
             <div className="site-home-hero-column">
               <div className="site-home-hero-heading text-center">
-                <h1
-                  className="site-hero-title site-home-hero-title text-[rgb(114,112,111)]"
+                <AnimatedHeading
+                  as="h1"
+                  className="site-hero-title site-home-hero-title site-heading-motion-manual text-[rgb(114,112,111)]"
                 >
                   {homePage.title || "Personalised Rock Candy"}
-                </h1>
+                </AnimatedHeading>
                 {homePage.bodyHtml ? (
                   <article
                     className="site-hero-copy site-home-hero-copy mx-auto max-w-3xl text-center text-[rgb(130,130,140)]"
@@ -108,7 +110,9 @@ export default async function Home() {
                 ) : null}
               </div>
 
-              <SiteUsps />
+              <div className="site-home-usp-wrap">
+                <SiteUsps />
+              </div>
 
               <div id="design" className="site-home-cta-wrap">
                 <DesignCtaModal />
@@ -138,8 +142,9 @@ export default async function Home() {
             </div>
           </section>
 
+          <div className="site-home-below-hero-stack site-page-stack-large">
           <section className="site-home-secondary-grid grid md:grid-cols-2">
-            <div className="aspect-square overflow-hidden">
+            <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
                 poster="/landing/home-feature-poster.jpg"
@@ -235,9 +240,9 @@ export default async function Home() {
             <PageFaqSection
               heading={faqSection.heading}
               items={faqSection.items}
-              className="mx-auto max-w-4xl"
             />
           ) : null}
+          </div>
 
           </div>
         </div>

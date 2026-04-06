@@ -44,7 +44,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       "/quote/subtypes/weddings-initials.jpg",
     ],
     primaryCta: {
-      label: "Design & Pricing",
+      label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "weddings" }),
     },
   },
@@ -60,7 +60,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       "/quote/subtypes/branded.jpg",
     ],
     primaryCta: {
-      label: "Design & Pricing",
+      label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }),
     },
   },
@@ -76,7 +76,7 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       "/quote/subtypes/custom-7-14.jpeg",
     ],
     primaryCta: {
-      label: "Design & Pricing",
+      label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "text" }),
     },
   },
@@ -182,7 +182,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingGalleryRows = landingConfig ? buildLandingGalleryRows(page.slug, landingGalleryImages) : [];
 
   return (
-    <main className={`landing-bg ${landingConfig ? "landing-bg-faded" : ""} min-h-screen bg-white text-zinc-900`}>
+    <main className={`${!landingConfig ? "landing-bg" : ""} min-h-screen bg-white text-zinc-900`}>
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
@@ -204,35 +204,43 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
+        <div className={landingConfig ? "landing-bg landing-bg-faded -mt-8 pt-8" : ""}>
         <div className="site-page-frame site-page-stack mx-auto max-w-5xl">
           {landingConfig ? (
             <section className="site-landing-hero-section text-center">
               <div className="site-landing-hero-stack">
-                <div className="site-landing-hero-heading text-center">
+                {/* Landing-page heading block. Edit the matching `landingHero*` values in spacing.ts. */}
+                <div className="site-landing-hero-heading site-landing-hero-copy site-hero-copy text-center">
                   <h1
                     className="site-hero-title site-landing-hero-title text-[rgb(114,112,111)]"
                   >
                     {page.title}
                   </h1>
-                  <h2 className="site-subsection-title text-[rgb(130,130,140)]">
+                  <h2 className="site-landing-hero-subtitle text-[rgb(130,130,140)]">
                     {landingHeroSubheading}
                   </h2>
-                  <p className="text-xl font-medium text-[rgb(130,130,140)]">{landingHeroSupportingLine}</p>
+                  <p className="site-landing-hero-supporting-line text-[rgb(130,130,140)]">
+                    {landingHeroSupportingLine}
+                  </p>
                 </div>
 
-                <SiteUsps />
+                <div className="site-landing-usp-wrap">
+                  <SiteUsps />
+                </div>
 
-                <div>
+                <div className="site-landing-cta-wrap">
                   <Link
                     href={landingConfig.primaryCta.href}
-                    className="inline-flex rounded-full bg-[#ff6f95] px-7 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                    className="site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
                   >
                     {landingConfig.primaryCta.label}
                   </Link>
                 </div>
               </div>
 
-              <div className="site-landing-gallery overflow-hidden px-1">
+              {/* Landing-page scrolling gallery. Edit `landingGallery*` values in spacing.ts. */}
+              <div className="site-landing-gallery-shell overflow-hidden">
+                <div className="site-landing-gallery">
                 {landingGalleryRows.map((row, rowIndex) => (
                   <div key={`gallery-row-${rowIndex}`} className="site-landing-gallery-row overflow-hidden">
                     <div
@@ -242,30 +250,40 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                         animationDirection: rowIndex === 0 ? "normal" : "reverse",
                       }}
                     >
-                      {[...row, ...row].map((imageUrl, imageIndex) => (
-                        <Link
-                          key={`${imageUrl}-${rowIndex}-${imageIndex}`}
-                          href={landingConfig.primaryCta.href}
-                          aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
-                          className={`block shrink-0 overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-zinc-200/80 transition hover:-translate-y-1 hover:ring-zinc-300 hover:shadow-md ${
-                            rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
-                          } w-[240px]`}
+                      {[0, 1].map((cloneIndex) => (
+                        <div
+                          key={`gallery-clone-${rowIndex}-${cloneIndex}`}
+                          className="site-landing-gallery-clone flex shrink-0"
+                          aria-hidden={cloneIndex === 1}
                         >
-                          <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
-                            <Image
-                              src={imageUrl}
-                              alt={`${page.title} gallery image ${imageIndex + 1}`}
-                              fill
-                              sizes={rowIndex === 0 ? "(min-width: 768px) 300px, 240px" : "(min-width: 768px) 330px, 240px"}
-                              className="object-cover object-center"
-                              priority={rowIndex === 0 && imageIndex < row.length}
-                            />
-                          </div>
-                        </Link>
+                          {row.map((imageUrl, imageIndex) => (
+                            <Link
+                              key={`${imageUrl}-${rowIndex}-${cloneIndex}-${imageIndex}`}
+                              href={landingConfig.primaryCta.href}
+                              aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
+                              className={`block shrink-0 overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-zinc-200/80 transition hover:-translate-y-1 hover:ring-zinc-300 hover:shadow-md ${
+                                rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
+                              } w-[240px]`}
+                              tabIndex={cloneIndex === 1 ? -1 : undefined}
+                            >
+                              <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
+                                <Image
+                                  src={imageUrl}
+                                  alt={`${page.title} gallery image ${imageIndex + 1}`}
+                                  fill
+                                  sizes={rowIndex === 0 ? "(min-width: 768px) 300px, 240px" : "(min-width: 768px) 330px, 240px"}
+                                  className="object-cover object-center"
+                                  priority={rowIndex === 0 && cloneIndex === 0 && imageIndex < row.length}
+                                />
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             </section>
           ) : (
@@ -280,9 +298,12 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
           )}
           {landingConfig ? (
             page.bodyHtml ? (
-              <section className="mx-auto max-w-3xl rounded-3xl border border-zinc-200 bg-white/90 px-6 py-8 text-left shadow-sm md:px-8">
-                <article className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: page.bodyHtml }} />
-              </section>
+              <>
+                {/* Landing-page body content between gallery and FAQs. Full-width, no card treatment. */}
+                <section className="site-landing-body-content text-left">
+                  <article className={BODY_HTML_CLASS} dangerouslySetInnerHTML={{ __html: page.bodyHtml }} />
+                </section>
+              </>
             ) : null
           ) : (
             <article
@@ -291,6 +312,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
             />
           )}
           {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
+        </div>
         </div>
       </div>
     </main>

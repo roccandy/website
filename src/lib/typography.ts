@@ -9,19 +9,20 @@ import type { CSSProperties } from "react";
 export const TYPOGRAPHY = {
   headingCase: "none",
 
-  publicHeroH1Size: "52px",
-  publicHeroH1Weight: 420,
+  // Homepage hero typography.
+  publicHeroH1Size: "56px",
+  publicHeroH1Weight: 400,
   publicHeroH1LineHeight: "1.02",
   publicHeroH1LetterSpacing: "-0.02em",
 
-  publicHeroH2Size: "28px",
-  publicHeroH2Weight: 500,
+  publicHeroH2Size: "30px",
+  publicHeroH2Weight: 400,
   publicHeroH2LineHeight: "1.05",
   publicHeroH2LetterSpacing: "-0.02em",
 
-  publicHeroParagraphSize: "1.125rem",
-  publicHeroParagraphWeight: 500,
-  publicHeroParagraphLineHeight: "1.2",
+  publicHeroParagraphSize: "1.05rem",
+  publicHeroParagraphWeight: 400,
+  publicHeroParagraphLineHeight: "1.1",
 
   publicPageH1Size: "52px",
   publicPageH1Weight: 320,

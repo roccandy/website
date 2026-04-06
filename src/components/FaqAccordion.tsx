@@ -18,30 +18,36 @@ export default function FaqAccordion({ items }: Props) {
   const [openIndex, setOpenIndex] = useState(-1);
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3">
       {items.map((item, index) => {
         const isOpen = openIndex === index;
         return (
-          <section key={item.question} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <section key={item.question} className="w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
             <button
               type="button"
               aria-expanded={isOpen}
               onClick={() => setOpenIndex((current) => (current === index ? -1 : index))}
               className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
             >
-              <h3 className="site-faq-question-title text-zinc-900">{toSentenceCase(item.question)}</h3>
+              <h3 className="site-faq-question-title min-w-0 text-zinc-900">{toSentenceCase(item.question)}</h3>
               <span
                 aria-hidden="true"
-                className={`text-lg font-semibold text-[#ff6f95] transition-transform ${isOpen ? "rotate-180" : ""}`}
+                className={`shrink-0 text-lg font-semibold text-[#ff6f95] transition-transform ${isOpen ? "rotate-180" : ""}`}
               >
                 ˅
               </span>
             </button>
-            {isOpen ? (
-              <div className="border-t border-zinc-200 px-5 py-4 text-sm leading-relaxed text-zinc-700">
-                <div dangerouslySetInnerHTML={{ __html: item.answerHtml }} />
+            <div
+              className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+                isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="w-full border-t border-zinc-200 px-5 py-4 text-sm leading-relaxed text-zinc-700">
+                  <div className="w-full break-words [&_*]:break-words" dangerouslySetInnerHTML={{ __html: item.answerHtml }} />
+                </div>
               </div>
-            ) : null}
+            </div>
           </section>
         );
       })}

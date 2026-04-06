@@ -175,8 +175,10 @@ body {
 .site-home-hero-column,
 .site-home-hero-heading,
 .site-home-contact-stack,
+.site-landing-hero-section,
 .site-landing-hero-stack,
 .site-landing-hero-heading,
+.site-landing-gallery,
 .site-product-card-stack,
 .site-product-card-meta,
 .site-product-detail-stack,
@@ -226,7 +228,7 @@ body {
 }
 
 .site-home-hero-column {
-  gap: var(--space-home-hero-column-gap);
+  gap: 0;
 }
 
 .site-home-hero-heading {
@@ -240,11 +242,19 @@ body {
 
 .site-home-hero-copy {
   --site-hero-copy-h2-after: var(--space-home-hero-h2-after);
-  --site-hero-copy-p-after: var(--space-home-hero-paragraph-after);
+}
+
+.site-home-usp-wrap {
+  padding-top: var(--space-home-hero-paragraph-to-usp);
 }
 
 .site-home-cta-wrap {
-  padding-top: var(--space-home-hero-cta-offset);
+  padding-top: var(--space-home-hero-usp-to-cta);
+}
+
+.site-home-below-hero-stack {
+  padding-top: var(--space-home-hero-cta-to-next);
+  gap: var(--space-page-stack-gap-large);
 }
 
 .site-home-option-grid {
@@ -268,19 +278,38 @@ body {
 }
 
 .site-landing-hero-section {
-  gap: var(--space-landing-hero-section-gap);
+  gap: var(--space-landing-hero-cta-to-gallery);
 }
 
 .site-landing-hero-stack {
-  gap: var(--space-landing-hero-content-gap);
+  gap: 0;
 }
 
 .site-landing-hero-heading {
-  gap: var(--space-landing-hero-heading-gap);
+  gap: 0;
 }
 
 .site-landing-hero-title {
+  margin-top: var(--space-landing-hero-title-before);
   margin-bottom: var(--space-landing-hero-title-after);
+}
+
+.site-landing-usp-wrap {
+  padding-top: var(--space-landing-hero-paragraph-to-usp);
+}
+
+.site-landing-cta-wrap {
+  padding-top: var(--space-landing-hero-usp-to-cta);
+}
+
+.site-landing-cta-button {
+  padding-inline: var(--space-landing-cta-padding-x);
+  padding-block: var(--space-landing-cta-padding-y);
+}
+
+.site-landing-gallery-shell {
+  padding-top: var(--space-landing-hero-cta-to-gallery);
+  padding-inline: var(--space-landing-gallery-inset-x);
 }
 
 .site-landing-gallery {
@@ -292,7 +321,31 @@ body {
 }
 
 .site-landing-gallery-track {
-  gap: var(--space-landing-gallery-item-gap);
+  gap: 0;
+  will-change: transform;
+}
+
+.site-landing-gallery-clone {
+  padding-inline-end: var(--space-landing-gallery-item-gap);
+}
+
+.site-landing-gallery-clone > * + * {
+  margin-inline-start: var(--space-landing-gallery-item-gap);
+}
+
+.site-landing-body-card {
+  padding-inline: var(--space-landing-body-card-padding-x);
+  padding-block: var(--space-landing-body-card-padding-y);
+}
+
+.site-landing-body-content {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .site-landing-body-card {
+    padding-inline: var(--space-landing-body-card-padding-x-md);
+  }
 }
 
 .site-product-grid {
@@ -305,6 +358,12 @@ body {
 
 .site-product-card-meta {
   gap: var(--space-product-card-meta-gap);
+}
+
+.site-product-card-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .site-product-detail-stack {
@@ -338,6 +397,50 @@ body {
 
 .site-banner-inner {
   padding-block: var(--space-banner-padding-y);
+}
+
+@keyframes site-heading-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-hero-title:not(.site-heading-motion-manual),
+  .site-page-title:not(.site-heading-motion-manual),
+  .site-section-title:not(.site-heading-motion-manual),
+  .site-subsection-title:not(.site-heading-motion-manual),
+  .site-small-title:not(.site-heading-motion-manual),
+  .site-hero-copy h2,
+  .site-rich-content h2,
+  .site-rich-content h3 {
+    animation: site-heading-enter 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: center;
+    will-change: opacity, transform;
+  }
+
+  .site-hero-title,
+  .site-page-title {
+    animation-delay: 40ms;
+  }
+
+  .site-hero-copy h2,
+  .site-section-title,
+  .site-rich-content h2 {
+    animation-delay: 90ms;
+  }
+
+  .site-subsection-title,
+  .site-small-title,
+  .site-rich-content h3 {
+    animation-delay: 130ms;
+  }
 }
 
 :is(h1, h2, h3, h4, h5, h6, button, label, summary, nav, th, thead, legend),
@@ -430,10 +533,19 @@ body {
   font-weight: var(--type-public-hero-p-weight);
   line-height: var(--type-public-hero-p-line-height);
   text-transform: none;
+  white-space: pre-line;
 }
 
 .site-hero-copy > :last-child {
   margin-bottom: 0;
+}
+
+.site-landing-hero-copy > .site-landing-hero-subtitle {
+  margin: 0 0 var(--space-landing-hero-h2-after) 0;
+}
+
+.site-landing-hero-copy > .site-landing-hero-supporting-line {
+  margin: 0;
 }
 
 .site-rich-content {

@@ -63,6 +63,13 @@ export const LANDING_GALLERY_PAGE_SLUGS = [
   "design/branded-logo-candy",
 ] as const;
 
+export const HERO_INTRO_SITE_PAGE_SLUGS = [
+  ...LANDING_GALLERY_PAGE_SLUGS,
+  "pre-made-candy",
+] as const;
+
+export const HERO_ONLY_SITE_PAGE_SLUGS = ["pre-made-candy"] as const;
+
 export const EDITABLE_SITE_PAGE_SLUGS = [
   "home",
   "about",
@@ -289,10 +296,10 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   "pre-made-candy": {
     slug: "pre-made-candy",
     title: "Pre-made candy",
-    heroSubheading: null,
-    heroSupportingLine: null,
-    bodyHtml:
-      "<p>Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery across Australia.</p>",
+    heroSubheading: "Ready-to-order rock candy",
+    heroSupportingLine:
+      "Choose from our range of pre-made candy for multiple occasions, available for pickup or delivery across Australia.",
+    bodyHtml: "",
     faqHeading: null,
     faqItemIds: [],
     seoTitle: "Pre-Made Rock Candy Australia | Ready To Order Candy | Roc Candy",

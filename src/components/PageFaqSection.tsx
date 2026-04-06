@@ -15,8 +15,8 @@ export function PageFaqSection({
   if (items.length === 0) return null;
 
   return (
-    <section className={`site-faq-stack ${className}`.trim()}>
-      <div className="site-faq-heading-stack">
+    <section className={`site-faq-stack w-full ${className}`.trim()}>
+      <div className="site-faq-heading-stack w-full">
         <p className="site-eyebrow text-zinc-500">Frequently Asked Questions</p>
         <h2 className="site-section-title text-[rgb(114,112,111)]">{heading}</h2>
       </div>

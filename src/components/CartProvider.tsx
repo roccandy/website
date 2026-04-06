@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "roccandy-cart-v1";
+const EMPTY_CART: CartItem[] = [];
 
 export type PremadeCartItem = {
   id: string;
@@ -75,18 +76,18 @@ function createCartId(prefix: string) {
 }
 
 function readStoredCart(): CartItem[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return EMPTY_CART;
   const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
+  if (!raw) return EMPTY_CART;
   try {
     const parsed = JSON.parse(raw) as CartItem[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : EMPTY_CART;
   } catch {
-    return [];
+    return EMPTY_CART;
   }
 }
 
-let itemsState: CartItem[] = typeof window === "undefined" ? [] : readStoredCart();
+let itemsState: CartItem[] = typeof window === "undefined" ? EMPTY_CART : readStoredCart();
 let storageListenerAttached = false;
 
 function notify() {
@@ -131,7 +132,7 @@ function getSnapshot() {
 }
 
 function getServerSnapshot() {
-  return [] as CartItem[];
+  return EMPTY_CART;
 }
 
 const addPremadeItem: CartContextValue["addPremadeItem"] = (item) => {
@@ -197,7 +198,7 @@ const removeItem: CartContextValue["removeItem"] = (id) => {
 };
 
 const clearCart: CartContextValue["clearCart"] = () => {
-  setItems([]);
+  setItems(EMPTY_CART);
 };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {

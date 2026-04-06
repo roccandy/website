@@ -40,7 +40,7 @@ export function DesignCtaModal() {
             expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
           }`}
         >
-          Design Your Candy + Pricing
+          Design Your Candy
         </button>
 
         <div
