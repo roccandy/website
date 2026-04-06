@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { CUSTOM_INTERNAL_LINK_VALUE, INTERNAL_LINK_OPTIONS } from "@/lib/internalLinkOptions";
 import {
   convertHtmlToTextContent,
   renderTextContentToHtml,
@@ -21,6 +22,7 @@ type LinkComposerState = {
   mode: LinkComposerMode;
   label: string;
   href: string;
+  useCustomInternalPath: boolean;
 };
 
 type SelectionRange = {
@@ -130,10 +132,12 @@ export function TextContentEditorField({
   function openLinkComposer(mode: LinkComposerMode) {
     const range = rememberSelection();
     const selected = value.slice(range.start, range.end).trim();
+    const defaultInternalHref = INTERNAL_LINK_OPTIONS[0]?.href ?? "/";
     setLinkComposer({
       mode,
       label: selected,
-      href: mode === "internal" ? "/" : "https://",
+      href: mode === "internal" ? defaultInternalHref : "https://",
+      useCustomInternalPath: false,
     });
   }
 
@@ -142,7 +146,9 @@ export function TextContentEditorField({
     const label = linkComposer.label.trim() || "Link text";
     const href =
       linkComposer.mode === "internal"
-        ? normalizeInternalPath(linkComposer.href)
+        ? linkComposer.useCustomInternalPath
+          ? normalizeInternalPath(linkComposer.href)
+          : linkComposer.href
         : linkComposer.href.trim();
     const range = selectionRange;
     replaceRange(`[${label}](${href})`, range.start, range.end);
@@ -198,13 +204,56 @@ export function TextContentEditorField({
                 <span className="text-xs text-zinc-500">
                   {linkComposer.mode === "internal" ? "Internal path" : "Link destination"}
                 </span>
-                <input
-                  type="text"
-                  value={linkComposer.href}
-                  onChange={(event) => setLinkComposer({ ...linkComposer, href: event.target.value })}
-                  placeholder={linkComposer.mode === "internal" ? "/design" : "https://example.com"}
-                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                />
+                {linkComposer.mode === "internal" ? (
+                  <div className="space-y-2">
+                    <select
+                      value={linkComposer.useCustomInternalPath ? CUSTOM_INTERNAL_LINK_VALUE : linkComposer.href}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        if (nextValue === CUSTOM_INTERNAL_LINK_VALUE) {
+                          setLinkComposer({
+                            ...linkComposer,
+                            useCustomInternalPath: true,
+                            href: linkComposer.useCustomInternalPath ? linkComposer.href : "",
+                          });
+                          return;
+                        }
+
+                        setLinkComposer({
+                          ...linkComposer,
+                          useCustomInternalPath: false,
+                          href: nextValue,
+                        });
+                      }}
+                      className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                    >
+                      {INTERNAL_LINK_OPTIONS.map((option) => (
+                        <option key={option.href} value={option.href}>
+                          {option.label}
+                        </option>
+                      ))}
+                      <option value={CUSTOM_INTERNAL_LINK_VALUE}>Custom path…</option>
+                    </select>
+
+                    {linkComposer.useCustomInternalPath ? (
+                      <input
+                        type="text"
+                        value={linkComposer.href}
+                        onChange={(event) => setLinkComposer({ ...linkComposer, href: event.target.value })}
+                        placeholder="/design"
+                        className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                      />
+                    ) : null}
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={linkComposer.href}
+                    onChange={(event) => setLinkComposer({ ...linkComposer, href: event.target.value })}
+                    placeholder="https://example.com"
+                    className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                  />
+                )}
               </label>
               <div className="flex items-end gap-2">
                 <button
