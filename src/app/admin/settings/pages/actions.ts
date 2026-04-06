@@ -8,6 +8,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
+import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
 
@@ -59,13 +60,15 @@ export async function updateSitePageAction(formData: FormData) {
   if (!slug) {
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Page slug is required."));
   }
-  const bodyHtml = normalizeField(formData.get("bodyHtml"));
-  if (/<h1\b/i.test(bodyHtml)) {
+  const hasBodyText = formData.has("bodyText");
+  const bodyText = hasBodyText ? normalizeField(formData.get("bodyText")) : "";
+  const bodyContent = hasBodyText ? renderTextContentToHtml(bodyText) : null;
+  if (bodyContent && bodyContent.issues.length > 0) {
     redirect(
       appendAdminToast(
         MANAGED_PAGES_ADMIN_PATH,
         "error",
-        "Page body HTML cannot include H1 headings. Use H2 and H3 only.",
+        `Page content issue on line ${bodyContent.issues[0].line}: ${bodyContent.issues[0].message}`,
       ),
     );
   }
@@ -79,7 +82,7 @@ export async function updateSitePageAction(formData: FormData) {
     title: normalizeField(formData.get("title")),
     heroSubheading: normalizeField(formData.get("heroSubheading")) || null,
     heroSupportingLine: normalizeField(formData.get("heroSupportingLine")) || null,
-    bodyHtml,
+    bodyHtml: bodyContent?.html,
     faqHeading: normalizeField(formData.get("faqHeading")) || null,
     faqItemIds: formData.getAll("faqItemIds").map((value) => normalizeField(value)).filter(Boolean),
     seoTitle: normalizeField(formData.get("seoTitle")) || null,

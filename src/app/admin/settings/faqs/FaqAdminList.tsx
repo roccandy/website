@@ -7,6 +7,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ManagedFaqItem } from "@/lib/faqs";
+import { TextContentEditorField } from "../pages/TextContentEditorField";
 import { deleteFaq, updateFaq, updateFaqOrder } from "./actions";
 
 type Props = {
@@ -66,16 +67,20 @@ function SortableFaqItem({
           />
         </label>
         <label className="block text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Answer (HTML allowed)</span>
-          <textarea
-            name="answerHtml"
-            defaultValue={item.answerHtml}
-            required
-            rows={5}
-            readOnly={!canWriteSeo}
-            className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-          />
+          <span className="text-xs text-zinc-500">Answer</span>
+          <div className="mt-1">
+            <TextContentEditorField
+              name="answerText"
+              defaultHtml={item.answerHtml}
+              rows={6}
+              readOnly={!canWriteSeo}
+              placeholder="Type the FAQ answer"
+            />
+          </div>
         </label>
+        <p className="text-xs leading-relaxed text-zinc-500">
+          FAQ answers use the same text editor as the site page content editor. New lines, bold text, lists, and links render on the site without HTML.
+        </p>
       </form>
 
       {canWriteSeo ? (

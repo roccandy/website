@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getManagedFaqItems } from "@/lib/faqs";
+import { TextContentEditorField } from "../pages/TextContentEditorField";
 import { addFaq } from "./actions";
 import FaqAdminList from "./FaqAdminList";
 
@@ -40,27 +41,32 @@ export default async function AdminFaqSettingsPage() {
       {canWriteSeo ? (
         <form
           action={addFaq}
-          className="grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_auto]"
+          className="grid gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
         >
+          <div className="grid gap-3">
+            <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">New question</span>
+              <input
+                type="text"
+                name="question"
+                placeholder="Type the FAQ question"
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
           <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">New question</span>
-            <input
-              type="text"
-              name="question"
-              placeholder="Type the FAQ question"
-              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="space-y-1 text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">New answer (HTML allowed)</span>
-            <input
-              type="text"
-              name="answerHtml"
+            <span className="text-xs text-zinc-500">New answer</span>
+            <TextContentEditorField
+              name="answerText"
+              defaultHtml=""
+              rows={6}
               placeholder="Type the FAQ answer"
-              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
             />
           </label>
-          <div className="flex items-end">
+          <p className="text-xs leading-relaxed text-zinc-500">
+            FAQ answers use the same text editor as the SEO page content fields. New lines, bold text, lists, and links will render on the site without HTML.
+          </p>
+          <div className="flex justify-end">
             <button
               type="submit"
               className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"

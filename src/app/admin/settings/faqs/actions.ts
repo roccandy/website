@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireAdminSeoWriteAccess } from "@/lib/adminAuth";
+import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { getManagedFaqItems, saveManagedFaqItems, type ManagedFaqItem } from "@/lib/faqs";
+import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const FAQ_SETTINGS_PATH = "/admin/settings/faqs";
 
@@ -17,7 +18,18 @@ function reindex(items: ManagedFaqItem[]): ManagedFaqItem[] {
 export async function addFaq(formData: FormData) {
   await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
   const question = normalizeField(formData.get("question"));
-  const answerHtml = normalizeField(formData.get("answerHtml"));
+  const answerText = normalizeField(formData.get("answerText"));
+  const answerContent = renderTextContentToHtml(answerText || "Add answer here.");
+
+  if (answerContent.issues.length > 0) {
+    redirect(
+      appendAdminToast(
+        FAQ_SETTINGS_PATH,
+        "error",
+        `FAQ answer issue on line ${answerContent.issues[0].line}: ${answerContent.issues[0].message}`,
+      ),
+    );
+  }
 
   const current = await getManagedFaqItems();
   const next = reindex([
@@ -25,12 +37,12 @@ export async function addFaq(formData: FormData) {
     {
       id: crypto.randomUUID(),
       question: question || "New FAQ",
-      answerHtml: answerHtml || "<p>Add answer here.</p>",
+      answerHtml: answerContent.html,
       sortOrder: current.length,
     },
   ]);
   await saveManagedFaqItems(next);
-  redirect(FAQ_SETTINGS_PATH);
+  redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ added."));
 }
 
 export async function updateFaq(formData: FormData) {
@@ -39,9 +51,19 @@ export async function updateFaq(formData: FormData) {
   if (!id) throw new Error("FAQ id is required.");
 
   const question = normalizeField(formData.get("question"));
-  const answerHtml = normalizeField(formData.get("answerHtml"));
-  if (!question || !answerHtml) {
+  const answerText = normalizeField(formData.get("answerText"));
+  const answerContent = renderTextContentToHtml(answerText);
+  if (!question || !answerText) {
     throw new Error("Question and answer are required.");
+  }
+  if (answerContent.issues.length > 0) {
+    redirect(
+      appendAdminToast(
+        FAQ_SETTINGS_PATH,
+        "error",
+        `FAQ answer issue on line ${answerContent.issues[0].line}: ${answerContent.issues[0].message}`,
+      ),
+    );
   }
 
   const current = await getManagedFaqItems();
@@ -51,13 +73,13 @@ export async function updateFaq(formData: FormData) {
         ? {
             ...item,
             question,
-            answerHtml,
+            answerHtml: answerContent.html,
           }
         : item
     )
   );
   await saveManagedFaqItems(next);
-  redirect(FAQ_SETTINGS_PATH);
+  redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ saved."));
 }
 
 export async function deleteFaq(formData: FormData) {
@@ -68,7 +90,7 @@ export async function deleteFaq(formData: FormData) {
   const current = await getManagedFaqItems();
   const next = reindex(current.filter((item) => item.id !== id));
   await saveManagedFaqItems(next);
-  redirect(FAQ_SETTINGS_PATH);
+  redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ deleted."));
 }
 
 export async function moveFaqUp(formData: FormData) {

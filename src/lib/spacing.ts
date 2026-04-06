@@ -103,9 +103,9 @@ export const SPACING_CONTROLS = {
     belowCta: "3rem",
 
     // Horizontal padding inside the pink CTA button.
-    ctaPaddingX: "1.75rem",
+    ctaPaddingX: "1.5rem",
     // Vertical padding inside the pink CTA button.
-    ctaPaddingY: "0.7rem",
+    ctaPaddingY: "0.75rem",
 
     // Left/right inset around the whole scrolling gallery area.
     gallerySideInset: "0.25rem",

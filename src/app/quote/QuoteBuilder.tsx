@@ -465,7 +465,7 @@ export function QuoteBuilder({
     SUBTITLE_BY_CATEGORY[categoryId] ?? categories.find((category) => category.id === categoryId)?.name ?? "";
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
-  const subtitle = subtitleLabel && hasBasePrice ? `${subtitleLabel} - base ${formatMoney(basePrice)}` : subtitleLabel;
+  const subtitle = subtitleLabel;
   const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
@@ -1206,7 +1206,7 @@ export function QuoteBuilder({
                     {formatMoney(basePrice)}
                   </p>
                   <p className="text-sm text-zinc-500">
-                    {loading ? "Calculating..." : "Base price only. Select packaging quantity to add packaging cost."}
+                    {loading ? "Calculating..." : "Base price. Select packaging quantity to add packaging cost."}
                   </p>
                 </div>
               ) : (

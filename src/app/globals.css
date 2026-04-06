@@ -307,6 +307,65 @@ body {
   padding-block: var(--space-landing-cta-padding-y);
 }
 
+.site-primary-cta {
+  font-family: var(--font-heading), sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1;
+  gap: 0;
+  overflow: hidden;
+  transition:
+    background-color 180ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
+}
+
+.site-primary-cta-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-primary-cta-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex: none;
+  width: 0;
+  opacity: 0;
+  transform: translateX(-0.35rem);
+  overflow: hidden;
+  transition:
+    width 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin-left 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-primary-cta-arrow svg {
+  display: block;
+}
+
+.site-primary-cta:hover,
+.site-primary-cta:focus-visible {
+  box-shadow: 0 14px 30px rgba(255, 111, 149, 0.34);
+}
+
+.site-primary-cta:hover .site-primary-cta-label,
+.site-primary-cta:focus-visible .site-primary-cta-label {
+  transform: translateX(0.08rem);
+}
+
+.site-primary-cta:hover .site-primary-cta-arrow,
+.site-primary-cta:focus-visible .site-primary-cta-arrow {
+  width: 0.95rem;
+  margin-left: 0.35rem;
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .site-landing-gallery-shell {
   padding-top: var(--space-landing-hero-cta-to-gallery);
   padding-inline: var(--space-landing-gallery-inset-x);

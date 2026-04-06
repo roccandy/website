@@ -3,13 +3,14 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { getManagedSitePage } from "@/lib/sitePages";
+import { TextContentEditorField } from "../pages/TextContentEditorField";
 import { savePrivacyPage } from "./actions";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-type SearchParams = { updated?: string } | Promise<{ updated?: string }>;
+type SearchParams = { updated?: string; error?: string } | Promise<{ updated?: string; error?: string }>;
 
 export default async function AdminPrivacySettingsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await getServerSession(authOptions);
@@ -20,6 +21,7 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const privacyPage = await getManagedSitePage("privacy");
   const wasUpdated = resolvedSearchParams?.updated === "1";
+  const errorMessage = resolvedSearchParams?.error ?? null;
   const canWriteSeo = session.user.canWriteSeo;
 
   return (
@@ -29,7 +31,7 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Site Settings</p>
           <h1 className="admin-page-title text-zinc-900">Privacy Policy</h1>
           <p className="text-sm text-zinc-600">
-            Edit the public privacy page here. Paste the policy as HTML.
+            Edit the public privacy page here using the same text editor controls as the main SEO workspace.
           </p>
         </div>
         <Link
@@ -46,6 +48,12 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
         </div>
       ) : null}
 
+      {errorMessage ? (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+          {errorMessage}
+        </div>
+      ) : null}
+
       <form action={savePrivacyPage} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
         <label className="block space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Page title</span>
@@ -59,13 +67,12 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
         </label>
 
         <label className="block space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">HTML content</span>
-          <textarea
-            name="bodyHtml"
-            defaultValue={privacyPage.bodyHtml}
+          <span className="text-xs text-zinc-500">Page content</span>
+          <TextContentEditorField
+            name="bodyText"
+            defaultHtml={privacyPage.bodyHtml}
             rows={20}
             readOnly={!canWriteSeo}
-            className="w-full rounded border border-zinc-200 px-3 py-2 font-mono text-sm"
           />
         </label>
 

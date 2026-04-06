@@ -22,9 +22,9 @@ import {
   updateSitePageAction,
 } from "./actions";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
-import { HtmlEditorField } from "./HtmlEditorField";
 import { LandingGalleryPicker } from "./LandingGalleryPicker";
 import { SeoAdminWorkspace } from "./SeoAdminWorkspace";
+import { TextContentEditorField } from "./TextContentEditorField";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -379,10 +379,10 @@ function SitePageCard({
               ) : (
                 <>
                   <label className="block space-y-1 text-sm text-zinc-700">
-                    <span className="text-xs text-zinc-500">Page content (HTML body copy)</span>
-                    <HtmlEditorField
-                      name="bodyHtml"
-                      defaultValue={page.bodyHtml}
+                    <span className="text-xs text-zinc-500">Page content</span>
+                    <TextContentEditorField
+                      name="bodyText"
+                      defaultHtml={page.bodyHtml}
                       rows={12}
                       readOnly={!canWriteSeo}
                       placeholder="Write the page content here."

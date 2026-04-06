@@ -36,11 +36,16 @@ export function DesignCtaModal() {
           onClick={() => setExpanded(true)}
           aria-expanded={expanded}
           aria-controls="design-options"
-          className={`absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ff6f95] px-8 py-3 text-sm font-semibold normal-case tracking-normal text-white shadow-[0_18px_38px_rgba(114,112,111,0.24)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
+          className={`site-primary-cta site-landing-cta-button absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#ff6f95] text-sm font-semibold normal-case tracking-normal text-white shadow-[0_18px_38px_rgba(114,112,111,0.24)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
             expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
           }`}
         >
-          Design Your Candy
+          <span className="site-primary-cta-label">Design Your Candy</span>
+          <span className="site-primary-cta-arrow" aria-hidden="true">
+            <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
+              <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
 
         <div

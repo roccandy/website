@@ -128,9 +128,14 @@ export default async function PremadePage() {
                 <div className="site-landing-cta-wrap">
                   <Link
                     href="#shop"
-                    className="site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                    className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
                   >
-                    Browse the Range
+                    <span className="site-primary-cta-label">Browse the Range</span>
+                    <span className="site-primary-cta-arrow" aria-hidden="true">
+                      <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
+                        <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
                   </Link>
                 </div>
               </div>
