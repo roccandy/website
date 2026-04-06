@@ -5,6 +5,7 @@ import { AnimatedHeading } from "@/components/AnimatedHeading";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
+import { ScrollReveal } from "@/components/ScrollReveal";
 import { SiteUsps } from "@/components/SiteUsps";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildDesignerPath } from "@/lib/designUrls";
@@ -143,8 +144,9 @@ export default async function Home() {
           </section>
 
           <div className="site-home-below-hero-stack site-page-stack-large">
+          <ScrollReveal delayMs={40}>
           <section className="site-home-secondary-grid grid md:grid-cols-2">
-            <div className="aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <div className="site-home-media-card aspect-square overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <AutoplayOnViewVideo
                 src="/landing/home-feature-web.mp4"
                 poster="/landing/home-feature-poster.jpg"
@@ -196,7 +198,7 @@ export default async function Home() {
               </p>
             </article>
 
-            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <div className="site-home-media-card overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
               <Image
                 src="/about-carousel/about-1.jpg"
                 alt="Handmade Roc Candy pieces"
@@ -206,7 +208,9 @@ export default async function Home() {
               />
             </div>
           </section>
+          </ScrollReveal>
 
+          <ScrollReveal delayMs={120}>
           <section id="contact" className="rounded-3xl border border-zinc-200 bg-zinc-900 p-8 text-white">
             <div className="site-home-contact-grid grid md:grid-cols-[1.1fr,0.9fr] md:items-center">
               <div className="site-home-contact-stack">
@@ -235,12 +239,17 @@ export default async function Home() {
               </div>
             </div>
           </section>
+          </ScrollReveal>
 
           {faqSection ? (
-            <PageFaqSection
-              heading={faqSection.heading}
-              items={faqSection.items}
-            />
+            <ScrollReveal delayMs={180}>
+              <div className="site-home-faq-divider">
+                <PageFaqSection
+                  heading={faqSection.heading}
+                  items={faqSection.items}
+                />
+              </div>
+            </ScrollReveal>
           ) : null}
           </div>
 
