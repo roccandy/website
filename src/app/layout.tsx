@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { JsonLd } from "@/components/JsonLd";
 import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 import ConditionalSiteFooter from "@/components/ConditionalSiteFooter";
@@ -81,6 +82,7 @@ export default function RootLayout({
           </noscript>
         ) : null}
         <Analytics />
+        <VercelAnalytics />
         <JsonLd
           data={buildSchemaGraph([
             buildOrganizationSchema(),
