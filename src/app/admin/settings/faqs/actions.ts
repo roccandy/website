@@ -47,25 +47,30 @@ export async function addFaq(formData: FormData) {
 }
 
 export async function updateFaq(formData: FormData) {
-  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: FAQ_SETTINGS_PATH });
+  try {
+    await requireAdminSeoWriteAccess();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save FAQ." };
+  }
+
   const id = normalizeField(formData.get("id"));
-  if (!id) throw new Error("FAQ id is required.");
+  if (!id) {
+    return { error: "FAQ id is required." };
+  }
 
   const question = normalizeField(formData.get("question"));
   const answerText = normalizeField(formData.get("answerText"));
   const showOnFaqPage = formData.get("showOnFaqPage") === "on";
   const answerContent = renderTextContentToHtml(answerText);
+
   if (!question || !answerText) {
-    throw new Error("Question and answer are required.");
+    return { error: "Question and answer are required." };
   }
+
   if (answerContent.issues.length > 0) {
-    redirect(
-      appendAdminToast(
-        FAQ_SETTINGS_PATH,
-        "error",
-        `FAQ answer issue on line ${answerContent.issues[0].line}: ${answerContent.issues[0].message}`,
-      ),
-    );
+    return {
+      error: `FAQ answer issue on line ${answerContent.issues[0].line}: ${answerContent.issues[0].message}`,
+    };
   }
 
   const current = await getManagedFaqItems();
@@ -81,8 +86,13 @@ export async function updateFaq(formData: FormData) {
         : item
     )
   );
-  await saveManagedFaqItems(next);
-  redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ saved."));
+
+  try {
+    await saveManagedFaqItems(next);
+    return { error: null };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save FAQ." };
+  }
 }
 
 export async function deleteFaq(formData: FormData) {

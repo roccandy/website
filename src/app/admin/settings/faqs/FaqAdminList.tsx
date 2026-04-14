@@ -33,6 +33,26 @@ function SortableFaqItem({
   };
   const formId = `faq-edit-${item.id}`;
   const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, startSaving] = useTransition();
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleSave = async (formData: FormData) => {
+    setSaveMessage(null);
+    setSaveError(null);
+
+    startSaving(async () => {
+      const result = await updateFaq(formData);
+      if (result?.error) {
+        setSaveError(result.error);
+        return;
+      }
+
+      setSaveMessage("Saved");
+      router.refresh();
+    });
+  };
 
   return (
     <article
@@ -75,11 +95,12 @@ function SortableFaqItem({
               <button
                 type="submit"
                 form={formId}
-                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? "Saving..." : "Save"}
               </button>
             ) : null}
 
@@ -107,7 +128,7 @@ function SortableFaqItem({
         </summary>
 
         <div className="border-t border-zinc-200 px-4 py-4">
-          <form id={formId} action={updateFaq} className="space-y-4">
+          <form id={formId} action={handleSave} className="space-y-4">
             <input type="hidden" name="id" value={item.id} />
 
             <label className="block text-sm text-zinc-700">
@@ -138,6 +159,9 @@ function SortableFaqItem({
             <p className="text-xs leading-relaxed text-zinc-500">
               FAQ answers use the same text editor as the site page content editor. New lines, bold text, lists, and links render on the site without HTML.
             </p>
+
+            {saveError ? <p className="text-xs text-red-600">{saveError}</p> : null}
+            {saveMessage ? <p className="text-xs text-emerald-600">{saveMessage}</p> : null}
           </form>
 
           {canWriteSeo ? (
@@ -145,9 +169,10 @@ function SortableFaqItem({
               <button
                 type="submit"
                 form={formId}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSaving}
               >
-                Save
+                {isSaving ? "Saving..." : "Save"}
               </button>
 
               <form action={deleteFaq} className="ml-auto">
