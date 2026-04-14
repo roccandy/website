@@ -19,6 +19,7 @@ import {
   LANDING_GALLERY_PAGE_SLUGS,
 } from "@/lib/sitePages";
 import {
+  createPageFaqAction,
   deleteSiteRedirectAction,
   updatePremadeSeoAction,
   saveSiteRedirectAction,
@@ -209,6 +210,49 @@ function PageFaqSelector({
             className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
           />
         </label>
+
+        {!readOnly ? (
+          <details className="rounded-lg border border-zinc-200 bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-zinc-900">Create a page FAQ</p>
+                <p className="text-xs text-zinc-500">Adds it to this page and to the master FAQ library, hidden from the main FAQ page by default.</p>
+              </div>
+              <span className="text-xs font-semibold text-zinc-500">▾</span>
+            </summary>
+            <div className="border-t border-zinc-200 px-4 py-4">
+              <form action={createPageFaqAction} className="space-y-3">
+                <input type="hidden" name="pageSlug" value={pageSlug} />
+                <label className="block space-y-1 text-sm text-zinc-700">
+                  <span className="text-xs text-zinc-500">New question</span>
+                  <input
+                    type="text"
+                    name="question"
+                    placeholder="Type the FAQ question"
+                    className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="block space-y-1 text-sm text-zinc-700">
+                  <span className="text-xs text-zinc-500">New answer</span>
+                  <TextContentEditorField
+                    name="answerText"
+                    defaultHtml=""
+                    rows={5}
+                    placeholder="Type the FAQ answer"
+                  />
+                </label>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+                  >
+                    Create FAQ
+                  </button>
+                </div>
+              </form>
+            </div>
+          </details>
+        ) : null}
 
         {faqItems.length === 0 ? (
           <p className="text-sm text-zinc-500">No FAQ items are available yet. Add them in FAQ Settings first.</p>

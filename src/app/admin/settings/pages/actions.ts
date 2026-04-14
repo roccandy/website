@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
+import { getManagedFaqItems, saveManagedFaqItems } from "@/lib/faqs";
 import { resolveLandingGalleryUploadPath } from "@/lib/landingGallery";
 import { buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
-import { buildManagedSitePageHref, saveManagedSitePage } from "@/lib/sitePages";
+import { buildManagedSitePageHref, getManagedSitePage, saveManagedSitePage } from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
@@ -47,6 +48,12 @@ async function revalidateSitePagePath(slug: string) {
   revalidatePath(buildManagedSitePageHref(slug));
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
   revalidatePath("/sitemap.xml");
+}
+
+function revalidateFaqAdminAndPublicPaths() {
+  revalidatePath("/admin/settings/faqs");
+  revalidatePath("/faq");
+  revalidatePath("/faqs");
 }
 
 async function revalidatePremadePagePath(path: string) {
@@ -96,6 +103,56 @@ export async function updateSitePageAction(formData: FormData) {
 
   await revalidateSitePagePath(slug);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Built-in page saved."));
+}
+
+export async function createPageFaqAction(formData: FormData) {
+  await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+
+  const pageSlug = normalizeField(formData.get("pageSlug"));
+  const question = normalizeField(formData.get("question"));
+  const answerText = normalizeField(formData.get("answerText"));
+
+  if (!pageSlug) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Page slug is required."));
+  }
+
+  if (!question || !answerText) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "New FAQ question and answer are required."));
+  }
+
+  const answerContent = renderTextContentToHtml(answerText);
+  if (answerContent.issues.length > 0) {
+    redirect(
+      appendAdminToast(
+        MANAGED_PAGES_ADMIN_PATH,
+        "error",
+        `FAQ answer issue on line ${answerContent.issues[0].line}: ${answerContent.issues[0].message}`,
+      ),
+    );
+  }
+
+  const currentFaqs = await getManagedFaqItems();
+  const newFaqId = crypto.randomUUID();
+  await saveManagedFaqItems([
+    ...currentFaqs,
+    {
+      id: newFaqId,
+      question,
+      answerHtml: answerContent.html,
+      sortOrder: currentFaqs.length,
+      showOnFaqPage: false,
+    },
+  ]);
+
+  const page = await getManagedSitePage(pageSlug);
+  await saveManagedSitePage({
+    slug: pageSlug,
+    faqItemIds: [...page.faqItemIds, newFaqId],
+  });
+
+  await revalidateSitePagePath(pageSlug);
+  revalidateFaqAdminAndPublicPaths();
+  redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Page FAQ created."));
 }
 
 export async function updatePremadeSeoAction(formData: FormData) {
