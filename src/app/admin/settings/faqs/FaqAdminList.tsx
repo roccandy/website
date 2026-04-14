@@ -73,6 +73,18 @@ function SortableFaqItem({
 
             {canWriteSeo ? (
               <button
+                type="submit"
+                form={formId}
+                className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50"
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                Save
+              </button>
+            ) : null}
+
+            {canWriteSeo ? (
+              <button
                 type="button"
                 className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
                 aria-label={`Drag to reorder FAQ ${index + 1}`}
