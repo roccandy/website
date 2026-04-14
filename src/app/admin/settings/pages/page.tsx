@@ -165,12 +165,14 @@ function PageFaqSelector({
   faqHeading,
   faqItems,
   readOnly,
+  createFaqFormId,
 }: {
   pageSlug: string;
   selectedIds: string[];
   faqHeading: string | null;
   faqItems: Awaited<ReturnType<typeof getManagedFaqItems>>;
   readOnly: boolean;
+  createFaqFormId?: string;
 }) {
   if (pageSlug === "faq" || pageSlug === "terms-and-conditions") {
     return null;
@@ -211,7 +213,7 @@ function PageFaqSelector({
           />
         </label>
 
-        {!readOnly ? (
+        {!readOnly && createFaqFormId ? (
           <details className="rounded-lg border border-zinc-200 bg-white">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
               <div className="space-y-1">
@@ -221,12 +223,13 @@ function PageFaqSelector({
               <span className="text-xs font-semibold text-zinc-500">▾</span>
             </summary>
             <div className="border-t border-zinc-200 px-4 py-4">
-              <form action={createPageFaqAction} className="space-y-3">
-                <input type="hidden" name="pageSlug" value={pageSlug} />
+              <div className="space-y-3">
+                <input type="hidden" form={createFaqFormId} name="pageSlug" value={pageSlug} />
                 <label className="block space-y-1 text-sm text-zinc-700">
                   <span className="text-xs text-zinc-500">New question</span>
                   <input
                     type="text"
+                    form={createFaqFormId}
                     name="question"
                     placeholder="Type the FAQ question"
                     className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
@@ -239,17 +242,19 @@ function PageFaqSelector({
                     defaultHtml=""
                     rows={5}
                     placeholder="Type the FAQ answer"
+                    form={createFaqFormId}
                   />
                 </label>
                 <div className="flex justify-end">
                   <button
                     type="submit"
+                    form={createFaqFormId}
                     className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
                   >
                     Create FAQ
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </details>
         ) : null}
@@ -325,6 +330,7 @@ function SitePageCard({
     url,
     sizeBytes: imageSizeBytesByUrl.get(url) ?? null,
   }));
+  const createFaqFormId = `create-page-faq-${page.slug.replace(/[^a-z0-9_-]/gi, "-")}`;
 
   return (
     <details className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -508,6 +514,7 @@ function SitePageCard({
             faqHeading={page.faqHeading}
             faqItems={faqItems}
             readOnly={!canWriteSeo}
+            createFaqFormId={createFaqFormId}
           />
 
           {canWriteSeo ? (
@@ -523,6 +530,7 @@ function SitePageCard({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
           )}
         </form>
+        <form id={createFaqFormId} action={createPageFaqAction} className="hidden" />
       </div>
     </details>
   );

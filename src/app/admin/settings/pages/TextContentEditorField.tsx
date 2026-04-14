@@ -14,6 +14,7 @@ type Props = {
   rows?: number;
   readOnly?: boolean;
   placeholder?: string;
+  form?: string;
 };
 
 type LinkComposerMode = "internal" | "external";
@@ -64,6 +65,7 @@ export function TextContentEditorField({
   rows = 12,
   readOnly = false,
   placeholder,
+  form,
 }: Props) {
   const [value, setValue] = useState(() => convertHtmlToTextContent(defaultHtml));
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -294,6 +296,7 @@ export function TextContentEditorField({
       {mode === "edit" ? (
         <textarea
           ref={textareaRef}
+          form={form}
           name={name}
           value={value}
           onChange={(event) => setValue(event.target.value)}
