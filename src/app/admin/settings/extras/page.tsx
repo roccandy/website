@@ -2,6 +2,7 @@ import { getSettings } from "@/lib/data";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -135,12 +136,13 @@ export default async function SettingsExtrasPage() {
         </fieldset>
 
         <div>
-          <button
+          <AdminSubmitButton
             type="submit"
+            pendingLabel="Saving..."
             className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
           >
             Save extras pricing
-          </button>
+          </AdminSubmitButton>
         </div>
       </form>
     </section>

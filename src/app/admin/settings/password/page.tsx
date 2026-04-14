@@ -1,5 +1,6 @@
 import { requireAdminSession } from "@/lib/adminAuth";
 import { changeOwnPasswordAction } from "./actions";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -70,12 +71,13 @@ export default async function AdminPasswordPage() {
             />
           </label>
           <div>
-            <button
+            <AdminSubmitButton
               type="submit"
+              pendingLabel="Updating..."
               className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
             >
               Update password
-            </button>
+            </AdminSubmitButton>
           </div>
         </form>
       )}

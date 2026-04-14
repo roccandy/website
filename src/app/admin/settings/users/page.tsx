@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { listAdminUsers } from "@/lib/adminUsers";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { addAdminUser, deleteAdminUserAction, resetAdminUserPassword, updateAdminUserAction } from "./actions";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -62,9 +63,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           </select>
         </label>
         <div className="md:col-span-4">
-          <button type="submit" className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+          <AdminSubmitButton
+            type="submit"
+            pendingLabel="Saving..."
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+          >
             Add user
-          </button>
+          </AdminSubmitButton>
         </div>
       </form>
 
@@ -100,9 +105,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                 Active
               </label>
               <div className="sm:col-span-3">
-                <button type="submit" className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+                <AdminSubmitButton
+                  type="submit"
+                  pendingLabel="Saving..."
+                  className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+                >
                   Save user
-                </button>
+                </AdminSubmitButton>
               </div>
             </form>
 
@@ -119,9 +128,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   required
                 />
               </div>
-              <button type="submit" className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-400 hover:text-zinc-900">
+              <AdminSubmitButton
+                type="submit"
+                pendingLabel="Updating..."
+                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+              >
                 Update password
-              </button>
+              </AdminSubmitButton>
             </form>
 
             <form action={deleteAdminUserAction} className="flex items-start justify-end">

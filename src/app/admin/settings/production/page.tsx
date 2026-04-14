@@ -4,6 +4,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -255,12 +256,13 @@ export default async function SettingsProductionPage() {
           </label>
         </div>
         <div>
-          <button
+          <AdminSubmitButton
             type="submit"
+            pendingLabel="Saving..."
             className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
           >
             Save production settings
-          </button>
+          </AdminSubmitButton>
         </div>
       </form>
 
@@ -284,12 +286,13 @@ export default async function SettingsProductionPage() {
                 </label>
               ))}
             </div>
-            <button
+            <AdminSubmitButton
               type="submit"
+              pendingLabel="Saving..."
               className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
             >
               Save default days
-            </button>
+            </AdminSubmitButton>
           </form>
         </div>
 
@@ -318,12 +321,13 @@ export default async function SettingsProductionPage() {
               />
             </label>
             <div className="flex flex-wrap items-center gap-3">
-              <button
+              <AdminSubmitButton
                 type="submit"
+                pendingLabel="Saving..."
                 className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
               >
                 Save website window
-              </button>
+              </AdminSubmitButton>
               <p className="text-xs text-zinc-500">Current value: {quoteBlockoutMonths} month{quoteBlockoutMonths === 1 ? "" : "s"}.</p>
             </div>
           </form>
@@ -356,12 +360,13 @@ export default async function SettingsProductionPage() {
               />
             </label>
             <div className="md:col-span-4">
-              <button
+              <AdminSubmitButton
                 type="submit"
+                pendingLabel="Saving..."
                 className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
               >
                 Add block
-              </button>
+              </AdminSubmitButton>
             </div>
           </form>
         </div>
@@ -431,12 +436,13 @@ export default async function SettingsProductionPage() {
                             />
                           </label>
                           <div className="flex justify-end">
-                            <button
-                              type="submit"
-                              className="rounded-md bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-800"
-                            >
-                              Save
-                            </button>
+              <AdminSubmitButton
+                type="submit"
+                pendingLabel="Saving..."
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-zinc-800"
+              >
+                Save
+              </AdminSubmitButton>
                           </div>
                         </form>
                       </details>

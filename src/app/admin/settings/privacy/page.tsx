@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getManagedSitePage } from "@/lib/sitePages";
 import { TextContentEditorField } from "../pages/TextContentEditorField";
 import { savePrivacyPage } from "./actions";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -78,12 +79,13 @@ export default async function AdminPrivacySettingsPage({ searchParams }: { searc
 
         {canWriteSeo ? (
           <div className="flex justify-end">
-            <button
+            <AdminSubmitButton
               type="submit"
+              pendingLabel="Saving..."
               className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
             >
               Save privacy page
-            </button>
+            </AdminSubmitButton>
           </div>
         ) : (
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>

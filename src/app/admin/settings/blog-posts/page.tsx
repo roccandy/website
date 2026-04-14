@@ -6,6 +6,7 @@ import { listAllBlogPosts } from "@/lib/blog";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
 import { TextContentEditorField } from "@/app/admin/settings/pages/TextContentEditorField";
 import { deleteBlogPostAction, saveBlogPostAction } from "./actions";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -218,12 +219,13 @@ function BlogPostCard({
                 >
                   Delete
                 </button>
-                <button
+                <AdminSubmitButton
                   type="submit"
+                  pendingLabel="Saving..."
                   className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
                 >
                   Save post
-                </button>
+                </AdminSubmitButton>
               </>
             ) : (
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</span>
@@ -340,9 +342,13 @@ export default async function AdminBlogPostsPage() {
 
           <div className="flex justify-end">
             {canWriteSeo ? (
-              <button type="submit" className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+              <AdminSubmitButton
+                type="submit"
+                pendingLabel="Saving..."
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
                 Create post
-              </button>
+              </AdminSubmitButton>
             ) : (
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</span>
             )}

@@ -401,9 +401,27 @@ export default function TermsEditor({ items, canWriteSeo }: Props) {
             <button
               type="button"
               onClick={handleSave}
-              className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+              disabled={isPending}
+              className="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-80"
             >
-              Save all changes
+              {isPending ? (
+                <span className="inline-flex items-center gap-2">
+                  <svg
+                    aria-hidden="true"
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="9" className="opacity-25" />
+                    <path d="M21 12a9 9 0 0 0-9-9" className="opacity-90" />
+                  </svg>
+                  <span>Saving terms...</span>
+                </span>
+              ) : (
+                "Save all changes"
+              )}
             </button>
           </div>
         ) : null}

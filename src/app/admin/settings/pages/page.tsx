@@ -26,6 +26,7 @@ import {
   updateSitePageAction,
 } from "./actions";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { LandingGalleryPicker } from "./LandingGalleryPicker";
 import { SeoAdminWorkspace } from "./SeoAdminWorkspace";
 import { TextContentEditorField } from "./TextContentEditorField";
@@ -246,13 +247,14 @@ function PageFaqSelector({
                   />
                 </label>
                 <div className="flex justify-end">
-                  <button
+                  <AdminSubmitButton
                     type="submit"
                     form={createFaqFormId}
+                    pendingLabel="Saving..."
                     className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
                   >
                     Create FAQ
-                  </button>
+                  </AdminSubmitButton>
                 </div>
               </div>
             </div>
@@ -519,12 +521,13 @@ function SitePageCard({
 
           {canWriteSeo ? (
             <div className="flex justify-end">
-              <button
+              <AdminSubmitButton
                 type="submit"
+                pendingLabel="Saving..."
                 className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               >
                 Save page
-              </button>
+              </AdminSubmitButton>
             </div>
           ) : (
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
@@ -649,12 +652,13 @@ function PremadeSeoCard({
 
           {canWriteSeo ? (
             <div className="flex justify-end">
-              <button
+              <AdminSubmitButton
                 type="submit"
+                pendingLabel="Saving..."
                 className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               >
                 Save product SEO
-              </button>
+              </AdminSubmitButton>
             </div>
           ) : (
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</p>
@@ -959,12 +963,13 @@ export default async function AdminManagedPagesPage() {
           </label>
           <div className="flex gap-2">
             {canWriteSeo ? (
-              <button
+              <AdminSubmitButton
                 type="submit"
+                pendingLabel="Saving..."
                 className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               >
                 Save redirect
-              </button>
+              </AdminSubmitButton>
             ) : (
               <span className="rounded-md border border-zinc-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
                 Read-only

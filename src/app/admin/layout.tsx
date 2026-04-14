@@ -7,6 +7,7 @@ import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
+import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
 import { buildAdminNavSections, isSeoFocusedUser } from "@/app/admin/adminNavigation";
 import { getAdminSession } from "@/lib/adminAuth";
 
@@ -47,6 +48,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <ToastProvider>
         <AdminBodyAttributes />
         <AdminQueryToast />
+        <AdminScrollRestoration />
         <div className="min-h-screen bg-white text-zinc-900">{children}</div>
       </ToastProvider>
     );
@@ -68,6 +70,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <ToastProvider>
       <AdminBodyAttributes />
       <AdminQueryToast />
+      <AdminScrollRestoration />
       <div className="min-h-screen bg-zinc-100 text-zinc-900 print:min-h-0 print:bg-white">
         <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden">
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
