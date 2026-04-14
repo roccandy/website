@@ -70,6 +70,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
     tone: "rose",
     items: [
       { label: "Site Pages & SEO", href: "/admin/settings/pages", description: "Landing pages, product SEO, redirects, and fixed page content.", seoEditable: true },
+      { label: "Blog Posts", href: "/admin/settings/blog-posts", description: "Monthly article publishing, cover images, and blog SEO.", seoEditable: true },
       { label: "FAQs", href: "/admin/settings/faqs", description: "Main FAQ library and ordering.", seoEditable: true },
       { label: "Privacy Policy", href: "/admin/settings/privacy", description: "Public privacy-page content.", seoEditable: true },
       { label: "Terms and Conditions", href: "/admin/settings/terms", description: "Public terms content tree.", seoEditable: true },
@@ -90,6 +91,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
 export function isSeoEditableAdminHref(href: string) {
   return (
     href === "/admin/settings/pages" ||
+    href === "/admin/settings/blog-posts" ||
     href === "/admin/settings/faqs" ||
     href === "/admin/settings/privacy" ||
     href === "/admin/settings/terms"

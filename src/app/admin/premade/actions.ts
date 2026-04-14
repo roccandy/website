@@ -1,7 +1,13 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import type { PremadeCandy } from "@/lib/data";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
+import {
+  buildPremadeItemPath,
+  buildPremadeLegacyItemPath,
+} from "@/lib/premadeCatalog";
+import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import {
   DEFAULT_GOOGLE_PRODUCT_CATEGORY,
   DEFAULT_PREMADE_BRAND,
@@ -12,6 +18,7 @@ import {
   isOptimizableWebImageMimeType,
   optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
+import { saveSiteRedirect } from "@/lib/siteRedirects";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { deleteWooProduct, upsertWooProduct } from "@/lib/woo";
 
@@ -43,6 +50,16 @@ function buildPremadeImageUrl(path?: string | null) {
   if (!base || !path) return "";
   const encoded = encodeURIComponent(path);
   return `${base}/storage/v1/object/public/${PREMADE_IMAGE_BUCKET}/${encoded}`;
+}
+
+function revalidatePremadePaths(paths: string[]) {
+  for (const path of Array.from(new Set(paths.filter(Boolean)))) {
+    revalidatePath(path);
+  }
+  revalidatePath("/pre-made-candy");
+  revalidatePath("/sitemap.xml");
+  revalidatePath("/admin/premade");
+  revalidatePath("/admin/settings/pages");
 }
 
 async function updateWooSyncStatus(
@@ -145,6 +162,7 @@ export async function uploadPremadeImageAction(formData: FormData): Promise<Prem
 
 export async function insertPremadeCandy(payload: {
   name: string;
+  slug?: string | null;
   short_name?: string | null;
   description: string;
   weight_g: number;
@@ -186,6 +204,11 @@ export async function insertPremadeCandy(payload: {
   }
 
   const client = supabaseAdminClient;
+  const resolvedSlug = await resolveUniquePremadeSlug(
+    payload.slug?.trim() || name,
+    null,
+    !payload.slug?.trim(),
+  );
   const { data: sortRows, error: sortError } = await client
     .from("premade_candies")
     .select("sort_order")
@@ -203,6 +226,7 @@ export async function insertPremadeCandy(payload: {
     .from("premade_candies")
     .insert({
       name,
+      slug: resolvedSlug,
       short_name: payload.short_name?.trim() || null,
       description,
       weight_g: payload.weight_g,
@@ -226,6 +250,10 @@ export async function insertPremadeCandy(payload: {
   if (error) return { error: error.message };
   if (data) {
     await syncPremadeCandyToWoo(client, data as PremadeCandy);
+    revalidatePremadePaths([
+      buildPremadeItemPath(data as PremadeCandy),
+      buildPremadeLegacyItemPath(data as PremadeCandy),
+    ]);
   }
   return { error: null };
 }
@@ -233,6 +261,7 @@ export async function insertPremadeCandy(payload: {
 export async function updatePremadeCandy(payload: {
   id: string;
   name: string;
+  slug?: string | null;
   short_name?: string | null;
   description: string;
   weight_g: number;
@@ -272,6 +301,7 @@ export async function updatePremadeCandy(payload: {
 
   const update: {
     name: string;
+    slug: string;
     short_name: string | null;
     description: string;
     weight_g: number;
@@ -288,6 +318,7 @@ export async function updatePremadeCandy(payload: {
     product_condition: string | null;
   } = {
     name,
+    slug: "",
     short_name: payload.short_name?.trim() || null,
     description,
     weight_g: payload.weight_g,
@@ -309,6 +340,21 @@ export async function updatePremadeCandy(payload: {
   }
 
   const client = supabaseAdminClient;
+  const { data: existing, error: existingError } = await client
+    .from("premade_candies")
+    .select("*")
+    .eq("id", payload.id)
+    .maybeSingle();
+  if (existingError) return { error: existingError.message };
+  const existingItem = (existing as PremadeCandy | null) ?? null;
+  if (!existingItem) return { error: "Pre-made item not found." };
+
+  update.slug = await resolveUniquePremadeSlug(
+    payload.slug?.trim() || name,
+    payload.id,
+    !payload.slug?.trim(),
+  );
+
   const { data, error } = await client
     .from("premade_candies")
     .update(update)
@@ -318,6 +364,22 @@ export async function updatePremadeCandy(payload: {
   if (error) return { error: error.message };
   if (data) {
     await syncPremadeCandyToWoo(client, data as PremadeCandy);
+    const oldPath = buildPremadeItemPath(existingItem);
+    const nextPath = buildPremadeItemPath(data as PremadeCandy);
+    if (oldPath !== nextPath) {
+      await saveSiteRedirect({
+        sourcePath: oldPath,
+        destinationPath: nextPath,
+        statusCode: 301,
+        isActive: true,
+      });
+    }
+    revalidatePremadePaths([
+      oldPath,
+      buildPremadeLegacyItemPath(existingItem),
+      nextPath,
+      buildPremadeLegacyItemPath(data as PremadeCandy),
+    ]);
   }
   return { error: null };
 }
@@ -339,6 +401,10 @@ export async function setPremadeActive(id: string, is_active: boolean): Promise<
   if (error) return { error: error.message };
   if (data) {
     await syncPremadeCandyToWoo(client, data as PremadeCandy);
+    revalidatePremadePaths([
+      buildPremadeItemPath(data as PremadeCandy),
+      buildPremadeLegacyItemPath(data as PremadeCandy),
+    ]);
   }
   return { error: null };
 }
@@ -424,7 +490,7 @@ export async function deletePremadeCandy(id: string): Promise<{ error: string | 
   const client = supabaseAdminClient;
   const { data: existing, error: readError } = await client
     .from("premade_candies")
-    .select("id,image_path,woo_product_id")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   if (readError) return { error: readError.message };
@@ -446,6 +512,11 @@ export async function deletePremadeCandy(id: string): Promise<{ error: string | 
     const { error: storageError } = await client.storage.from(PREMADE_IMAGE_BUCKET).remove([existing.image_path]);
     if (storageError) return { error: storageError.message };
   }
+
+  revalidatePremadePaths([
+    buildPremadeItemPath(existing as PremadeCandy),
+    buildPremadeLegacyItemPath(existing as PremadeCandy),
+  ]);
 
   return { error: null };
 }

@@ -8,6 +8,7 @@ import { authOptions } from "@/lib/auth";
 import { getPremadeCandies } from "@/lib/data";
 import { getManagedFaqItems } from "@/lib/faqs";
 import { buildPremadeImageUrl, buildPremadeItemPath } from "@/lib/premadeCatalog";
+import { listSiteRedirects, type SiteRedirect } from "@/lib/siteRedirects";
 import { listBucketObjectInfo } from "@/lib/storageObjects";
 import {
   buildManagedSitePageHref,
@@ -18,7 +19,9 @@ import {
   LANDING_GALLERY_PAGE_SLUGS,
 } from "@/lib/sitePages";
 import {
+  deleteSiteRedirectAction,
   updatePremadeSeoAction,
+  saveSiteRedirectAction,
   updateSitePageAction,
 } from "./actions";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
@@ -29,6 +32,46 @@ import { TextContentEditorField } from "./TextContentEditorField";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+type BuiltInRedirect = {
+  sourcePath: string;
+  destinationPath: string;
+  statusCode: 301 | 302 | 307 | 308;
+  notes: string;
+};
+
+const BUILT_IN_REDIRECTS: BuiltInRedirect[] = [
+  {
+    sourcePath: "/faq",
+    destinationPath: "/faqs",
+    statusCode: 307,
+    notes: "Legacy short FAQ path handled directly in the app route.",
+  },
+  {
+    sourcePath: "/premade",
+    destinationPath: "/pre-made-candy",
+    statusCode: 307,
+    notes: "Legacy pre-made collection path handled directly in the app route.",
+  },
+  {
+    sourcePath: "/quote",
+    destinationPath: "/design",
+    statusCode: 307,
+    notes: "Legacy designer entry path handled directly in the app route.",
+  },
+  {
+    sourcePath: "/pre-made-candy/:id--:slug",
+    destinationPath: "/pre-made-candy/:slug",
+    statusCode: 308,
+    notes: "Legacy ID-based pre-made URLs are normalized to the new canonical slug path.",
+  },
+  {
+    sourcePath: "/design?legacy-query",
+    destinationPath: "/design",
+    statusCode: 307,
+    notes: "Old designer query formats are normalized to the current canonical query format.",
+  },
+];
 
 function AdminSection({
   eyebrow,
@@ -484,6 +527,18 @@ function PremadeSeoCard({
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Product URL</span>
+              <input
+                type="text"
+                name="slug"
+                defaultValue={item.slug ?? ""}
+                readOnly={!canWriteSeo}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                placeholder="oh-boy-baby-boy-rock-candy"
+              />
+              <span className="block text-xs text-zinc-500">Visible as /pre-made-candy/your-product-slug</span>
+            </label>
+            <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">SEO title (&lt;title&gt;)</span>
               <input
                 type="text"
@@ -558,6 +613,125 @@ function PremadeSeoCard({
   );
 }
 
+function RedirectEditorCard({
+  redirect,
+  canWriteSeo,
+}: {
+  redirect: SiteRedirect;
+  canWriteSeo: boolean;
+}) {
+  return (
+    <form action={saveSiteRedirectAction} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="grid gap-4 md:grid-cols-[1fr_1fr_120px_auto_auto] md:items-end">
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">From</span>
+          <input
+            type="text"
+            name="sourcePath"
+            defaultValue={redirect.sourcePath}
+            readOnly={!canWriteSeo}
+            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">To</span>
+          <input
+            type="text"
+            name="destinationPath"
+            defaultValue={redirect.destinationPath}
+            readOnly={!canWriteSeo}
+            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">Status</span>
+          <select
+            name="statusCode"
+            defaultValue={String(redirect.statusCode)}
+            disabled={!canWriteSeo}
+            className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+          >
+            <option value="301">301</option>
+            <option value="302">302</option>
+          </select>
+        </label>
+        <label className="inline-flex items-center gap-2 rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
+          <input
+            type="checkbox"
+            name="isActive"
+            defaultChecked={redirect.isActive}
+            disabled={!canWriteSeo}
+            className="h-4 w-4"
+          />
+          Active
+        </label>
+        <div className="flex gap-2">
+          {canWriteSeo ? (
+            <>
+              <button
+                type="submit"
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
+                Save
+              </button>
+              <button
+                formAction={deleteSiteRedirectAction}
+                className="rounded-md border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+              >
+                Delete
+              </button>
+            </>
+          ) : (
+            <span className="rounded-md border border-zinc-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              Read-only
+            </span>
+          )}
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function BuiltInRedirectCard({ redirect }: { redirect: BuiltInRedirect }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-4 shadow-sm">
+      <div className="grid gap-4 md:grid-cols-[1fr_1fr_120px_auto] md:items-end">
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">From</span>
+          <input
+            type="text"
+            value={redirect.sourcePath}
+            readOnly
+            className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">To</span>
+          <input
+            type="text"
+            value={redirect.destinationPath}
+            readOnly
+            className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+          />
+        </label>
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">Status</span>
+          <input
+            type="text"
+            value={String(redirect.statusCode)}
+            readOnly
+            className="w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm"
+          />
+        </label>
+        <div className="rounded-md border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          Code-managed
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-zinc-500">{redirect.notes}</p>
+    </div>
+  );
+}
+
 export default async function AdminManagedPagesPage() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -567,6 +741,8 @@ export default async function AdminManagedPagesPage() {
   const pages = await getManagedSitePages(EDITABLE_SITE_PAGE_SLUGS);
   const faqItems = await getManagedFaqItems();
   const premadeProducts = await getPremadeCandies();
+  const redirects = await listSiteRedirects();
+  const builtInRedirects = BUILT_IN_REDIRECTS;
   const canWriteSeo = session.user.canWriteSeo;
   const galleryImageUrls = Array.from(
     new Set(
@@ -681,6 +857,97 @@ export default async function AdminManagedPagesPage() {
     </AdminSection>
   );
 
+  const redirectsSection = (
+    <AdminSection
+      eyebrow="Redirects"
+      title="301 Redirects"
+      description="Map old public URLs to their new destinations. These redirects are enforced by middleware and existing rows are loaded directly from the live redirect table."
+    >
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <h3 className="admin-subsection-title text-zinc-900">Add a redirect</h3>
+        <p className="mt-1 text-sm text-zinc-600">
+          Use old site paths like <span className="font-mono">/product/wedding-candy</span> and point them to their new public path.
+        </p>
+        <form action={saveSiteRedirectAction} className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_120px_auto_auto] md:items-end">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">From</span>
+            <input
+              type="text"
+              name="sourcePath"
+              placeholder="/product/wedding-candy"
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">To</span>
+            <input
+              type="text"
+              name="destinationPath"
+              placeholder="/design/wedding-candy"
+              readOnly={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Status</span>
+            <select
+              name="statusCode"
+              defaultValue="301"
+              disabled={!canWriteSeo}
+              className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            >
+              <option value="301">301</option>
+              <option value="302">302</option>
+            </select>
+          </label>
+          <label className="inline-flex items-center gap-2 rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-700">
+            <input type="checkbox" name="isActive" defaultChecked className="h-4 w-4" disabled={!canWriteSeo} />
+            Active
+          </label>
+          <div className="flex gap-2">
+            {canWriteSeo ? (
+              <button
+                type="submit"
+                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+              >
+                Save redirect
+              </button>
+            ) : (
+              <span className="rounded-md border border-zinc-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                Read-only
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {redirects.length === 0 ? (
+        <p className="text-sm text-zinc-500">No redirects saved yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {redirects.map((redirect) => (
+            <RedirectEditorCard key={redirect.sourcePath} redirect={redirect} canWriteSeo={canWriteSeo} />
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <h3 className="admin-subsection-title text-zinc-900">Built-In Redirects</h3>
+          <p className="text-sm text-zinc-600">
+            These redirects are already enforced in code. They are shown here so the full redirect picture is visible in one place, but they are not edited from admin.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {builtInRedirects.map((redirect) => (
+            <BuiltInRedirectCard key={redirect.sourcePath} redirect={redirect} />
+          ))}
+        </div>
+      </div>
+    </AdminSection>
+  );
+
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -696,8 +963,10 @@ export default async function AdminManagedPagesPage() {
       <SeoAdminWorkspace
         pageCount={pages.length}
         productCount={premadeProducts.length}
+        redirectCount={redirects.length + builtInRedirects.length}
         pages={pagesSection}
         productPages={premadeProductsSection}
+        redirects={redirectsSection}
       />
     </section>
   );

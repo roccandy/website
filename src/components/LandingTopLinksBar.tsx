@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const LINKS = [
   { label: "FAQs", href: "/faqs" },
   { label: "About", href: "/about" },
   { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact" },
 ];
 
 const TOP_SCROLL_THRESHOLD = 0;
@@ -30,11 +32,11 @@ export default function LandingTopLinksBar() {
       }`}
       aria-hidden={hidden}
     >
-      <div className="site-top-links-row mx-auto flex max-w-6xl items-center justify-center px-6 text-[11px] font-semibold tracking-[0.16em] text-[#ff6f95] md:text-xs">
+        <div className="site-top-links-row mx-auto flex max-w-6xl items-center justify-center px-6 text-[11px] font-semibold tracking-[0.16em] text-[#ff6f95] md:text-xs">
         {LINKS.map((link) => (
-          <a key={link.href} href={link.href} className="transition-colors hover:text-[#ff4f80]">
+          <Link key={link.href} href={link.href} className="transition-colors hover:text-[#ff4f80]">
             {link.label}
-          </a>
+          </Link>
         ))}
       </div>
     </div>

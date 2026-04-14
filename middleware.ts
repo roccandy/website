@@ -6,7 +6,7 @@ import {
 } from "@/lib/siteRedirectsShared";
 import { isPreviewCrawlModeEnabled } from "@/lib/siteUrl";
 
-const REDIRECT_CACHE_TTL_MS = 60_000;
+const REDIRECT_CACHE_TTL_MS = 5_000;
 const SITE_REDIRECTS_TABLE = "site_redirects";
 
 type RedirectRow = {
@@ -75,7 +75,7 @@ async function loadRedirects() {
         apikey: supabaseAnonKey,
         Authorization: `Bearer ${supabaseAnonKey}`,
       },
-      next: { revalidate: 60 },
+      next: { revalidate: 5 },
     },
   );
 

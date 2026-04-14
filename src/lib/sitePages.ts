@@ -65,6 +65,7 @@ export const LANDING_GALLERY_PAGE_SLUGS = [
 
 export const HERO_INTRO_SITE_PAGE_SLUGS = [
   ...LANDING_GALLERY_PAGE_SLUGS,
+  "contact",
   "pre-made-candy",
 ] as const;
 
@@ -159,7 +160,7 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml:
-      "<p>Stories, inspiration, product ideas, and behind-the-scenes updates from Roc Candy. Use this page as the blog landing page until individual articles are added.</p>",
+      "<p>Stories, inspiration, product ideas, and behind-the-scenes updates from Roc Candy.</p>",
     faqHeading: null,
     faqItemIds: [],
     seoTitle: "Roc Candy Blog | Personalised Rock Candy Ideas, Events & News",
@@ -312,8 +313,8 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   contact: {
     slug: "contact",
     title: "Contact Roc Candy",
-    heroSubheading: null,
-    heroSupportingLine: null,
+    heroSubheading: "Talk to our team",
+    heroSupportingLine: "email, call, or get help with your order",
     bodyHtml: `
 <p>Need help choosing the right personalised rock candy for your event, campaign, or celebration? Contact Roc Candy for advice on colours, flavours, packaging, delivery timing, and order quantities.</p>
 <h2>Get in touch</h2>
@@ -472,6 +473,8 @@ function hydrateManagedSitePage(existing: ManagedSitePage, fallback?: ManagedSit
 
   return {
     ...existing,
+    heroSubheading: existing.heroSubheading || fallback.heroSubheading,
+    heroSupportingLine: existing.heroSupportingLine || fallback.heroSupportingLine,
     seoTitle: resolveSeoFieldValue(existing.slug, "seoTitle", existing.seoTitle, fallback.seoTitle),
     metaDescription: resolveSeoFieldValue(existing.slug, "metaDescription", existing.metaDescription, fallback.metaDescription),
     ogImageUrl: resolveSeoFieldValue(existing.slug, "ogImageUrl", existing.ogImageUrl, fallback.ogImageUrl),

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { resolveLandingGalleryUploadPath } from "@/lib/landingGallery";
+import { buildPremadeItemPath } from "@/lib/premadeCatalog";
+import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
@@ -104,13 +106,35 @@ export async function updatePremadeSeoAction(formData: FormData) {
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", "Product id and path are required."));
   }
 
+  const { data: existingItem, error: readError } = await supabaseAdminClient
+    .from("premade_candies")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError || !existingItem) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", readError?.message ?? "Pre-made product not found."));
+  }
+
   const ogImageFile = formData.get("ogImageFile");
   const uploadedOgImage =
     ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, `premade-${id}`) : null;
+  const submittedSlug = normalizeField(formData.get("slug"));
+  let resolvedSlug = (existingItem.slug as string | null | undefined)?.trim() || "";
+  try {
+    resolvedSlug = await resolveUniquePremadeSlug(
+      submittedSlug || existingItem.name || existingItem.slug || "item",
+      id,
+      !submittedSlug,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save the product URL.";
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
+  }
 
   const { error } = await supabaseAdminClient
     .from("premade_candies")
     .update({
+      slug: resolvedSlug,
       seo_title: normalizeField(formData.get("seoTitle")) || null,
       meta_description: normalizeField(formData.get("metaDescription")) || null,
       og_image_url: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
@@ -122,6 +146,21 @@ export async function updatePremadeSeoAction(formData: FormData) {
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", error.message));
   }
 
+  const previousPath = pagePath;
+  const nextPagePath = buildPremadeItemPath({
+    id: existingItem.id,
+    name: existingItem.name,
+    slug: resolvedSlug,
+  });
+  if (previousPath !== nextPagePath) {
+    await saveSiteRedirect({
+      sourcePath: previousPath,
+      destinationPath: nextPagePath,
+      statusCode: 301,
+      isActive: true,
+    });
+  }
+  await revalidatePremadePagePath(nextPagePath);
   await revalidatePremadePagePath(pagePath);
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Pre-made product SEO saved."));
 }

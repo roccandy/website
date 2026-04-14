@@ -51,6 +51,7 @@ export function AddPremadeForm({ flavorOptions }: Props) {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const name = String(formData.get("name") || "").trim();
+    const slug = String(formData.get("slug") || "").trim();
     const shortName = String(formData.get("short_name") || "").trim();
     const description = String(formData.get("description") || "").trim();
     const weightValueRaw = String(formData.get("weight_value") || "").trim();
@@ -142,6 +143,7 @@ export function AddPremadeForm({ flavorOptions }: Props) {
 
       const { error: insertError } = await insertPremadeCandy({
         name,
+        slug: slug || null,
         short_name: shortName || null,
         description,
         weight_g,
@@ -185,6 +187,18 @@ export function AddPremadeForm({ flavorOptions }: Props) {
           className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
           placeholder="e.g., Strawberry Hearts"
         />
+      </label>
+      <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+        Product URL
+        <input
+          type="text"
+          name="slug"
+          className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+          placeholder="e.g., oh-boy-baby-boy-rock-candy"
+        />
+        <span className="mt-1 block text-[11px] normal-case tracking-normal text-zinc-500">
+          Optional. Leave blank to generate from the product name.
+        </span>
       </label>
       <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
         Short link label

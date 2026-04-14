@@ -2,36 +2,43 @@
 
 import { useState, type ReactNode } from "react";
 
-type TabId = "pages" | "productPages";
+type TabId = "pages" | "productPages" | "redirects";
 
 type Props = {
   pageCount: number;
   productCount: number;
+  redirectCount: number;
   pages: ReactNode;
   productPages: ReactNode;
+  redirects: ReactNode;
 };
 
 const TAB_ORDER: Array<{ id: TabId; label: string }> = [
   { id: "pages", label: "Site Pages" },
   { id: "productPages", label: "Product SEO" },
+  { id: "redirects", label: "Redirects" },
 ];
 
 export function SeoAdminWorkspace({
   pageCount,
   productCount,
+  redirectCount,
   pages,
   productPages,
+  redirects,
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("pages");
 
   const metaByTab: Record<TabId, string> = {
     pages: `${pageCount} pages`,
     productPages: `${productCount} products`,
+    redirects: `${redirectCount} redirects`,
   };
 
   const panelByTab: Record<TabId, ReactNode> = {
     pages,
     productPages,
+    redirects,
   };
 
   return (

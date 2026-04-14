@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeItemAnalytics } from "@/components/PremadeItemAnalytics";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
-import { getPremadeCandies, getPremadeCandyById } from "@/lib/data";
+import { getPremadeCandies, getPremadeCandyById, getPremadeCandyBySlug } from "@/lib/data";
 import {
   buildPremadeImageUrl,
   buildPremadeItemPath,
-  extractPremadeIdFromParam,
+  extractPremadeLegacyIdFromParam,
   formatPremadeFlavors,
   formatPremadeMoney,
   formatPremadeWeight,
   hasPremadeSale,
+  isPremadeLegacyParam,
+  normalizePremadeSlugInput,
   resolvePremadePrice,
 } from "@/lib/premadeCatalog";
 import {
@@ -39,11 +41,27 @@ type PageProps = {
 };
 
 async function loadItemFromParams(itemParam: string) {
-  const id = extractPremadeIdFromParam(itemParam);
-  if (!id) return null;
-  const item = await getPremadeCandyById(id);
+  if (isPremadeLegacyParam(itemParam)) {
+    const id = extractPremadeLegacyIdFromParam(itemParam);
+    if (!id) return null;
+    const item = await getPremadeCandyById(id);
+    if (!item || !item.is_active) return null;
+    return {
+      item,
+      canonicalPath: buildPremadeItemPath(item),
+      shouldRedirect: true,
+    };
+  }
+
+  const normalizedSlug = normalizePremadeSlugInput(itemParam);
+  const item = await getPremadeCandyBySlug(normalizedSlug);
   if (!item || !item.is_active) return null;
-  return item;
+  const canonicalPath = buildPremadeItemPath(item);
+  return {
+    item,
+    canonicalPath,
+    shouldRedirect: canonicalPath !== `/pre-made-candy/${itemParam}`,
+  };
 }
 
 async function resolveItemParam(params: PageProps["params"]) {
@@ -57,7 +75,8 @@ async function resolveItemParam(params: PageProps["params"]) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const itemParam = await resolveItemParam(params);
-  const item = itemParam ? await loadItemFromParams(itemParam) : null;
+  const resolvedItem = itemParam ? await loadItemFromParams(itemParam) : null;
+  const item = resolvedItem?.item ?? null;
   if (!item) {
     return buildMetadata({
       title: "Pre-Made Rock Candy | Roc Candy",
@@ -109,8 +128,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PremadeItemPage({ params }: PageProps) {
   const itemParam = await resolveItemParam(params);
-  const item = itemParam ? await loadItemFromParams(itemParam) : null;
-  if (!item) notFound();
+  const resolvedItem = itemParam ? await loadItemFromParams(itemParam) : null;
+  const item = resolvedItem?.item ?? null;
+  if (!item || !resolvedItem) notFound();
+  if (resolvedItem.shouldRedirect) {
+    permanentRedirect(resolvedItem.canonicalPath);
+  }
 
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;

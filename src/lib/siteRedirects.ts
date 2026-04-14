@@ -7,6 +7,8 @@ import {
   type SiteRedirect,
 } from "@/lib/siteRedirectsShared";
 
+export type { SiteRedirect } from "@/lib/siteRedirectsShared";
+
 const SITE_REDIRECTS_TABLE = "site_redirects";
 
 type SiteRedirectRow = {
@@ -29,6 +31,39 @@ function mapRow(row: SiteRedirectRow): SiteRedirect {
     isActive: row.is_active !== false,
     updatedAt: row.updated_at ?? null,
   };
+}
+
+function isInternalDestinationPath(value: string) {
+  return value.startsWith("/") || value.startsWith("?") || value.startsWith("#");
+}
+
+function resolveRedirectLoopIssue(redirects: SiteRedirect[], nextRedirect: Pick<SiteRedirect, "sourcePath" | "destinationPath">) {
+  if (!isInternalDestinationPath(nextRedirect.destinationPath)) {
+    return null;
+  }
+
+  const lookup = new Map<string, string>();
+  for (const redirect of redirects) {
+    if (!redirect.isActive) continue;
+    if (!isInternalDestinationPath(redirect.destinationPath)) continue;
+    lookup.set(redirect.sourcePath, redirect.destinationPath);
+  }
+  lookup.set(nextRedirect.sourcePath, nextRedirect.destinationPath);
+
+  const visited = new Set<string>([nextRedirect.sourcePath]);
+  let cursor = nextRedirect.destinationPath;
+
+  while (cursor) {
+    const normalizedCursor = normalizeRedirectSourcePath(cursor);
+    if (!normalizedCursor) return null;
+    if (visited.has(normalizedCursor)) {
+      return `This redirect creates a loop through ${normalizedCursor}.`;
+    }
+    visited.add(normalizedCursor);
+    cursor = lookup.get(normalizedCursor) ?? "";
+  }
+
+  return null;
 }
 
 export async function listSiteRedirects(): Promise<SiteRedirect[]> {
@@ -64,6 +99,25 @@ export async function saveSiteRedirect(input: {
   }
   if (sourcePath === destinationPath) {
     throw new Error("Source and destination cannot be the same.");
+  }
+  if (sourcePath.startsWith("/admin")) {
+    throw new Error("Admin paths cannot be redirected from this tool.");
+  }
+
+  const existingRedirects = await listSiteRedirects();
+  const duplicateSource = existingRedirects.find(
+    (item) => item.sourcePath === sourcePath && item.destinationPath === destinationPath && item.statusCode === statusCode,
+  );
+  if (duplicateSource && duplicateSource.isActive === (input.isActive !== false)) {
+    return;
+  }
+
+  const loopIssue = resolveRedirectLoopIssue(
+    existingRedirects.filter((item) => item.sourcePath !== sourcePath),
+    { sourcePath, destinationPath },
+  );
+  if (loopIssue) {
+    throw new Error(loopIssue);
   }
 
   const { error } = await supabaseAdminClient.from(SITE_REDIRECTS_TABLE).upsert(

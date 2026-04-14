@@ -34,6 +34,7 @@ function resolveDefaultText(value: string | null | undefined, fallback: string) 
 type PremadeItem = {
   id: string;
   name: string;
+  slug: string;
   short_name: string | null;
   description: string;
   weight_g: number;
@@ -76,6 +77,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
     return initialWeightUnit === "kg" ? weight / 1000 : weight;
   }, [item.weight_g, initialWeightUnit]);
   const [name, setName] = useState(item.name);
+  const [slug, setSlug] = useState(item.slug);
   const [shortName, setShortName] = useState(item.short_name ?? "");
   const [description, setDescription] = useState(item.description);
   const [weightValue, setWeightValue] = useState(String(initialWeightValue));
@@ -111,6 +113,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   useEffect(() => {
     if (isEditing) return;
     setName(item.name);
+    setSlug(item.slug);
     setShortName(item.short_name ?? "");
     setDescription(item.description);
     setWeightUnit(initialWeightUnit);
@@ -135,6 +138,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   }, [
     isEditing,
     item.name,
+    item.slug,
     item.short_name,
     item.description,
     item.weight_g,
@@ -259,6 +263,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
       const { error: updateError } = await updatePremadeCandy({
         id: item.id,
         name: trimmedName,
+        slug,
         short_name: shortName.trim() || null,
         description: trimmedDescription,
         weight_g,
@@ -579,6 +584,16 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
               value={name}
               onChange={(event) => setName(event.target.value)}
               className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Product URL
+            <input
+              type="text"
+              value={slug}
+              onChange={(event) => setSlug(event.target.value)}
+              className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              placeholder="e.g., oh-boy-baby-boy-rock-candy"
             />
           </label>
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">

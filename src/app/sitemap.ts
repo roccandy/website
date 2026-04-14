@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { listPublishedBlogPosts } from "@/lib/blog";
 import { getPremadeCandies } from "@/lib/data";
 import { buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { getSiteBaseUrl } from "@/lib/siteUrl";
@@ -41,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   try {
-    const premadeItems = await getPremadeCandies();
+    const [premadeItems, blogPosts] = await Promise.all([getPremadeCandies(), listPublishedBlogPosts()]);
     const premadeEntries: MetadataRoute.Sitemap = premadeItems
       .filter((item) => item.is_active)
       .map((item) => ({
@@ -50,8 +51,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly",
         priority: 0.8,
       }));
+    const blogEntries: MetadataRoute.Sitemap = blogPosts.map((post) => ({
+      url: `${baseUrl}/blog/${post.slug}`,
+      lastModified: toDate(post.updatedAt) ?? toDate(post.publishedAt) ?? now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    }));
 
-    return [...staticEntries, ...premadeEntries];
+    return [...staticEntries, ...premadeEntries, ...blogEntries];
   } catch {
     return staticEntries;
   }

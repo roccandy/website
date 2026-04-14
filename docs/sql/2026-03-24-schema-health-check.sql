@@ -307,6 +307,14 @@ with checks as (
     )
 
   union all
+  select 'premade_candies.slug',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'premade_candies' and column_name = 'slug'
+    )
+
+  union all
   select 'orders.archived_at',
     exists (
       select 1
@@ -363,6 +371,30 @@ with checks as (
       where schemaname = 'public'
         and tablename = 'payment_failures'
         and policyname = 'payment_failures_admin_write'
+    )
+
+  union all
+  select 'table.blog_posts',
+    exists (
+      select 1
+      from information_schema.tables
+      where table_schema = 'public' and table_name = 'blog_posts'
+    )
+
+  union all
+  select 'policy.blog_posts_select_published',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'blog_posts' and policyname = 'blog_posts_select_published'
+    )
+
+  union all
+  select 'policy.blog_posts_admin_write',
+    exists (
+      select 1
+      from pg_policies
+      where schemaname = 'public' and tablename = 'blog_posts' and policyname = 'blog_posts_admin_write'
     )
 )
 select

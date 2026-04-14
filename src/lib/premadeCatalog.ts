@@ -57,12 +57,28 @@ export function makePremadeSlug(name: string) {
   return normalized || "item";
 }
 
-export function buildPremadeItemPath(item: Pick<PremadeCandy, "id" | "name">) {
+export function normalizePremadeSlugInput(value: string | null | undefined) {
+  const normalized = makePremadeSlug(value ?? "");
+  return normalized || "item";
+}
+
+export function buildPremadeLegacyItemPath(item: Pick<PremadeCandy, "id" | "name">) {
   return `/pre-made-candy/${item.id}--${makePremadeSlug(item.name)}`;
 }
 
-export function extractPremadeIdFromParam(param?: string | null) {
+export function buildPremadeItemPath(item: Pick<PremadeCandy, "id" | "name"> & { slug?: string | null }) {
+  const slug = normalizePremadeSlugInput(item.slug ?? item.name);
+  return `/pre-made-candy/${slug}`;
+}
+
+export function isPremadeLegacyParam(param?: string | null) {
+  if (!param || typeof param !== "string") return false;
+  return param.includes("--") || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(param);
+}
+
+export function extractPremadeLegacyIdFromParam(param?: string | null) {
   if (!param || typeof param !== "string") return "";
+  if (!isPremadeLegacyParam(param)) return "";
   const [id] = param.split("--");
   return id?.trim() || "";
 }

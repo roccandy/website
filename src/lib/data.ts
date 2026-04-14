@@ -90,6 +90,7 @@ export type Flavor = {
 export type PremadeCandy = {
   id: string;
   name: string;
+  slug: string;
   short_name: string | null;
   description: string;
   weight_g: number;
@@ -422,6 +423,13 @@ export async function getPremadeCandies() {
 export async function getPremadeCandyById(id: string) {
   const client = supabaseAdminClient;
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as PremadeCandy | null) ?? null;
+}
+
+export async function getPremadeCandyBySlug(slug: string) {
+  const client = supabaseAdminClient;
+  const { data, error } = await client.from("premade_candies").select("*").eq("slug", slug).maybeSingle();
   if (error) throw new Error(error.message);
   return (data as PremadeCandy | null) ?? null;
 }

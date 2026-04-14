@@ -27,8 +27,8 @@ import { buildLandingGalleryRows } from "@/lib/landingGallery";
 type LandingPageConfig = {
   intro: string;
   detail: string;
-  defaultGalleryImageUrls: string[];
-  primaryCta: { label: string; href: string };
+  defaultGalleryImageUrls?: string[];
+  primaryCta?: { label: string; href: string } | null;
 };
 
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
@@ -80,6 +80,11 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       href: buildDesignerPath({ orderType: "text" }),
     },
   },
+  contact: {
+    intro: "Talk to our team",
+    detail: "email, call, or get help with your order",
+    primaryCta: null,
+  },
 };
 
 const BODY_HTML_CLASS = `
@@ -87,7 +92,7 @@ const BODY_HTML_CLASS = `
   text-base leading-relaxed
 `;
 
-function resolveGalleryImages(primary: string[], fallback: string[]) {
+function resolveGalleryImages(primary: string[], fallback: string[] = []) {
   const base = primary.length > 0 ? primary : fallback;
   if (base.length === 0) return [];
 
@@ -177,7 +182,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
     ? page.heroSupportingLine || landingConfig.detail
     : null;
   const landingGalleryImages = landingConfig
-    ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls)
+    ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls ?? [])
     : [];
   const landingGalleryRows = landingConfig ? buildLandingGalleryRows(page.slug, landingGalleryImages) : [];
 
@@ -228,68 +233,72 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
                   <SiteUsps />
                 </div>
 
-                <div className="site-landing-cta-wrap">
-                  <Link
-                    href={landingConfig.primaryCta.href}
-                    className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
-                  >
-                    <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
-                    <span className="site-primary-cta-arrow" aria-hidden="true">
-                      <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
-                        <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                  </Link>
-                </div>
+                {landingConfig.primaryCta ? (
+                  <div className="site-landing-cta-wrap">
+                    <Link
+                      href={landingConfig.primaryCta.href}
+                      className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                    >
+                      <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
+                      <span className="site-primary-cta-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
+                          <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </Link>
+                  </div>
+                ) : null}
               </div>
 
               {/* Landing-page scrolling gallery. Edit `landingGallery*` values in spacing.ts. */}
-              <div className="site-landing-gallery-shell overflow-hidden">
-                <div className="site-landing-gallery">
-                {landingGalleryRows.map((row, rowIndex) => (
-                  <div key={`gallery-row-${rowIndex}`} className="site-landing-gallery-row overflow-hidden">
-                    <div
-                      className={`site-landing-gallery-track flex w-max ${rowIndex === 0 ? "animate-marquee" : "animate-marquee"}`}
-                      style={{
-                        animationDuration: rowIndex === 0 ? "34s" : "38s",
-                        animationDirection: rowIndex === 0 ? "normal" : "reverse",
-                      }}
-                    >
-                      {[0, 1].map((cloneIndex) => (
-                        <div
-                          key={`gallery-clone-${rowIndex}-${cloneIndex}`}
-                          className="site-landing-gallery-clone flex shrink-0"
-                          aria-hidden={cloneIndex === 1}
-                        >
-                          {row.map((imageUrl, imageIndex) => (
-                            <Link
-                              key={`${imageUrl}-${rowIndex}-${cloneIndex}-${imageIndex}`}
-                              href={landingConfig.primaryCta.href}
-                              aria-label={`${landingConfig.primaryCta.label}: ${page.title} gallery image ${imageIndex + 1}`}
-                              className={`block shrink-0 overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-zinc-200/80 transition hover:-translate-y-1 hover:ring-zinc-300 hover:shadow-md ${
-                                rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
-                              } w-[240px]`}
-                              tabIndex={cloneIndex === 1 ? -1 : undefined}
-                            >
-                              <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
-                                <Image
-                                  src={imageUrl}
-                                  alt={`${page.title} gallery image ${imageIndex + 1}`}
-                                  fill
-                                  sizes={rowIndex === 0 ? "(min-width: 768px) 300px, 240px" : "(min-width: 768px) 330px, 240px"}
-                                  className="object-cover object-center"
-                                  priority={rowIndex === 0 && cloneIndex === 0 && imageIndex < row.length}
-                                />
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      ))}
+              {landingConfig.primaryCta && landingGalleryRows.length > 0 ? (
+                <div className="site-landing-gallery-shell overflow-hidden">
+                  <div className="site-landing-gallery">
+                  {landingGalleryRows.map((row, rowIndex) => (
+                    <div key={`gallery-row-${rowIndex}`} className="site-landing-gallery-row overflow-hidden">
+                      <div
+                        className={`site-landing-gallery-track flex w-max ${rowIndex === 0 ? "animate-marquee" : "animate-marquee"}`}
+                        style={{
+                          animationDuration: rowIndex === 0 ? "34s" : "38s",
+                          animationDirection: rowIndex === 0 ? "normal" : "reverse",
+                        }}
+                      >
+                        {[0, 1].map((cloneIndex) => (
+                          <div
+                            key={`gallery-clone-${rowIndex}-${cloneIndex}`}
+                            className="site-landing-gallery-clone flex shrink-0"
+                            aria-hidden={cloneIndex === 1}
+                          >
+                            {row.map((imageUrl, imageIndex) => (
+                              <Link
+                                key={`${imageUrl}-${rowIndex}-${cloneIndex}-${imageIndex}`}
+                                href={landingConfig.primaryCta!.href}
+                                aria-label={`${landingConfig.primaryCta!.label}: ${page.title} gallery image ${imageIndex + 1}`}
+                                className={`block shrink-0 overflow-hidden rounded-2xl bg-white/90 shadow-sm ring-1 ring-zinc-200/80 transition hover:-translate-y-1 hover:ring-zinc-300 hover:shadow-md ${
+                                  rowIndex === 0 ? "md:w-[300px]" : "md:w-[330px]"
+                                } w-[240px]`}
+                                tabIndex={cloneIndex === 1 ? -1 : undefined}
+                              >
+                                <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
+                                  <Image
+                                    src={imageUrl}
+                                    alt={`${page.title} gallery image ${imageIndex + 1}`}
+                                    fill
+                                    sizes={rowIndex === 0 ? "(min-width: 768px) 300px, 240px" : "(min-width: 768px) 330px, 240px"}
+                                    className="object-cover object-center"
+                                    priority={rowIndex === 0 && cloneIndex === 0 && imageIndex < row.length}
+                                  />
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                  ))}
                   </div>
-                ))}
                 </div>
-              </div>
+              ) : null}
             </section>
           ) : (
             <section className="site-page-header">
@@ -316,6 +325,42 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
             />
           )}
+          {page.slug === "contact" ? (
+            <section className="grid gap-4 md:grid-cols-2">
+              <a
+                href={enquiriesHref}
+                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Email</p>
+                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Send an enquiry</h2>
+                <p className="mt-2 text-sm text-zinc-600">{enquiriesEmail}</p>
+              </a>
+              <a
+                href="tel:0414519211"
+                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Phone</p>
+                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Call Roc Candy</h2>
+                <p className="mt-2 text-sm text-zinc-600">0414 519 211</p>
+              </a>
+              <Link
+                href="/design"
+                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Design</p>
+                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Start your candy design</h2>
+                <p className="mt-2 text-sm text-zinc-600">Choose wedding, text, or branded candy and submit your order online.</p>
+              </Link>
+              <Link
+                href="/faqs"
+                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">FAQs</p>
+                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Common questions</h2>
+                <p className="mt-2 text-sm text-zinc-600">Lead times, delivery, ingredients, and ordering answers in one place.</p>
+              </Link>
+            </section>
+          ) : null}
           {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
         </div>
         </div>
