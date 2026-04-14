@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { getManagedFaqItems, saveManagedFaqItems, type ManagedFaqItem } from "@/lib/faqs";
+import { buildManagedSitePageHref, EDITABLE_SITE_PAGE_SLUGS } from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const FAQ_SETTINGS_PATH = "/admin/settings/faqs";
@@ -13,6 +15,16 @@ function normalizeField(value: FormDataEntryValue | null) {
 
 function reindex(items: ManagedFaqItem[]): ManagedFaqItem[] {
   return items.map((item, index) => ({ ...item, sortOrder: index }));
+}
+
+function revalidateFaqDependentPages() {
+  const paths = new Set<string>(EDITABLE_SITE_PAGE_SLUGS.map((slug) => buildManagedSitePageHref(slug)));
+  paths.add("/faq");
+  paths.add("/faqs");
+
+  for (const path of paths) {
+    revalidatePath(path);
+  }
 }
 
 export async function addFaq(formData: FormData) {
@@ -43,6 +55,7 @@ export async function addFaq(formData: FormData) {
     },
   ]);
   await saveManagedFaqItems(next);
+  revalidateFaqDependentPages();
   redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ added."));
 }
 
@@ -89,6 +102,7 @@ export async function updateFaq(formData: FormData) {
 
   try {
     await saveManagedFaqItems(next);
+    revalidateFaqDependentPages();
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save FAQ." };
@@ -103,6 +117,7 @@ export async function deleteFaq(formData: FormData) {
   const current = await getManagedFaqItems();
   const next = reindex(current.filter((item) => item.id !== id));
   await saveManagedFaqItems(next);
+  revalidateFaqDependentPages();
   redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ deleted."));
 }
 
@@ -120,6 +135,7 @@ export async function moveFaqUp(formData: FormData) {
   const next = [...current];
   [next[index - 1], next[index]] = [next[index], next[index - 1]];
   await saveManagedFaqItems(reindex(next));
+  revalidateFaqDependentPages();
   redirect(FAQ_SETTINGS_PATH);
 }
 
@@ -137,6 +153,7 @@ export async function moveFaqDown(formData: FormData) {
   const next = [...current];
   [next[index], next[index + 1]] = [next[index + 1], next[index]];
   await saveManagedFaqItems(reindex(next));
+  revalidateFaqDependentPages();
   redirect(FAQ_SETTINGS_PATH);
 }
 
@@ -169,6 +186,7 @@ export async function updateFaqOrder(
 
   try {
     await saveManagedFaqItems(next);
+    revalidateFaqDependentPages();
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save FAQ order." };
