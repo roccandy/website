@@ -15,6 +15,7 @@ export type FaqContent = {
 export type ManagedFaqItem = FaqContent & {
   id: string;
   sortOrder: number;
+  showOnFaqPage: boolean;
 };
 
 type LegacyStoredFaqPayload = {
@@ -27,6 +28,7 @@ type SiteFaqRow = {
   question: string;
   answer_html: string;
   sort_order: number;
+  show_on_faq_page: boolean | null;
 };
 
 function normalizeText(value: string | null | undefined) {
@@ -62,6 +64,7 @@ function normalizeFaqItems(items: ManagedFaqItem[]): ManagedFaqItem[] {
         question: normalizeText(item.question),
         answerHtml: normalizeText(item.answerHtml),
         sortOrder: index,
+        showOnFaqPage: item.showOnFaqPage !== false,
       };
     })
     .filter((item) => item.question && item.answerHtml);
@@ -73,6 +76,7 @@ function buildFallbackFaqItems(): ManagedFaqItem[] {
     question: item.question,
     answerHtml: item.answerHtml,
     sortOrder: index,
+    showOnFaqPage: true,
   }));
 }
 
@@ -97,7 +101,7 @@ async function readFaqItemsFromTable(): Promise<ManagedFaqItem[] | null> {
   const client = supabasePublicClient;
   const { data, error } = await client
     .from(FAQ_TABLE)
-    .select("id,question,answer_html,sort_order")
+    .select("id,question,answer_html,sort_order,show_on_faq_page")
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -114,6 +118,7 @@ async function readFaqItemsFromTable(): Promise<ManagedFaqItem[] | null> {
     question: normalizeText(row.question),
     answerHtml: normalizeText(row.answer_html),
     sortOrder: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : index,
+    showOnFaqPage: row.show_on_faq_page !== false,
   }));
 
   return normalizeFaqItems(mapped);
@@ -168,6 +173,7 @@ async function readLegacyFaqItemsFromStorage(): Promise<ManagedFaqItem[] | null>
         question,
         answerHtml,
         sortOrder,
+        showOnFaqPage: item.showOnFaqPage !== false,
       } satisfies ManagedFaqItem;
     })
     .filter((item): item is ManagedFaqItem => Boolean(item));
@@ -187,7 +193,7 @@ export async function getManagedFaqItems(): Promise<ManagedFaqItem[]> {
 
 export async function getFaqContentItems(): Promise<FaqContent[]> {
   const items = await getManagedFaqItems();
-  return items.map(({ question, answerHtml }) => ({ question, answerHtml }));
+  return items.filter((item) => item.showOnFaqPage !== false).map(({ question, answerHtml }) => ({ question, answerHtml }));
 }
 
 export async function getFaqContentItemsByIds(ids: string[]): Promise<FaqContent[]> {
@@ -231,6 +237,7 @@ export async function saveManagedFaqItems(items: ManagedFaqItem[]) {
     question: item.question,
     answer_html: item.answerHtml,
     sort_order: index,
+    show_on_faq_page: item.showOnFaqPage !== false,
   }));
 
   const { error: insertError } = await client.from(FAQ_TABLE).insert(rows);

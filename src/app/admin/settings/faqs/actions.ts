@@ -39,6 +39,7 @@ export async function addFaq(formData: FormData) {
       question: question || "New FAQ",
       answerHtml: answerContent.html,
       sortOrder: current.length,
+      showOnFaqPage: formData.get("showOnFaqPage") === "on",
     },
   ]);
   await saveManagedFaqItems(next);
@@ -52,6 +53,7 @@ export async function updateFaq(formData: FormData) {
 
   const question = normalizeField(formData.get("question"));
   const answerText = normalizeField(formData.get("answerText"));
+  const showOnFaqPage = formData.get("showOnFaqPage") === "on";
   const answerContent = renderTextContentToHtml(answerText);
   if (!question || !answerText) {
     throw new Error("Question and answer are required.");
@@ -74,6 +76,7 @@ export async function updateFaq(formData: FormData) {
             ...item,
             question,
             answerHtml: answerContent.html,
+            showOnFaqPage,
           }
         : item
     )

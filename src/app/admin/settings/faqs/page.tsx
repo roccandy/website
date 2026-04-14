@@ -66,6 +66,10 @@ export default async function AdminFaqSettingsPage() {
           <p className="text-xs leading-relaxed text-zinc-500">
             FAQ answers use the same text editor as the SEO page content fields. New lines, bold text, lists, and links will render on the site without HTML.
           </p>
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+            <input type="checkbox" name="showOnFaqPage" defaultChecked className="h-4 w-4" />
+            <span>Show on the main FAQ page</span>
+          </label>
           <div className="flex justify-end">
             <button
               type="submit"

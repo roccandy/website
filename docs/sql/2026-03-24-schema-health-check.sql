@@ -107,6 +107,14 @@ with checks as (
     )
 
   union all
+  select 'site_faqs.show_on_faq_page',
+    exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public' and table_name = 'site_faqs' and column_name = 'show_on_faq_page'
+    )
+
+  union all
   select 'table.admin_users',
     exists (
       select 1

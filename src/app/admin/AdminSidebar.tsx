@@ -21,8 +21,8 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
   const seoFocused = isSeoFocusedUser(user);
 
   return (
-    <aside className="hidden print:hidden lg:block lg:w-64 lg:flex-none">
-      <div className="sticky top-24 space-y-3">
+    <aside className="hidden print:hidden lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-7rem)] lg:w-64 lg:flex-none lg:self-start">
+      <div className="h-full space-y-3 overflow-y-auto pr-1">
         {sections.map((section) => {
           const toneClasses = getAdminNavToneClasses(section.tone);
           const isPrimarySection = !seoFocused || section.key === "content-seo";

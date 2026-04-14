@@ -32,78 +32,125 @@ function SortableFaqItem({
     transition,
   };
   const formId = `faq-edit-${item.id}`;
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`rounded-xl border border-zinc-200 bg-white p-4 shadow-sm ${isDragging ? "opacity-80" : ""}`}
+      className={`overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm ${isDragging ? "opacity-80" : ""}`}
     >
-      <form id={formId} action={updateFaq} className="space-y-3">
-        <input type="hidden" name="id" value={item.id} />
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">FAQ #{index + 1}</p>
-          {canWriteSeo ? (
-            <button
-              type="button"
-              className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
-              aria-label={`Drag to reorder FAQ ${index + 1}`}
-              {...attributes}
-              {...listeners}
+      <details open={isOpen} onToggle={(event) => setIsOpen(event.currentTarget.open)}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">FAQ #{index + 1}</p>
+              {!item.showOnFaqPage ? (
+                <span className="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Hidden
+                </span>
+              ) : null}
+            </div>
+            <p className="truncate text-sm font-semibold text-zinc-900">{item.question}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-700"
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
             >
-              Drag
-            </button>
+              <input
+                type="checkbox"
+                name="showOnFaqPage"
+                form={formId}
+                defaultChecked={item.showOnFaqPage}
+                disabled={!canWriteSeo}
+                className="h-4 w-4"
+              />
+              <span>Main FAQ page</span>
+            </label>
+
+            {canWriteSeo ? (
+              <button
+                type="button"
+                className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"
+                aria-label={`Drag to reorder FAQ ${index + 1}`}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                {...attributes}
+                {...listeners}
+              >
+                Drag
+              </button>
+            ) : null}
+
+            <span
+              aria-hidden="true"
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            >
+              ▾
+            </span>
+          </div>
+        </summary>
+
+        <div className="border-t border-zinc-200 px-4 py-4">
+          <form id={formId} action={updateFaq} className="space-y-4">
+            <input type="hidden" name="id" value={item.id} />
+
+            <label className="block text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Question</span>
+              <input
+                type="text"
+                name="question"
+                defaultValue={item.question}
+                required
+                readOnly={!canWriteSeo}
+                className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="block text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Answer</span>
+              <div className="mt-1">
+                <TextContentEditorField
+                  name="answerText"
+                  defaultHtml={item.answerHtml}
+                  rows={6}
+                  readOnly={!canWriteSeo}
+                  placeholder="Type the FAQ answer"
+                />
+              </div>
+            </label>
+
+            <p className="text-xs leading-relaxed text-zinc-500">
+              FAQ answers use the same text editor as the site page content editor. New lines, bold text, lists, and links render on the site without HTML.
+            </p>
+          </form>
+
+          {canWriteSeo ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                form={formId}
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
+              >
+                Save
+              </button>
+
+              <form action={deleteFaq} className="ml-auto">
+                <input type="hidden" name="id" value={item.id} />
+                <button
+                  type="submit"
+                  className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </form>
+            </div>
           ) : null}
         </div>
-        <label className="block text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Question</span>
-          <input
-            type="text"
-            name="question"
-            defaultValue={item.question}
-            required
-            readOnly={!canWriteSeo}
-            className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Answer</span>
-          <div className="mt-1">
-            <TextContentEditorField
-              name="answerText"
-              defaultHtml={item.answerHtml}
-              rows={6}
-              readOnly={!canWriteSeo}
-              placeholder="Type the FAQ answer"
-            />
-          </div>
-        </label>
-        <p className="text-xs leading-relaxed text-zinc-500">
-          FAQ answers use the same text editor as the site page content editor. New lines, bold text, lists, and links render on the site without HTML.
-        </p>
-      </form>
-
-      {canWriteSeo ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="submit"
-            form={formId}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
-          >
-            Save
-          </button>
-
-          <form action={deleteFaq} className="ml-auto">
-            <input type="hidden" name="id" value={item.id} />
-            <button
-              type="submit"
-              className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          </form>
-        </div>
-      ) : null}
+      </details>
     </article>
   );
 }
@@ -151,7 +198,11 @@ export default function FaqAdminList({ items, canWriteSeo }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-zinc-500">{canWriteSeo ? "Drag and drop FAQs to reorder." : "Read-only FAQ view."}</p>
+      <p className="text-xs text-zinc-500">
+        {canWriteSeo
+          ? "Click a question to open the editor. Drag rows to reorder them. The checkbox controls whether the FAQ appears on the main FAQ page."
+          : "Read-only FAQ view."}
+      </p>
       {isPending ? <p className="text-xs text-zinc-500">Saving order...</p> : null}
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
 
