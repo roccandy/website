@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 const STORAGE_PREFIX = "admin-scroll:";
 const MAX_AGE_MS = 5 * 60 * 1000;
@@ -12,11 +12,14 @@ function getStorageKey(pathname: string) {
 
 export function AdminScrollRestoration() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const locationKey = search ? `${pathname}?${search}` : pathname;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const key = getStorageKey(pathname);
+    const key = getStorageKey(locationKey);
     const raw = window.sessionStorage.getItem(key);
     if (!raw) return;
 
@@ -35,7 +38,7 @@ export function AdminScrollRestoration() {
     } catch {
       // Ignore malformed state.
     }
-  }, [pathname]);
+  }, [locationKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,7 +49,7 @@ export function AdminScrollRestoration() {
 
       try {
         window.sessionStorage.setItem(
-          getStorageKey(pathname),
+          getStorageKey(locationKey),
           JSON.stringify({
             y: window.scrollY,
             ts: Date.now(),
@@ -59,7 +62,7 @@ export function AdminScrollRestoration() {
 
     window.addEventListener("submit", handleSubmit, true);
     return () => window.removeEventListener("submit", handleSubmit, true);
-  }, [pathname]);
+  }, [locationKey]);
 
   return null;
 }

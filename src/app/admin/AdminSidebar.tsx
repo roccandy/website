@@ -61,6 +61,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch
                       className={`block rounded-2xl border px-3 py-2.5 transition ${
                         active
                           ? `${toneClasses.border} bg-white shadow-sm`

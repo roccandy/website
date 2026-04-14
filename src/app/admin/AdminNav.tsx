@@ -59,6 +59,7 @@ export function AdminNav({ sections }: { sections: AdminNavSection[] }) {
                       <Link
                         key={item.href}
                         href={item.href}
+                        prefetch
                         onClick={close}
                         className={`block rounded-2xl border px-3 py-3 text-sm transition ${
                           pathname === item.href
