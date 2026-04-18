@@ -44,7 +44,10 @@ export default function FaqAccordion({ items }: Props) {
             >
               <div className="overflow-hidden">
                 <div className="w-full border-t border-zinc-200 px-5 py-4 text-sm leading-relaxed text-zinc-700">
-                  <div className="w-full break-words [&_*]:break-words" dangerouslySetInnerHTML={{ __html: item.answerHtml }} />
+                  <div
+                    className="site-rich-content w-full break-words [&_*]:break-words"
+                    dangerouslySetInnerHTML={{ __html: item.answerHtml }}
+                  />
                 </div>
               </div>
             </div>
