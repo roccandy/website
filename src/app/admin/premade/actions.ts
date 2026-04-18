@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { PremadeCandy } from "@/lib/data";
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import {
   buildPremadeItemPath,
@@ -157,6 +158,19 @@ export async function uploadPremadeImageAction(formData: FormData): Promise<Prem
     return { data: null, error: error.message ?? "Unable to upload image." };
   }
 
+  await logAdminActivity({
+    area: "products",
+    action: "uploaded",
+    entityType: "premade-image",
+    entityLabel: trimmed,
+    summary: `Uploaded pre-made product image for "${trimmed}".`,
+    path: "/admin/premade",
+    changedFields: ["Image"],
+    metadata: {
+      fileName,
+    },
+  });
+
   return { data: { path: fileName }, error: null };
 }
 
@@ -254,6 +268,16 @@ export async function insertPremadeCandy(payload: {
       buildPremadeItemPath(data as PremadeCandy),
       buildPremadeLegacyItemPath(data as PremadeCandy),
     ]);
+    await logAdminActivity({
+      area: "products",
+      action: "created",
+      entityType: "premade-product",
+      entityId: data.id,
+      entityLabel: data.name,
+      summary: `Created pre-made product "${data.name}".`,
+      path: "/admin/premade",
+      changedFields: ["Name", "Price", "Weight", "Flavors", "Active state"],
+    });
   }
   return { error: null };
 }
@@ -380,6 +404,71 @@ export async function updatePremadeCandy(payload: {
       nextPath,
       buildPremadeLegacyItemPath(data as PremadeCandy),
     ]);
+    await logAdminActivity({
+      area: "products",
+      action: "updated",
+      entityType: "premade-product",
+      entityId: data.id,
+      entityLabel: data.name,
+      summary: `Updated pre-made product "${data.name}".`,
+      path: "/admin/premade",
+      changedFields: getChangedFieldLabels(
+        {
+          name: existingItem.name,
+          slug: existingItem.slug,
+          short_name: existingItem.short_name,
+          description: existingItem.description,
+          weight_g: existingItem.weight_g,
+          price: existingItem.price,
+          sale_price: existingItem.sale_price,
+          approx_pcs: existingItem.approx_pcs,
+          image_path: existingItem.image_path,
+          flavors: existingItem.flavors,
+          great_value: existingItem.great_value,
+          sku: existingItem.sku,
+          short_description: existingItem.short_description,
+          brand: existingItem.brand,
+          google_product_category: existingItem.google_product_category,
+          product_condition: existingItem.product_condition,
+        },
+        {
+          name: data.name,
+          slug: data.slug,
+          short_name: data.short_name,
+          description: data.description,
+          weight_g: data.weight_g,
+          price: data.price,
+          sale_price: data.sale_price,
+          approx_pcs: data.approx_pcs,
+          image_path: data.image_path,
+          flavors: data.flavors,
+          great_value: data.great_value,
+          sku: data.sku,
+          short_description: data.short_description,
+          brand: data.brand,
+          google_product_category: data.google_product_category,
+          product_condition: data.product_condition,
+        },
+        {
+          name: "Name",
+          slug: "URL slug",
+          short_name: "Short name",
+          description: "Description",
+          weight_g: "Weight",
+          price: "Price",
+          sale_price: "Sale price",
+          approx_pcs: "Approx pieces",
+          image_path: "Image",
+          flavors: "Flavors",
+          great_value: "Great value",
+          sku: "SKU",
+          short_description: "Short description",
+          brand: "Brand",
+          google_product_category: "Google category",
+          product_condition: "Condition",
+        },
+      ),
+    });
   }
   return { error: null };
 }
@@ -405,6 +494,16 @@ export async function setPremadeActive(id: string, is_active: boolean): Promise<
       buildPremadeItemPath(data as PremadeCandy),
       buildPremadeLegacyItemPath(data as PremadeCandy),
     ]);
+    await logAdminActivity({
+      area: "products",
+      action: "updated",
+      entityType: "premade-product",
+      entityId: data.id,
+      entityLabel: data.name,
+      summary: `${is_active ? "Activated" : "Deactivated"} pre-made product "${data.name}".`,
+      path: "/admin/premade",
+      changedFields: ["Active state"],
+    });
   }
   return { error: null };
 }
@@ -426,6 +525,18 @@ export async function updatePremadeOrder(
       .eq("id", update.id);
     if (error) return { error: error.message };
   }
+  await logAdminActivity({
+    area: "products",
+    action: "reordered",
+    entityType: "premade-products",
+    entityLabel: "Pre-made products",
+    summary: "Saved pre-made product order.",
+    path: "/admin/premade",
+    changedFields: ["Sort order"],
+    metadata: {
+      itemCount: updates.length,
+    },
+  });
   return { error: null };
 }
 
@@ -440,6 +551,18 @@ export async function syncPremadeToWoo(id: string): Promise<{ error: string | nu
   const { data, error } = await client.from("premade_candies").select("*").eq("id", id).single();
   if (error || !data) return { error: error?.message ?? "Premade item not found." };
   const syncResult = await syncPremadeCandyToWoo(client, data as PremadeCandy);
+  if (!syncResult.error) {
+    await logAdminActivity({
+      area: "products",
+      action: "synced",
+      entityType: "premade-product",
+      entityId: data.id,
+      entityLabel: data.name,
+      summary: `Synced pre-made product "${data.name}" to Woo.`,
+      path: "/admin/premade",
+      changedFields: ["Woo sync"],
+    });
+  }
   return { error: syncResult.error };
 }
 
@@ -477,6 +600,23 @@ export async function syncAllPremadeToWoo(): Promise<{
     }
   }
   const errorMessage = failed > 0 ? `${failed} item${failed === 1 ? "" : "s"} failed to sync.` : null;
+  await logAdminActivity({
+    area: "products",
+    action: "synced",
+    entityType: "premade-products",
+    entityLabel: "Pre-made products",
+    summary:
+      failed > 0
+        ? `Synced ${synced} pre-made products to Woo, with ${failed} failures.`
+        : `Synced ${synced} pre-made products to Woo.`,
+    path: "/admin/premade",
+    changedFields: ["Woo sync"],
+    metadata: {
+      synced,
+      failed,
+      total: items.length,
+    },
+  });
   return { error: errorMessage, synced, failed, total: items.length };
 }
 
@@ -517,6 +657,16 @@ export async function deletePremadeCandy(id: string): Promise<{ error: string | 
     buildPremadeItemPath(existing as PremadeCandy),
     buildPremadeLegacyItemPath(existing as PremadeCandy),
   ]);
+  await logAdminActivity({
+    area: "products",
+    action: "deleted",
+    entityType: "premade-product",
+    entityId: existing.id,
+    entityLabel: existing.name,
+    summary: `Deleted pre-made product "${existing.name}".`,
+    path: "/admin/premade",
+    changedFields: ["Pre-made product"],
+  });
 
   return { error: null };
 }

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSeoWriteAccess } from "@/lib/adminAuth";
-import { saveManagedSitePage } from "@/lib/sitePages";
+import { getManagedSitePage, saveManagedSitePage } from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const PRIVACY_ADMIN_PATH = "/admin/settings/privacy";
@@ -26,13 +27,38 @@ export async function savePrivacyPage(formData: FormData) {
     );
   }
 
+  const previousPage = await getManagedSitePage("privacy");
   await saveManagedSitePage({
     slug: "privacy",
     title: title || "Privacy Policy",
     bodyHtml: bodyContent.html,
   });
+  const nextPage = await getManagedSitePage("privacy");
 
   revalidatePath("/privacy");
   revalidatePath(PRIVACY_ADMIN_PATH);
+  await logAdminActivity({
+    area: "content-seo",
+    action: "updated",
+    entityType: "site-page",
+    entityId: nextPage.slug,
+    entityLabel: nextPage.title,
+    summary: 'Updated the "Privacy Policy" page.',
+    path: PRIVACY_ADMIN_PATH,
+    changedFields: getChangedFieldLabels(
+      {
+        title: previousPage.title,
+        bodyHtml: previousPage.bodyHtml,
+      },
+      {
+        title: nextPage.title,
+        bodyHtml: nextPage.bodyHtml,
+      },
+      {
+        title: "Title",
+        bodyHtml: "Body",
+      },
+    ),
+  });
   redirect(`${PRIVACY_ADMIN_PATH}?updated=1`);
 }

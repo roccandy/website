@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { deleteBlogPost, getBlogPostById, resolveUniqueBlogSlug, upsertBlogPost } from "@/lib/blog";
 import { uploadSeoImage } from "@/lib/seoAssets";
@@ -86,6 +87,53 @@ export async function saveBlogPostAction(formData: FormData) {
     authorName: normalizeField(formData.get("authorName")) || "Roc Candy",
   });
 
+  const changedFields = existingPost
+    ? getChangedFieldLabels(
+        {
+          title: existingPost.title,
+          slug: existingPost.slug,
+          excerpt: existingPost.excerpt,
+          coverImageUrl: existingPost.coverImageUrl,
+          coverImageAlt: existingPost.coverImageAlt,
+          bodyHtml: existingPost.bodyHtml,
+          seoTitle: existingPost.seoTitle,
+          metaDescription: existingPost.metaDescription,
+          canonicalUrl: existingPost.canonicalUrl,
+          status: existingPost.status,
+          publishedAt: existingPost.publishedAt,
+          authorName: existingPost.authorName,
+        },
+        {
+          title: savedPost.title,
+          slug: savedPost.slug,
+          excerpt: savedPost.excerpt,
+          coverImageUrl: savedPost.coverImageUrl,
+          coverImageAlt: savedPost.coverImageAlt,
+          bodyHtml: savedPost.bodyHtml,
+          seoTitle: savedPost.seoTitle,
+          metaDescription: savedPost.metaDescription,
+          canonicalUrl: savedPost.canonicalUrl,
+          status: savedPost.status,
+          publishedAt: savedPost.publishedAt,
+          authorName: savedPost.authorName,
+        },
+        {
+          title: "Title",
+          slug: "URL slug",
+          excerpt: "Excerpt",
+          coverImageUrl: "Cover image",
+          coverImageAlt: "Cover alt text",
+          bodyHtml: "Body",
+          seoTitle: "SEO title",
+          metaDescription: "Meta description",
+          canonicalUrl: "Canonical URL",
+          status: "Status",
+          publishedAt: "Published date",
+          authorName: "Author",
+        },
+      )
+    : ["Title", "Body", "Status"];
+
   if (existingPost && existingPost.slug !== savedPost.slug) {
     await saveSiteRedirect({
       sourcePath: `/blog/${existingPost.slug}`,
@@ -99,6 +147,20 @@ export async function saveBlogPostAction(formData: FormData) {
     existingPost ? `/blog/${existingPost.slug}` : "",
     `/blog/${savedPost.slug}`,
   ]);
+  await logAdminActivity({
+    area: "content-seo",
+    action: existingPost ? "updated" : "created",
+    entityType: "blog-post",
+    entityId: savedPost.id,
+    entityLabel: savedPost.title,
+    summary: `${existingPost ? "Updated" : "Created"} blog post "${savedPost.title}".`,
+    path: BLOG_ADMIN_PATH,
+    changedFields,
+    metadata: {
+      slug: savedPost.slug,
+      status: savedPost.status,
+    },
+  });
   redirect(appendAdminToast(BLOG_ADMIN_PATH, "success", "Blog post saved."));
 }
 
@@ -117,5 +179,18 @@ export async function deleteBlogPostAction(formData: FormData) {
 
   await deleteBlogPost(id);
   revalidateBlogPaths([`/blog/${existingPost.slug}`]);
+  await logAdminActivity({
+    area: "content-seo",
+    action: "deleted",
+    entityType: "blog-post",
+    entityId: existingPost.id,
+    entityLabel: existingPost.title,
+    summary: `Deleted blog post "${existingPost.title}".`,
+    path: BLOG_ADMIN_PATH,
+    changedFields: ["Blog post"],
+    metadata: {
+      slug: existingPost.slug,
+    },
+  });
   redirect(appendAdminToast(BLOG_ADMIN_PATH, "success", "Blog post deleted."));
 }

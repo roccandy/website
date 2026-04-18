@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import {
   buildAdminNavSections,
   getAdminNavToneClasses,
   isSeoFocusedUser,
 } from "@/app/admin/adminNavigation";
+import { listRecentAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getOrders } from "@/lib/data";
 import { isVisibleOnPremadeOrders, isVisibleOnProductionSchedule } from "./orders/scheduleVisibility";
@@ -44,6 +46,7 @@ export default async function AdminHome() {
   const seoSection = sections.find((section) => section.key === "content-seo") ?? null;
   const secondarySections = seoFocused ? sections.filter((section) => section.key !== "content-seo") : sections;
   const orders = seoFocused ? [] : await getOrders();
+  const recentActivity = session.user.role === "admin" ? await listRecentAdminActivity(8) : [];
   const outstandingCounts: Record<string, number> = {
     "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,
     "/admin/orders/additional-items": orders.filter(isVisibleOnPremadeOrders).length,
@@ -246,6 +249,26 @@ export default async function AdminHome() {
           );
         })}
       </div>
+
+      {session.user.role === "admin" ? (
+        <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm lg:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">Subtle internal log</p>
+              <h2 className="admin-card-title text-zinc-900">Recent changes</h2>
+            </div>
+            <Link
+              href="/admin/activity"
+              className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-white"
+            >
+              Full log
+            </Link>
+          </div>
+          <div className="mt-4">
+            <AdminActivityFeed entries={recentActivity} compact />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

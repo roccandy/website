@@ -1,4 +1,5 @@
 import { getProductionBlocks, getSettings } from "@/lib/data";
+import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -56,6 +57,15 @@ async function updateProductionSettings(formData: FormData) {
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "production-settings",
+    entityLabel: "Production settings",
+    summary: "Updated production capacity settings.",
+    path: "/admin/settings/production",
+    changedFields: ["Slots per day", "Max total kg"],
+  });
   redirect("/admin/settings/production");
 }
 
@@ -81,6 +91,18 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "quote-blockout-window",
+    entityLabel: "Quote blockout window",
+    summary: "Updated the quote blockout visibility window.",
+    path: "/admin/settings/production",
+    changedFields: ["Quote blockout window"],
+    metadata: {
+      quoteBlockoutMonths: quote_blockout_months,
+    },
+  });
   redirect("/admin/settings/production");
 }
 
@@ -115,6 +137,15 @@ async function updateDefaultNoProduction(formData: FormData) {
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "production-days",
+    entityLabel: "Default no-production days",
+    summary: "Updated default no-production days.",
+    path: "/admin/settings/production",
+    changedFields: ["Default no-production days"],
+  });
   redirect("/admin/settings/production");
 }
 
@@ -144,6 +175,15 @@ async function addBlock(formData: FormData) {
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "created",
+    entityType: "production-block",
+    entityLabel: reason,
+    summary: `Added production block "${reason}" from ${start_date} to ${resolvedEnd}.`,
+    path: "/admin/settings/production",
+    changedFields: ["Blocked dates"],
+  });
   redirect("/admin/settings/production");
 }
 
@@ -157,12 +197,23 @@ async function deleteBlock(formData: FormData) {
   }
 
   const client = supabaseAdminClient;
+  const { data: existing } = await client.from("production_blocks").select("id,start_date,end_date,reason").eq("id", id).maybeSingle();
   const { error } = await client.from("production_blocks").delete().eq("id", id);
   if (error) {
     throw new Error(error.message);
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "deleted",
+    entityType: "production-block",
+    entityId: existing?.id ?? id,
+    entityLabel: existing?.reason ?? "Production block",
+    summary: `Deleted production block${existing ? ` "${existing.reason}"` : ""}.`,
+    path: "/admin/settings/production",
+    changedFields: ["Blocked dates"],
+  });
   redirect("/admin/settings/production");
 }
 
@@ -199,6 +250,16 @@ async function updateBlock(formData: FormData) {
   }
 
   revalidateProductionBlockoutPages();
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "production-block",
+    entityId: id,
+    entityLabel: reason,
+    summary: `Updated production block "${reason}" from ${start_date} to ${resolvedEnd}.`,
+    path: "/admin/settings/production",
+    changedFields: ["Blocked dates"],
+  });
   redirect("/admin/settings/production");
 }
 

@@ -1,5 +1,6 @@
 "use server";
 
+import { logAdminActivity, type AdminActivityInput } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
@@ -91,6 +92,16 @@ const formatPremadeWeight = (weightG: number) => {
   return `${weightG}g`;
 };
 
+const describeOrderTarget = (input: {
+  orderNumber?: string | null;
+  title?: string | null;
+  customerName?: string | null;
+}) => {
+  const label = input.title?.trim() || input.customerName?.trim() || "Order";
+  const orderNumber = input.orderNumber?.trim();
+  return orderNumber ? `#${orderNumber} ${label}`.trim() : label;
+};
+
 export async function upsertOrder(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const redirectTo = formData.get("redirect_to")?.toString() || null;
@@ -162,6 +173,7 @@ export async function upsertOrder(formData: FormData) {
   const existing = id
     ? (await client.from("orders").select("*").eq("id", id).maybeSingle()).data
     : null;
+  let activity: AdminActivityInput | null = null;
   const resolvedCategoryId = category_id ?? existing?.category_id ?? null;
   const isBranded = resolvedCategoryId === "branded";
   const isWedding = resolvedCategoryId?.startsWith("weddings");
@@ -245,6 +257,28 @@ export async function upsertOrder(formData: FormData) {
     if (id) {
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
       if (error) throw new Error(error.message);
+      activity = {
+        area: "operations",
+        action: "updated",
+        entityType: "order",
+        entityId: id,
+        entityLabel: describeOrderTarget({
+          orderNumber: existing?.order_number ?? order_number,
+          title: basePayload.title,
+          customerName: basePayload.customer_name,
+        }),
+        summary: `Updated ${describeOrderTarget({
+          orderNumber: existing?.order_number ?? order_number,
+          title: basePayload.title,
+          customerName: basePayload.customer_name,
+        })}.`,
+        path: redirectTo ?? ORDERS_PATH,
+        changedFields: ["Order details"],
+        metadata: {
+          status: basePayload.status,
+          dueDate: basePayload.due_date,
+        },
+      };
     } else {
       const hasPremadeSelections = premadeSelections.length > 0;
       const buildOrderNumbers = async (seed?: string | null) => {
@@ -382,6 +416,28 @@ export async function upsertOrder(formData: FormData) {
           }
         }
       }
+      activity = {
+        area: "operations",
+        action: "created",
+        entityType: "order",
+        entityLabel: describeOrderTarget({
+          orderNumber: customOrderNumber,
+          title: payload.title,
+          customerName: payload.customer_name,
+        }),
+        summary: `Created ${describeOrderTarget({
+          orderNumber: customOrderNumber,
+          title: payload.title,
+          customerName: payload.customer_name,
+        })}.`,
+        path: redirectTo ?? ORDERS_PATH,
+        changedFields: ["Order details"],
+        metadata: {
+          orderNumber: customOrderNumber,
+          premadeOrderNumber,
+          createdPremadeCompanion: hasPremadeSelections,
+        },
+      };
     }
   } catch (error) {
     if (redirectTo && toastError) {
@@ -391,6 +447,9 @@ export async function upsertOrder(formData: FormData) {
     throw error;
   }
 
+  if (activity) {
+    await logAdminActivity(activity);
+  }
   const destination = redirectTo ?? ORDERS_PATH;
   if (redirectTo && toastSuccess) {
     const params = new URLSearchParams({ toast: "success", message: toastSuccess });
@@ -479,6 +538,24 @@ export async function refundOrder(formData: FormData) {
       refundResult.sharedPayment && !refundResult.fullyRefundedPayment
         ? `Refund processed for #${orders[0]?.order_number}. Other split items on this payment can still be refunded separately.`
         : "Refund processed";
+    await logAdminActivity({
+      area: "operations",
+      action: "refunded",
+      entityType: "order",
+      entityId: orders[0]?.id ?? id,
+      entityLabel: describeOrderTarget({
+        orderNumber: orders[0]?.order_number ?? null,
+        title: orders[0]?.title ?? null,
+        customerName: orders[0]?.customer_name ?? null,
+      }),
+      summary: successMessage,
+      path: redirectBase,
+      changedFields: ["Refund"],
+      metadata: {
+        orderCount: orders.length,
+        amount,
+      },
+    });
     redirect(`${redirectBase}?toast_success=${encodeURIComponent(successMessage)}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Refund failed.";
@@ -519,12 +596,23 @@ export async function upsertSlot(formData: FormData) {
     await writeSlot(toSafeInteger(capacity_kg));
   }
 
+  await logAdminActivity({
+    area: "operations",
+    action: id ? "updated" : "created",
+    entityType: "production-slot",
+    entityId: id ?? null,
+    entityLabel: slot_date,
+    summary: `${id ? "Updated" : "Created"} production slot for ${slot_date}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Slot date", "Capacity", "Status"],
+  });
   redirect(ORDERS_PATH);
 }
 
 export async function assignOrderToSlot(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
+  let assignmentActivity: AdminActivityInput | null = null;
   try {
     const assignmentId = formData.get("assignment_id")?.toString() || undefined;
     const order_id = formData.get("order_id")?.toString();
@@ -547,7 +635,7 @@ export async function assignOrderToSlot(formData: FormData) {
 
     const { data: order, error: orderError } = await client
       .from("orders")
-      .select("id,total_weight_kg")
+      .select("id,order_number,title,customer_name,total_weight_kg")
       .eq("id", order_id)
       .single();
     if (orderError) throw new Error(orderError.message);
@@ -605,6 +693,7 @@ export async function assignOrderToSlot(formData: FormData) {
     }
 
     if (!resolvedSlotId) throw new Error("Slot could not be resolved.");
+    let resolvedSlotDate = slot_date ?? null;
     if (!slot_date && resolvedSlotId) {
       const { data: slotDateRow, error: slotDateError } = await client
         .from("production_slots")
@@ -613,6 +702,7 @@ export async function assignOrderToSlot(formData: FormData) {
         .maybeSingle();
       if (slotDateError) throw new Error(slotDateError.message);
       if (slotDateRow?.slot_date) {
+        resolvedSlotDate = slotDateRow.slot_date;
         await assertAssignableDate(slotDateRow.slot_date, client);
       }
     }
@@ -684,6 +774,28 @@ export async function assignOrderToSlot(formData: FormData) {
 
     const { error: statusError } = await client.from("orders").update({ status: "scheduled" }).eq("id", order_id);
     if (statusError) throw new Error(statusError.message);
+    assignmentActivity = {
+      area: "operations",
+      action: "assigned",
+      entityType: "order",
+      entityId: order.id,
+      entityLabel: describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      }),
+      summary: `Assigned ${describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      })} to ${resolvedSlotDate ?? "a production slot"}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Production slot"],
+      metadata: {
+        slotId: resolvedSlotId,
+        slotDate: resolvedSlotDate,
+      },
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to assign order.";
     if (inlineResponse) {
@@ -693,6 +805,9 @@ export async function assignOrderToSlot(formData: FormData) {
     redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
+  if (assignmentActivity) {
+    await logAdminActivity(assignmentActivity);
+  }
   if (inlineResponse) {
     revalidatePath(ORDERS_PATH);
     return { ok: true, tone: "success" as const, message: "Order assigned." };
@@ -703,6 +818,7 @@ export async function assignOrderToSlot(formData: FormData) {
 export async function deleteAssignment(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
+  let orderIdForLog: string | null = null;
   try {
     const assignmentId = formData.get("assignment_id")?.toString();
     if (!assignmentId) throw new Error("Missing assignment id");
@@ -714,6 +830,7 @@ export async function deleteAssignment(formData: FormData) {
       .eq("id", assignmentId)
       .maybeSingle();
     if (slotLookupError) throw new Error(slotLookupError.message);
+    orderIdForLog = orderSlot?.order_id ?? null;
 
     const { error } = await client.from("order_slots").delete().eq("id", assignmentId);
     if (error) throw new Error(error.message);
@@ -734,6 +851,16 @@ export async function deleteAssignment(formData: FormData) {
     redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
+  await logAdminActivity({
+    area: "operations",
+    action: "unassigned",
+    entityType: "order",
+    entityId: orderIdForLog,
+    entityLabel: orderIdForLog ?? "Order",
+    summary: "Removed an order from its production slot.",
+    path: ORDERS_PATH,
+    changedFields: ["Production slot"],
+  });
   if (inlineResponse) {
     revalidatePath(ORDERS_PATH);
     return { ok: true, tone: "success" as const, message: "Order unassigned." };
@@ -749,6 +876,7 @@ async function completeOrder(formData: FormData, inlineResponse: boolean) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  let completionActivity: AdminActivityInput | null = null;
   try {
     if (!orderId) throw new Error("Missing order id");
 
@@ -782,6 +910,19 @@ async function completeOrder(formData: FormData, inlineResponse: boolean) {
         .eq("design_type", "premade");
       if (companionError) throw new Error(companionError.message);
     }
+    completionActivity = {
+      area: "operations",
+      action: "archived",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: orderId ?? "Order",
+      summary:
+        includeCompanion && companionOrderIds.length > 0
+          ? `Completed order and ${companionOrderIds.length} linked companion item(s).`
+          : "Completed order.",
+      path: ORDERS_PATH,
+      changedFields: ["Order status"],
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to complete order.";
     if (inlineResponse) {
@@ -793,6 +934,9 @@ async function completeOrder(formData: FormData, inlineResponse: boolean) {
     throw error;
   }
 
+  if (completionActivity) {
+    await logAdminActivity(completionActivity);
+  }
   if (inlineResponse) {
     revalidatePath(ORDERS_PATH);
     revalidatePath(ADDITIONAL_ITEMS_PATH);
@@ -863,6 +1007,18 @@ export async function unarchiveOrder(formData: FormData) {
   revalidatePath(ORDERS_PATH);
   revalidatePath(ADDITIONAL_ITEMS_PATH);
   revalidatePath("/admin/orders/archived");
+  await logAdminActivity({
+    area: "operations",
+    action: "restored",
+    entityType: "orders",
+    entityLabel: targetOrderIds.length === 1 ? targetOrderIds[0] : `${targetOrderIds.length} orders`,
+    summary:
+      targetOrderIds.length === 1
+        ? "Moved 1 order back to pending."
+        : `Moved ${targetOrderIds.length} orders back to pending.`,
+    path: redirectBase,
+    changedFields: ["Order status"],
+  });
   redirect(redirectBase);
 }
 
@@ -874,7 +1030,7 @@ export async function markAdditionalItemShipped(formData: FormData) {
   const client = supabaseAdminClient;
   const { data: existing, error: existingError } = await client
     .from("orders")
-    .select("refunded_at")
+    .select("id,order_number,title,customer_name,refunded_at")
     .eq("id", orderId)
     .maybeSingle();
   if (existingError) throw new Error(existingError.message);
@@ -884,6 +1040,25 @@ export async function markAdditionalItemShipped(formData: FormData) {
     .update({ status: "shipped", shipped_at: new Date().toISOString() })
     .eq("id", orderId);
   if (error) throw new Error(error.message);
+
+  await logAdminActivity({
+    area: "operations",
+    action: "shipped",
+    entityType: "order",
+    entityId: existing?.id ?? orderId,
+    entityLabel: describeOrderTarget({
+      orderNumber: existing?.order_number ?? null,
+      title: existing?.title ?? null,
+      customerName: existing?.customer_name ?? null,
+    }),
+    summary: `Marked ${describeOrderTarget({
+      orderNumber: existing?.order_number ?? null,
+      title: existing?.title ?? null,
+      customerName: existing?.customer_name ?? null,
+    })} as shipped.`,
+    path: ADDITIONAL_ITEMS_PATH,
+    changedFields: ["Order status"],
+  });
 
   redirect(ADDITIONAL_ITEMS_PATH);
 }
@@ -979,6 +1154,18 @@ export async function markAdditionalItemsShipped(formData: FormData) {
 
   revalidatePath(ORDERS_PATH);
   revalidatePath("/admin/orders/archived");
+  await logAdminActivity({
+    area: "operations",
+    action: "shipped",
+    entityType: "premade-orders",
+    entityLabel: `${orderIds.length} orders`,
+    summary:
+      includeCompanion && companionOrderIds.length > 0
+        ? `Marked ${orderIds.length} pre-made order(s) shipped and completed ${companionOrderIds.length} linked custom order(s).`
+        : `Marked ${orderIds.length} pre-made order(s) shipped.`,
+    path: redirectBase,
+    changedFields: ["Order status"],
+  });
   redirect(redirectBase);
 }
 
@@ -1007,6 +1194,15 @@ export async function markAdditionalItemsPending(formData: FormData) {
     .eq("design_type", "premade");
   if (error) throw new Error(error.message);
 
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "premade-orders",
+    entityLabel: `${orderIds.length} orders`,
+    summary: `Moved ${orderIds.length} pre-made order(s) back to pending.`,
+    path: ADDITIONAL_ITEMS_PATH,
+    changedFields: ["Order status"],
+  });
   redirect(ADDITIONAL_ITEMS_PATH);
 }
 
@@ -1034,6 +1230,15 @@ export async function addOpenOverride(formData: FormData) {
     if (error) throw new Error(error.message);
   }
 
+  await logAdminActivity({
+    area: "operations",
+    action: "created",
+    entityType: "production-block",
+    entityLabel: date,
+    summary: `Added an open override for ${date}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Production block"],
+  });
   redirect(ORDERS_PATH);
 }
 
@@ -1069,6 +1274,15 @@ export async function addManualBlock(formData: FormData) {
     if (error) throw new Error(error.message);
   }
 
+  await logAdminActivity({
+    area: "operations",
+    action: "created",
+    entityType: "production-block",
+    entityLabel: date,
+    summary: `Added a manual production block for ${date}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Production block"],
+  });
   redirect(ORDERS_PATH);
 }
 
@@ -1086,6 +1300,15 @@ export async function removeManualBlock(formData: FormData) {
     .eq("reason", MANUAL_BLOCK_REASON);
   if (error) throw new Error(error.message);
 
+  await logAdminActivity({
+    area: "operations",
+    action: "deleted",
+    entityType: "production-block",
+    entityLabel: date,
+    summary: `Removed the manual production block for ${date}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Production block"],
+  });
   redirect(ORDERS_PATH);
 }
 
@@ -1104,6 +1327,15 @@ export async function addQuoteBlock(formData: FormData) {
   });
   if (error) throw new Error(error.message);
 
+  await logAdminActivity({
+    area: "operations",
+    action: "created",
+    entityType: "quote-block",
+    entityLabel: start_date,
+    summary: `Added a front-end quote block from ${start_date} to ${resolvedEnd}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Quote block"],
+  });
   redirect(ORDERS_PATH);
 }
 
@@ -1116,5 +1348,15 @@ export async function removeQuoteBlock(formData: FormData) {
   const { error } = await client.from("quote_blocks").delete().eq("id", id);
   if (error) throw new Error(error.message);
 
+  await logAdminActivity({
+    area: "operations",
+    action: "deleted",
+    entityType: "quote-block",
+    entityId: id,
+    entityLabel: id,
+    summary: "Removed a front-end quote block.",
+    path: ORDERS_PATH,
+    changedFields: ["Quote block"],
+  });
   redirect(ORDERS_PATH);
 }

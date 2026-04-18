@@ -1,5 +1,6 @@
 "use server";
 
+import { logAdminActivity } from "@/lib/adminActivity";
 import { appendAdminToast, requireAdminWriteAccess } from "@/lib/adminAuth";
 import {
   isOptimizableWebImageMimeType,
@@ -162,6 +163,22 @@ export async function upsertPackaging(formData: FormData) {
       }
     }
 
+    await logAdminActivity({
+      area: "commercial",
+      action: id ? "updated" : "created",
+      entityType: "packaging-option",
+      entityId: id ?? null,
+      entityLabel: `${type} ${size}`,
+      summary: `${id ? "Updated" : "Saved"} packaging option "${type} ${size}".`,
+      path: "/admin/packaging",
+      changedFields: ["Packaging option"],
+      metadata: {
+        type,
+        size,
+        candyWeightG: candy_weight_g,
+      },
+    });
+
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save packaging.";
     redirect(appendAdminToast("/admin/packaging", "error", message));
@@ -218,6 +235,18 @@ export async function updatePackagingTypeOrder(formData: FormData) {
   }
 
   revalidatePath("/admin/packaging");
+  await logAdminActivity({
+    area: "commercial",
+    action: "reordered",
+    entityType: "packaging-types",
+    entityLabel: "Packaging types",
+    summary: "Saved packaging type order.",
+    path: "/admin/packaging",
+    changedFields: ["Sort order"],
+    metadata: {
+      typeCount: finalOrder.length,
+    },
+  });
   redirect("/admin/packaging");
 }
 
@@ -227,8 +256,19 @@ export async function deletePackaging(formData: FormData) {
     const id = formData.get("id")?.toString();
     if (!id) throw new Error("Missing id");
     const client = supabaseAdminClient;
+    const { data: existing } = await client.from("packaging_options").select("id,type,size").eq("id", id).maybeSingle();
     const { error } = await client.from("packaging_options").delete().eq("id", id);
     if (error) throw new Error(error.message);
+    await logAdminActivity({
+      area: "commercial",
+      action: "deleted",
+      entityType: "packaging-option",
+      entityId: existing?.id ?? id,
+      entityLabel: existing ? `${existing.type} ${existing.size}` : "Packaging option",
+      summary: `Deleted packaging option${existing ? ` "${existing.type} ${existing.size}"` : ""}.`,
+      path: "/admin/packaging",
+      changedFields: ["Packaging option"],
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete packaging.";
     redirect(appendAdminToast("/admin/packaging", "error", message));
@@ -285,6 +325,21 @@ export async function uploadPackagingImage(formData: FormData) {
       { onConflict: "packaging_option_id,category_id,lid_color" }
     );
     if (upsertError) throw new Error(upsertError.message);
+    await logAdminActivity({
+      area: "commercial",
+      action: "uploaded",
+      entityType: "packaging-image",
+      entityId: packagingOptionId,
+      entityLabel: `${option.type} ${option.size}`,
+      summary: `Uploaded packaging image for "${option.type} ${option.size}".`,
+      path: "/admin/packaging",
+      changedFields: ["Packaging image"],
+      metadata: {
+        categoryId,
+        lidColor,
+        fileName,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to upload packaging image.";
     redirect(appendAdminToast("/admin/packaging", "error", message));

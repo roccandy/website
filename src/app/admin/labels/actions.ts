@@ -1,5 +1,6 @@
 "use server";
 
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -12,6 +13,9 @@ export async function upsertLabelRange(formData: FormData) {
   const range_cost = range_cost_raw === null ? Number.NaN : Number(range_cost_raw);
 
   const client = supabaseAdminClient;
+  const existingRange = id
+    ? (await client.from("label_ranges").select("id,upper_bound,range_cost").eq("id", id).maybeSingle()).data
+    : null;
   if (id) {
     let nextRangeCost = range_cost;
     if (!Number.isFinite(nextRangeCost)) {
@@ -23,17 +27,53 @@ export async function upsertLabelRange(formData: FormData) {
       if (existingError) throw new Error(existingError.message);
       nextRangeCost = Number(existing?.range_cost ?? 0);
     }
-    const { error } = await client
+    const { data, error } = await client
       .from("label_ranges")
       .update({ upper_bound, range_cost: nextRangeCost })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id,upper_bound,range_cost")
+      .single();
     if (error) throw new Error(error.message);
-  } else {
-    const { error } = await client.from("label_ranges").insert({
-      upper_bound,
-      range_cost: Number.isFinite(range_cost) ? range_cost : 0,
+    await logAdminActivity({
+      area: "commercial",
+      action: "updated",
+      entityType: "label-range",
+      entityId: data?.id ?? id,
+      entityLabel: `Up to ${data?.upper_bound ?? upper_bound} labels`,
+      summary: `Updated label pricing range up to ${data?.upper_bound ?? upper_bound} labels.`,
+      path: "/admin/labels",
+      changedFields: getChangedFieldLabels(
+        {
+          upper_bound: existingRange?.upper_bound ?? null,
+          range_cost: existingRange?.range_cost ?? null,
+        },
+        {
+          upper_bound: data?.upper_bound ?? upper_bound,
+          range_cost: data?.range_cost ?? nextRangeCost,
+        },
+        {
+          upper_bound: "Upper bound",
+          range_cost: "Range cost",
+        },
+      ),
     });
+  } else {
+    const insertedCost = Number.isFinite(range_cost) ? range_cost : 0;
+    const { data, error } = await client.from("label_ranges").insert({
+      upper_bound,
+      range_cost: insertedCost,
+    }).select("id,upper_bound,range_cost").single();
     if (error) throw new Error(error.message);
+    await logAdminActivity({
+      area: "commercial",
+      action: "created",
+      entityType: "label-range",
+      entityId: data?.id ?? null,
+      entityLabel: `Up to ${data?.upper_bound ?? upper_bound} labels`,
+      summary: `Added label pricing range up to ${data?.upper_bound ?? upper_bound} labels.`,
+      path: "/admin/labels",
+      changedFields: ["Upper bound", "Range cost"],
+    });
   }
 
   redirect("/admin/labels");
@@ -44,8 +84,19 @@ export async function deleteLabelRange(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseAdminClient;
+  const { data: existing } = await client.from("label_ranges").select("id,upper_bound").eq("id", id).maybeSingle();
   const { error } = await client.from("label_ranges").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  await logAdminActivity({
+    area: "commercial",
+    action: "deleted",
+    entityType: "label-range",
+    entityId: existing?.id ?? id,
+    entityLabel: existing?.upper_bound ? `Up to ${existing.upper_bound} labels` : "Label range",
+    summary: `Deleted label pricing range${existing?.upper_bound ? ` up to ${existing.upper_bound} labels` : ""}.`,
+    path: "/admin/labels",
+    changedFields: ["Label range"],
+  });
   redirect("/admin/labels");
 }
 
@@ -60,6 +111,15 @@ export async function updateLabelSettings(formData: FormData) {
     .update({ labels_supplier_shipping, labels_markup_multiplier, labels_max_bulk })
     .eq("id", 1);
   if (error) throw new Error(error.message);
+  await logAdminActivity({
+    area: "commercial",
+    action: "updated",
+    entityType: "label-settings",
+    entityLabel: "Label settings",
+    summary: "Updated label pricing settings.",
+    path: "/admin/labels",
+    changedFields: ["Supplier shipping", "Markup multiplier", "Bulk limit"],
+  });
   redirect("/admin/labels");
 }
 
@@ -76,5 +136,14 @@ export async function updateIngredientLabelSettings(formData: FormData) {
     })
     .eq("id", 1);
   if (error) throw new Error(error.message);
+  await logAdminActivity({
+    area: "commercial",
+    action: "updated",
+    entityType: "ingredient-label-settings",
+    entityLabel: "Ingredient label settings",
+    summary: "Updated ingredient label settings.",
+    path: "/admin/labels",
+    changedFields: ["Ingredient label price", "Ingredient label type"],
+  });
   redirect("/admin/labels");
 }

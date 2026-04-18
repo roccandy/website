@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { logAdminActivity } from "@/lib/adminActivity";
 import { appendAdminToast, requireAdminSession } from "@/lib/adminAuth";
 import { getAdminUserByEmail, updateAdminUserPassword } from "@/lib/adminUsers";
 import { verifyPassword } from "@/lib/passwords";
@@ -55,5 +56,15 @@ export async function changeOwnPasswordAction(formData: FormData) {
   }
 
   await updateAdminUserPassword(user.id, newPassword);
+  await logAdminActivity({
+    area: "admin",
+    action: "updated",
+    entityType: "admin-user",
+    entityId: user.id,
+    entityLabel: user.email,
+    summary: "Changed their own admin password.",
+    path: PASSWORD_PATH,
+    changedFields: ["Password"],
+  });
   redirect(appendAdminToast(PASSWORD_PATH, "success", "Password updated."));
 }

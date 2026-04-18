@@ -63,6 +63,24 @@ export async function getAdminUserByEmail(email: string) {
   return (data as AdminUserRecord | null) ?? null;
 }
 
+export async function getAdminUserById(id: string) {
+  const normalized = id.trim();
+  if (!normalized) return null;
+
+  const { data, error } = await supabaseAdminClient
+    .from(ADMIN_USERS_TABLE)
+    .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
+    .eq("id", normalized)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTableError(error.message)) return null;
+    throw new Error(error.message);
+  }
+
+  return (data as AdminUserRecord | null) ?? null;
+}
+
 export async function hasAnyAdminUsers() {
   const { count, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)

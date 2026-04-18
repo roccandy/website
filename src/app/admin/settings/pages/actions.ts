@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { getManagedFaqItems, saveManagedFaqItems } from "@/lib/faqs";
 import { resolveLandingGalleryUploadPath } from "@/lib/landingGallery";
@@ -9,7 +10,7 @@ import { buildPremadeItemPath } from "@/lib/premadeCatalog";
 import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
-import { deleteSiteRedirect, saveSiteRedirect } from "@/lib/siteRedirects";
+import { deleteSiteRedirect, listSiteRedirects, saveSiteRedirect } from "@/lib/siteRedirects";
 import { buildManagedSitePageHref, getManagedSitePage, saveManagedSitePage } from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
@@ -85,6 +86,7 @@ export async function updateSitePageAction(formData: FormData) {
   const ogImageFile = formData.get("ogImageFile");
   const uploadedOgImage =
     ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, slug) : null;
+  const previousPage = await getManagedSitePage(slug);
 
   await saveManagedSitePage({
     slug,
@@ -100,8 +102,59 @@ export async function updateSitePageAction(formData: FormData) {
     canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
     galleryImageUrls: normalizeGalleryImageUrls(formData.getAll("galleryImageUrls")),
   });
+  const nextPage = await getManagedSitePage(slug);
 
   await revalidateSitePagePath(slug);
+  await logAdminActivity({
+    area: "content-seo",
+    action: "updated",
+    entityType: "site-page",
+    entityId: nextPage.slug,
+    entityLabel: nextPage.title || nextPage.slug,
+    summary: `Updated built-in page "${nextPage.title || nextPage.slug}".`,
+    path: MANAGED_PAGES_ADMIN_PATH,
+    changedFields: getChangedFieldLabels(
+      {
+        title: previousPage.title,
+        heroSubheading: previousPage.heroSubheading,
+        heroSupportingLine: previousPage.heroSupportingLine,
+        bodyHtml: previousPage.bodyHtml,
+        faqHeading: previousPage.faqHeading,
+        faqItemIds: previousPage.faqItemIds,
+        seoTitle: previousPage.seoTitle,
+        metaDescription: previousPage.metaDescription,
+        ogImageUrl: previousPage.ogImageUrl,
+        canonicalUrl: previousPage.canonicalUrl,
+        galleryImageUrls: previousPage.galleryImageUrls,
+      },
+      {
+        title: nextPage.title,
+        heroSubheading: nextPage.heroSubheading,
+        heroSupportingLine: nextPage.heroSupportingLine,
+        bodyHtml: nextPage.bodyHtml,
+        faqHeading: nextPage.faqHeading,
+        faqItemIds: nextPage.faqItemIds,
+        seoTitle: nextPage.seoTitle,
+        metaDescription: nextPage.metaDescription,
+        ogImageUrl: nextPage.ogImageUrl,
+        canonicalUrl: nextPage.canonicalUrl,
+        galleryImageUrls: nextPage.galleryImageUrls,
+      },
+      {
+        title: "Title",
+        heroSubheading: "Hero subheading",
+        heroSupportingLine: "Hero supporting line",
+        bodyHtml: "Body",
+        faqHeading: "FAQ heading",
+        faqItemIds: "Linked FAQs",
+        seoTitle: "SEO title",
+        metaDescription: "Meta description",
+        ogImageUrl: "OG image",
+        canonicalUrl: "Canonical URL",
+        galleryImageUrls: "Gallery images",
+      },
+    ),
+  });
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Built-in page saved."));
 }
 
@@ -152,6 +205,19 @@ export async function createPageFaqAction(formData: FormData) {
 
   await revalidateSitePagePath(pageSlug);
   revalidateFaqAdminAndPublicPaths();
+  await logAdminActivity({
+    area: "content-seo",
+    action: "created",
+    entityType: "faq",
+    entityId: newFaqId,
+    entityLabel: question || "New FAQ",
+    summary: `Added a page FAQ to "${page.title || pageSlug}".`,
+    path: MANAGED_PAGES_ADMIN_PATH,
+    changedFields: ["Question", "Answer", "Linked page"],
+    metadata: {
+      pageSlug,
+    },
+  });
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Page FAQ created."));
 }
 
@@ -188,7 +254,7 @@ export async function updatePremadeSeoAction(formData: FormData) {
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
   }
 
-  const { error } = await supabaseAdminClient
+  const { data: updatedItem, error } = await supabaseAdminClient
     .from("premade_candies")
     .update({
       slug: resolvedSlug,
@@ -197,17 +263,19 @@ export async function updatePremadeSeoAction(formData: FormData) {
       og_image_url: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
       canonical_url: normalizeField(formData.get("canonicalUrl")) || null,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id,name,slug,seo_title,meta_description,og_image_url,canonical_url")
+    .single();
 
-  if (error) {
-    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", error.message));
+  if (error || !updatedItem) {
+    redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", error?.message ?? "Unable to save the product SEO."));
   }
 
   const previousPath = pagePath;
   const nextPagePath = buildPremadeItemPath({
-    id: existingItem.id,
-    name: existingItem.name,
-    slug: resolvedSlug,
+    id: updatedItem.id,
+    name: updatedItem.name,
+    slug: updatedItem.slug,
   });
   if (previousPath !== nextPagePath) {
     await saveSiteRedirect({
@@ -219,6 +287,42 @@ export async function updatePremadeSeoAction(formData: FormData) {
   }
   await revalidatePremadePagePath(nextPagePath);
   await revalidatePremadePagePath(pagePath);
+  await logAdminActivity({
+    area: "content-seo",
+    action: "updated",
+    entityType: "premade-seo",
+    entityId: updatedItem.id,
+    entityLabel: updatedItem.name,
+    summary: `Updated pre-made SEO for "${updatedItem.name}".`,
+    path: MANAGED_PAGES_ADMIN_PATH,
+    changedFields: getChangedFieldLabels(
+      {
+        slug: existingItem.slug,
+        seo_title: existingItem.seo_title,
+        meta_description: existingItem.meta_description,
+        og_image_url: existingItem.og_image_url,
+        canonical_url: existingItem.canonical_url,
+      },
+      {
+        slug: updatedItem.slug,
+        seo_title: updatedItem.seo_title,
+        meta_description: updatedItem.meta_description,
+        og_image_url: updatedItem.og_image_url,
+        canonical_url: updatedItem.canonical_url,
+      },
+      {
+        slug: "URL slug",
+        seo_title: "SEO title",
+        meta_description: "Meta description",
+        og_image_url: "OG image",
+        canonical_url: "Canonical URL",
+      },
+    ),
+    metadata: {
+      previousPath,
+      nextPath: nextPagePath,
+    },
+  });
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Pre-made product SEO saved."));
 }
 
@@ -276,6 +380,23 @@ export async function bulkUploadLandingGalleryImagesAction(
     }
 
     revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+    await logAdminActivity({
+      area: "content-seo",
+      action: "uploaded",
+      entityType: "landing-gallery",
+      entityLabel: slug,
+      summary:
+        uploaded.length === 1
+          ? `Uploaded 1 landing gallery image for "${slug}".`
+          : `Uploaded ${uploaded.length} landing gallery images for "${slug}".`,
+      path: MANAGED_PAGES_ADMIN_PATH,
+      changedFields: ["Gallery images"],
+      metadata: {
+        pageSlug: slug,
+        uploadTarget: uploadTarget || null,
+        count: uploaded.length,
+      },
+    });
 
     return {
       status: "success",
@@ -298,12 +419,17 @@ export async function bulkUploadLandingGalleryImagesAction(
 
 export async function saveSiteRedirectAction(formData: FormData) {
   await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  const sourcePath = normalizeField(formData.get("sourcePath"));
+  const destinationPath = normalizeField(formData.get("destinationPath"));
+  const statusCode = normalizeField(formData.get("statusCode"));
+  const isActive = readCheckbox(formData, "isActive");
+  const existingRedirect = (await listSiteRedirects()).find((item) => item.sourcePath === sourcePath) ?? null;
   try {
     await saveSiteRedirect({
-      sourcePath: normalizeField(formData.get("sourcePath")),
-      destinationPath: normalizeField(formData.get("destinationPath")),
-      statusCode: normalizeField(formData.get("statusCode")),
-      isActive: readCheckbox(formData, "isActive"),
+      sourcePath,
+      destinationPath,
+      statusCode,
+      isActive,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save the redirect.";
@@ -311,17 +437,56 @@ export async function saveSiteRedirectAction(formData: FormData) {
   }
 
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  await logAdminActivity({
+    area: "content-seo",
+    action: existingRedirect ? "updated" : "created",
+    entityType: "redirect",
+    entityId: sourcePath,
+    entityLabel: sourcePath,
+    summary: `Saved redirect ${sourcePath} -> ${destinationPath}.`,
+    path: MANAGED_PAGES_ADMIN_PATH,
+    changedFields: existingRedirect
+      ? getChangedFieldLabels(
+          {
+            destinationPath: existingRedirect.destinationPath,
+            statusCode: String(existingRedirect.statusCode),
+            isActive: existingRedirect.isActive,
+          },
+          {
+            destinationPath,
+            statusCode,
+            isActive,
+          },
+          {
+            destinationPath: "Destination",
+            statusCode: "Status code",
+            isActive: "Active state",
+          },
+        )
+      : ["Destination", "Status code", "Active state"],
+  });
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Redirect saved."));
 }
 
 export async function deleteSiteRedirectAction(formData: FormData) {
   await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: MANAGED_PAGES_ADMIN_PATH });
+  const sourcePath = normalizeField(formData.get("sourcePath"));
   try {
-    await deleteSiteRedirect(normalizeField(formData.get("sourcePath")));
+    await deleteSiteRedirect(sourcePath);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete the redirect.";
     redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "error", message));
   }
   revalidatePath(MANAGED_PAGES_ADMIN_PATH);
+  await logAdminActivity({
+    area: "content-seo",
+    action: "deleted",
+    entityType: "redirect",
+    entityId: sourcePath,
+    entityLabel: sourcePath,
+    summary: `Deleted redirect ${sourcePath}.`,
+    path: MANAGED_PAGES_ADMIN_PATH,
+    changedFields: ["Redirect"],
+  });
   redirect(appendAdminToast(MANAGED_PAGES_ADMIN_PATH, "success", "Redirect deleted."));
 }

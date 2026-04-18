@@ -1,4 +1,5 @@
 import { getColorPalette } from "@/lib/data";
+import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -46,6 +47,18 @@ async function updateColorPalette(formData: FormData) {
     throw new Error(error.message);
   }
 
+  await logAdminActivity({
+    area: "commercial",
+    action: "updated",
+    entityType: "color-palette",
+    entityLabel: "Colour palette",
+    summary: "Updated the colour palette.",
+    path: "/admin/settings/palette",
+    changedFields: ["Colour palette"],
+    metadata: {
+      colorCount: rows.length,
+    },
+  });
   redirect("/admin/settings/palette");
 }
 

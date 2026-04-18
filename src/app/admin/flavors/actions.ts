@@ -1,5 +1,6 @@
 "use server";
 
+import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -26,8 +27,18 @@ export async function insertFlavor(name: string): Promise<{ error: string | null
     Number.isFinite(latestSort) && latestSort >= -1
       ? { name: trimmed, sort_order: latestSort + 1 }
       : { name: trimmed };
-  const { error } = await client.from("flavors").insert(payload);
+  const { data, error } = await client.from("flavors").insert(payload).select("id,name").single();
   if (error) return { error: error.message };
+  await logAdminActivity({
+    area: "products",
+    action: "created",
+    entityType: "flavor",
+    entityId: data?.id ?? null,
+    entityLabel: data?.name ?? trimmed,
+    summary: `Added flavor "${data?.name ?? trimmed}".`,
+    path: PATH,
+    changedFields: ["Flavor name"],
+  });
   return { error: null };
 }
 
@@ -36,8 +47,19 @@ export async function deleteFlavor(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("Missing id");
   const client = supabaseAdminClient;
+  const { data: existing } = await client.from("flavors").select("id,name").eq("id", id).maybeSingle();
   const { error } = await client.from("flavors").delete().eq("id", id);
   if (error) throw new Error(error.message);
+  await logAdminActivity({
+    area: "products",
+    action: "deleted",
+    entityType: "flavor",
+    entityId: existing?.id ?? id,
+    entityLabel: existing?.name ?? "Flavor",
+    summary: `Deleted flavor "${existing?.name ?? "Flavor"}".`,
+    path: PATH,
+    changedFields: ["Flavor"],
+  });
   redirect(PATH);
 }
 
@@ -49,8 +71,19 @@ export async function toggleFlavorActive(formData: FormData) {
   const nextActive = nextActiveRaw === "true";
 
   const client = supabaseAdminClient;
+  const { data: existing } = await client.from("flavors").select("id,name,is_active").eq("id", id).maybeSingle();
   const { error } = await client.from("flavors").update({ is_active: nextActive }).eq("id", id);
   if (error) throw new Error(error.message);
+  await logAdminActivity({
+    area: "products",
+    action: "updated",
+    entityType: "flavor",
+    entityId: existing?.id ?? id,
+    entityLabel: existing?.name ?? "Flavor",
+    summary: `${nextActive ? "Activated" : "Deactivated"} flavor "${existing?.name ?? "Flavor"}".`,
+    path: PATH,
+    changedFields: ["Active state"],
+  });
   redirect(PATH);
 }
 
@@ -73,6 +106,18 @@ export async function updateFlavorOrder(
       const { error } = await client.from("flavors").update({ sort_order: sortOrder }).eq("id", id);
       if (error) throw error;
     }
+    await logAdminActivity({
+      area: "products",
+      action: "reordered",
+      entityType: "flavor-library",
+      entityLabel: "Flavors",
+      summary: "Saved flavor order.",
+      path: PATH,
+      changedFields: ["Sort order"],
+      metadata: {
+        itemCount: updates.length,
+      },
+    });
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save flavor order." };

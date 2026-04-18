@@ -1,4 +1,5 @@
 import { getSettings } from "@/lib/data";
+import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -36,6 +37,15 @@ async function updateExtrasPricing(formData: FormData) {
     throw new Error(error.message);
   }
 
+  await logAdminActivity({
+    area: "commercial",
+    action: "updated",
+    entityType: "extras-pricing",
+    entityLabel: "Extras pricing",
+    summary: "Updated extras pricing settings.",
+    path: "/admin/settings/extras",
+    changedFields: ["Urgency fee", "Transaction fee", "Jacket pricing"],
+  });
   redirect("/admin/settings/extras");
 }
 

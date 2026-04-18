@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { appendAdminToast, requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { getManagedFaqItems, saveManagedFaqItems, type ManagedFaqItem } from "@/lib/faqs";
 import { buildManagedSitePageHref, EDITABLE_SITE_PAGE_SLUGS } from "@/lib/sitePages";
@@ -56,6 +57,18 @@ export async function addFaq(formData: FormData) {
   ]);
   await saveManagedFaqItems(next);
   revalidateFaqDependentPages();
+  const addedFaq = next[next.length - 1];
+  const addedFaqLabel = addedFaq?.question ?? question ?? "New FAQ";
+  await logAdminActivity({
+    area: "content-seo",
+    action: "created",
+    entityType: "faq",
+    entityId: addedFaq?.id ?? null,
+    entityLabel: addedFaqLabel,
+    summary: `Added FAQ "${addedFaqLabel}".`,
+    path: FAQ_SETTINGS_PATH,
+    changedFields: ["Question", "Answer", "FAQ page visibility"],
+  });
   redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ added."));
 }
 
@@ -87,6 +100,7 @@ export async function updateFaq(formData: FormData) {
   }
 
   const current = await getManagedFaqItems();
+  const previousItem = current.find((item) => item.id === id) ?? null;
   const next = reindex(
     current.map((item) =>
       item.id === id
@@ -103,6 +117,35 @@ export async function updateFaq(formData: FormData) {
   try {
     await saveManagedFaqItems(next);
     revalidateFaqDependentPages();
+    const updatedItem = next.find((item) => item.id === id) ?? null;
+    if (previousItem && updatedItem) {
+      await logAdminActivity({
+        area: "content-seo",
+        action: "updated",
+        entityType: "faq",
+        entityId: updatedItem.id,
+        entityLabel: updatedItem.question,
+        summary: `Updated FAQ "${updatedItem.question}".`,
+        path: FAQ_SETTINGS_PATH,
+        changedFields: getChangedFieldLabels(
+          {
+            question: previousItem.question,
+            answerHtml: previousItem.answerHtml,
+            showOnFaqPage: previousItem.showOnFaqPage,
+          },
+          {
+            question: updatedItem.question,
+            answerHtml: updatedItem.answerHtml,
+            showOnFaqPage: updatedItem.showOnFaqPage,
+          },
+          {
+            question: "Question",
+            answerHtml: "Answer",
+            showOnFaqPage: "FAQ page visibility",
+          },
+        ),
+      });
+    }
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save FAQ." };
@@ -115,9 +158,22 @@ export async function deleteFaq(formData: FormData) {
   if (!id) throw new Error("FAQ id is required.");
 
   const current = await getManagedFaqItems();
+  const removedFaq = current.find((item) => item.id === id) ?? null;
   const next = reindex(current.filter((item) => item.id !== id));
   await saveManagedFaqItems(next);
   revalidateFaqDependentPages();
+  if (removedFaq) {
+    await logAdminActivity({
+      area: "content-seo",
+      action: "deleted",
+      entityType: "faq",
+      entityId: removedFaq.id,
+      entityLabel: removedFaq.question,
+      summary: `Deleted FAQ "${removedFaq.question}".`,
+      path: FAQ_SETTINGS_PATH,
+      changedFields: ["FAQ"],
+    });
+  }
   redirect(appendAdminToast(FAQ_SETTINGS_PATH, "success", "FAQ deleted."));
 }
 
@@ -136,6 +192,16 @@ export async function moveFaqUp(formData: FormData) {
   [next[index - 1], next[index]] = [next[index], next[index - 1]];
   await saveManagedFaqItems(reindex(next));
   revalidateFaqDependentPages();
+  await logAdminActivity({
+    area: "content-seo",
+    action: "reordered",
+    entityType: "faq",
+    entityId: current[index]?.id ?? id,
+    entityLabel: current[index]?.question ?? "FAQ",
+    summary: `Moved FAQ "${current[index]?.question ?? "FAQ"}" up.`,
+    path: FAQ_SETTINGS_PATH,
+    changedFields: ["Sort order"],
+  });
   redirect(FAQ_SETTINGS_PATH);
 }
 
@@ -154,6 +220,16 @@ export async function moveFaqDown(formData: FormData) {
   [next[index], next[index + 1]] = [next[index + 1], next[index]];
   await saveManagedFaqItems(reindex(next));
   revalidateFaqDependentPages();
+  await logAdminActivity({
+    area: "content-seo",
+    action: "reordered",
+    entityType: "faq",
+    entityId: current[index]?.id ?? id,
+    entityLabel: current[index]?.question ?? "FAQ",
+    summary: `Moved FAQ "${current[index]?.question ?? "FAQ"}" down.`,
+    path: FAQ_SETTINGS_PATH,
+    changedFields: ["Sort order"],
+  });
   redirect(FAQ_SETTINGS_PATH);
 }
 
@@ -187,6 +263,18 @@ export async function updateFaqOrder(
   try {
     await saveManagedFaqItems(next);
     revalidateFaqDependentPages();
+    await logAdminActivity({
+      area: "content-seo",
+      action: "reordered",
+      entityType: "faq-library",
+      entityLabel: "FAQ library",
+      summary: "Saved the FAQ order.",
+      path: FAQ_SETTINGS_PATH,
+      changedFields: ["Sort order"],
+      metadata: {
+        itemCount: next.length,
+      },
+    });
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save FAQ order." };
