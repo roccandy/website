@@ -264,9 +264,18 @@ export default async function AdminHome() {
               Full log
             </Link>
           </div>
-          <div className="mt-4">
-            <AdminActivityFeed entries={recentActivity} compact />
-          </div>
+          <details className="group mt-4 rounded-3xl border border-zinc-200 bg-zinc-50/70">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-zinc-900">Show recent changes</p>
+                <p className="text-xs text-zinc-500">Displays the latest 8 backend edits with user and time.</p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-zinc-500 transition group-open:rotate-180">▾</span>
+            </summary>
+            <div className="border-t border-zinc-200 px-4 py-4">
+              <AdminActivityFeed entries={recentActivity} compact />
+            </div>
+          </details>
         </div>
       ) : null}
     </section>
