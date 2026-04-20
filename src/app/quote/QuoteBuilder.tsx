@@ -46,6 +46,7 @@ import {
   buildPublicImageUrl,
   formatLabelTypeLabel,
   inferOrderTypeFromCategory,
+  ORDER_TYPES,
   ORDER_SUBTYPES,
   ORDER_TYPE_TITLES,
   resolveInitialDesignerSelection,
@@ -466,6 +467,21 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const subtitle = subtitleLabel;
+  const handleOrderTypeChange = (nextOrderType: OrderTypeId) => {
+    if (nextOrderType === orderType) return;
+    hasManualSubtypeRef.current = true;
+    setOrderType(nextOrderType);
+    setCategoryId(
+      nextOrderType === "branded"
+        ? ORDER_SUBTYPES.branded[0]?.id ?? "branded"
+        : ORDER_SUBTYPES[nextOrderType]?.[0]?.id ?? ""
+    );
+  };
+  const handleSubtypeChange = (nextSubtype: string) => {
+    if (nextSubtype === categoryId) return;
+    hasManualSubtypeRef.current = true;
+    setCategoryId(nextSubtype);
+  };
   const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
@@ -1169,61 +1185,119 @@ export function QuoteBuilder({
         <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
           <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
             <div
-              className={`relative border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg ${
+              className={`relative min-w-[320px] border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:min-w-[420px] lg:shadow-lg ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
-              {needsSubtypeSelection ? (
-                <p className="text-sm text-zinc-500 text-center">Select your order type</p>
-              ) : result ? (
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  {(() => {
-                    const subtotal = Math.max(0, result.total - result.transactionFee);
-                    return (
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <p
-                            className="text-center text-2xl font-semibold leading-none"
-                            style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
-                          >
-                            ${subtotal.toFixed(2)}
-                          </p>
-                          {loading && (
-                            <span className="inline-flex items-center">
-                              <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
-                              <span className="sr-only">Updating</span>
-                            </span>
-                          )}
-                        </div>
+                  <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Design Style
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    {ORDER_TYPES.map((type) => {
+                      const isActive = orderType === type.id;
+                      return (
                         <button
+                          key={type.id}
                           type="button"
-                          onClick={() => setShowBreakdown((prev) => !prev)}
-                          data-neutral-button
-                          className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                          onClick={() => handleOrderTypeChange(type.id)}
+                          className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
+                          style={{
+                            backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                            borderColor: "rgb(239,232,239)",
+                            borderWidth: "0.5px",
+                            borderStyle: "solid",
+                            color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                            fontFamily: "var(--font-body), sans-serif",
+                          }}
                         >
-                          {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                          {toTitleCase(type.label)}
                         </button>
-                      </div>
-                    );
-                  })()}
+                      );
+                    })}
+                  </div>
+                  {showSubtype && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                      {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                        const isActive = categoryId === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleSubtypeChange(sub.id)}
+                            className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
+                            style={{
+                              backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                              borderColor: "rgb(239,232,239)",
+                              borderWidth: "0.5px",
+                              borderStyle: "solid",
+                              color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                              fontFamily: "var(--font-body), sans-serif",
+                            }}
+                          >
+                            {toTitleCase(sub.label)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ) : hasBasePrice ? (
-                <div className="space-y-2 text-center">
-                  <p
-                    className="text-2xl font-semibold leading-none"
-                    style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
-                  >
-                    {formatMoney(basePrice)}
-                  </p>
-                  <p className="text-sm text-zinc-500">
-                    {loading ? "Calculating..." : "Base price. Select packaging quantity to add packaging cost."}
-                  </p>
+
+                <div className="border-t border-zinc-100 pt-3">
+                  {needsSubtypeSelection ? (
+                    <p className="text-center text-sm text-zinc-500">Choose a design style above</p>
+                  ) : result ? (
+                    <div className="space-y-2">
+                      {(() => {
+                        const subtotal = Math.max(0, result.total - result.transactionFee);
+                        return (
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <p
+                                className="text-center text-2xl font-semibold leading-none"
+                                style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
+                              >
+                                ${subtotal.toFixed(2)}
+                              </p>
+                              {loading && (
+                                <span className="inline-flex items-center">
+                                  <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
+                                  <span className="sr-only">Updating</span>
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowBreakdown((prev) => !prev)}
+                              data-neutral-button
+                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                            >
+                              {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                            </button>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : hasBasePrice ? (
+                    <div className="space-y-2 text-center">
+                      <p
+                        className="text-2xl font-semibold leading-none"
+                        style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
+                      >
+                        {formatMoney(basePrice)}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {loading ? "Calculating..." : "Base Price"}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-center text-sm text-zinc-500">
+                      {loading ? "Calculating..." : "Select packaging to see price"}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-zinc-500">
-                  {loading ? "Calculating..." : "Select packaging to see price"}
-                </p>
-              )}
+              </div>
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
             {result && showBreakdown && (
@@ -1247,43 +1321,6 @@ export function QuoteBuilder({
             )}
           </div>
         </div>
-        {/* Step 1: Subtype */}
-        {showSubtype && (
-          <div className="flex justify-center">
-            <div
-              className="inline-flex w-auto max-w-full overflow-hidden rounded-full"
-              style={{
-                borderColor: "rgb(239,232,239)",
-                borderWidth: "0.5px",
-                borderStyle: "solid",
-                backgroundColor: "rgb(250,243,247)",
-              }}
-            >
-                  {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
-                    const isActive = categoryId === sub.id;
-                    return (
-                      <button
-                        key={sub.id}
-                        type="button"
-                        onClick={() => {
-                          hasManualSubtypeRef.current = true;
-                          setCategoryId(sub.id);
-                        }}
-                        className={`px-6 py-3 text-sm font-semibold normal-case tracking-[0.04em] transition ${index > 0 ? "border-l" : ""}`}
-                        style={{
-                          backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                          borderColor: "rgb(239,232,239)",
-                          color: "rgb(124,121,131)",
-                          fontFamily: "var(--font-body), sans-serif",
-                        }}
-                      >
-                        {toTitleCase(sub.label)}
-                      </button>
-                    );
-                  })}
-            </div>
-          </div>
-        )}
 
         <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
