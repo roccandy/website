@@ -46,7 +46,6 @@ import {
   buildPublicImageUrl,
   formatLabelTypeLabel,
   inferOrderTypeFromCategory,
-  ORDER_TYPES,
   ORDER_SUBTYPES,
   ORDER_TYPE_TITLES,
   resolveInitialDesignerSelection,
@@ -467,16 +466,6 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const subtitle = subtitleLabel;
-  const handleOrderTypeChange = (nextOrderType: OrderTypeId) => {
-    if (nextOrderType === orderType) return;
-    hasManualSubtypeRef.current = true;
-    setOrderType(nextOrderType);
-    setCategoryId(
-      nextOrderType === "branded"
-        ? ORDER_SUBTYPES.branded[0]?.id ?? "branded"
-        : ORDER_SUBTYPES[nextOrderType]?.[0]?.id ?? ""
-    );
-  };
   const handleSubtypeChange = (nextSubtype: string) => {
     if (nextSubtype === categoryId) return;
     hasManualSubtypeRef.current = true;
@@ -1190,64 +1179,8 @@ export function QuoteBuilder({
               }`}
             >
               <div className="space-y-3">
-                <div className="space-y-2">
-                  <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                    Design Style
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-1.5">
-                    {ORDER_TYPES.map((type) => {
-                      const isActive = orderType === type.id;
-                      return (
-                        <button
-                          key={type.id}
-                          type="button"
-                          onClick={() => handleOrderTypeChange(type.id)}
-                          className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
-                          style={{
-                            backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                            borderColor: "rgb(239,232,239)",
-                            borderWidth: "0.5px",
-                            borderStyle: "solid",
-                            color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
-                            fontFamily: "var(--font-body), sans-serif",
-                          }}
-                        >
-                          {toTitleCase(type.label)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {showSubtype && (
-                    <div className="flex flex-wrap items-center justify-center gap-1.5">
-                      {ORDER_SUBTYPES[orderType]?.map((sub) => {
-                        const isActive = categoryId === sub.id;
-                        return (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => handleSubtypeChange(sub.id)}
-                            className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
-                            style={{
-                              backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                              borderColor: "rgb(239,232,239)",
-                              borderWidth: "0.5px",
-                              borderStyle: "solid",
-                              color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
-                              fontFamily: "var(--font-body), sans-serif",
-                            }}
-                          >
-                            {toTitleCase(sub.label)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
                 <div className="border-t border-zinc-100 pt-3">
-                  {needsSubtypeSelection ? (
-                    <p className="text-center text-sm text-zinc-500">Choose a design style above</p>
-                  ) : result ? (
+                  {result ? (
                     <div className="space-y-2">
                       {(() => {
                         const subtotal = Math.max(0, result.total - result.transactionFee);
@@ -1297,6 +1230,33 @@ export function QuoteBuilder({
                     </p>
                   )}
                 </div>
+                {showSubtype && (
+                  <div className="border-t border-zinc-100 pt-3">
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                      {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                        const isActive = categoryId === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            type="button"
+                            onClick={() => handleSubtypeChange(sub.id)}
+                            className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
+                            style={{
+                              backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                              borderColor: "rgb(239,232,239)",
+                              borderWidth: "0.5px",
+                              borderStyle: "solid",
+                              color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                              fontFamily: "var(--font-body), sans-serif",
+                            }}
+                          >
+                            {toTitleCase(sub.label)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
