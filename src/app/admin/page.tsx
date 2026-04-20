@@ -5,7 +5,7 @@ import {
   getAdminNavToneClasses,
   isSeoFocusedUser,
 } from "@/app/admin/adminNavigation";
-import { listRecentAdminActivity } from "@/lib/adminActivity";
+import { isNonProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getOrders } from "@/lib/data";
 import { isVisibleOnPremadeOrders, isVisibleOnProductionSchedule } from "./orders/scheduleVisibility";
@@ -46,7 +46,10 @@ export default async function AdminHome() {
   const seoSection = sections.find((section) => section.key === "content-seo") ?? null;
   const secondarySections = seoFocused ? sections.filter((section) => section.key !== "content-seo") : sections;
   const orders = seoFocused ? [] : await getOrders();
-  const recentActivity = session.user.role === "admin" ? await listRecentAdminActivity(8) : [];
+  const recentActivity =
+    session.user.role === "admin"
+      ? (await listRecentAdminActivity(100)).filter(isNonProductionActivity).slice(0, 20)
+      : [];
   const outstandingCounts: Record<string, number> = {
     "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,
     "/admin/orders/additional-items": orders.filter(isVisibleOnPremadeOrders).length,
@@ -268,7 +271,7 @@ export default async function AdminHome() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 marker:hidden">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-zinc-900">Show recent changes</p>
-                <p className="text-xs text-zinc-500">Displays the latest 8 backend edits with user and time.</p>
+                <p className="text-xs text-zinc-500">Displays the latest 20 non-production backend edits with user and time.</p>
               </div>
               <span className="shrink-0 text-xs font-semibold text-zinc-500 transition group-open:rotate-180">▾</span>
             </summary>

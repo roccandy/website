@@ -42,6 +42,25 @@ export type AdminActivityEntry = {
   createdAt: string;
 };
 
+const PRODUCTION_ENTITY_TYPES = new Set([
+  "production-slot",
+  "production-block",
+  "production-settings",
+  "production-days",
+  "quote-blockout-window",
+]);
+
+const PRODUCTION_CHANGED_FIELDS = new Set([
+  "Production slot",
+  "Production block",
+  "Order status",
+  "Slots per day",
+  "Max total kg",
+  "Quote blockout window",
+  "Default no-production days",
+  "Blocked dates",
+]);
+
 export type AdminActivityInput = {
   area: string;
   action: string;
@@ -157,6 +176,16 @@ export async function listRecentAdminActivity(limit = 12) {
   }
 
   return ((data ?? []) as AdminActivityRow[]).map(mapRow);
+}
+
+export function isProductionActivity(entry: AdminActivityEntry) {
+  if (PRODUCTION_ENTITY_TYPES.has(entry.entityType)) return true;
+  if (entry.path === "/admin/settings/production") return true;
+  return entry.changedFields.some((field) => PRODUCTION_CHANGED_FIELDS.has(field));
+}
+
+export function isNonProductionActivity(entry: AdminActivityEntry) {
+  return !isProductionActivity(entry);
 }
 
 export function getChangedFieldLabels(

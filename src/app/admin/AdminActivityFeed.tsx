@@ -45,21 +45,26 @@ export function AdminActivityFeed({
   }
 
   return (
-    <div className="space-y-3">
+    <div className={compact ? "space-y-2" : "space-y-3"}>
       {entries.map((entry) => {
-        const changedFields = compact ? entry.changedFields.slice(0, 4) : entry.changedFields;
+        const changedFields = compact ? entry.changedFields.slice(0, 3) : entry.changedFields;
 
         return (
-          <div key={entry.id} className="rounded-3xl border border-zinc-200 bg-zinc-50/70 px-4 py-3">
+          <div
+            key={entry.id}
+            className={`rounded-3xl border border-zinc-200 bg-zinc-50/70 ${compact ? "px-3 py-2.5" : "px-4 py-3"}`}
+          >
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 space-y-2">
+              <div className={compact ? "min-w-0 space-y-1.5" : "min-w-0 space-y-2"}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
                     {formatActionLabel(entry.action)}
                   </span>
                   {entry.entityLabel ? <span className="text-xs font-medium text-zinc-500">{entry.entityLabel}</span> : null}
                 </div>
-                <p className="text-sm font-medium text-zinc-900">{entry.summary}</p>
+                <p className={compact ? "text-[13px] font-medium leading-snug text-zinc-900" : "text-sm font-medium text-zinc-900"}>
+                  {entry.summary}
+                </p>
                 <p className="text-xs text-zinc-500">
                   {resolveActorLabel(entry)} · {formatTimestamp(entry.createdAt)}
                 </p>
