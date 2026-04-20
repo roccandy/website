@@ -1179,7 +1179,7 @@ export function QuoteBuilder({
               }`}
             >
               <div className="space-y-3">
-                <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
                       {(() => {
@@ -1220,40 +1220,42 @@ export function QuoteBuilder({
                       >
                         {formatMoney(basePrice)}
                       </p>
-                      <p className="text-sm text-zinc-500">
-                        {loading ? "Calculating..." : "Base Price"}
-                      </p>
                     </div>
                   ) : (
-                    <p className="text-center text-sm text-zinc-500 sm:text-left">
-                      {loading ? "Calculating..." : "Select packaging to see price"}
-                    </p>
+                    <div />
                   )}
-                  {showSubtype && (
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[52%] sm:justify-end">
-                      {ORDER_SUBTYPES[orderType]?.map((sub) => {
-                        const isActive = categoryId === sub.id;
-                        return (
-                          <button
-                            key={sub.id}
-                            type="button"
-                            onClick={() => handleSubtypeChange(sub.id)}
-                            className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
-                            style={{
-                              backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                              borderColor: "rgb(239,232,239)",
-                              borderWidth: "0.5px",
-                              borderStyle: "solid",
-                              color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
-                              fontFamily: "var(--font-body), sans-serif",
-                            }}
-                          >
-                            {toTitleCase(sub.label)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <div className="flex items-center justify-center gap-3 sm:justify-end">
+                    {hasBasePrice ? (
+                      <p className="text-sm text-zinc-500">{loading ? "Calculating..." : "Base Price"}</p>
+                    ) : (
+                      <p className="text-sm text-zinc-500">{loading ? "Calculating..." : "Select packaging to see price"}</p>
+                    )}
+                    {showSubtype && (
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[52%] sm:justify-end">
+                        {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                          const isActive = categoryId === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => handleSubtypeChange(sub.id)}
+                              className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
+                              style={{
+                                backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                borderColor: "rgb(239,232,239)",
+                                borderWidth: "0.5px",
+                                borderStyle: "solid",
+                                color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                                fontFamily: "var(--font-body), sans-serif",
+                              }}
+                            >
+                              {toTitleCase(sub.label)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
