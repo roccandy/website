@@ -66,7 +66,7 @@ export async function GET(request: Request) {
         justifyContent: "center",
         position: "relative",
         background: "#ffffff",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "sans-serif",
       },
     },
     createElement("div", {
@@ -201,4 +201,3 @@ export async function GET(request: Request) {
     },
   });
 }
-

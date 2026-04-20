@@ -1733,7 +1733,7 @@ export function QuoteBuilder({
                         }
                         required
                         className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
-                        placeholder={isWeddingInitials ? "A" : "Andy"}
+                        placeholder={isWeddingInitials ? "R" : "Romeo"}
                       />
                     {!isWeddingInitials && (
                       <div className="mt-1 text-right text-[11px] text-zinc-500">{`${(nameOne || "").length}/8`}</div>
@@ -1752,7 +1752,7 @@ export function QuoteBuilder({
                         }
                         required
                         className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
-                        placeholder={isWeddingInitials ? "S" : "Sylvi"}
+                        placeholder={isWeddingInitials ? "J" : "Juliet"}
                       />
                     {!isWeddingInitials && (
                       <div className="mt-1 text-right text-[11px] text-zinc-500">{`${(nameTwo || "").length}/8`}</div>
