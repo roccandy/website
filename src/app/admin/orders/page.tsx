@@ -45,7 +45,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
       getColorPalette(),
       getCategories(),
       getQuoteBlocks(),
-      listRecentAdminActivity(100),
+      listRecentAdminActivity(200),
     ]);
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   const pricingByOrderId: Record<string, ReturnType<typeof calculatePricingWithContext> | null> = {};

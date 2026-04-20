@@ -48,7 +48,7 @@ export default async function AdminHome() {
   const orders = seoFocused ? [] : await getOrders();
   const recentActivity =
     session.user.role === "admin"
-      ? (await listRecentAdminActivity(100)).filter(isNonProductionActivity).slice(0, 20)
+      ? (await listRecentAdminActivity(200)).filter(isNonProductionActivity).slice(0, 20)
       : [];
   const outstandingCounts: Record<string, number> = {
     "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,

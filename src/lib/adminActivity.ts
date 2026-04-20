@@ -43,17 +43,22 @@ export type AdminActivityEntry = {
 };
 
 const PRODUCTION_ENTITY_TYPES = new Set([
+  "order",
+  "orders",
   "production-slot",
   "production-block",
   "production-settings",
   "production-days",
   "quote-blockout-window",
+  "premade-orders",
 ]);
 
 const PRODUCTION_CHANGED_FIELDS = new Set([
+  "Order details",
   "Production slot",
   "Production block",
   "Order status",
+  "Refund",
   "Slots per day",
   "Max total kg",
   "Quote blockout window",
