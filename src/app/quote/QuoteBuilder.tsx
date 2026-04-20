@@ -1179,7 +1179,7 @@ export function QuoteBuilder({
               }`}
             >
               <div className="space-y-3">
-                <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
                       {(() => {
@@ -1198,41 +1198,39 @@ export function QuoteBuilder({
                                 <span className="sr-only">Updating</span>
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => setShowBreakdown((prev) => !prev)}
+                              data-neutral-button
+                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                            >
+                              {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                            </button>
                           </div>
                         );
                       })()}
                     </div>
                   ) : hasBasePrice ? (
-                    <div className="text-center sm:text-left">
+                    <div className="flex items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
                       <p
                         className="text-2xl font-semibold leading-none"
                         style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
                       >
                         {formatMoney(basePrice)}
                       </p>
+                      <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
+                        {loading ? "Calculating..." : "Base Price"}
+                      </span>
                     </div>
                   ) : (
                     <div />
                   )}
                   <div className="flex items-center justify-center gap-2 sm:justify-end sm:gap-2">
-                    {result ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowBreakdown((prev) => !prev)}
-                        data-neutral-button
-                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
-                      >
-                        {showBreakdown ? "Hide breakdown" : "Show breakdown"}
-                      </button>
-                    ) : hasBasePrice ? (
-                      <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
-                        {loading ? "Calculating..." : "Base Price"}
-                      </span>
-                    ) : (
+                    {!result && !hasBasePrice ? (
                       <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
                         {loading ? "Calculating..." : "Select packaging to see price"}
                       </span>
-                    )}
+                    ) : null}
                     {showSubtype && (
                       <div className="flex flex-wrap items-center justify-center gap-1 sm:flex-nowrap sm:justify-end">
                         {ORDER_SUBTYPES[orderType]?.map((sub) => {
