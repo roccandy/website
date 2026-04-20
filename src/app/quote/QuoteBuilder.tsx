@@ -1185,35 +1185,25 @@ export function QuoteBuilder({
                       {(() => {
                         const subtotal = Math.max(0, result.total - result.transactionFee);
                         return (
-                          <div className="flex items-center justify-center gap-3 sm:justify-start">
-                            <div className="flex items-center gap-2">
-                              <p
-                                className="text-2xl font-semibold leading-none"
-                                style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
-                              >
-                                ${subtotal.toFixed(2)}
-                              </p>
-                              {loading && (
-                                <span className="inline-flex items-center">
-                                  <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
-                                  <span className="sr-only">Updating</span>
-                                </span>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setShowBreakdown((prev) => !prev)}
-                              data-neutral-button
-                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                          <div className="flex items-center justify-center gap-2 sm:justify-start">
+                            <p
+                              className="text-2xl font-semibold leading-none"
+                              style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
                             >
-                              {showBreakdown ? "Hide breakdown" : "Show breakdown"}
-                            </button>
+                              ${subtotal.toFixed(2)}
+                            </p>
+                            {loading && (
+                              <span className="inline-flex items-center">
+                                <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
+                                <span className="sr-only">Updating</span>
+                              </span>
+                            )}
                           </div>
                         );
                       })()}
                     </div>
                   ) : hasBasePrice ? (
-                    <div className="space-y-2 text-center sm:text-left">
+                    <div className="text-center sm:text-left">
                       <p
                         className="text-2xl font-semibold leading-none"
                         style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
@@ -1225,10 +1215,23 @@ export function QuoteBuilder({
                     <div />
                   )}
                   <div className="flex items-center justify-center gap-3 sm:justify-end">
-                    {hasBasePrice ? (
-                      <p className="text-sm text-zinc-500">{loading ? "Calculating..." : "Base Price"}</p>
+                    {result ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowBreakdown((prev) => !prev)}
+                        data-neutral-button
+                        className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                      >
+                        {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                      </button>
+                    ) : hasBasePrice ? (
+                      <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
+                        {loading ? "Calculating..." : "Base Price"}
+                      </span>
                     ) : (
-                      <p className="text-sm text-zinc-500">{loading ? "Calculating..." : "Select packaging to see price"}</p>
+                      <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
+                        {loading ? "Calculating..." : "Select packaging to see price"}
+                      </span>
                     )}
                     {showSubtype && (
                       <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[52%] sm:justify-end">
