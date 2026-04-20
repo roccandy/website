@@ -1179,7 +1179,7 @@ export function QuoteBuilder({
               }`}
             >
               <div className="space-y-3">
-                <div className="flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
                       {(() => {
@@ -1214,7 +1214,7 @@ export function QuoteBuilder({
                   ) : (
                     <div />
                   )}
-                  <div className="flex items-center justify-center gap-3 sm:justify-end">
+                  <div className="flex items-center justify-center gap-2 sm:justify-end sm:gap-2">
                     {result ? (
                       <button
                         type="button"
@@ -1234,7 +1234,7 @@ export function QuoteBuilder({
                       </span>
                     )}
                     {showSubtype && (
-                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[52%] sm:justify-end">
+                      <div className="flex flex-wrap items-center justify-center gap-1 sm:flex-nowrap sm:justify-end">
                         {ORDER_SUBTYPES[orderType]?.map((sub) => {
                           const isActive = categoryId === sub.id;
                           return (
@@ -1242,7 +1242,7 @@ export function QuoteBuilder({
                               key={sub.id}
                               type="button"
                               onClick={() => handleSubtypeChange(sub.id)}
-                              className="rounded-full px-3 py-1.5 text-[11px] font-semibold normal-case tracking-[0.06em] transition"
+                              className="rounded-full px-2.5 py-1 text-[10px] font-semibold normal-case tracking-[0.04em] transition sm:px-3 sm:py-1.5 sm:text-[11px] sm:tracking-[0.06em]"
                               style={{
                                 backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                                 borderColor: "rgb(239,232,239)",
