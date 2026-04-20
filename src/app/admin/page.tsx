@@ -7,7 +7,7 @@ import {
 } from "@/app/admin/adminNavigation";
 import { isNonProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getOrders } from "@/lib/data";
+import { getOrders, getOrderSlots } from "@/lib/data";
 import { isVisibleOnPremadeOrders, isVisibleOnProductionSchedule } from "./orders/scheduleVisibility";
 
 function formatShortDate(value: string | null) {
@@ -45,17 +45,19 @@ export default async function AdminHome() {
   const sections = buildAdminNavSections(session.user);
   const seoSection = sections.find((section) => section.key === "content-seo") ?? null;
   const secondarySections = seoFocused ? sections.filter((section) => section.key !== "content-seo") : sections;
-  const orders = seoFocused ? [] : await getOrders();
+  const [orders, assignments] = seoFocused ? [[], []] : await Promise.all([getOrders(), getOrderSlots()]);
+  const assignmentOrderIds = new Set(assignments.map((assignment) => assignment.order_id));
   const recentActivity =
     session.user.role === "admin"
       ? (await listRecentAdminActivity(200)).filter(isNonProductionActivity).slice(0, 20)
       : [];
+  const visibleProductionOrders = orders.filter(isVisibleOnProductionSchedule);
   const outstandingCounts: Record<string, number> = {
-    "/admin/orders": orders.filter(isVisibleOnProductionSchedule).length,
+    "/admin/orders": visibleProductionOrders.length,
     "/admin/orders/additional-items": orders.filter(isVisibleOnPremadeOrders).length,
   };
   const unassignedCustomOrders = sortOrdersForAdminHome(
-    orders.filter((order) => isVisibleOnProductionSchedule(order) && order.status === "unassigned"),
+    visibleProductionOrders.filter((order) => !assignmentOrderIds.has(order.id)),
   ).slice(0, 6);
   const pendingPremadeGroups = Array.from(
     sortOrdersForAdminHome(orders.filter(isVisibleOnPremadeOrders)).reduce(
