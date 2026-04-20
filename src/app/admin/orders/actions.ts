@@ -1360,3 +1360,30 @@ export async function removeQuoteBlock(formData: FormData) {
   });
   redirect(ORDERS_PATH);
 }
+
+export async function removeQuoteBlockRange(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const start_date = formData.get("start_date")?.toString();
+  const end_date = formData.get("end_date")?.toString();
+  if (!start_date) throw new Error("Start date is required.");
+  const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
+
+  const client = supabaseAdminClient;
+  const [{ error: quoteError }, { error: productionError }] = await Promise.all([
+    client.from("quote_blocks").delete().eq("start_date", start_date).eq("end_date", resolvedEnd),
+    client.from("production_blocks").delete().eq("start_date", start_date).eq("end_date", resolvedEnd),
+  ]);
+  if (quoteError) throw new Error(quoteError.message);
+  if (productionError) throw new Error(productionError.message);
+
+  await logAdminActivity({
+    area: "operations",
+    action: "deleted",
+    entityType: "quote-block",
+    entityLabel: `${start_date} to ${resolvedEnd}`,
+    summary: `Removed the front-end block from ${start_date} to ${resolvedEnd}.`,
+    path: ORDERS_PATH,
+    changedFields: ["Quote block"],
+  });
+  redirect(ORDERS_PATH);
+}

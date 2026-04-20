@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { QuoteBlock } from "@/lib/data";
-import { addQuoteBlock, removeQuoteBlock } from "./actions";
+import { addQuoteBlock, removeQuoteBlockRange } from "./actions";
 
 type Props = {
   blocks: QuoteBlock[];
@@ -221,13 +221,14 @@ export function FrontEndCalendarButton({ blocks }: Props) {
                       {blocked ? (
                         <div className="mt-2 space-y-2">
                           <p className="text-[10px] font-semibold text-zinc-700">{blocked.reason ?? "Blocked"}</p>
-                          <form action={removeQuoteBlock}>
-                            <input type="hidden" name="id" value={blocked.id} />
+                          <form action={removeQuoteBlockRange}>
+                            <input type="hidden" name="start_date" value={blocked.start_date} />
+                            <input type="hidden" name="end_date" value={blocked.end_date} />
                             <button
                               type="submit"
                               className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
                             >
-                              Unblock
+                              {blocked.end_date !== blocked.start_date ? "Unblock range" : "Unblock"}
                             </button>
                           </form>
                         </div>
@@ -255,13 +256,14 @@ export function FrontEndCalendarButton({ blocks }: Props) {
                         {block.start_date}
                         {block.end_date !== block.start_date ? ` to ${block.end_date}` : ""}
                       </span>
-                      <form action={removeQuoteBlock}>
-                        <input type="hidden" name="id" value={block.id} />
+                      <form action={removeQuoteBlockRange}>
+                        <input type="hidden" name="start_date" value={block.start_date} />
+                        <input type="hidden" name="end_date" value={block.end_date} />
                         <button
                           type="submit"
                           className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                         >
-                          Remove
+                          Unblock range
                         </button>
                       </form>
                     </div>
