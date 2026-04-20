@@ -937,6 +937,7 @@ export function QuoteBuilder({
     const mql = window.matchMedia("(max-width: 1023px)");
     const priceSticky = priceStickyRef.current;
     const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
+    const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
     const topGap = 16;
     const priceGap = 12;
     let raf = 0;
@@ -963,7 +964,8 @@ export function QuoteBuilder({
       const wrapTop = scrollY + wrapRect.top;
       const previewHeight = stickyEl.offsetHeight;
       const priceHeight = priceSticky?.offsetHeight ?? 0;
-      const baseOffset = (headerEl?.getBoundingClientRect().height ?? 0) + topGap;
+      const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
+      const baseOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap;
       const topOffset = baseOffset + priceHeight + priceGap;
 
       const start = wrapTop - topOffset;
@@ -1009,6 +1011,9 @@ export function QuoteBuilder({
     if (headerEl) {
       observer.observe(headerEl);
     }
+    if (bannerEl) {
+      observer.observe(bannerEl);
+    }
 
     update();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -1032,6 +1037,7 @@ export function QuoteBuilder({
     if (!container || !wrap || !stickyEl) return;
 
     const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
+    const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
     const topGap = 16;
     let raf = 0;
     let lockedWidth = 0;
@@ -1080,7 +1086,8 @@ export function QuoteBuilder({
       const containerBottom = containerTop + containerRect.height;
       const wrapTop = scrollY + wrapRect.top;
       const stickyHeight = stickyEl.offsetHeight;
-      const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + topGap;
+      const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
+      const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap;
 
       const start = wrapTop - topOffset;
       const end = containerBottom - topOffset - stickyHeight;
@@ -1128,6 +1135,9 @@ export function QuoteBuilder({
     observer.observe(stickyEl);
     if (headerEl) {
       observer.observe(headerEl);
+    }
+    if (bannerEl) {
+      observer.observe(bannerEl);
     }
 
     update();
