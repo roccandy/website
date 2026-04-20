@@ -1179,16 +1179,16 @@ export function QuoteBuilder({
               }`}
             >
               <div className="space-y-3">
-                <div className="border-t border-zinc-100 pt-3">
+                <div className="flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-center sm:text-left">
                       {(() => {
                         const subtotal = Math.max(0, result.total - result.transactionFee);
                         return (
-                          <div className="flex items-center justify-center gap-3">
+                          <div className="flex items-center justify-center gap-3 sm:justify-start">
                             <div className="flex items-center gap-2">
                               <p
-                                className="text-center text-2xl font-semibold leading-none"
+                                className="text-2xl font-semibold leading-none"
                                 style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
                               >
                                 ${subtotal.toFixed(2)}
@@ -1213,7 +1213,7 @@ export function QuoteBuilder({
                       })()}
                     </div>
                   ) : hasBasePrice ? (
-                    <div className="space-y-2 text-center">
+                    <div className="space-y-2 text-center sm:text-left">
                       <p
                         className="text-2xl font-semibold leading-none"
                         style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
@@ -1225,14 +1225,12 @@ export function QuoteBuilder({
                       </p>
                     </div>
                   ) : (
-                    <p className="text-center text-sm text-zinc-500">
+                    <p className="text-center text-sm text-zinc-500 sm:text-left">
                       {loading ? "Calculating..." : "Select packaging to see price"}
                     </p>
                   )}
-                </div>
-                {showSubtype && (
-                  <div className="border-t border-zinc-100 pt-3">
-                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  {showSubtype && (
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 sm:max-w-[52%] sm:justify-end">
                       {ORDER_SUBTYPES[orderType]?.map((sub) => {
                         const isActive = categoryId === sub.id;
                         return (
@@ -1255,8 +1253,8 @@ export function QuoteBuilder({
                         );
                       })}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
