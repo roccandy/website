@@ -251,6 +251,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     const quantityLabel = Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0 ? ` (Qty: ${Number(order.quantity)})` : "";
     return `${packagingLabel}${quantityLabel}`;
   })();
+  const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
 
   const showJacketColorOne =
     order.jacket === "two_colour" || order.jacket === "two_colour_pinstripe" || order.jacket === "pinstripe" || !order.jacket;
@@ -453,6 +454,10 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
                 <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
+              </p>
+              <p className={SPEC_ROW_CLASS}>
+                <span className={SPEC_LABEL_CLASS}>Labels to print:</span>
+                <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
               </p>
             </div>
           </div>

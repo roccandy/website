@@ -332,8 +332,9 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 
   const productsText = order.items
     .map((item) => {
+      const labelsText = Number.isFinite(item.labelsCount ?? NaN) ? ` | Labels to print: ${item.labelsCount}` : "";
       const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? ` ($${Number(item.totalPrice).toFixed(2)})` : "";
-      return `- ${item.quantity} x ${item.title}${lineTotal}`;
+      return `- ${item.quantity} x ${item.title}${labelsText}${lineTotal}`;
     })
     .join("\n");
 
@@ -345,7 +346,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
     order.customDetails?.heartColour ? `Heart: ${order.customDetails.heartColour}` : null,
     order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
-    order.customDetails ? `Labels: ${order.customDetails.labels}` : null,
+    order.customDetails ? `Label type: ${order.customDetails.labels}` : null,
     order.customDetails ? `Ingredient labels: ${order.customDetails.ingredientLabels}` : null,
     "",
     "Order Information",
@@ -385,7 +386,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
       <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
       ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
       <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
-      <div><strong>Labels:</strong> ${escapeHtml(order.customDetails.labels)}</div>
+      <div><strong>Label type:</strong> ${escapeHtml(order.customDetails.labels)}</div>
       ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="130" style="display:block;max-width:100%;width:130px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
       ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
       <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
@@ -396,9 +397,11 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   const productsHtml = order.items
     .map((item) => {
       const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? `$${Number(item.totalPrice).toFixed(2)}` : "-";
+      const labelsCount = Number.isFinite(item.labelsCount ?? NaN) ? String(item.labelsCount) : "-";
       return `<tr>
         <td style="padding:8px;border-bottom:1px solid #e4e4e7;">${escapeHtml(item.title)}</td>
         <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:center;">${escapeHtml(labelsCount)}</td>
         <td style="padding:8px;border-bottom:1px solid #e4e4e7;text-align:right;">${escapeHtml(lineTotal)}</td>
       </tr>`;
     })
@@ -423,6 +426,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
           <tr>
             <th style="text-align:left;padding:8px;border-bottom:2px solid #d4d4d8;">Product</th>
             <th style="text-align:center;padding:8px;border-bottom:2px solid #d4d4d8;">Qty</th>
+            <th style="text-align:center;padding:8px;border-bottom:2px solid #d4d4d8;">Labels to print</th>
             <th style="text-align:right;padding:8px;border-bottom:2px solid #d4d4d8;">Line total</th>
           </tr>
         </thead>

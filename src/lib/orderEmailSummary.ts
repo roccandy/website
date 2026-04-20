@@ -14,6 +14,7 @@ type BillingAddress = {
 export type AdminOrderSummaryItem = {
   title: string;
   quantity: number;
+  labelsCount: number | null;
   totalPrice: number | null;
 };
 
@@ -287,6 +288,7 @@ export async function buildAdminOrderSummaryEmailPayload({
   const items = orderPayloads.map((payload) => ({
     title: String(payload.title ?? "Order item"),
     quantity: Number(payload.quantity ?? 1),
+    labelsCount: toNumber(payload.labels_count),
     totalPrice: toNumber(payload.total_price),
   }));
 
