@@ -466,9 +466,14 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const subtitle = subtitleLabel;
+  const deriveInitial = (value: string) => (value.trim().charAt(0) || "").toUpperCase();
   const handleSubtypeChange = (nextSubtype: string) => {
     if (nextSubtype === categoryId) return;
     hasManualSubtypeRef.current = true;
+    if (orderType === "weddings" && nextSubtype === "weddings-initials") {
+      setInitialOne(deriveInitial(nameOne || initialOne));
+      setInitialTwo(deriveInitial(nameTwo || initialTwo));
+    }
     setCategoryId(nextSubtype);
   };
   const handleLogoUpload = async (file?: File | null) => {
