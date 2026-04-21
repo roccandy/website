@@ -183,6 +183,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
   const landingHeroSupportingLine = landingConfig
     ? page.heroSupportingLine || landingConfig.detail
     : null;
+  const showLandingBackdrop = landingConfig !== null && page.slug !== "contact";
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls ?? [])
     : [];
@@ -211,8 +212,8 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className={landingConfig ? "landing-bg landing-bg-faded -mt-8 pt-8" : ""}>
-        <div className="site-page-frame site-page-stack mx-auto max-w-5xl">
+        <div className={showLandingBackdrop ? "landing-bg landing-bg-faded -mt-8 pt-8" : "-mt-8 pt-8"}>
+          <div className="site-page-frame site-page-stack mx-auto max-w-5xl">
           {landingConfig ? (
             <section className="site-landing-hero-section text-center">
               <div className="site-landing-hero-stack">
@@ -370,7 +371,7 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               <PageFaqSection heading={faqSection.heading} items={faqSection.items} />
             </div>
           ) : null}
-        </div>
+          </div>
         </div>
       </div>
     </main>

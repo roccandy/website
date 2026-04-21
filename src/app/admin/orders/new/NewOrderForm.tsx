@@ -318,6 +318,8 @@ export function NewOrderForm({
   assignments,
   blocks,
 }: Props) {
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
@@ -360,6 +362,7 @@ export function NewOrderForm({
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
   const [customHexInput, setCustomHexInput] = useState(defaultJacketColor);
+  const [submitAfterCalendarPick, setSubmitAfterCalendarPick] = useState(false);
   const [customCmyk, setCustomCmyk] = useState<Cmyk>(
     () => hexToCmyk(defaultJacketColor) ?? { c: 0, m: 0, y: 0, k: 0 },
   );
@@ -422,7 +425,7 @@ export function NewOrderForm({
     const flavorLabel = flavor.trim();
     const title = flavorLabel ? `Premade stock - ${flavorLabel}` : "Premade stock";
     const parsedWeight = Number(weightValue);
-    const totalWeightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight / 1000 : 0.01;
+    const totalWeightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 0.01;
     return {
       id: "draft-premade-order",
       order_number: null,
@@ -610,6 +613,12 @@ export function NewOrderForm({
   };
 
   useEffect(() => {
+    if (!submitAfterCalendarPick || !productionSlotDate) return;
+    setSubmitAfterCalendarPick(false);
+    scheduleSubmitButtonRef.current?.click();
+  }, [productionSlotDate, submitAfterCalendarPick]);
+
+  useEffect(() => {
     if (!categoryId || !packagingOptionId) return;
     const isValid = filteredPackagingOptions.some((option) => option.id === packagingOptionId);
     if (!isValid) {
@@ -699,7 +708,7 @@ export function NewOrderForm({
   }, [categoryId, packagingOptionId, quantity, labelsCount, ingredientLabelsOptIn, jacket, dueDate, isAdminPremadeOrder]);
 
   return (
-    <form action={upsertOrder} className="space-y-6">
+    <form ref={formRef} action={upsertOrder} className="space-y-6">
       <div className="sticky top-20 z-20">
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -768,11 +777,12 @@ export function NewOrderForm({
             </select>
           </label>
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Total weight (g)
+            {isAdminPremadeOrder ? "Total weight (kg)" : "Total weight (g)"}
             <input
               type="number"
-              name="order_weight_g"
-              min={1}
+              name={isAdminPremadeOrder ? "total_weight_kg" : "order_weight_g"}
+              min={isAdminPremadeOrder ? 0.01 : 1}
+              step={isAdminPremadeOrder ? "0.01" : "1"}
               required
               readOnly={!isAdminPremadeOrder}
               value={weightValue}
@@ -806,21 +816,13 @@ export function NewOrderForm({
                   <div className="space-y-1">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Production date</p>
                     <p className="text-sm text-zinc-700">
-                      {productionSlotDate ? `Selected: ${new Date(`${productionSlotDate}T00:00:00`).toLocaleDateString()}` : "Choose a slot from the production calendar."}
+                      {productionSlotDate
+                        ? `Selected: ${new Date(`${productionSlotDate}T00:00:00`).toLocaleDateString()}`
+                        : "Choose a slot from the production calendar."}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setProductionSlotPickerOpen(true)}
-                    className="rounded border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-900 hover:border-rose-400 hover:bg-rose-50"
-                  >
-                    Choose in production calendar
-                  </button>
                 </div>
                 <input type="hidden" name="production_slot_date" value={productionSlotDate} />
-              </div>
-              <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900 md:col-span-2">
-                Premade stock orders ignore pricing, delivery details, packaging, labels, and artwork. They are saved as internal stock-only jobs.
               </div>
             </>
           ) : (
@@ -1386,9 +1388,16 @@ export function NewOrderForm({
           slots={slots}
           blocks={blocks}
           settings={settings}
-          onClose={() => setProductionSlotPickerOpen(false)}
+          onClose={() => {
+            setProductionSlotPickerOpen(false);
+            setSubmitAfterCalendarPick(false);
+          }}
           mode="pick"
-          onPickSlot={({ slotDate }) => setProductionSlotDate(slotDate)}
+          onPickSlot={({ slotDate }) => {
+            setProductionSlotDate(slotDate);
+            setProductionSlotPickerOpen(false);
+            setSubmitAfterCalendarPick(true);
+          }}
         />
       ) : null}
 
@@ -1607,13 +1616,14 @@ export function NewOrderForm({
         </Link>
         {isAdminPremadeOrder ? (
           <button
-            type="submit"
-            name="submit_intent"
-            value="save_and_schedule"
-            disabled={!productionSlotDate}
-            className="rounded border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-900 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            onClick={() => {
+              setSubmitAfterCalendarPick(false);
+              setProductionSlotPickerOpen(true);
+            }}
+            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
           >
-            Save + slot into production
+            Add to Calendar
           </button>
         ) : null}
         <button
@@ -1622,7 +1632,18 @@ export function NewOrderForm({
           value="save"
           className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
         >
-          {isAdminPremadeOrder ? "Save premade batch" : "Save order"}
+          {isAdminPremadeOrder ? "Add to Orders" : "Save order"}
+        </button>
+        <button
+          ref={scheduleSubmitButtonRef}
+          type="submit"
+          name="submit_intent"
+          value="save_and_schedule"
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          Add to Calendar
         </button>
       </div>
     </form>

@@ -77,7 +77,7 @@ export default async function BlogArticlePage({ params }: PageProps) {
   const relatedPosts = (await listPublishedBlogPosts()).filter((candidate) => candidate.id !== post.id).slice(0, 3);
 
   return (
-    <main className="landing-bg min-h-screen bg-white text-zinc-900">
+    <main className="min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({

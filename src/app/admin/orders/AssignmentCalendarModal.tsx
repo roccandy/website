@@ -277,7 +277,6 @@ export default function AssignmentCalendarModal({
                       if (slotIndex === null) return;
                       if (mode === "pick" && onPickSlot) {
                         onPickSlot({ slotDate: item.key, slotIndex });
-                        onClose();
                         return;
                       }
                       const formData = new FormData();
