@@ -61,7 +61,7 @@ export default async function BlogPage() {
     "Read the Roc Candy blog for personalised rock candy ideas, event inspiration, and product updates.";
 
   return (
-    <main className="landing-bg min-h-screen bg-white text-zinc-900">
+    <main className="min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({

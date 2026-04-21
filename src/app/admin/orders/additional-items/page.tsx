@@ -7,6 +7,7 @@ import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";
 import { PremadeGroupShipButton } from "./PremadeGroupShipButton";
 import { dateKey, getScheduleStatus } from "../productionScheduleShared";
+import { isVisibleOnPremadeOrders } from "../scheduleVisibility";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -92,7 +93,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
     }
   });
   const additionalItems = orders
-    .filter((order) => order.design_type === "premade")
+    .filter(isVisibleOnPremadeOrders)
     .filter((order) => shouldShowPremade(order))
     .sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;

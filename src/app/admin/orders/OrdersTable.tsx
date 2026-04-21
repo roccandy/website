@@ -14,6 +14,7 @@ import type {
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
 import { archiveOrderInline, upsertOrder } from "./actions";
+import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL } from "@/lib/adminPremadeOrder";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -199,7 +200,10 @@ export function OrdersTable({
     () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
     [categories]
   );
-  const categoryLabelById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const categoryLabelById = useMemo(
+    () => new Map([...categories.map((category) => [category.id, category.name] as const), [ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL] as const]),
+    [categories]
+  );
   const jacketLabelByValue = useMemo(
     () => new Map(JACKET_OPTIONS.map((option) => [option.value, option.label])),
     []
@@ -207,6 +211,9 @@ export function OrdersTable({
   const orderCategoryOptions = useMemo(() => {
     if (!orderCategoryId) return categoryOptions;
     if (categoryOptions.some((option) => option.id === orderCategoryId)) return categoryOptions;
+    if (orderCategoryId === ADMIN_PREMADE_CATEGORY_ID) {
+      return [{ id: ADMIN_PREMADE_CATEGORY_ID, name: ADMIN_PREMADE_ORDER_LABEL }, ...categoryOptions];
+    }
     return [{ id: orderCategoryId, name: orderCategoryId }, ...categoryOptions];
   }, [categoryOptions, orderCategoryId]);
   const filteredPackagingOptions = useMemo(() => {

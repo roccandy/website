@@ -10,6 +10,11 @@ import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
+import {
+  ADMIN_PREMADE_CATEGORY_ID,
+  isAdminPremadeCategoryId,
+} from "@/lib/adminPremadeOrder";
+import { findFirstAvailableSlotIndexForDate } from "./productionScheduleShared";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -102,8 +107,31 @@ const describeOrderTarget = (input: {
   return orderNumber ? `#${orderNumber} ${label}`.trim() : label;
 };
 
+async function resolveFirstAvailableSlotIndex(
+  slotDate: string,
+  client: typeof supabaseAdminClient,
+  slotsPerDay: number,
+) {
+  const [{ data: slots, error: slotsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
+    client.from("production_slots").select("id,slot_date,slot_index,capacity_kg,status,notes,created_at"),
+    client.from("order_slots").select("id,order_id,slot_id,kg_assigned,created_at"),
+  ]);
+  if (slotsError) throw new Error(slotsError.message);
+  if (assignmentsError) throw new Error(assignmentsError.message);
+
+  return findFirstAvailableSlotIndexForDate({
+    date: slotDate,
+    slotsPerDay,
+    assignments: assignments ?? [],
+    slots: slots ?? [],
+  });
+}
+
 export async function upsertOrder(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
+  const submitIntent = formData.get("submit_intent")?.toString() || "save";
+  const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
+  const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const toastSuccess = formData.get("toast_success")?.toString() || null;
   const toastError = formData.get("toast_error")?.toString() || null;
@@ -174,13 +202,15 @@ export async function upsertOrder(formData: FormData) {
     ? (await client.from("orders").select("*").eq("id", id).maybeSingle()).data
     : null;
   let activity: AdminActivityInput | null = null;
+  let postSaveRedirect: string | null = null;
   const resolvedCategoryId = category_id ?? existing?.category_id ?? null;
+  const isAdminPremade = isAdminPremadeCategoryId(resolvedCategoryId);
   const isBranded = resolvedCategoryId === "branded";
   const isWedding = resolvedCategoryId?.startsWith("weddings");
   const nameFromParts = [first_name, last_name].filter(Boolean).join(" ") || null;
   const resolvedCustomerName = customer_name_raw ?? nameFromParts ?? existing?.customer_name ?? null;
-  const resolvedTextColor = !isBranded ? text_color_raw ?? existing?.text_color ?? null : null;
-  const resolvedHeartColor = isWedding ? heart_color_raw ?? existing?.heart_color ?? null : null;
+  const resolvedTextColor = !isBranded && !isAdminPremade ? text_color_raw ?? existing?.text_color ?? null : null;
+  const resolvedHeartColor = isWedding && !isAdminPremade ? heart_color_raw ?? existing?.heart_color ?? null : null;
   const resolvedNotes = hasIngredientLabelsControl
     ? syncIngredientLabelsNote(notes ?? existing?.notes ?? null, ingredientLabelsOptIn)
     : notes ?? existing?.notes ?? null;
@@ -196,6 +226,7 @@ export async function upsertOrder(formData: FormData) {
   const created_at_date = created_at_raw ? new Date(created_at_raw) : null;
   const created_at =
     created_at_date && !Number.isNaN(created_at_date.valueOf()) ? created_at_date.toISOString() : null;
+  const resolvedDueDate = isAdminPremade ? productionSlotDate ?? due_date ?? existing?.due_date ?? null : due_date ?? existing?.due_date ?? null;
 
   const resolvedWeightKg = Number.isFinite(total_weight_kg)
     ? total_weight_kg
@@ -214,41 +245,53 @@ export async function upsertOrder(formData: FormData) {
       throw new Error(`Max total kg per settings is ${settings.max_total_kg}.`);
     }
 
+    const resolvedFlavor = flavor?.trim() || existing?.flavor?.trim() || null;
+    if (isAdminPremade && !resolvedFlavor) {
+      throw new Error("Flavor is required for premade stock orders.");
+    }
+    if (isAdminPremade && shouldScheduleAfterCreate && !productionSlotDate) {
+      throw new Error("Production date is required to slot this premade order.");
+    }
+
+    const premadeStockTitle = resolvedFlavor ? `Premade stock - ${resolvedFlavor}` : "Premade stock";
+    const premadeWeightGrams = Math.round(resolvedWeightKg * 1000);
+    const premadeStockDescription = `${premadeWeightGrams}g stock batch`;
+
     const basePayload = {
-      title: title ?? syncedTitleFromDesignText ?? existing?.title ?? null,
-      order_description: order_description ?? existing?.order_description ?? null,
-      customer_name: resolvedCustomerName,
-      customer_email: customer_email ?? existing?.customer_email ?? null,
-      category_id: category_id ?? existing?.category_id ?? null,
-      packaging_option_id: packaging_option_id ?? existing?.packaging_option_id ?? null,
-      quantity: quantity ?? existing?.quantity ?? null,
-      labels_count: labels_count ?? existing?.labels_count ?? null,
-      jacket: jacket ?? existing?.jacket ?? null,
-      design_type: design_type ?? existing?.design_type ?? null,
-      design_text: design_text ?? existing?.design_text ?? null,
-      jacket_type: jacketType ?? existing?.jacket_type ?? null,
-      jacket_color_one: jacket_color_one ?? existing?.jacket_color_one ?? null,
-      jacket_color_two: jacket_color_two ?? existing?.jacket_color_two ?? null,
-      flavor: flavor ?? existing?.flavor ?? null,
-      jar_lid_color: jar_lid_color ?? existing?.jar_lid_color ?? null,
-      logo_url: logo_url ?? existing?.logo_url ?? null,
-      label_image_url: label_image_url ?? existing?.label_image_url ?? null,
-      due_date: due_date ?? existing?.due_date ?? null,
+      title: isAdminPremade ? premadeStockTitle : title ?? syncedTitleFromDesignText ?? existing?.title ?? null,
+      order_description: isAdminPremade ? premadeStockDescription : order_description ?? existing?.order_description ?? null,
+      customer_name: isAdminPremade ? null : resolvedCustomerName,
+      customer_email: isAdminPremade ? null : customer_email ?? existing?.customer_email ?? null,
+      category_id: isAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : category_id ?? existing?.category_id ?? null,
+      packaging_option_id: isAdminPremade ? null : packaging_option_id ?? existing?.packaging_option_id ?? null,
+      quantity: isAdminPremade ? null : quantity ?? existing?.quantity ?? null,
+      labels_count: isAdminPremade ? null : labels_count ?? existing?.labels_count ?? null,
+      jacket: isAdminPremade ? null : jacket ?? existing?.jacket ?? null,
+      design_type: isAdminPremade ? "premade" : design_type ?? existing?.design_type ?? null,
+      design_text: isAdminPremade ? resolvedFlavor : design_text ?? existing?.design_text ?? null,
+      jacket_type: isAdminPremade ? null : jacketType ?? existing?.jacket_type ?? null,
+      jacket_color_one: isAdminPremade ? null : jacket_color_one ?? existing?.jacket_color_one ?? null,
+      jacket_color_two: isAdminPremade ? null : jacket_color_two ?? existing?.jacket_color_two ?? null,
+      flavor: resolvedFlavor,
+      jar_lid_color: isAdminPremade ? null : jar_lid_color ?? existing?.jar_lid_color ?? null,
+      logo_url: isAdminPremade ? null : logo_url ?? existing?.logo_url ?? null,
+      label_image_url: isAdminPremade ? null : label_image_url ?? existing?.label_image_url ?? null,
+      due_date: resolvedDueDate,
       total_weight_kg: resolvedWeightKg,
-      total_price: total_price ?? existing?.total_price ?? null,
-      status: status ?? existing?.status ?? "pending",
-      payment_method: payment_method ?? existing?.payment_method ?? null,
+      total_price: isAdminPremade ? null : total_price ?? existing?.total_price ?? null,
+      status: isAdminPremade ? "unassigned" : status ?? existing?.status ?? "pending",
+      payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
       notes: resolvedNotes,
-      pickup: pickup ?? existing?.pickup ?? false,
-      state: state ?? existing?.state ?? null,
-      first_name: first_name ?? existing?.first_name ?? null,
-      last_name: last_name ?? existing?.last_name ?? null,
-      phone: phone ?? existing?.phone ?? null,
-      organization_name: organization_name ?? existing?.organization_name ?? null,
-      address_line1: address_line1 ?? existing?.address_line1 ?? null,
-      address_line2: address_line2 ?? existing?.address_line2 ?? null,
-      suburb: suburb ?? existing?.suburb ?? null,
-      postcode: postcode ?? existing?.postcode ?? null,
+      pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,
+      state: isAdminPremade ? null : state ?? existing?.state ?? null,
+      first_name: isAdminPremade ? null : first_name ?? existing?.first_name ?? null,
+      last_name: isAdminPremade ? null : last_name ?? existing?.last_name ?? null,
+      phone: isAdminPremade ? null : phone ?? existing?.phone ?? null,
+      organization_name: isAdminPremade ? null : organization_name ?? existing?.organization_name ?? null,
+      address_line1: isAdminPremade ? null : address_line1 ?? existing?.address_line1 ?? null,
+      address_line2: isAdminPremade ? null : address_line2 ?? existing?.address_line2 ?? null,
+      suburb: isAdminPremade ? null : suburb ?? existing?.suburb ?? null,
+      postcode: isAdminPremade ? null : postcode ?? existing?.postcode ?? null,
       text_color: resolvedTextColor,
       heart_color: resolvedHeartColor,
       created_at: created_at ?? undefined,
@@ -280,7 +323,7 @@ export async function upsertOrder(formData: FormData) {
         },
       };
     } else {
-      const hasPremadeSelections = premadeSelections.length > 0;
+      const hasPremadeSelections = !isAdminPremade && premadeSelections.length > 0;
       const buildOrderNumbers = async (seed?: string | null) => {
         const baseNumber = normalizeBaseOrderNumber(seed) ?? (await generateOrderNumber());
         const baseOrderNumber = baseNumber.replace(ORDER_SUFFIX_PATTERN, "");
@@ -292,13 +335,15 @@ export async function upsertOrder(formData: FormData) {
       };
       let orderNumbers = await buildOrderNumbers(order_number);
       let payload: (typeof basePayload & { order_number: string }) | null = null;
+      let createdOrderId: string | null = null;
       let insertError: { code?: string | null; message?: string | null } | null = null;
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const candidate = { ...basePayload, order_number: orderNumbers.customOrderNumber };
-        const { error } = await client.from("orders").insert(candidate);
+        const { data, error } = await client.from("orders").insert(candidate).select("id").single();
         if (!error) {
           payload = candidate;
+          createdOrderId = data?.id ?? null;
           insertError = null;
           break;
         }
@@ -313,9 +358,12 @@ export async function upsertOrder(formData: FormData) {
         const message = insertError?.message || "Unable to create order.";
         throw new Error(message);
       }
+      if (!createdOrderId) {
+        throw new Error("Unable to resolve the new order id.");
+      }
       const { customOrderNumber, premadeOrderNumber, quoteLabel } = orderNumbers;
       const ordersRecipients = getOrdersRecipients();
-      if (ordersRecipients.length > 0) {
+      if (!isAdminPremade && ordersRecipients.length > 0) {
         try {
           await sendOrderEmail(ordersRecipients, {
             orderNumber: customOrderNumber,
@@ -416,10 +464,32 @@ export async function upsertOrder(formData: FormData) {
           }
         }
       }
+
+      if (isAdminPremade && shouldScheduleAfterCreate && productionSlotDate) {
+        await assertAssignableDate(productionSlotDate, client);
+        const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
+        const slotIndex = await resolveFirstAvailableSlotIndex(productionSlotDate, client, slotsPerDay);
+        if (slotIndex === null) {
+          throw new Error("No production slot is available on this date.");
+        }
+        const scheduleFormData = new FormData();
+        scheduleFormData.set("order_id", createdOrderId);
+        scheduleFormData.set("slot_date", productionSlotDate);
+        scheduleFormData.set("slot_index", String(slotIndex));
+        scheduleFormData.set("kg_assigned", String(payload.total_weight_kg));
+        scheduleFormData.set("response_mode", "inline");
+        const scheduleResult = await assignOrderToSlot(scheduleFormData);
+        if (!scheduleResult?.ok) {
+          throw new Error(scheduleResult?.message || "Unable to slot premade order into production schedule.");
+        }
+        postSaveRedirect = `${ORDERS_PATH}?selected=${encodeURIComponent(createdOrderId)}`;
+      }
+
       activity = {
         area: "operations",
         action: "created",
         entityType: "order",
+        entityId: createdOrderId,
         entityLabel: describeOrderTarget({
           orderNumber: customOrderNumber,
           title: payload.title,
@@ -436,6 +506,7 @@ export async function upsertOrder(formData: FormData) {
           orderNumber: customOrderNumber,
           premadeOrderNumber,
           createdPremadeCompanion: hasPremadeSelections,
+          adminPremade: isAdminPremade,
         },
       };
     }
@@ -450,7 +521,7 @@ export async function upsertOrder(formData: FormData) {
   if (activity) {
     await logAdminActivity(activity);
   }
-  const destination = redirectTo ?? ORDERS_PATH;
+  const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
   if (redirectTo && toastSuccess) {
     const params = new URLSearchParams({ toast: "success", message: toastSuccess });
     redirect(`${destination}?${params.toString()}`);
