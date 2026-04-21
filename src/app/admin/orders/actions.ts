@@ -11,7 +11,7 @@ import { getSettings } from "@/lib/data";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
 import {
-  ADMIN_PREMADE_CATEGORY_ID,
+  ADMIN_PREMADE_ORDER_MARKER,
   isAdminPremadeCategoryId,
 } from "@/lib/adminPremadeOrder";
 import { findFirstAvailableSlotIndexForDate } from "./productionScheduleShared";
@@ -226,7 +226,11 @@ export async function upsertOrder(formData: FormData) {
   const created_at_date = created_at_raw ? new Date(created_at_raw) : null;
   const created_at =
     created_at_date && !Number.isNaN(created_at_date.valueOf()) ? created_at_date.toISOString() : null;
-  const resolvedDueDate = isAdminPremade ? productionSlotDate ?? due_date ?? existing?.due_date ?? null : due_date ?? existing?.due_date ?? null;
+  const resolvedDueDate = isAdminPremade
+    ? shouldScheduleAfterCreate
+      ? productionSlotDate ?? null
+      : null
+    : due_date ?? existing?.due_date ?? null;
 
   const resolvedWeightKg = Number.isFinite(total_weight_kg)
     ? total_weight_kg
@@ -262,7 +266,7 @@ export async function upsertOrder(formData: FormData) {
       order_description: isAdminPremade ? premadeStockDescription : order_description ?? existing?.order_description ?? null,
       customer_name: isAdminPremade ? null : resolvedCustomerName,
       customer_email: isAdminPremade ? null : customer_email ?? existing?.customer_email ?? null,
-      category_id: isAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : category_id ?? existing?.category_id ?? null,
+      category_id: isAdminPremade ? null : category_id ?? existing?.category_id ?? null,
       packaging_option_id: isAdminPremade ? null : packaging_option_id ?? existing?.packaging_option_id ?? null,
       quantity: isAdminPremade ? null : quantity ?? existing?.quantity ?? null,
       labels_count: isAdminPremade ? null : labels_count ?? existing?.labels_count ?? null,
@@ -281,7 +285,6 @@ export async function upsertOrder(formData: FormData) {
       total_price: isAdminPremade ? null : total_price ?? existing?.total_price ?? null,
       status: isAdminPremade ? "unassigned" : status ?? existing?.status ?? "pending",
       payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
-      notes: resolvedNotes,
       pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,
       state: isAdminPremade ? null : state ?? existing?.state ?? null,
       first_name: isAdminPremade ? null : first_name ?? existing?.first_name ?? null,
@@ -292,6 +295,7 @@ export async function upsertOrder(formData: FormData) {
       address_line2: isAdminPremade ? null : address_line2 ?? existing?.address_line2 ?? null,
       suburb: isAdminPremade ? null : suburb ?? existing?.suburb ?? null,
       postcode: isAdminPremade ? null : postcode ?? existing?.postcode ?? null,
+      notes: isAdminPremade ? ADMIN_PREMADE_ORDER_MARKER : resolvedNotes,
       text_color: resolvedTextColor,
       heart_color: resolvedHeartColor,
       created_at: created_at ?? undefined,

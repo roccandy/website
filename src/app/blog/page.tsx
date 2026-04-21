@@ -55,6 +55,8 @@ export default async function BlogPage() {
   const faqSection = await getManagedSitePageFaqSection(blogPage);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
+  const featuredPost = posts[0] ?? null;
+  const remainingPosts = posts.slice(1);
   const description =
     blogPage.metaDescription ||
     truncateText(stripHtml(blogPage.bodyHtml), 160) ||
@@ -99,7 +101,7 @@ export default async function BlogPage() {
             <article className="site-rich-content text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: blogPage.bodyHtml }} />
           ) : null}
 
-          <section className="space-y-4">
+          <section className="space-y-6">
             {posts.length === 0 ? (
               <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
                 <h2 className="site-section-title text-[rgb(114,112,111)]">Articles coming soon</h2>
@@ -108,47 +110,98 @@ export default async function BlogPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                {posts.map((post) => (
-                  <article
-                    key={post.id}
-                    className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    {post.coverImageUrl ? (
-                      <Link href={`/blog/${post.slug}`} className="block">
-                        <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
-                          <Image
-                            src={post.coverImageUrl}
-                            alt={post.coverImageAlt || post.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                            className="object-cover"
-                          />
-                        </div>
-                      </Link>
-                    ) : null}
-                    <div className="space-y-3 p-5">
-                      {formatPublishDate(post.publishedAt) ? (
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                          {formatPublishDate(post.publishedAt)}
-                        </p>
-                      ) : null}
-                      <h2 className="site-subsection-title text-[rgb(114,112,111)]">
-                        <Link href={`/blog/${post.slug}`} className="hover:text-[#ff6f95]">
-                          {post.title}
+              <div className="space-y-5">
+                {featuredPost ? (
+                  <article className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
+                    <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
+                      {featuredPost.coverImageUrl ? (
+                        <Link href={`/blog/${featuredPost.slug}`} className="block">
+                          <div className="relative aspect-[4/3] h-full min-h-[16rem] overflow-hidden bg-zinc-100 lg:aspect-auto">
+                            <Image
+                              src={featuredPost.coverImageUrl}
+                              alt={featuredPost.coverImageAlt || featuredPost.title}
+                              fill
+                              sizes="(max-width: 1024px) 100vw, 60vw"
+                              className="object-cover"
+                            />
+                          </div>
                         </Link>
-                      </h2>
-                      <p className="text-sm leading-relaxed text-zinc-600">{post.excerpt}</p>
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#ff6f95] transition hover:text-[#ff4f80]"
-                      >
-                        Read article
-                        <span aria-hidden="true">›</span>
-                      </Link>
+                      ) : null}
+                      <div className="flex flex-col justify-center space-y-4 p-6 lg:p-8">
+                        <div className="space-y-3">
+                          {formatPublishDate(featuredPost.publishedAt) ? (
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                              Latest post
+                              <span className="mx-2 text-zinc-300">|</span>
+                              {formatPublishDate(featuredPost.publishedAt)}
+                            </p>
+                          ) : (
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Latest post</p>
+                          )}
+                          <h2 className="site-subsection-title text-[rgb(114,112,111)]">
+                            <Link href={`/blog/${featuredPost.slug}`} className="hover:text-[#ff6f95]">
+                              {featuredPost.title}
+                            </Link>
+                          </h2>
+                          <p className="text-base leading-relaxed text-zinc-600">{featuredPost.excerpt}</p>
+                        </div>
+                        <div>
+                          <Link
+                            href={`/blog/${featuredPost.slug}`}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-[#ff6f95] transition hover:text-[#ff4f80]"
+                          >
+                            Read latest article
+                            <span aria-hidden="true">›</span>
+                          </Link>
+                        </div>
+                      </div>
                     </div>
                   </article>
-                ))}
+                ) : null}
+                {remainingPosts.length > 0 ? (
+                  <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    {remainingPosts.map((post) => (
+                      <article
+                        key={post.id}
+                        className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      >
+                        {post.coverImageUrl ? (
+                          <Link href={`/blog/${post.slug}`} className="block">
+                            <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
+                              <Image
+                                src={post.coverImageUrl}
+                                alt={post.coverImageAlt || post.title}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                                className="object-cover"
+                              />
+                            </div>
+                          </Link>
+                        ) : null}
+                        <div className="space-y-3 p-5">
+                          {formatPublishDate(post.publishedAt) ? (
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                              {formatPublishDate(post.publishedAt)}
+                            </p>
+                          ) : null}
+                          <h2 className="site-subsection-title text-[rgb(114,112,111)]">
+                            <Link href={`/blog/${post.slug}`} className="hover:text-[#ff6f95]">
+                              {post.title}
+                            </Link>
+                          </h2>
+                          <p className="text-sm leading-relaxed text-zinc-600">{post.excerpt}</p>
+                          <Link
+                            href={`/blog/${post.slug}`}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-[#ff6f95] transition hover:text-[#ff4f80]"
+                          >
+                            Read article
+                            <span aria-hidden="true">›</span>
+                          </Link>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             )}
           </section>

@@ -14,7 +14,7 @@ import type {
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
 import { archiveOrderInline, upsertOrder } from "./actions";
-import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL } from "@/lib/adminPremadeOrder";
+import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -129,7 +129,7 @@ export function OrdersTable({
     const nextJacketColorOne = order.jacket_color_one ? normalizeHex(order.jacket_color_one) : "";
     const nextJacketColorTwo = order.jacket_color_two ? normalizeHex(order.jacket_color_two) : "";
     const nextJarLidColor = order.jar_lid_color ? normalizeHex(order.jar_lid_color) : "";
-    const nextCategoryId = order.category_id ?? "";
+    const nextCategoryId = isAdminPremadeOrder(order) ? ADMIN_PREMADE_CATEGORY_ID : order.category_id ?? "";
     const nextPackagingOption = order.packaging_option_id ? packagingById.get(order.packaging_option_id) ?? null : null;
     setOrderCategoryId(nextCategoryId);
     setPackagingType(nextPackagingOption?.type ?? "");
@@ -412,6 +412,7 @@ export function OrdersTable({
                 const scheduleStatus = getScheduleStatus(order, assignedSlotDate);
                 const canCompleteFromSchedule = canCompleteOrderForSlotDate(order, assignedSlotDate);
                 const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
+                const isAdminPremade = isAdminPremadeOrder(order);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -442,7 +443,11 @@ export function OrdersTable({
                           >
                             {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
-                          {premadeSiblingMeta ? (
+                          {isAdminPremade ? (
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                              Premade stock
+                            </span>
+                          ) : premadeSiblingMeta ? (
                             <a
                               href={premadeSiblingMeta.href}
                               onClick={(event) => event.stopPropagation()}
@@ -484,7 +489,8 @@ export function OrdersTable({
                               const weightG = Number.isFinite(Number(order.total_weight_kg ?? NaN))
                                 ? Math.round(Number(order.total_weight_kg) * 1000)
                                 : "";
-                              const activeCategoryId = orderCategoryId || order.category_id || "";
+                              const activeCategoryId =
+                                orderCategoryId || (isAdminPremadeOrder(order) ? ADMIN_PREMADE_CATEGORY_ID : order.category_id || "");
                               const isWedding = activeCategoryId.startsWith("weddings");
                               const isBranded = activeCategoryId === "branded";
                               const textColorOptions = buildColorOptions(colorOptions, textColorValue);
