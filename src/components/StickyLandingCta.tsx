@@ -1,29 +1,36 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { buildDesignerPath } from "@/lib/designUrls";
-import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/StickyLandingCta";
+import type { ReactNode, RefObject } from "react";
+import { useEffect, useRef } from "react";
 
-const OPTIONS = [
-  { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
-  { label: "Text Candy", href: buildDesignerPath({ orderType: "text" }) },
-  { label: "Branded Candy", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
-];
+export const LANDING_CTA_BUTTON_BASE_CLASS =
+  "site-primary-cta site-landing-cta-button inline-flex items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-base font-semibold normal-case tracking-normal text-white sm:px-7 sm:py-3.5 sm:text-[15px]";
+export const LANDING_CTA_ARROW_CLASS = "h-4 w-4";
 
-export function DesignCtaModal() {
-  const [expanded, setExpanded] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+type StickyLandingCtaProps = {
+  children: ReactNode;
+  containerRef?: RefObject<HTMLDivElement | null>;
+  className?: string;
+};
+
+export function StickyLandingCta({
+  children,
+  containerRef,
+  className = "mx-auto w-fit max-w-full overflow-visible",
+}: StickyLandingCtaProps) {
+  const innerContainerRef = useRef<HTMLDivElement | null>(null);
+  const resolvedContainerRef = containerRef ?? innerContainerRef;
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const container = containerRef.current?.closest<HTMLElement>(".site-page-frame") ?? containerRef.current;
+    const container = resolvedContainerRef.current?.closest<HTMLElement>(".site-page-frame") ?? resolvedContainerRef.current;
     const wrap = wrapRef.current;
     const stickyEl = stickyRef.current;
     if (!container || !wrap || !stickyEl) return;
 
-    const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
+    const headerEl =
+      document.querySelector<HTMLElement>("[data-site-header]") ?? document.querySelector<HTMLElement>("[data-quote-header]");
     const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
     const topGap = 16;
     let raf = 0;
@@ -138,64 +145,13 @@ export function DesignCtaModal() {
       observer.disconnect();
       reset();
     };
-  }, []);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
-        setExpanded(false);
-      }
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [expanded]);
+  }, [resolvedContainerRef]);
 
   return (
-    <div ref={containerRef} className="mx-auto w-fit max-w-full overflow-visible">
+    <div ref={resolvedContainerRef} className={className}>
       <div ref={wrapRef} className="relative h-16 sm:h-[4.5rem]">
         <div ref={stickyRef} className="w-fit max-w-full overflow-visible">
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          aria-expanded={expanded}
-          aria-controls="design-options"
-          className={`${LANDING_CTA_BUTTON_BASE_CLASS} absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#ff6f95] shadow-[0_18px_38px_rgba(114,112,111,0.24)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
-            expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
-          }`}
-        >
-          <span className="site-primary-cta-label">Design Your Candy</span>
-          <span className="site-primary-cta-arrow" aria-hidden="true">
-            <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
-              <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-        </button>
-
-        <div
-          id="design-options"
-          aria-hidden={!expanded}
-          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
-            expanded ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
-          }`}
-        >
-          <div className="inline-flex overflow-hidden rounded-full border border-zinc-200 bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)]">
-            {OPTIONS.map((option, index) => (
-              <Link
-                key={option.href}
-                href={option.href}
-                className={`inline-flex items-center justify-center whitespace-nowrap px-4 py-3.5 text-[13px] font-semibold normal-case tracking-normal text-[#ff6f95] transition-colors duration-200 ease-out hover:bg-[#fff1f5] hover:text-[#ff4f80] sm:px-6 sm:py-4 sm:text-sm ${
-                  index > 0 ? "border-l border-zinc-200" : ""
-                }`}
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div>
-        </div>
+          {children}
         </div>
       </div>
     </div>

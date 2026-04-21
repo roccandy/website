@@ -2,6 +2,7 @@ import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { JsonLd } from "@/components/JsonLd";
+import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS, StickyLandingCta } from "@/components/StickyLandingCta";
 import { SiteUsps } from "@/components/SiteUsps";
 import Image from "next/image";
 import { getPremadeCandies } from "@/lib/data";
@@ -126,17 +127,19 @@ export default async function PremadePage() {
                 </div>
 
                 <div className="site-landing-cta-wrap">
-                  <Link
-                    href="#shop"
-                    className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
-                  >
-                    <span className="site-primary-cta-label">Browse the Range</span>
-                    <span className="site-primary-cta-arrow" aria-hidden="true">
-                      <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
-                        <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                  </Link>
+                  <StickyLandingCta>
+                    <Link
+                      href="#shop"
+                      className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]`}
+                    >
+                      <span className="site-primary-cta-label">Browse the Range</span>
+                      <span className="site-primary-cta-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
+                          <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </Link>
+                  </StickyLandingCta>
                 </div>
               </div>
             </section>

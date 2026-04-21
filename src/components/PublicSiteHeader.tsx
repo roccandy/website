@@ -26,7 +26,7 @@ export default async function PublicSiteHeader({
   const resolvedClassName = blockoutMessage ? className.replace(" shadow-[0_4px_10px_rgba(63,63,70,0.36)]", "") : className;
 
   return (
-    <div className={resolvedClassName} data-quote-header={dataQuoteHeader ? "true" : undefined}>
+    <div className={resolvedClassName} data-site-header="true" data-quote-header={dataQuoteHeader ? "true" : undefined}>
       <LandingTopLinksBar />
       <div className="site-header-inner mx-auto w-full max-w-6xl px-6">
         <div className="site-header-row flex flex-wrap items-center justify-between">

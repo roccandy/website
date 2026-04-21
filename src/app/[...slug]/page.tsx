@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
+import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS, StickyLandingCta } from "@/components/StickyLandingCta";
 import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import {
@@ -235,17 +236,19 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
 
                 {landingConfig.primaryCta ? (
                   <div className="site-landing-cta-wrap">
-                    <Link
-                      href={landingConfig.primaryCta.href}
-                      className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
-                    >
-                      <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
-                      <span className="site-primary-cta-arrow" aria-hidden="true">
-                        <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
-                          <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    </Link>
+                    <StickyLandingCta>
+                      <Link
+                        href={landingConfig.primaryCta.href}
+                        className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]`}
+                      >
+                        <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
+                        <span className="site-primary-cta-arrow" aria-hidden="true">
+                          <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
+                            <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      </Link>
+                    </StickyLandingCta>
                   </div>
                 ) : null}
               </div>
