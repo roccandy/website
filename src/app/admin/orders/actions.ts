@@ -12,7 +12,7 @@ import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
 import {
   ADMIN_PREMADE_ORDER_MARKER,
-  isAdminPremadeCategoryId,
+  isAdminPremadeOrder,
 } from "@/lib/adminPremadeOrder";
 import { findFirstAvailableSlotIndexForDate } from "./productionScheduleShared";
 
@@ -204,7 +204,7 @@ export async function upsertOrder(formData: FormData) {
   let activity: AdminActivityInput | null = null;
   let postSaveRedirect: string | null = null;
   const resolvedCategoryId = category_id ?? existing?.category_id ?? null;
-  const isAdminPremade = isAdminPremadeCategoryId(resolvedCategoryId);
+  const isAdminPremade = isAdminPremadeOrder(existing) || isAdminPremadeOrder({ category_id: resolvedCategoryId, design_type: design_type, notes: notes, title: title });
   const isBranded = resolvedCategoryId === "branded";
   const isWedding = resolvedCategoryId?.startsWith("weddings");
   const nameFromParts = [first_name, last_name].filter(Boolean).join(" ") || null;

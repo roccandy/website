@@ -1,4 +1,15 @@
-import { getCategories, getColorPalette, getFlavors, getPackagingOptions, getPremadeCandies, getSettings } from "@/lib/data";
+import {
+  getCategories,
+  getColorPalette,
+  getFlavors,
+  getOrderSlots,
+  getPackagingOptions,
+  getPremadeCandies,
+  getProductionBlocks,
+  getProductionSlots,
+  getSettings,
+  getOrders,
+} from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -13,13 +24,17 @@ export default async function NewOrderPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
 
-  const [categories, packagingOptions, flavors, palette, premadeCandies, settings] = await Promise.all([
+  const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments, blocks] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getFlavors(),
     getColorPalette(),
     getPremadeCandies(),
     getSettings(),
+    getOrders(),
+    getProductionSlots(),
+    getOrderSlots(),
+    getProductionBlocks(),
   ]);
 
   return (
@@ -45,6 +60,10 @@ export default async function NewOrderPage() {
         palette={palette}
         premadeCandies={premadeCandies}
         settings={settings}
+        orders={orders}
+        slots={slots}
+        assignments={assignments}
+        blocks={blocks}
       />
     </section>
   );

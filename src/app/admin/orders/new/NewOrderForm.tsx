@@ -4,14 +4,26 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import AssignmentCalendarModal from "@/app/admin/orders/AssignmentCalendarModal";
 import {
   analyzeImageOptimization,
   fileToDataUrl,
   optimizeBrowserImageToDataUrl,
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
-import type { Category, ColorPaletteRow, Flavor, PackagingOption, PremadeCandy, SettingsRow } from "@/lib/data";
-import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL } from "@/lib/adminPremadeOrder";
+import type {
+  Category,
+  ColorPaletteRow,
+  Flavor,
+  OrderRow,
+  OrderSlot,
+  PackagingOption,
+  PremadeCandy,
+  ProductionBlock,
+  ProductionSlot,
+  SettingsRow,
+} from "@/lib/data";
+import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
 import { upsertOrder } from "../actions";
 import { paletteSections } from "@/app/admin/settings/palette";
 
@@ -288,9 +300,24 @@ type Props = {
   palette: ColorPaletteRow[];
   premadeCandies: PremadeCandy[];
   settings: SettingsRow;
+  orders: OrderRow[];
+  slots: ProductionSlot[];
+  assignments: OrderSlot[];
+  blocks: ProductionBlock[];
 };
 
-export function NewOrderForm({ categories, packagingOptions, flavors, palette, premadeCandies, settings }: Props) {
+export function NewOrderForm({
+  categories,
+  packagingOptions,
+  flavors,
+  palette,
+  premadeCandies,
+  settings,
+  orders,
+  slots,
+  assignments,
+  blocks,
+}: Props) {
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
@@ -303,6 +330,7 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const [jacket, setJacket] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [productionSlotDate, setProductionSlotDate] = useState("");
+  const [productionSlotPickerOpen, setProductionSlotPickerOpen] = useState(false);
   const [priceValue, setPriceValue] = useState("");
   const [weightValue, setWeightValue] = useState("");
   const [pricingError, setPricingError] = useState<string | null>(null);
@@ -390,6 +418,67 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
   const isCustomText = categoryId.startsWith("custom-");
   const isBranded = categoryId === "branded";
   const isDesignDisabled = !categoryId || isAdminPremadeOrder;
+  const productionCalendarOrder = useMemo<OrderRow>(() => {
+    const flavorLabel = flavor.trim();
+    const title = flavorLabel ? `Premade stock - ${flavorLabel}` : "Premade stock";
+    const parsedWeight = Number(weightValue);
+    const totalWeightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight / 1000 : 0.01;
+    return {
+      id: "draft-premade-order",
+      order_number: null,
+      title,
+      order_description: flavorLabel ? `${flavorLabel} stock batch` : "Premade stock batch",
+      customer_name: null,
+      customer_email: null,
+      category_id: null,
+      packaging_option_id: null,
+      quantity: 1,
+      jar_lid_color: null,
+      labels_count: null,
+      jacket: null,
+      design_type: "premade",
+      design_text: flavorLabel || title,
+      jacket_type: null,
+      jacket_color_one: null,
+      jacket_color_two: null,
+      text_color: null,
+      heart_color: null,
+      flavor: flavorLabel || null,
+      payment_method: null,
+      logo_url: null,
+      label_image_url: null,
+      due_date: productionSlotDate || null,
+      label_type_id: null,
+      total_weight_kg: totalWeightKg,
+      total_price: null,
+      status: "unassigned",
+      notes: ADMIN_PREMADE_ORDER_MARKER,
+      made: false,
+      pickup: false,
+      state: null,
+      location: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      organization_name: null,
+      address_line1: null,
+      address_line2: null,
+      suburb: null,
+      postcode: null,
+      woo_order_id: null,
+      woo_order_status: null,
+      woo_order_key: null,
+      woo_payment_url: null,
+      paid_at: null,
+      payment_provider: null,
+      payment_transaction_id: null,
+      refunded_at: null,
+      refund_reason: null,
+      archived_at: null,
+      shipped_at: null,
+      created_at: new Date().toISOString(),
+    };
+  }, [flavor, productionSlotDate, weightValue]);
   const showJacketColorTwo = jacket === "two_colour" || jacket === "two_colour_pinstripe";
   const customTextLimit = categoryId === "custom-7-14" ? 14 : 6;
   const designTextValue = useMemo(() => {
@@ -712,19 +801,24 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
                   ))}
                 </select>
               </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                Production date
-                <input
-                  type="date"
-                  name="production_slot_date"
-                  value={productionSlotDate}
-                  onChange={(event) => setProductionSlotDate(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-                <div className="mt-2 text-[11px] text-zinc-500">
-                  Only needed if you use the button to slot this premade batch directly into production.
+              <div className="md:col-span-2">
+                <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Production date</p>
+                    <p className="text-sm text-zinc-700">
+                      {productionSlotDate ? `Selected: ${new Date(`${productionSlotDate}T00:00:00`).toLocaleDateString()}` : "Choose a slot from the production calendar."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProductionSlotPickerOpen(true)}
+                    className="rounded border border-rose-300 bg-white px-3 py-2 text-xs font-semibold text-rose-900 hover:border-rose-400 hover:bg-rose-50"
+                  >
+                    Choose in production calendar
+                  </button>
                 </div>
-              </label>
+                <input type="hidden" name="production_slot_date" value={productionSlotDate} />
+              </div>
               <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-900 md:col-span-2">
                 Premade stock orders ignore pricing, delivery details, packaging, labels, and artwork. They are saved as internal stock-only jobs.
               </div>
@@ -1282,6 +1376,20 @@ export function NewOrderForm({ categories, packagingOptions, flavors, palette, p
             />
           </div>
         </>
+      ) : null}
+
+      {productionSlotPickerOpen ? (
+        <AssignmentCalendarModal
+          order={productionCalendarOrder}
+          allOrders={orders}
+          assignments={assignments}
+          slots={slots}
+          blocks={blocks}
+          settings={settings}
+          onClose={() => setProductionSlotPickerOpen(false)}
+          mode="pick"
+          onPickSlot={({ slotDate }) => setProductionSlotDate(slotDate)}
+        />
       ) : null}
 
       {customPickerOpen && (

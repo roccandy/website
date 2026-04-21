@@ -27,6 +27,8 @@ type Props = {
   blocks: ProductionBlock[];
   settings: SettingsRow;
   onClose: () => void;
+  mode?: "assign" | "pick";
+  onPickSlot?: (input: { slotDate: string; slotIndex: number }) => void;
 };
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -55,6 +57,8 @@ export default function AssignmentCalendarModal({
   blocks,
   settings,
   onClose,
+  mode = "assign",
+  onPickSlot,
 }: Props) {
   const router = useRouter();
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -120,7 +124,7 @@ export default function AssignmentCalendarModal({
     [assignment?.assignment.id, assignment?.slot?.slot_date, assignments, blocks, monthCells, settings, slots, slotsPerDay, todayKey],
   );
 
-  const actionLabel = assignment ? "Change assignment" : "Assign";
+  const actionLabel = mode === "pick" ? "Pick production slot" : assignment ? "Change assignment" : "Assign";
   const scheduleStatus = getScheduleStatus(order, assignment?.slot?.slot_date ?? null, todayKey);
   const canCompleteOrder = canCompleteOrderForSlotDate(order, assignment?.slot?.slot_date ?? null);
   const premadeSiblingMeta = useMemo(() => getPremadeSiblingMeta(allOrders, order), [allOrders, order]);
@@ -163,7 +167,7 @@ export default function AssignmentCalendarModal({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {canCompleteOrder ? (
+            {mode === "assign" && canCompleteOrder ? (
               <button
                 type="button"
                 disabled={isPending}
@@ -183,7 +187,7 @@ export default function AssignmentCalendarModal({
                 {productionCompletionActionLabel(order)}
               </button>
             ) : null}
-            {assignment?.assignment.id ? (
+            {mode === "assign" && assignment?.assignment.id ? (
               <button
                 type="button"
                 disabled={isPending}
@@ -269,6 +273,13 @@ export default function AssignmentCalendarModal({
                       if (!confirmed) return;
                     }
                     startTransition(async () => {
+                      const slotIndex = item.availableSlotIndex;
+                      if (slotIndex === null) return;
+                      if (mode === "pick" && onPickSlot) {
+                        onPickSlot({ slotDate: item.key, slotIndex });
+                        onClose();
+                        return;
+                      }
                       const formData = new FormData();
                       formData.set("order_id", order.id);
                       formData.set("slot_date", item.key);
