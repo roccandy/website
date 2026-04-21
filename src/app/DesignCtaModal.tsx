@@ -17,7 +17,7 @@ export function DesignCtaModal() {
   const stickyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const container = containerRef.current?.closest<HTMLElement>(".site-home-hero-section") ?? containerRef.current;
+    const container = containerRef.current?.closest<HTMLElement>(".site-page-frame") ?? containerRef.current;
     const wrap = wrapRef.current;
     const stickyEl = stickyRef.current;
     if (!container || !wrap || !stickyEl) return;
