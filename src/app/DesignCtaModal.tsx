@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/landingCtaClasses";
 import { buildDesignerPath } from "@/lib/designUrls";
-import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/StickyLandingCta";
 
 const OPTIONS = [
   { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
@@ -29,6 +29,8 @@ export function DesignCtaModal() {
     const topGap = 16;
     let raf = 0;
     let lockedWidth = 0;
+    let lockedHeight = 0;
+    let lockedControlOffset = 0;
 
     const reset = () => {
       stickyEl.style.position = "static";
@@ -77,39 +79,104 @@ export function DesignCtaModal() {
       return Math.min(measured, viewportMax);
     };
 
+    const measureRestingHeight = () => {
+      const prev = {
+        position: stickyEl.style.position,
+        top: stickyEl.style.top,
+        left: stickyEl.style.left,
+        width: stickyEl.style.width,
+        height: stickyEl.style.height,
+        zIndex: stickyEl.style.zIndex,
+        wrapHeight: wrap.style.height,
+        wrapWidth: wrap.style.width,
+      };
+
+      reset();
+      const measured = Math.ceil(Math.max(wrap.getBoundingClientRect().height, stickyEl.getBoundingClientRect().height, 40));
+
+      stickyEl.style.position = prev.position;
+      stickyEl.style.top = prev.top;
+      stickyEl.style.left = prev.left;
+      stickyEl.style.width = prev.width;
+      stickyEl.style.height = prev.height;
+      stickyEl.style.zIndex = prev.zIndex;
+      wrap.style.height = prev.wrapHeight;
+      wrap.style.width = prev.wrapWidth;
+
+      return measured;
+    };
+
+    const measureRestingControlOffset = () => {
+      const prev = {
+        position: stickyEl.style.position,
+        top: stickyEl.style.top,
+        left: stickyEl.style.left,
+        width: stickyEl.style.width,
+        height: stickyEl.style.height,
+        zIndex: stickyEl.style.zIndex,
+        wrapHeight: wrap.style.height,
+        wrapWidth: wrap.style.width,
+      };
+
+      reset();
+      const stickyRect = stickyEl.getBoundingClientRect();
+      const controlRect = buttonRef.current?.getBoundingClientRect() ?? stickyRect;
+      const measured = controlRect.top - stickyRect.top;
+
+      stickyEl.style.position = prev.position;
+      stickyEl.style.top = prev.top;
+      stickyEl.style.left = prev.left;
+      stickyEl.style.width = prev.width;
+      stickyEl.style.height = prev.height;
+      stickyEl.style.zIndex = prev.zIndex;
+      wrap.style.height = prev.wrapHeight;
+      wrap.style.width = prev.wrapWidth;
+
+      return measured;
+    };
+
     const update = () => {
       const containerRect = container.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
       const scrollY = window.scrollY;
       const containerTop = scrollY + containerRect.top;
       const containerBottom = containerTop + containerRect.height;
-      const wrapTop = scrollY + wrapRect.top;
       const controlHeight = buttonRef.current?.offsetHeight ?? stickyEl.offsetHeight;
       const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
       const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap;
+      const controlOffset = lockedControlOffset;
+      const controlTop = scrollY + wrapRect.top + controlOffset;
 
-      const start = wrapTop - topOffset;
+      const start = controlTop - topOffset;
       const end = containerBottom - topOffset - controlHeight;
 
       if (scrollY < start) {
         reset();
         lockedWidth = measureRestingWidth();
+        lockedHeight = measureRestingHeight();
+        lockedControlOffset = measureRestingControlOffset();
         return;
       }
 
       if (!lockedWidth) {
         lockedWidth = measureRestingWidth();
       }
+      if (!lockedHeight) {
+        lockedHeight = measureRestingHeight();
+      }
+      if (!lockedControlOffset) {
+        lockedControlOffset = measureRestingControlOffset();
+      }
       const width = Math.min(lockedWidth, Math.max(220, window.innerWidth - 16));
       stickyEl.style.height = `${controlHeight}px`;
-      wrap.style.height = `${controlHeight}px`;
+      wrap.style.height = `${Math.max(lockedHeight, controlHeight)}px`;
       wrap.style.width = `${width}px`;
       const currentWrapRect = wrap.getBoundingClientRect();
       const left = Math.min(Math.max(Math.round(currentWrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
 
       if (scrollY <= end) {
         stickyEl.style.position = "fixed";
-        stickyEl.style.top = `${topOffset}px`;
+        stickyEl.style.top = `${topOffset - controlOffset}px`;
         stickyEl.style.left = `${left}px`;
         stickyEl.style.width = `${width}px`;
         stickyEl.style.zIndex = "20";
@@ -170,8 +237,8 @@ export function DesignCtaModal() {
   return (
     <div ref={containerRef} className="mx-auto w-fit max-w-full overflow-visible">
       <div ref={wrapRef} className="relative h-16 sm:h-[4.5rem]">
-        <div ref={stickyRef} className="w-fit max-w-full overflow-visible">
-          <div className="absolute inset-0 flex items-center justify-center">
+        <div ref={stickyRef} className="relative inline-flex max-w-full items-center justify-center overflow-visible">
+          <div className={`${expanded ? "pointer-events-none absolute inset-0 flex items-center justify-center" : "relative flex items-center justify-center"}`}>
             <button
               ref={buttonRef}
               type="button"
@@ -194,8 +261,8 @@ export function DesignCtaModal() {
           <div
             id="design-options"
             aria-hidden={!expanded}
-            className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out ${
-              expanded ? "scale-100 opacity-100" : "pointer-events-none scale-90 opacity-0"
+            className={`flex items-center justify-center transition-all duration-300 ease-out ${
+              expanded ? "relative scale-100 opacity-100" : "pointer-events-none absolute inset-0 scale-90 opacity-0"
             }`}
           >
             <div className="inline-flex overflow-hidden rounded-full border border-zinc-200 bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)]">

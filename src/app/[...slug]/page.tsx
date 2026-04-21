@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
-import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS, StickyLandingCta } from "@/components/StickyLandingCta";
+import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/landingCtaClasses";
+import { StickyLandingCta } from "@/components/StickyLandingCta";
 import { SiteUsps } from "@/components/SiteUsps";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import {

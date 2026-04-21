@@ -35,7 +35,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: -2;
   pointer-events: none;
   background-image: url("/landing/watercolour-hero-Homepage.webp");
   background-repeat: no-repeat;
@@ -43,6 +43,29 @@ body {
   background-position: center -28px;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
   mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+}
+
+:root .landing-bg:not(.landing-bg-home):not(.landing-bg-faded)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    rgba(255, 255, 255, 0.998) 4%,
+    rgba(255, 255, 255, 0.94) 7%,
+    rgba(255, 255, 255, 0.78) 10%,
+    rgba(255, 255, 255, 0.38) 13%,
+    transparent 16%,
+    transparent 84%,
+    rgba(255, 255, 255, 0.38) 87%,
+    rgba(255, 255, 255, 0.78) 90%,
+    rgba(255, 255, 255, 0.94) 93%,
+    rgba(255, 255, 255, 0.998) 96%,
+    #fff 100%
+  );
 }
 
 :root .landing-bg-home::before {
@@ -75,16 +98,16 @@ body {
   background: linear-gradient(
     to right,
     #fff 0%,
-    rgba(255, 255, 255, 0.998) 3.5%,
-    rgba(255, 255, 255, 0.92) 5.5%,
-    rgba(255, 255, 255, 0.66) 7.5%,
-    rgba(255, 255, 255, 0.28) 9%,
-    transparent 10%,
-    transparent 90%,
-    rgba(255, 255, 255, 0.28) 91%,
-    rgba(255, 255, 255, 0.66) 92.5%,
-    rgba(255, 255, 255, 0.92) 94.5%,
-    rgba(255, 255, 255, 0.998) 96.5%,
+    rgba(255, 255, 255, 0.998) 4%,
+    rgba(255, 255, 255, 0.94) 7%,
+    rgba(255, 255, 255, 0.78) 10%,
+    rgba(255, 255, 255, 0.38) 13%,
+    transparent 16%,
+    transparent 84%,
+    rgba(255, 255, 255, 0.38) 87%,
+    rgba(255, 255, 255, 0.78) 90%,
+    rgba(255, 255, 255, 0.94) 93%,
+    rgba(255, 255, 255, 0.998) 96%,
     #fff 100%
   );
 }
@@ -119,16 +142,16 @@ body {
   background: linear-gradient(
     to right,
     #fff 0%,
-    rgba(255, 255, 255, 0.998) 3.5%,
-    rgba(255, 255, 255, 0.92) 5.5%,
-    rgba(255, 255, 255, 0.66) 7.5%,
-    rgba(255, 255, 255, 0.28) 9%,
-    transparent 10%,
-    transparent 90%,
-    rgba(255, 255, 255, 0.28) 91%,
-    rgba(255, 255, 255, 0.66) 92.5%,
-    rgba(255, 255, 255, 0.92) 94.5%,
-    rgba(255, 255, 255, 0.998) 96.5%,
+    rgba(255, 255, 255, 0.998) 4%,
+    rgba(255, 255, 255, 0.94) 7%,
+    rgba(255, 255, 255, 0.78) 10%,
+    rgba(255, 255, 255, 0.38) 13%,
+    transparent 16%,
+    transparent 84%,
+    rgba(255, 255, 255, 0.38) 87%,
+    rgba(255, 255, 255, 0.78) 90%,
+    rgba(255, 255, 255, 0.94) 93%,
+    rgba(255, 255, 255, 0.998) 96%,
     #fff 100%
   );
 }
@@ -263,6 +286,26 @@ body {
 
 .site-home-secondary-grid {
   gap: var(--space-home-secondary-grid-gap);
+}
+
+.site-home-bottom-splash {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-home-bottom-splash::before {
+  content: "";
+  position: absolute;
+  inset: -3rem -2rem -4rem;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/landing/background-no-figures.webp");
+  background-repeat: no-repeat;
+  background-position: center 42%;
+  background-size: min(100%, 1120px) auto;
+  opacity: 0.9;
+  -webkit-mask-image: radial-gradient(circle at center, #000 34%, rgba(0, 0, 0, 0.94) 58%, rgba(0, 0, 0, 0.58) 80%, transparent 100%);
+  mask-image: radial-gradient(circle at center, #000 34%, rgba(0, 0, 0, 0.94) 58%, rgba(0, 0, 0, 0.58) 80%, transparent 100%);
 }
 
 .site-home-card-copy {

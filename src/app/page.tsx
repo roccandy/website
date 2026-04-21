@@ -210,60 +210,62 @@ export default async function Home() {
           </section>
           </ScrollReveal>
 
-          <ScrollReveal delayMs={120}>
-          <section id="contact" className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <div className="site-home-contact-grid grid md:grid-cols-[1.1fr,0.9fr] md:items-center">
-              <div className="site-home-contact-stack">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Contact</p>
-                <h2 className="site-subsection-title text-zinc-900">Tell us about your event or brand</h2>
-                <p className="text-sm text-zinc-600">
-                  We will help with timeline, color selection, and delivery planning. Email us or call to lock in a
-                  production slot.
-                </p>
-                <div>
-                  <Link
-                    href="/contact"
-                    className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
-                  >
-                    <span className="site-primary-cta-label">Contact Us</span>
-                    <span className="site-primary-cta-arrow" aria-hidden="true">
-                      <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
-                        <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </span>
-                  </Link>
+          <div className="site-home-bottom-splash">
+            <ScrollReveal delayMs={120}>
+            <section id="contact" className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm">
+              <div className="site-home-contact-grid grid md:grid-cols-[1.1fr,0.9fr] md:items-center">
+                <div className="site-home-contact-stack">
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Contact</p>
+                  <h2 className="site-subsection-title text-zinc-900">Tell us about your event or brand</h2>
+                  <p className="text-sm text-zinc-600">
+                    We will help with timeline, color selection, and delivery planning. Email us or call to lock in a
+                    production slot.
+                  </p>
+                  <div>
+                    <Link
+                      href="/contact"
+                      className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
+                    >
+                      <span className="site-primary-cta-label">Contact Us</span>
+                      <span className="site-primary-cta-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 12 12" className="h-3.5 w-3.5" fill="none">
+                          <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+                <div className="site-home-contact-stack text-sm">
+                  <div>
+                    <p className="text-zinc-500">Email</p>
+                    <a href={enquiriesHref} className="font-semibold text-zinc-900">
+                      {enquiriesEmail}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Phone</p>
+                    <p className="font-semibold text-zinc-900">0414 519 211</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-500">Location</p>
+                    <p className="font-semibold text-zinc-900">Australia wide delivery</p>
+                  </div>
                 </div>
               </div>
-              <div className="site-home-contact-stack text-sm">
-                <div>
-                  <p className="text-zinc-500">Email</p>
-                  <a href={enquiriesHref} className="font-semibold text-zinc-900">
-                    {enquiriesEmail}
-                  </a>
-                </div>
-                <div>
-                  <p className="text-zinc-500">Phone</p>
-                  <p className="font-semibold text-zinc-900">0414 519 211</p>
-                </div>
-                <div>
-                  <p className="text-zinc-500">Location</p>
-                  <p className="font-semibold text-zinc-900">Australia wide delivery</p>
-                </div>
-              </div>
-            </div>
-          </section>
-          </ScrollReveal>
-
-          {faqSection ? (
-            <ScrollReveal delayMs={180}>
-              <div className="site-home-faq-divider">
-                <PageFaqSection
-                  heading={faqSection.heading}
-                  items={faqSection.items}
-                />
-              </div>
+            </section>
             </ScrollReveal>
-          ) : null}
+
+            {faqSection ? (
+              <ScrollReveal delayMs={180}>
+                <div className="site-home-faq-divider">
+                  <PageFaqSection
+                    heading={faqSection.heading}
+                    items={faqSection.items}
+                  />
+                </div>
+              </ScrollReveal>
+            ) : null}
+          </div>
           </div>
 
           </div>

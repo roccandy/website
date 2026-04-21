@@ -3,10 +3,6 @@
 import type { ReactNode, RefObject } from "react";
 import { useEffect, useRef } from "react";
 
-export const LANDING_CTA_BUTTON_BASE_CLASS =
-  "site-primary-cta site-landing-cta-button inline-flex items-center justify-center whitespace-nowrap rounded-full px-6 py-3 text-base font-semibold normal-case tracking-normal text-white sm:px-7 sm:py-3.5 sm:text-[15px]";
-export const LANDING_CTA_ARROW_CLASS = "h-4 w-4";
-
 type StickyLandingCtaProps = {
   children: ReactNode;
   containerRef?: RefObject<HTMLDivElement | null>;
@@ -35,6 +31,8 @@ export function StickyLandingCta({
     const topGap = 16;
     let raf = 0;
     let lockedWidth = 0;
+    let lockedHeight = 0;
+    let lockedControlOffset = 0;
 
     const reset = () => {
       stickyEl.style.position = "static";
@@ -72,38 +70,100 @@ export function StickyLandingCta({
       return Math.min(measured, viewportMax);
     };
 
+    const measureRestingHeight = () => {
+      const prev = {
+        position: stickyEl.style.position,
+        top: stickyEl.style.top,
+        left: stickyEl.style.left,
+        width: stickyEl.style.width,
+        zIndex: stickyEl.style.zIndex,
+        wrapHeight: wrap.style.height,
+        wrapWidth: wrap.style.width,
+      };
+
+      reset();
+      const measured = Math.ceil(Math.max(wrap.getBoundingClientRect().height, stickyEl.getBoundingClientRect().height, 40));
+
+      stickyEl.style.position = prev.position;
+      stickyEl.style.top = prev.top;
+      stickyEl.style.left = prev.left;
+      stickyEl.style.width = prev.width;
+      stickyEl.style.zIndex = prev.zIndex;
+      wrap.style.height = prev.wrapHeight;
+      wrap.style.width = prev.wrapWidth;
+
+      return measured;
+    };
+
+    const measureRestingControlOffset = () => {
+      const prev = {
+        position: stickyEl.style.position,
+        top: stickyEl.style.top,
+        left: stickyEl.style.left,
+        width: stickyEl.style.width,
+        zIndex: stickyEl.style.zIndex,
+        wrapHeight: wrap.style.height,
+        wrapWidth: wrap.style.width,
+      };
+
+      reset();
+      const controlEl = stickyEl.querySelector<HTMLElement>(".site-primary-cta");
+      const stickyRect = stickyEl.getBoundingClientRect();
+      const controlRect = controlEl?.getBoundingClientRect() ?? stickyRect;
+      const measured = controlRect.top - stickyRect.top;
+
+      stickyEl.style.position = prev.position;
+      stickyEl.style.top = prev.top;
+      stickyEl.style.left = prev.left;
+      stickyEl.style.width = prev.width;
+      stickyEl.style.zIndex = prev.zIndex;
+      wrap.style.height = prev.wrapHeight;
+      wrap.style.width = prev.wrapWidth;
+
+      return measured;
+    };
+
     const update = () => {
       const containerRect = container.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
       const scrollY = window.scrollY;
       const containerTop = scrollY + containerRect.top;
       const containerBottom = containerTop + containerRect.height;
-      const wrapTop = scrollY + wrapRect.top;
       const stickyHeight = stickyEl.offsetHeight;
       const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
       const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap;
+      const controlOffset = lockedControlOffset;
+      const controlTop = scrollY + wrapRect.top + controlOffset;
 
-      const start = wrapTop - topOffset;
+      const start = controlTop - topOffset;
       const end = containerBottom - topOffset - stickyHeight;
 
       if (scrollY < start) {
         reset();
         lockedWidth = measureRestingWidth();
+        lockedHeight = measureRestingHeight();
+        lockedControlOffset = measureRestingControlOffset();
         return;
       }
 
       if (!lockedWidth) {
         lockedWidth = measureRestingWidth();
       }
+      if (!lockedHeight) {
+        lockedHeight = measureRestingHeight();
+      }
+      if (!lockedControlOffset) {
+        lockedControlOffset = measureRestingControlOffset();
+      }
       const width = Math.min(lockedWidth, Math.max(220, window.innerWidth - 16));
-      wrap.style.height = `${stickyHeight}px`;
+      wrap.style.height = `${Math.max(lockedHeight, stickyHeight)}px`;
       wrap.style.width = `${width}px`;
       const currentWrapRect = wrap.getBoundingClientRect();
       const left = Math.min(Math.max(Math.round(currentWrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
 
       if (scrollY <= end) {
         stickyEl.style.position = "fixed";
-        stickyEl.style.top = `${topOffset}px`;
+        stickyEl.style.top = `${topOffset - controlOffset}px`;
         stickyEl.style.left = `${left}px`;
         stickyEl.style.width = `${width}px`;
         stickyEl.style.zIndex = "20";
