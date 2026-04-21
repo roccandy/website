@@ -57,7 +57,7 @@ export default function AboutPhotoCarousel() {
                 className="h-60 w-full rounded-xl object-cover md:h-72"
                 loading={slideIndex < 2 ? "eager" : "lazy"}
                 onError={(event) => {
-                  event.currentTarget.src = "/landing/watercolour-hero-Homepage.webp";
+                  event.currentTarget.src = "/landing/watercolour-hero-Homepage_2.webp";
                 }}
               />
             </div>
