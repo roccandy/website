@@ -37,7 +37,7 @@ body {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: url("/landing/hero-bg_3.webp");
+  background-image: url("/landing/watercolour-hero-Homepage.webp");
   background-repeat: no-repeat;
   background-size: 1400px auto;
   background-position: center -28px;
@@ -55,7 +55,7 @@ body {
   transform: translateX(-50%);
   z-index: -2;
   pointer-events: none;
-  background-image: url("/landing/hero-bg_3.webp");
+  background-image: url("/landing/watercolour-hero-Homepage.webp");
   background-repeat: no-repeat;
   background-size: 100% auto;
   background-position: center -18px;
@@ -99,7 +99,7 @@ body {
   transform: translateX(-50%);
   z-index: -2;
   pointer-events: none;
-  background-image: url("/landing/hero-bg_3.webp");
+  background-image: url("/landing/watercolour-hero-Homepage.webp");
   background-repeat: no-repeat;
   background-size: 100% auto;
   background-position: center -18px;
