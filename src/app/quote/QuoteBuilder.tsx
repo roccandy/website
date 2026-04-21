@@ -205,9 +205,6 @@ export function QuoteBuilder({
   const priceSectionRef = useRef<HTMLDivElement | null>(null);
   const priceWrapRef = useRef<HTMLDivElement | null>(null);
   const priceStickyRef = useRef<HTMLDivElement | null>(null);
-  const ctaSectionRef = useRef<HTMLDivElement | null>(null);
-  const ctaWrapRef = useRef<HTMLDivElement | null>(null);
-  const ctaStickyRef = useRef<HTMLDivElement | null>(null);
   const hasManualSubtypeRef = useRef(false);
 
   const capturePreviewSvg = () => {
@@ -1166,135 +1163,6 @@ export function QuoteBuilder({
     };
   }, [showBreakdown, loading, error, needsSubtypeSelection, result?.total, result?.transactionFee, result?.items.length]);
 
-  useEffect(() => {
-    const container = ctaSectionRef.current;
-    const wrap = ctaWrapRef.current;
-    const stickyEl = ctaStickyRef.current;
-    if (!container || !wrap || !stickyEl) return;
-
-    const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
-    const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
-    const priceSticky = priceStickyRef.current;
-    const topGap = 16;
-    const ctaGap = 12;
-    let raf = 0;
-    let lockedWidth = 0;
-
-    const reset = () => {
-      stickyEl.style.position = "static";
-      stickyEl.style.top = "";
-      stickyEl.style.left = "";
-      stickyEl.style.width = "";
-      stickyEl.style.zIndex = "";
-      wrap.style.height = "";
-      wrap.style.width = "";
-    };
-
-    const measureRestingWidth = () => {
-      const prev = {
-        position: stickyEl.style.position,
-        top: stickyEl.style.top,
-        left: stickyEl.style.left,
-        width: stickyEl.style.width,
-        zIndex: stickyEl.style.zIndex,
-        wrapHeight: wrap.style.height,
-        wrapWidth: wrap.style.width,
-      };
-
-      reset();
-      const measured = Math.ceil(Math.max(wrap.getBoundingClientRect().width, stickyEl.getBoundingClientRect().width, 220)) + 2;
-      const viewportMax = Math.max(220, window.innerWidth - 16);
-
-      stickyEl.style.position = prev.position;
-      stickyEl.style.top = prev.top;
-      stickyEl.style.left = prev.left;
-      stickyEl.style.width = prev.width;
-      stickyEl.style.zIndex = prev.zIndex;
-      wrap.style.height = prev.wrapHeight;
-      wrap.style.width = prev.wrapWidth;
-
-      return Math.min(measured, viewportMax);
-    };
-
-    const update = () => {
-      const containerRect = container.getBoundingClientRect();
-      const wrapRect = wrap.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const containerTop = scrollY + containerRect.top;
-      const containerBottom = containerTop + containerRect.height;
-      const wrapTop = scrollY + wrapRect.top;
-      const stickyHeight = stickyEl.offsetHeight;
-      const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
-      const priceHeight = priceSticky?.getBoundingClientRect().height ?? 0;
-      const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap + priceHeight + ctaGap;
-
-      const start = wrapTop - topOffset;
-      const end = containerBottom - topOffset - stickyHeight;
-
-      if (scrollY < start) {
-        reset();
-        lockedWidth = measureRestingWidth();
-        return;
-      }
-
-      if (!lockedWidth) {
-        lockedWidth = measureRestingWidth();
-      }
-      const width = Math.min(lockedWidth, Math.max(220, window.innerWidth - 16));
-      wrap.style.height = `${stickyHeight}px`;
-      wrap.style.width = `${width}px`;
-      const currentWrapRect = wrap.getBoundingClientRect();
-      const left = Math.min(Math.max(Math.round(currentWrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
-
-      if (scrollY <= end) {
-        stickyEl.style.position = "fixed";
-        stickyEl.style.top = `${topOffset}px`;
-        stickyEl.style.left = `${left}px`;
-        stickyEl.style.width = `${width}px`;
-        stickyEl.style.zIndex = "20";
-        return;
-      }
-
-      const absoluteTop = container.clientHeight - stickyHeight;
-      stickyEl.style.position = "absolute";
-      stickyEl.style.top = `${absoluteTop}px`;
-      stickyEl.style.left = `${Math.round(left - containerRect.left)}px`;
-      stickyEl.style.width = `${width}px`;
-      stickyEl.style.zIndex = "1";
-    };
-
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(update);
-    };
-
-    const observer = new ResizeObserver(onScroll);
-    observer.observe(container);
-    observer.observe(wrap);
-    observer.observe(stickyEl);
-    if (headerEl) {
-      observer.observe(headerEl);
-    }
-    if (bannerEl) {
-      observer.observe(bannerEl);
-    }
-    if (priceSticky) {
-      observer.observe(priceSticky);
-    }
-
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      observer.disconnect();
-      reset();
-    };
-  }, [canPlace, placing, isEditing]);
-
 
   return (
     <div className="relative space-y-6">
@@ -1418,125 +1286,7 @@ export function QuoteBuilder({
           </div>
         </div>
 
-        <div ref={ctaSectionRef} className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
-          <div ref={ctaWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
-            <div ref={ctaStickyRef} className="w-fit max-w-full overflow-visible">
-              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm shadow-lg lg:min-w-[420px] lg:shadow-lg">
-                <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
-                <p className="mt-2 text-sm text-zinc-600">
-                  You can add delivery, payment, and contact details in the cart.
-                </p>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setPlaceError(null);
-                      if (!canPlace) {
-                        const missingText = missingFields.length ? missingFields.join(", ") : "required fields";
-                        setPlaceError(`Please complete: ${missingText}.`);
-                        return;
-                      }
-                      setPlacing(true);
-                      try {
-                        const title = designTitle;
-                        const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
-                        const labelsCount = labelsOptIn
-                          ? hasBulkSelection
-                            ? labelCountOverride > 0
-                              ? Math.min(labelCountOverride, settings.labels_max_bulk)
-                              : 0
-                            : totalPackages
-                          : null;
-                        const jacketValue = rainbowJacket
-                          ? "rainbow"
-                          : twoColourJacket && pinstripeJacket
-                            ? "two_colour_pinstripe"
-                            : twoColourJacket
-                              ? "two_colour"
-                              : pinstripeJacket
-                                ? "pinstripe"
-                                : null;
-                        const jacketExtras = [
-                          ...(rainbowJacket ? [{ jacket: "rainbow" as const }] : []),
-                          ...(twoColourJacket ? [{ jacket: "two_colour" as const }] : []),
-                          ...(pinstripeJacket ? [{ jacket: "pinstripe" as const }] : []),
-                        ];
-                        const previewSvg = capturePreviewSvg();
-                        const previewPngDataUrl = await capturePreviewPngDataUrl(previewSvg);
-
-                        const customItemPayload: Omit<CustomCartItem, "id" | "type"> = {
-                          title: title || mainTitle,
-                          description,
-                          categoryId,
-                          packagingOptionId: selectedOptionId,
-                          maxPackages: selectedOption?.max_packages ?? null,
-                          totalPrice: result?.total ?? null,
-                          totalWeightKg,
-                          quantity: selectionQty,
-                          packagingLabel: description,
-                          jarLidColor: isJarOption ? jarLidColor || null : null,
-                          labelsCount,
-                          labelImageUrl: labelsOptIn ? labelImageUrl || null : null,
-                          labelTypeId: labelsOptIn ? labelTypeId || null : null,
-                          ingredientLabelsOptIn,
-                          jacket: jacketValue,
-                          jacketType: previewJacketMode || null,
-                          jacketColorOne,
-                          jacketColorTwo,
-                          textColor: isBranded ? null : textColor,
-                          heartColor: isWedding ? heartColor : null,
-                          flavor,
-                          logoUrl: logoUrl || null,
-                          previewSvg,
-                          previewPngDataUrl,
-                          designType: categoryId || orderType,
-                          designText: title || mainTitle,
-                          jacketExtras,
-                        };
-                        if (isEditing && editItem) {
-                          updateCustomItem(editItem.id, customItemPayload);
-                        } else {
-                          addCustomItem(customItemPayload);
-                          trackAddToCart({
-                            currency: "AUD",
-                            value: result?.total ?? undefined,
-                            items: [
-                              {
-                                item_id: categoryId || orderType || "custom-candy",
-                                item_name: title || mainTitle || "Custom candy order",
-                                item_category: orderType || "custom",
-                                item_variant: categoryId || undefined,
-                                item_brand: "Roc Candy",
-                                price: result?.total ?? undefined,
-                                quantity: selectionQty,
-                              },
-                            ],
-                          });
-                        }
-                        router.push("/checkout");
-                      } catch (addError) {
-                        const message = addError instanceof Error ? addError.message : "Unable to add item to cart.";
-                        setPlaceError(message);
-                        setPlacing(false);
-                      }
-                    }}
-                    aria-disabled={!canPlace || placing}
-                    className={`inline-flex items-center justify-center rounded-md px-5 py-2.5 text-[15px] font-semibold shadow-sm sm:px-6 sm:py-3 sm:text-base ${
-                      placing
-                        ? "cursor-not-allowed border border-zinc-200 bg-zinc-100 text-zinc-500"
-                        : canPlace
-                          ? "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
-                          : "border border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-zinc-300"
-                    }`}
-                  >
-                    {placing ? (isEditing ? "Updating..." : "Adding...") : isEditing ? "Update cart item" : "Continue to cart"}
-                  </button>
-                </div>
-              </div>
-              {placeError && <p className="mt-2 text-xs text-red-600">{placeError}</p>}
-            </div>
-          </div>
-
+        <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
           <div className="mt-4 w-full border-t border-zinc-200 pt-4 space-y-3">
             <div className="grid items-start gap-4 lg:grid-cols-2">
@@ -2242,6 +1992,120 @@ export function QuoteBuilder({
                 );
               })}
             </div>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
+            <p className="mt-2 text-sm text-zinc-600">
+              You can add delivery, payment, and contact details in the cart.
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={async () => {
+                  setPlaceError(null);
+                  if (!canPlace) {
+                    const missingText = missingFields.length ? missingFields.join(", ") : "required fields";
+                    setPlaceError(`Please complete: ${missingText}.`);
+                    return;
+                  }
+                  setPlacing(true);
+                  try {
+                    const title = designTitle;
+                    const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
+                    const labelsCount = labelsOptIn
+                      ? hasBulkSelection
+                        ? labelCountOverride > 0
+                          ? Math.min(labelCountOverride, settings.labels_max_bulk)
+                          : 0
+                        : totalPackages
+                      : null;
+                    const jacketValue = rainbowJacket
+                      ? "rainbow"
+                      : twoColourJacket && pinstripeJacket
+                        ? "two_colour_pinstripe"
+                        : twoColourJacket
+                          ? "two_colour"
+                          : pinstripeJacket
+                            ? "pinstripe"
+                            : null;
+                    const jacketExtras = [
+                      ...(rainbowJacket ? [{ jacket: "rainbow" as const }] : []),
+                      ...(twoColourJacket ? [{ jacket: "two_colour" as const }] : []),
+                      ...(pinstripeJacket ? [{ jacket: "pinstripe" as const }] : []),
+                    ];
+                    const previewSvg = capturePreviewSvg();
+                    const previewPngDataUrl = await capturePreviewPngDataUrl(previewSvg);
+
+                    const customItemPayload: Omit<CustomCartItem, "id" | "type"> = {
+                      title: title || mainTitle,
+                      description,
+                      categoryId,
+                      packagingOptionId: selectedOptionId,
+                      maxPackages: selectedOption?.max_packages ?? null,
+                      totalPrice: result?.total ?? null,
+                      totalWeightKg,
+                      quantity: selectionQty,
+                      packagingLabel: description,
+                      jarLidColor: isJarOption ? jarLidColor || null : null,
+                      labelsCount,
+                      labelImageUrl: labelsOptIn ? labelImageUrl || null : null,
+                      labelTypeId: labelsOptIn ? labelTypeId || null : null,
+                      ingredientLabelsOptIn,
+                      jacket: jacketValue,
+                      jacketType: previewJacketMode || null,
+                      jacketColorOne,
+                      jacketColorTwo,
+                      textColor: isBranded ? null : textColor,
+                      heartColor: isWedding ? heartColor : null,
+                      flavor,
+                      logoUrl: logoUrl || null,
+                      previewSvg,
+                      previewPngDataUrl,
+                      designType: categoryId || orderType,
+                      designText: title || mainTitle,
+                      jacketExtras,
+                    };
+                    if (isEditing && editItem) {
+                      updateCustomItem(editItem.id, customItemPayload);
+                    } else {
+                      addCustomItem(customItemPayload);
+                      trackAddToCart({
+                        currency: "AUD",
+                        value: result?.total ?? undefined,
+                        items: [
+                          {
+                            item_id: categoryId || orderType || "custom-candy",
+                            item_name: title || mainTitle || "Custom candy order",
+                            item_category: orderType || "custom",
+                            item_variant: categoryId || undefined,
+                            item_brand: "Roc Candy",
+                            price: result?.total ?? undefined,
+                            quantity: selectionQty,
+                          },
+                        ],
+                      });
+                    }
+                    router.push("/checkout");
+                  } catch (addError) {
+                    const message = addError instanceof Error ? addError.message : "Unable to add item to cart.";
+                    setPlaceError(message);
+                    setPlacing(false);
+                  }
+                }}
+                aria-disabled={!canPlace || placing}
+                className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm ${
+                  placing
+                    ? "cursor-not-allowed border border-zinc-200 bg-zinc-100 text-zinc-500"
+                    : canPlace
+                      ? "border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800"
+                      : "border border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-zinc-300"
+                }`}
+              >
+                {placing ? (isEditing ? "Updating..." : "Adding...") : isEditing ? "Update cart item" : "Continue to cart"}
+              </button>
+            </div>
+            {placeError && <p className="mt-2 text-xs text-red-600">{placeError}</p>}
           </div>
         </div>
 
