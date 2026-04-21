@@ -151,7 +151,9 @@ export function StickyLandingCta({
     <div ref={resolvedContainerRef} className={className}>
       <div ref={wrapRef} className="relative h-16 sm:h-[4.5rem]">
         <div ref={stickyRef} className="w-fit max-w-full overflow-visible">
-          {children}
+          <div className="inline-flex max-w-full items-center justify-center rounded-full bg-[#ff6f95] p-[2px] shadow-[0_18px_38px_rgba(114,112,111,0.24)]">
+            {children}
+          </div>
         </div>
       </div>
     </div>
