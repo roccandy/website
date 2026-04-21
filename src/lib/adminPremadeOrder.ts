@@ -12,7 +12,8 @@ export function isAdminPremadeOrder(input: {
   notes?: string | null;
   title?: string | null;
 } | null | undefined) {
-  if (input?.design_type !== "premade") return false;
+  if (!input) return false;
+  if (input?.design_type !== "premade" && !isAdminPremadeCategoryId(input?.category_id)) return false;
   const notes = input.notes?.trim() ?? "";
   if (notes === ADMIN_PREMADE_ORDER_MARKER) return true;
   const title = input.title?.trim().toLowerCase() ?? "";
