@@ -89,7 +89,7 @@ export default async function Home() {
         ])}
       />
       <div className="relative">
-        <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
+        <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority dataQuoteHeader />
 
         <div className="landing-bg landing-bg-home -mt-8 pt-8">
           <div className="site-page-frame relative mx-auto max-w-6xl">
