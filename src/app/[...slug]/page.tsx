@@ -365,7 +365,11 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
               </Link>
             </section>
           ) : null}
-          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
+          {faqSection ? (
+            <div className={landingConfig ? "site-landing-faq-splash" : ""}>
+              <PageFaqSection heading={faqSection.heading} items={faqSection.items} />
+            </div>
+          ) : null}
         </div>
         </div>
       </div>

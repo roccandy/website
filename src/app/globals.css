@@ -356,6 +356,26 @@ body {
   opacity: 0.9;
 }
 
+.site-landing-faq-splash {
+  position: relative;
+  isolation: isolate;
+}
+
+.site-landing-faq-splash::before {
+  content: "";
+  position: absolute;
+  inset: -2.75rem -2rem -3.5rem;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/landing/background-no-figures.webp");
+  background-repeat: no-repeat;
+  background-position: center 38%;
+  background-size: min(100%, 1080px) auto;
+  opacity: 0.84;
+  -webkit-mask-image: radial-gradient(circle at center, #000 34%, rgba(0, 0, 0, 0.94) 58%, rgba(0, 0, 0, 0.56) 80%, transparent 100%);
+  mask-image: radial-gradient(circle at center, #000 34%, rgba(0, 0, 0, 0.94) 58%, rgba(0, 0, 0, 0.56) 80%, transparent 100%);
+}
+
 .site-landing-hero-section {
   gap: var(--space-landing-hero-cta-to-gallery);
 }
