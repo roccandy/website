@@ -293,22 +293,24 @@ export function TextContentEditorField({
         Use plain text here. Supported formatting: <span className="font-semibold">H2</span>, <span className="font-semibold">H3</span>, <span className="font-semibold">bold</span>, bullet lists, numbered lists, internal links, and regular links. You can also type <span className="font-mono">## Heading</span>, <span className="font-mono">**bold**</span>, <span className="font-mono">- list item</span>, or <span className="font-mono">[Link text](/page-path)</span> directly.
       </p>
 
-      {mode === "edit" ? (
-        <textarea
-          ref={textareaRef}
-          form={form}
-          name={name}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyUp={rememberSelection}
-          onMouseUp={rememberSelection}
-          onSelect={rememberSelection}
-          rows={rows}
-          readOnly={readOnly}
-          placeholder={placeholder}
-          className="w-full rounded border border-zinc-200 px-3 py-2 text-sm leading-relaxed"
-        />
-      ) : (
+      <textarea
+        ref={textareaRef}
+        form={form}
+        name={name}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyUp={rememberSelection}
+        onMouseUp={rememberSelection}
+        onSelect={rememberSelection}
+        rows={rows}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        className={mode === "edit" ? "w-full rounded border border-zinc-200 px-3 py-2 text-sm leading-relaxed" : "sr-only"}
+        aria-hidden={mode === "preview"}
+        tabIndex={mode === "preview" ? -1 : undefined}
+      />
+
+      {mode === "preview" ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-4">
           {preview.html ? (
             <div
@@ -319,7 +321,7 @@ export function TextContentEditorField({
             <p className="text-sm text-zinc-500">Nothing to preview yet.</p>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

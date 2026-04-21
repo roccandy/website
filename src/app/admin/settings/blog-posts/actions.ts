@@ -31,7 +31,8 @@ export async function saveBlogPostAction(formData: FormData) {
   const title = normalizeField(formData.get("title"));
   const slugInput = normalizeField(formData.get("slug"));
   const excerpt = normalizeField(formData.get("excerpt"));
-  const bodyText = normalizeField(formData.get("bodyText"));
+  const hasBodyText = formData.has("bodyText");
+  const bodyText = hasBodyText ? normalizeField(formData.get("bodyText")) : null;
   const status = normalizeField(formData.get("status")) === "published" ? "published" : "draft";
   const publishedAt = normalizeField(formData.get("publishedAt")) || null;
 
@@ -42,8 +43,11 @@ export async function saveBlogPostAction(formData: FormData) {
     redirect(appendAdminToast(BLOG_ADMIN_PATH, "error", "Blog excerpt is required."));
   }
 
-  const renderedBody = renderTextContentToHtml(bodyText);
-  if (renderedBody.issues.length > 0) {
+  const existingPost = id ? await getBlogPostById(id) : null;
+  const renderedBody = hasBodyText
+    ? renderTextContentToHtml(bodyText ?? "")
+    : { html: existingPost?.bodyHtml ?? "", issues: [] };
+  if (hasBodyText && renderedBody.issues.length > 0) {
     const issue = renderedBody.issues[0];
     redirect(
       appendAdminToast(
@@ -53,8 +57,6 @@ export async function saveBlogPostAction(formData: FormData) {
       ),
     );
   }
-
-  const existingPost = id ? await getBlogPostById(id) : null;
 
   let resolvedSlug = "";
   try {
