@@ -18,7 +18,6 @@ const STATIC_ROUTES: Array<{
   { path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
   { path: "/terms-and-conditions", changeFrequency: "yearly", priority: 0.3 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/shipping-and-returns", changeFrequency: "yearly", priority: 0.4 },
   { path: "/design/wedding-candy", changeFrequency: "monthly", priority: 0.8 },
   { path: "/design/custom-text-candy", changeFrequency: "monthly", priority: 0.8 },
   { path: "/design/branded-logo-candy", changeFrequency: "monthly", priority: 0.8 },

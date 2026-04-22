@@ -69,7 +69,7 @@ export default async function Home() {
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const homeDescription = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
   return (
-    <main className="min-h-screen text-zinc-900">
+    <main className="min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({
@@ -91,7 +91,7 @@ export default async function Home() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority dataQuoteHeader />
 
-        <div className="landing-bg landing-bg-home -mt-8 pt-8">
+        <div className="landing-bg landing-bg-home site-watercolour-hero-mobile-offset -mt-8 pt-8">
           <div className="site-page-frame relative mx-auto max-w-6xl">
 
           <section className="site-home-hero-section site-home-hero-grid grid items-center lg:grid-cols-[1.2fr,0.8fr]">

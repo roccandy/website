@@ -21,7 +21,7 @@ export default function SetupGuide() {
           <li>1) Populate `.env.local` / production env vars for Supabase, NextAuth, payments, email, analytics, and Woo.</li>
           <li>2) Keep the live Supabase schema aligned with the SQL files in `docs/sql/` and verify it with the schema health check.</li>
           <li>3) Use the custom admin login backed by `admin_users`; do not assume Supabase Auth is the active website admin flow.</li>
-          <li>4) Treat <code>docs/launch-checklist.md</code> as the real launch document and <code>docs/seo-recommendations-checklist.md</code> as the SEO gap tracker.</li>
+          <li>4) Treat <code>docs/launch-steps.md</code> as the single launch and cutover document.</li>
           <li>5) Validate payments, Woo order mirroring, emails, redirects, and GA4/Ads/Search Console before cutover.</li>
           <li>6) Launch only after the real domain, production env vars, and redirect map are all ready.</li>
         </ol>

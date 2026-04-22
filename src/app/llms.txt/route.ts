@@ -23,7 +23,6 @@ export async function GET() {
     `- ${baseUrl}/faqs`,
     `- ${baseUrl}/blog`,
     `- ${baseUrl}/contact`,
-    `- ${baseUrl}/shipping-and-returns`,
     "",
     "Notes:",
     "- Public storefront and marketing pages are the primary source of truth.",

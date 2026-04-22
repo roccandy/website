@@ -2,8 +2,6 @@ import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { JsonLd } from "@/components/JsonLd";
-import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/landingCtaClasses";
-import { StickyLandingCta } from "@/components/StickyLandingCta";
 import { SiteUsps } from "@/components/SiteUsps";
 import Image from "next/image";
 import { getPremadeCandies } from "@/lib/data";
@@ -111,7 +109,7 @@ export default async function PremadePage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
 
-        <div className="landing-bg landing-bg-faded -mt-8 pt-8">
+        <div className="landing-bg landing-bg-faded site-watercolour-hero-mobile-offset -mt-8 pt-8">
           <div className="site-page-frame site-page-stack mx-auto max-w-6xl">
             <section className="site-landing-hero-section text-center">
               <div className="site-landing-hero-stack">
@@ -126,22 +124,6 @@ export default async function PremadePage() {
                 <div className="site-landing-usp-wrap">
                   <SiteUsps />
                 </div>
-
-                <div className="site-landing-cta-wrap">
-                  <StickyLandingCta>
-                    <Link
-                      href="#shop"
-                      className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]`}
-                    >
-                      <span className="site-primary-cta-label">Browse the Range</span>
-                      <span className="site-primary-cta-arrow" aria-hidden="true">
-                        <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
-                          <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    </Link>
-                  </StickyLandingCta>
-                </div>
               </div>
             </section>
 
@@ -151,7 +133,7 @@ export default async function PremadePage() {
               </div>
             ) : (
               <section id="shop" className="site-section-stack">
-                <div className="site-product-grid grid sm:grid-cols-2 md:grid-cols-4">
+                <div className="site-product-grid grid grid-cols-2 md:grid-cols-4">
                   {visible.map((item) => {
                     const imageUrl = buildPremadeImageUrl(item.image_path);
                     const weightLabel = formatPremadeWeight(Number(item.weight_g));

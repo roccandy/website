@@ -1,23 +1,39 @@
 # Roc Candy
 
-Next.js 14 (App Router, TypeScript, Tailwind) scaffold for the Roc Candy storefront + admin workspace.
+Next.js storefront and admin workspace for Roc Candy.
 
-## Quick start
-1. Copy `.env.local.example` to `.env.local` and add Supabase values:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
-2. Install dependencies: `npm install` (already done if you just ran create-next-app).
-3. Start dev server: `npm run dev` then open http://localhost:3000.
+Current stack:
 
-## Supabase prep
-- Create tables: `products`, `pricing_rules`, `orders`, `production_slots`, `user_roles`.
-- Enable Row Level Security; allow public read on `products`/`pricing_rules`, restrict writes to admins.
-- Use the service role key only on the server (never expose to the browser).
+- Next.js 16 App Router + TypeScript + Tailwind
+- Supabase for product/content/order data
+- NextAuth credentials login backed by `admin_users`
+- Square + PayPal checkout
+- WooCommerce order mirroring
 
-## Routes scaffolded
-- Public: `/` (landing), `/docs/setup` (setup checklist).
-- Admin: `/admin` placeholder (wire auth + Supabase, then build pricing/schedule views).
+## Local setup
 
-## Deploy
-- Deploy on Vercel, add the env vars above in Project Settings, and connect your domain.
+1. Install dependencies with `npm install`.
+2. Populate `.env.local` with the current project env vars for:
+   - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+   - NextAuth: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
+   - Payments: Square and PayPal client/server keys
+   - WooCommerce: `WOO_*`
+   - Email: `SMTP_*`, `ORDERS_EMAIL`, `ENQUIRIES_EMAIL`
+3. Start the app with `npm run dev`.
+
+If you are pointing at a fresh or incomplete Supabase environment, run `npm run sync-managed-content` to restore the built-in managed content rows.
+
+## Verification
+
+Run these before major merges or launch changes:
+
+- `npm test`
+- `npm run lint`
+- `npm run build`
+
+## Key docs
+
+- [docs/launch-steps.md](/Users/joeconlin/dev/roccandy/docs/launch-steps.md)
+- [docs/architecture-notes.md](/Users/joeconlin/dev/roccandy/docs/architecture-notes.md)
+
+Treat [docs/launch-steps.md](/Users/joeconlin/dev/roccandy/docs/launch-steps.md) as the main go-live document.

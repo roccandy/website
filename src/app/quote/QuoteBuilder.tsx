@@ -202,6 +202,7 @@ export function QuoteBuilder({
   const designSectionRef = useRef<HTMLDivElement | null>(null);
   const previewWrapRef = useRef<HTMLDivElement | null>(null);
   const previewStickyRef = useRef<HTMLDivElement | null>(null);
+  const mobilePreviewRef = useRef<HTMLDivElement | null>(null);
   const priceSectionRef = useRef<HTMLDivElement | null>(null);
   const priceWrapRef = useRef<HTMLDivElement | null>(null);
   const priceStickyRef = useRef<HTMLDivElement | null>(null);
@@ -209,7 +210,10 @@ export function QuoteBuilder({
 
   const capturePreviewSvg = () => {
     if (typeof window === "undefined") return null;
-    const root = previewStickyRef.current;
+    const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
+    const root = (
+      isMobileViewport ? mobilePreviewRef.current : previewStickyRef.current
+    ) ?? previewStickyRef.current ?? mobilePreviewRef.current;
     if (!root) return null;
 
     const svgs = Array.from(root.querySelectorAll("svg"));
@@ -459,6 +463,44 @@ export function QuoteBuilder({
   const previewJacketColorTwo = jacketColorTwo || defaultJacketColor;
   const previewTextColor = textColor || defaultTextColor;
   const previewHeartColor = heartColor || defaultTextColor;
+  const renderCandyPreview = (dimensions: { width: number; height: number }, zoom: number) => (
+    <CandyPreview
+      designText={
+        isWeddingInitials
+          ? undefined
+          : isText && !isBranded
+            ? (customText || "").trim()
+            : !isWedding && !isText && !isBranded
+              ? designTitle || "Candy"
+              : undefined
+      }
+      lineOne={
+        isWedding
+          ? isWeddingInitials
+            ? (initialOne || "").trim().toUpperCase()
+            : (nameOne || "").trim()
+          : undefined
+      }
+      lineTwo={
+        isWedding
+          ? isWeddingInitials
+            ? (initialTwo || "").trim().toUpperCase()
+            : (nameTwo || "").trim()
+          : undefined
+      }
+      mode={previewJacketMode}
+      showPinstripe={previewShowPinstripe}
+      colorOne={previewJacketColorOne}
+      colorTwo={previewJacketColorTwo}
+      showHeart={isWedding}
+      logoUrl={isBranded ? logoUrl : undefined}
+      heartColor={previewHeartColor}
+      textColor={previewTextColor}
+      isInitials={isWeddingInitials}
+      dimensions={dimensions}
+      zoom={zoom}
+    />
+  );
   const formatMoney = (value: number) => `$${value.toFixed(2)}`;
   const mainTitle = ORDER_TYPE_TITLES[orderType] ?? "Candy";
   const subtitleLabel =
@@ -944,7 +986,7 @@ export function QuoteBuilder({
     const stickyEl = previewStickyRef.current;
     if (!container || !preview || !stickyEl) return;
 
-    const mql = window.matchMedia("(max-width: 1023px)");
+    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1023px)");
     const priceSticky = priceStickyRef.current;
     const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
     const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
@@ -1686,48 +1728,13 @@ export function QuoteBuilder({
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
               ref={previewWrapRef}
-              className="order-1 w-full md:order-2 md:flex md:h-[360px] md:items-center md:justify-center md:self-start"
+              className="hidden w-full md:order-2 md:flex md:h-[360px] md:items-center md:justify-center md:self-start"
             >
               <div ref={previewStickyRef} className="flex justify-center">
-                <CandyPreview
-                  designText={
-                    isWeddingInitials
-                      ? undefined
-                      : isText && !isBranded
-                        ? (customText || "").trim()
-                        : !isWedding && !isText && !isBranded
-                          ? designTitle || "Candy"
-                          : undefined
-                  }
-                  lineOne={
-                    isWedding
-                      ? isWeddingInitials
-                        ? (initialOne || "").trim().toUpperCase()
-                        : (nameOne || "").trim()
-                      : undefined
-                  }
-                  lineTwo={
-                    isWedding
-                      ? isWeddingInitials
-                        ? (initialTwo || "").trim().toUpperCase()
-                        : (nameTwo || "").trim()
-                      : undefined
-                  }
-                  mode={previewJacketMode}
-                  showPinstripe={previewShowPinstripe}
-                  colorOne={previewJacketColorOne}
-                  colorTwo={previewJacketColorTwo}
-                  showHeart={isWedding}
-                  logoUrl={isBranded ? logoUrl : undefined}
-                  heartColor={previewHeartColor}
-                  textColor={previewTextColor}
-                  isInitials={isWeddingInitials}
-                  dimensions={{ width: 420, height: 312 }}
-                  zoom={1.3}
-                />
+                {renderCandyPreview({ width: 420, height: 312 }, 1.3)}
               </div>
             </div>
-            <div className="order-2 md:order-1">
+            <div className="order-1">
               <div className="grid gap-3 md:grid-cols-2">
               {isWedding && (
                 <>
@@ -1914,6 +1921,11 @@ export function QuoteBuilder({
                       )}
                     </div>
                   )}
+                </div>
+              </div>
+              <div className="md:hidden">
+                <div ref={mobilePreviewRef} className="flex justify-center">
+                  {renderCandyPreview({ width: 300, height: 223 }, 1.2)}
                 </div>
               </div>
               {isBranded && (

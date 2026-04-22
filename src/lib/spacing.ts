@@ -1,9 +1,11 @@
 import type { CSSProperties } from "react";
+import { MOBILE_SPACING_CONTROLS } from "@/lib/mobileSpacing";
 
 /**
  * Public-site spacing control panel.
  *
- * Edit the values in `SPACING_CONTROLS` only.
+ * Edit `SPACING_CONTROLS` for desktop / laptop spacing.
+ * Edit `mobileSpacing.ts` for mobile-only spacing.
  * The CSS variable mapping underneath is just the plumbing that feeds globals.css.
  */
 export const SPACING_CONTROLS = {
@@ -34,6 +36,10 @@ export const SPACING_CONTROLS = {
 
     // Top offset before the USP strip when a page uses it under the intro.
     uspTopOffset: "0.75rem",
+    // Left/right padding inside the USP bubble.
+    uspPillPaddingX: "1rem",
+    // Top/bottom padding inside the USP bubble.
+    uspPillPaddingY: "0.5rem",
 
     // Gap between an FAQ heading block and its accordion.
     faqSectionGap: "1rem",
@@ -61,6 +67,9 @@ export const SPACING_CONTROLS = {
   homePage: {
     // Gap between the left text column and the right option-card grid.
     heroColumnsGap: "5rem",
+    // On mobile this is the space below the CTA and above the six option boxes.
+    // On desktop it only matters if the grid wraps to multiple rows.
+    ctaToBoxesGap: "3rem",
 
     // Space above the homepage H1.
     aboveH1: "4rem",
@@ -71,9 +80,9 @@ export const SPACING_CONTROLS = {
     // Space below the homepage paragraph and above the USP strip.
     belowParagraph: "2.5rem",
     // Space below the homepage USP strip and above the CTA.
-    belowUsp: "4rem",
+    belowUsp: "3.5rem",
     // Space below the homepage CTA and above the next section.
-    belowCta: "3rem",
+    belowCta: "0rem",
 
     // Gap between the homepage option cards on the right.
     optionGridGap: "1rem",
@@ -100,7 +109,7 @@ export const SPACING_CONTROLS = {
     // Space below the landing-page USP strip and above the CTA.
     belowUsp: "4.5rem",
     // Space below the landing-page CTA and above the gallery rows.
-    belowCta: "3rem",
+    belowCta: "2rem",
 
     // Horizontal padding inside the pink CTA button.
     ctaPaddingX: "1.5rem",
@@ -147,64 +156,123 @@ const header = SPACING_CONTROLS.headerAndBanner;
 const home = SPACING_CONTROLS.homePage;
 const landing = SPACING_CONTROLS.landingPages;
 const product = SPACING_CONTROLS.productPages;
+const mobileShared = MOBILE_SPACING_CONTROLS.sharedPages;
+const mobileHeader = MOBILE_SPACING_CONTROLS.headerAndBanner;
+const mobileHome = MOBILE_SPACING_CONTROLS.homePage;
+const mobileLanding = MOBILE_SPACING_CONTROLS.landingPages;
+const mobileProduct = MOBILE_SPACING_CONTROLS.productPages;
 
 export const SPACING_STYLE_VARS: CSSProperties = {
-  "--space-page-inline-padding": shared.sidePadding,
-  "--space-page-block-padding": shared.verticalPaddingMobile,
-  "--space-page-block-padding-md": shared.verticalPaddingDesktop,
+  "--space-page-inline-padding-mobile": mobileShared.sidePadding,
+  "--space-page-inline-padding-desktop": shared.sidePadding,
+  "--space-page-block-padding-mobile": mobileShared.verticalPadding,
+  "--space-page-block-padding-desktop": shared.verticalPaddingDesktop,
 
-  "--space-page-stack-gap": shared.sectionGap,
-  "--space-page-stack-gap-large": shared.sectionGapLarge,
-  "--space-page-stack-gap-tight": shared.sectionGapTight,
+  "--space-page-stack-gap-mobile": mobileShared.sectionGap,
+  "--space-page-stack-gap-desktop": shared.sectionGap,
+  "--space-page-stack-gap-large-mobile": mobileShared.sectionGapLarge,
+  "--space-page-stack-gap-large-desktop": shared.sectionGapLarge,
+  "--space-page-stack-gap-tight-mobile": mobileShared.sectionGapTight,
+  "--space-page-stack-gap-tight-desktop": shared.sectionGapTight,
 
-  "--space-page-header-gap": shared.pageHeaderGap,
-  "--space-page-header-gap-tight": shared.pageHeaderGapTight,
-  "--space-section-gap": shared.sectionStackGap,
-  "--space-rich-content-gap": shared.richTextBlockGap,
-  "--space-usp-offset": shared.uspTopOffset,
-  "--space-faq-section-gap": shared.faqSectionGap,
-  "--space-faq-heading-gap": shared.faqHeadingGap,
+  "--space-page-header-gap-mobile": mobileShared.pageHeaderGap,
+  "--space-page-header-gap-desktop": shared.pageHeaderGap,
+  "--space-page-header-gap-tight-mobile": mobileShared.pageHeaderGapTight,
+  "--space-page-header-gap-tight-desktop": shared.pageHeaderGapTight,
+  "--space-section-gap-mobile": mobileShared.sectionStackGap,
+  "--space-section-gap-desktop": shared.sectionStackGap,
+  "--space-rich-content-gap-mobile": mobileShared.richTextBlockGap,
+  "--space-rich-content-gap-desktop": shared.richTextBlockGap,
+  "--space-usp-offset-mobile": mobileShared.uspTopOffset,
+  "--space-usp-offset-desktop": shared.uspTopOffset,
+  "--space-usp-pill-padding-x-mobile": mobileShared.uspPillPaddingX,
+  "--space-usp-pill-padding-x-desktop": shared.uspPillPaddingX,
+  "--space-usp-pill-padding-y-mobile": mobileShared.uspPillPaddingY,
+  "--space-usp-pill-padding-y-desktop": shared.uspPillPaddingY,
+  "--space-faq-section-gap-mobile": mobileShared.faqSectionGap,
+  "--space-faq-section-gap-desktop": shared.faqSectionGap,
+  "--space-faq-heading-gap-mobile": mobileShared.faqHeadingGap,
+  "--space-faq-heading-gap-desktop": shared.faqHeadingGap,
 
-  "--space-header-row-gap": header.headerRowGap,
-  "--space-header-actions-gap": header.headerActionsGap,
-  "--space-header-padding-y": header.headerPaddingY,
-  "--space-top-links-gap": header.topLinksGap,
-  "--space-top-links-padding-y": header.topLinksPaddingY,
-  "--space-banner-padding-y": header.bannerPaddingY,
+  "--space-header-row-gap-mobile": mobileHeader.headerRowGap,
+  "--space-header-row-gap-desktop": header.headerRowGap,
+  "--space-header-actions-gap-mobile": mobileHeader.headerActionsGap,
+  "--space-header-actions-gap-desktop": header.headerActionsGap,
+  "--space-header-padding-y-mobile": mobileHeader.headerPaddingY,
+  "--space-header-padding-y-desktop": header.headerPaddingY,
+  "--space-top-links-gap-mobile": mobileHeader.topLinksGap,
+  "--space-top-links-gap-desktop": header.topLinksGap,
+  "--space-top-links-padding-y-mobile": mobileHeader.topLinksPaddingY,
+  "--space-top-links-padding-y-desktop": header.topLinksPaddingY,
+  "--space-banner-padding-y-mobile": mobileHeader.bannerPaddingY,
+  "--space-banner-padding-y-desktop": header.bannerPaddingY,
 
-  "--space-home-hero-grid-gap": home.heroColumnsGap,
-  "--space-home-hero-title-before": home.aboveH1,
-  "--space-home-hero-title-after": home.belowH1,
-  "--space-home-hero-h2-after": home.belowH2,
-  "--space-home-hero-paragraph-to-usp": home.belowParagraph,
-  "--space-home-hero-usp-to-cta": home.belowUsp,
-  "--space-home-hero-cta-to-next": home.belowCta,
-  "--space-home-option-grid-gap": home.optionGridGap,
-  "--space-home-secondary-grid-gap": home.lowerSectionGridGap,
-  "--space-home-card-body-gap": home.infoCardCopyTopGap,
-  "--space-home-contact-grid-gap": home.contactGridGap,
-  "--space-home-contact-column-gap": home.contactColumnGap,
+  "--space-home-hero-grid-gap-mobile": mobileHome.heroColumnsGap,
+  "--space-home-hero-grid-gap-desktop": home.heroColumnsGap,
+  "--space-home-hero-row-gap-mobile": mobileHome.ctaToBoxesGap,
+  "--space-home-hero-row-gap-desktop": home.ctaToBoxesGap,
+  "--space-home-hero-title-before-mobile": mobileHome.aboveH1,
+  "--space-home-hero-title-before-desktop": home.aboveH1,
+  "--space-home-hero-title-after-mobile": mobileHome.belowH1,
+  "--space-home-hero-title-after-desktop": home.belowH1,
+  "--space-home-hero-h2-after-mobile": mobileHome.belowH2,
+  "--space-home-hero-h2-after-desktop": home.belowH2,
+  "--space-home-hero-paragraph-to-usp-mobile": mobileHome.belowParagraph,
+  "--space-home-hero-paragraph-to-usp-desktop": home.belowParagraph,
+  "--space-home-hero-usp-to-cta-mobile": mobileHome.belowUsp,
+  "--space-home-hero-usp-to-cta-desktop": home.belowUsp,
+  "--space-home-hero-cta-to-next-mobile": mobileHome.belowCta,
+  "--space-home-hero-cta-to-next-desktop": home.belowCta,
+  "--space-home-option-grid-gap-mobile": mobileHome.optionGridGap,
+  "--space-home-option-grid-gap-desktop": home.optionGridGap,
+  "--space-home-secondary-grid-gap-mobile": mobileHome.lowerSectionGridGap,
+  "--space-home-secondary-grid-gap-desktop": home.lowerSectionGridGap,
+  "--space-home-card-body-gap-mobile": mobileHome.infoCardCopyTopGap,
+  "--space-home-card-body-gap-desktop": home.infoCardCopyTopGap,
+  "--space-home-contact-grid-gap-mobile": mobileHome.contactGridGap,
+  "--space-home-contact-grid-gap-desktop": home.contactGridGap,
+  "--space-home-contact-column-gap-mobile": mobileHome.contactColumnGap,
+  "--space-home-contact-column-gap-desktop": home.contactColumnGap,
 
-  "--space-landing-hero-title-before": landing.aboveH1,
-  "--space-landing-hero-title-after": landing.belowH1,
-  "--space-landing-hero-h2-after": landing.belowH2,
-  "--space-landing-hero-paragraph-to-usp": landing.belowParagraph,
-  "--space-landing-hero-usp-to-cta": landing.belowUsp,
-  "--space-landing-hero-cta-to-gallery": landing.belowCta,
-  "--space-landing-cta-padding-x": landing.ctaPaddingX,
-  "--space-landing-cta-padding-y": landing.ctaPaddingY,
-  "--space-landing-gallery-inset-x": landing.gallerySideInset,
-  "--space-landing-gallery-gap": landing.galleryRowGap,
-  "--space-landing-gallery-row-padding-y": landing.galleryRowPaddingY,
-  "--space-landing-gallery-item-gap": landing.galleryItemGap,
-  "--space-landing-body-card-padding-x": landing.bodyCardPaddingXMobile,
-  "--space-landing-body-card-padding-x-md": landing.bodyCardPaddingXDesktop,
-  "--space-landing-body-card-padding-y": landing.bodyCardPaddingY,
+  "--space-landing-hero-title-before-mobile": mobileLanding.aboveH1,
+  "--space-landing-hero-title-before-desktop": landing.aboveH1,
+  "--space-landing-hero-title-after-mobile": mobileLanding.belowH1,
+  "--space-landing-hero-title-after-desktop": landing.belowH1,
+  "--space-landing-hero-h2-after-mobile": mobileLanding.belowH2,
+  "--space-landing-hero-h2-after-desktop": landing.belowH2,
+  "--space-landing-hero-paragraph-to-usp-mobile": mobileLanding.belowParagraph,
+  "--space-landing-hero-paragraph-to-usp-desktop": landing.belowParagraph,
+  "--space-landing-hero-usp-to-cta-mobile": mobileLanding.belowUsp,
+  "--space-landing-hero-usp-to-cta-desktop": landing.belowUsp,
+  "--space-landing-hero-cta-to-gallery-mobile": mobileLanding.belowCta,
+  "--space-landing-hero-cta-to-gallery-desktop": landing.belowCta,
+  "--space-landing-cta-padding-x-mobile": mobileLanding.ctaPaddingX,
+  "--space-landing-cta-padding-x-desktop": landing.ctaPaddingX,
+  "--space-landing-cta-padding-y-mobile": mobileLanding.ctaPaddingY,
+  "--space-landing-cta-padding-y-desktop": landing.ctaPaddingY,
+  "--space-landing-gallery-inset-x-mobile": mobileLanding.gallerySideInset,
+  "--space-landing-gallery-inset-x-desktop": landing.gallerySideInset,
+  "--space-landing-gallery-gap-mobile": mobileLanding.galleryRowGap,
+  "--space-landing-gallery-gap-desktop": landing.galleryRowGap,
+  "--space-landing-gallery-row-padding-y-mobile": mobileLanding.galleryRowPaddingY,
+  "--space-landing-gallery-row-padding-y-desktop": landing.galleryRowPaddingY,
+  "--space-landing-gallery-item-gap-mobile": mobileLanding.galleryItemGap,
+  "--space-landing-gallery-item-gap-desktop": landing.galleryItemGap,
+  "--space-landing-body-card-padding-x-mobile": mobileLanding.bodyCardPaddingX,
+  "--space-landing-body-card-padding-x-desktop": landing.bodyCardPaddingXDesktop,
+  "--space-landing-body-card-padding-y-mobile": mobileLanding.bodyCardPaddingY,
+  "--space-landing-body-card-padding-y-desktop": landing.bodyCardPaddingY,
 
-  "--space-product-grid-gap": product.collectionGridGap,
-  "--space-product-card-gap": product.collectionCardStackGap,
-  "--space-product-card-meta-gap": product.collectionCardMetaGap,
-  "--space-product-detail-stack-gap": product.detailStackGap,
-  "--space-related-section-gap": product.relatedSectionGap,
-  "--space-product-feature-grid-gap": product.featureGridGap,
+  "--space-product-grid-gap-mobile": mobileProduct.collectionGridGap,
+  "--space-product-grid-gap-desktop": product.collectionGridGap,
+  "--space-product-card-gap-mobile": mobileProduct.collectionCardStackGap,
+  "--space-product-card-gap-desktop": product.collectionCardStackGap,
+  "--space-product-card-meta-gap-mobile": mobileProduct.collectionCardMetaGap,
+  "--space-product-card-meta-gap-desktop": product.collectionCardMetaGap,
+  "--space-product-detail-stack-gap-mobile": mobileProduct.detailStackGap,
+  "--space-product-detail-stack-gap-desktop": product.detailStackGap,
+  "--space-related-section-gap-mobile": mobileProduct.relatedSectionGap,
+  "--space-related-section-gap-desktop": product.relatedSectionGap,
+  "--space-product-feature-grid-gap-mobile": mobileProduct.featureGridGap,
+  "--space-product-feature-grid-gap-desktop": product.featureGridGap,
 } as CSSProperties;

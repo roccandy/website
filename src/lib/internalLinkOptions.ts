@@ -16,7 +16,6 @@ export const INTERNAL_LINK_OPTIONS: InternalLinkOption[] = [
   { label: "Branded Candy", href: "/design/branded-logo-candy" },
   { label: "Pre-Made Candy", href: "/pre-made-candy" },
   { label: "Contact", href: "/contact" },
-  { label: "Shipping & Returns", href: "/shipping-and-returns" },
   { label: "Privacy Policy", href: "/privacy" },
   { label: "Terms & Conditions", href: "/terms-and-conditions" },
   { label: "Start Wedding Design", href: buildDesignerPath({ orderType: "weddings" }) },

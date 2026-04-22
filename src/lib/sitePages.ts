@@ -82,14 +82,12 @@ export const EDITABLE_SITE_PAGE_SLUGS = [
   "design/branded-logo-candy",
   "pre-made-candy",
   "contact",
-  "shipping-and-returns",
   "privacy",
   "terms-and-conditions",
 ] as const;
 
 export const CATCH_ALL_SITE_PAGE_SLUGS = [
   "contact",
-  "shipping-and-returns",
   "design/wedding-candy",
   "design/custom-text-candy",
   "design/branded-logo-candy",
@@ -336,30 +334,6 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Contact Roc Candy | Personalised Rock Candy Australia",
     metaDescription:
       "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
-    ogImageUrl: "/landing/home-feature-poster.jpg",
-    canonicalUrl: null,
-    galleryImageUrls: [],
-  },
-  "shipping-and-returns": {
-    slug: "shipping-and-returns",
-    title: "Shipping and Returns",
-    heroSubheading: null,
-    heroSupportingLine: null,
-    bodyHtml: `
-<p>Roc Candy ships across Australia. Delivery timing depends on the type of order, production volume, and your required date.</p>
-<h2>Shipping</h2>
-<p>Pre-made candy orders are packed and dispatched as ready-to-order products. Custom personalised candy orders are produced to order and should be booked with enough time for production and delivery.</p>
-<p>For urgent requirements, contact us before ordering so we can confirm whether your date can be accommodated.</p>
-<h2>Returns</h2>
-<p>Because personalised candy is made to order, returns are generally not available for change-of-mind purchases once production has started. If there is an issue with your order, contact us as soon as possible so we can review the matter and help.</p>
-<h2>Need help before ordering?</h2>
-<p>If you are unsure about lead times, shipping options, or the best product for your event, <a href="/contact">contact us</a> and we will help you plan the order properly.</p>
-    `,
-    faqHeading: null,
-    faqItemIds: [],
-    seoTitle: "Shipping and Returns | Roc Candy Australia",
-    metaDescription:
-      "Read Roc Candy shipping and returns information for personalised and pre-made rock candy orders across Australia.",
     ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],

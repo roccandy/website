@@ -1,10 +1,12 @@
 import type { CSSProperties } from "react";
+import { MOBILE_TYPOGRAPHY } from "@/lib/mobileTypography";
 
 /**
  * Global typography controls.
  *
- * Update these values to adjust heading sizes, weights, spacing, and casing
- * across the public site and the main admin page titles.
+ * Update `TYPOGRAPHY` for desktop / laptop typography.
+ * Update `mobileTypography.ts` for mobile-only public-site typography.
+ * Admin typography remains single-size for now.
  */
 export const TYPOGRAPHY = {
   headingCase: "none",
@@ -43,6 +45,11 @@ export const TYPOGRAPHY = {
   publicEyebrowWeight: 600,
   publicEyebrowLetterSpacing: "0.28em",
 
+  publicUspSize: "0.75rem",
+  publicUspWeight: 500,
+  publicUspLineHeight: "1.3",
+  publicUspLetterSpacing: "0.08em",
+
   publicRichH2Size: "30px",
   publicRichH2Weight: 600,
   publicRichH2LineHeight: "1.1",
@@ -77,48 +84,91 @@ export const TYPOGRAPHY = {
 export const TYPOGRAPHY_STYLE_VARS: CSSProperties = {
   "--type-heading-case": TYPOGRAPHY.headingCase,
 
-  "--type-public-hero-h1-size": TYPOGRAPHY.publicHeroH1Size,
-  "--type-public-hero-h1-weight": TYPOGRAPHY.publicHeroH1Weight,
-  "--type-public-hero-h1-line-height": TYPOGRAPHY.publicHeroH1LineHeight,
-  "--type-public-hero-h1-letter-spacing": TYPOGRAPHY.publicHeroH1LetterSpacing,
+  "--type-public-hero-h1-size-mobile": MOBILE_TYPOGRAPHY.publicHeroH1Size,
+  "--type-public-hero-h1-size-desktop": TYPOGRAPHY.publicHeroH1Size,
+  "--type-public-hero-h1-weight-mobile": MOBILE_TYPOGRAPHY.publicHeroH1Weight,
+  "--type-public-hero-h1-weight-desktop": TYPOGRAPHY.publicHeroH1Weight,
+  "--type-public-hero-h1-line-height-mobile": MOBILE_TYPOGRAPHY.publicHeroH1LineHeight,
+  "--type-public-hero-h1-line-height-desktop": TYPOGRAPHY.publicHeroH1LineHeight,
+  "--type-public-hero-h1-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicHeroH1LetterSpacing,
+  "--type-public-hero-h1-letter-spacing-desktop": TYPOGRAPHY.publicHeroH1LetterSpacing,
 
-  "--type-public-hero-h2-size": TYPOGRAPHY.publicHeroH2Size,
-  "--type-public-hero-h2-weight": TYPOGRAPHY.publicHeroH2Weight,
-  "--type-public-hero-h2-line-height": TYPOGRAPHY.publicHeroH2LineHeight,
-  "--type-public-hero-h2-letter-spacing": TYPOGRAPHY.publicHeroH2LetterSpacing,
+  "--type-public-hero-h2-size-mobile": MOBILE_TYPOGRAPHY.publicHeroH2Size,
+  "--type-public-hero-h2-size-desktop": TYPOGRAPHY.publicHeroH2Size,
+  "--type-public-hero-h2-weight-mobile": MOBILE_TYPOGRAPHY.publicHeroH2Weight,
+  "--type-public-hero-h2-weight-desktop": TYPOGRAPHY.publicHeroH2Weight,
+  "--type-public-hero-h2-line-height-mobile": MOBILE_TYPOGRAPHY.publicHeroH2LineHeight,
+  "--type-public-hero-h2-line-height-desktop": TYPOGRAPHY.publicHeroH2LineHeight,
+  "--type-public-hero-h2-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicHeroH2LetterSpacing,
+  "--type-public-hero-h2-letter-spacing-desktop": TYPOGRAPHY.publicHeroH2LetterSpacing,
 
-  "--type-public-hero-p-size": TYPOGRAPHY.publicHeroParagraphSize,
-  "--type-public-hero-p-weight": TYPOGRAPHY.publicHeroParagraphWeight,
-  "--type-public-hero-p-line-height": TYPOGRAPHY.publicHeroParagraphLineHeight,
+  "--type-public-hero-p-size-mobile": MOBILE_TYPOGRAPHY.publicHeroParagraphSize,
+  "--type-public-hero-p-size-desktop": TYPOGRAPHY.publicHeroParagraphSize,
+  "--type-public-hero-p-weight-mobile": MOBILE_TYPOGRAPHY.publicHeroParagraphWeight,
+  "--type-public-hero-p-weight-desktop": TYPOGRAPHY.publicHeroParagraphWeight,
+  "--type-public-hero-p-line-height-mobile": MOBILE_TYPOGRAPHY.publicHeroParagraphLineHeight,
+  "--type-public-hero-p-line-height-desktop": TYPOGRAPHY.publicHeroParagraphLineHeight,
 
-  "--type-public-page-h1-size": TYPOGRAPHY.publicPageH1Size,
-  "--type-public-page-h1-weight": TYPOGRAPHY.publicPageH1Weight,
-  "--type-public-page-h1-line-height": TYPOGRAPHY.publicPageH1LineHeight,
-  "--type-public-page-h1-letter-spacing": TYPOGRAPHY.publicPageH1LetterSpacing,
+  "--type-public-page-h1-size-mobile": MOBILE_TYPOGRAPHY.publicPageH1Size,
+  "--type-public-page-h1-size-desktop": TYPOGRAPHY.publicPageH1Size,
+  "--type-public-page-h1-weight-mobile": MOBILE_TYPOGRAPHY.publicPageH1Weight,
+  "--type-public-page-h1-weight-desktop": TYPOGRAPHY.publicPageH1Weight,
+  "--type-public-page-h1-line-height-mobile": MOBILE_TYPOGRAPHY.publicPageH1LineHeight,
+  "--type-public-page-h1-line-height-desktop": TYPOGRAPHY.publicPageH1LineHeight,
+  "--type-public-page-h1-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicPageH1LetterSpacing,
+  "--type-public-page-h1-letter-spacing-desktop": TYPOGRAPHY.publicPageH1LetterSpacing,
 
-  "--type-public-section-h2-size": TYPOGRAPHY.publicSectionH2Size,
-  "--type-public-section-h2-weight": TYPOGRAPHY.publicSectionH2Weight,
-  "--type-public-section-h2-line-height": TYPOGRAPHY.publicSectionH2LineHeight,
-  "--type-public-section-h2-letter-spacing": TYPOGRAPHY.publicSectionH2LetterSpacing,
+  "--type-public-section-h2-size-mobile": MOBILE_TYPOGRAPHY.publicSectionH2Size,
+  "--type-public-section-h2-size-desktop": TYPOGRAPHY.publicSectionH2Size,
+  "--type-public-section-h2-weight-mobile": MOBILE_TYPOGRAPHY.publicSectionH2Weight,
+  "--type-public-section-h2-weight-desktop": TYPOGRAPHY.publicSectionH2Weight,
+  "--type-public-section-h2-line-height-mobile": MOBILE_TYPOGRAPHY.publicSectionH2LineHeight,
+  "--type-public-section-h2-line-height-desktop": TYPOGRAPHY.publicSectionH2LineHeight,
+  "--type-public-section-h2-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicSectionH2LetterSpacing,
+  "--type-public-section-h2-letter-spacing-desktop": TYPOGRAPHY.publicSectionH2LetterSpacing,
 
-  "--type-public-section-h3-size": TYPOGRAPHY.publicSectionH3Size,
-  "--type-public-section-h3-weight": TYPOGRAPHY.publicSectionH3Weight,
-  "--type-public-section-h3-line-height": TYPOGRAPHY.publicSectionH3LineHeight,
-  "--type-public-section-h3-letter-spacing": TYPOGRAPHY.publicSectionH3LetterSpacing,
+  "--type-public-section-h3-size-mobile": MOBILE_TYPOGRAPHY.publicSectionH3Size,
+  "--type-public-section-h3-size-desktop": TYPOGRAPHY.publicSectionH3Size,
+  "--type-public-section-h3-weight-mobile": MOBILE_TYPOGRAPHY.publicSectionH3Weight,
+  "--type-public-section-h3-weight-desktop": TYPOGRAPHY.publicSectionH3Weight,
+  "--type-public-section-h3-line-height-mobile": MOBILE_TYPOGRAPHY.publicSectionH3LineHeight,
+  "--type-public-section-h3-line-height-desktop": TYPOGRAPHY.publicSectionH3LineHeight,
+  "--type-public-section-h3-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicSectionH3LetterSpacing,
+  "--type-public-section-h3-letter-spacing-desktop": TYPOGRAPHY.publicSectionH3LetterSpacing,
 
-  "--type-public-eyebrow-size": TYPOGRAPHY.publicEyebrowSize,
-  "--type-public-eyebrow-weight": TYPOGRAPHY.publicEyebrowWeight,
-  "--type-public-eyebrow-letter-spacing": TYPOGRAPHY.publicEyebrowLetterSpacing,
+  "--type-public-eyebrow-size-mobile": MOBILE_TYPOGRAPHY.publicEyebrowSize,
+  "--type-public-eyebrow-size-desktop": TYPOGRAPHY.publicEyebrowSize,
+  "--type-public-eyebrow-weight-mobile": MOBILE_TYPOGRAPHY.publicEyebrowWeight,
+  "--type-public-eyebrow-weight-desktop": TYPOGRAPHY.publicEyebrowWeight,
+  "--type-public-eyebrow-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicEyebrowLetterSpacing,
+  "--type-public-eyebrow-letter-spacing-desktop": TYPOGRAPHY.publicEyebrowLetterSpacing,
 
-  "--type-public-rich-h2-size": TYPOGRAPHY.publicRichH2Size,
-  "--type-public-rich-h2-weight": TYPOGRAPHY.publicRichH2Weight,
-  "--type-public-rich-h2-line-height": TYPOGRAPHY.publicRichH2LineHeight,
-  "--type-public-rich-h2-letter-spacing": TYPOGRAPHY.publicRichH2LetterSpacing,
+  "--type-public-usp-size-mobile": MOBILE_TYPOGRAPHY.publicUspSize,
+  "--type-public-usp-size-desktop": TYPOGRAPHY.publicUspSize,
+  "--type-public-usp-weight-mobile": MOBILE_TYPOGRAPHY.publicUspWeight,
+  "--type-public-usp-weight-desktop": TYPOGRAPHY.publicUspWeight,
+  "--type-public-usp-line-height-mobile": MOBILE_TYPOGRAPHY.publicUspLineHeight,
+  "--type-public-usp-line-height-desktop": TYPOGRAPHY.publicUspLineHeight,
+  "--type-public-usp-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicUspLetterSpacing,
+  "--type-public-usp-letter-spacing-desktop": TYPOGRAPHY.publicUspLetterSpacing,
 
-  "--type-public-rich-h3-size": TYPOGRAPHY.publicRichH3Size,
-  "--type-public-rich-h3-weight": TYPOGRAPHY.publicRichH3Weight,
-  "--type-public-rich-h3-line-height": TYPOGRAPHY.publicRichH3LineHeight,
-  "--type-public-rich-h3-letter-spacing": TYPOGRAPHY.publicRichH3LetterSpacing,
+  "--type-public-rich-h2-size-mobile": MOBILE_TYPOGRAPHY.publicRichH2Size,
+  "--type-public-rich-h2-size-desktop": TYPOGRAPHY.publicRichH2Size,
+  "--type-public-rich-h2-weight-mobile": MOBILE_TYPOGRAPHY.publicRichH2Weight,
+  "--type-public-rich-h2-weight-desktop": TYPOGRAPHY.publicRichH2Weight,
+  "--type-public-rich-h2-line-height-mobile": MOBILE_TYPOGRAPHY.publicRichH2LineHeight,
+  "--type-public-rich-h2-line-height-desktop": TYPOGRAPHY.publicRichH2LineHeight,
+  "--type-public-rich-h2-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicRichH2LetterSpacing,
+  "--type-public-rich-h2-letter-spacing-desktop": TYPOGRAPHY.publicRichH2LetterSpacing,
+
+  "--type-public-rich-h3-size-mobile": MOBILE_TYPOGRAPHY.publicRichH3Size,
+  "--type-public-rich-h3-size-desktop": TYPOGRAPHY.publicRichH3Size,
+  "--type-public-rich-h3-weight-mobile": MOBILE_TYPOGRAPHY.publicRichH3Weight,
+  "--type-public-rich-h3-weight-desktop": TYPOGRAPHY.publicRichH3Weight,
+  "--type-public-rich-h3-line-height-mobile": MOBILE_TYPOGRAPHY.publicRichH3LineHeight,
+  "--type-public-rich-h3-line-height-desktop": TYPOGRAPHY.publicRichH3LineHeight,
+  "--type-public-rich-h3-letter-spacing-mobile": MOBILE_TYPOGRAPHY.publicRichH3LetterSpacing,
+  "--type-public-rich-h3-letter-spacing-desktop": TYPOGRAPHY.publicRichH3LetterSpacing,
 
   "--type-admin-page-title-size": TYPOGRAPHY.adminPageTitleSize,
   "--type-admin-page-title-weight": TYPOGRAPHY.adminPageTitleWeight,
