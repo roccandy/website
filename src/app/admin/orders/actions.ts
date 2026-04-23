@@ -152,6 +152,8 @@ export async function upsertOrder(formData: FormData) {
   const design_type = formData.get("design_type")?.toString() || null;
   const design_text_raw = formData.get("design_text")?.toString() || null;
   const design_text = design_text_raw?.trim() || null;
+  const adminPremadeModeRaw = formData.get("admin_premade_mode")?.toString() || null;
+  const adminPremadeMode = adminPremadeModeRaw?.trim() || null;
   const jacket_type_raw = formData.get("jacket_type")?.toString() || null;
   const jacket_type = jacket_type_raw?.trim() || null;
   const jacket_color_one = formData.get("jacket_color_one")?.toString() || null;
@@ -264,17 +266,33 @@ export async function upsertOrder(formData: FormData) {
       throw new Error(`Max total kg per settings is ${settings.max_total_kg}.`);
     }
 
-    const resolvedFlavor = flavor?.trim() || existing?.flavor?.trim() || null;
-    if (isAdminPremade && !resolvedFlavor) {
-      throw new Error("Flavor is required for premade stock orders.");
+    const submittedFlavor = flavor?.trim() || null;
+    const existingFlavor = existing?.flavor?.trim() || null;
+    const existingDesignText = existing?.design_text?.trim() || null;
+    const resolvedFlavor = submittedFlavor || existingFlavor || null;
+    const resolvedAdminPremadeSelection = isAdminPremade
+      ? adminPremadeMode === "premade"
+        ? design_text ?? existingDesignText ?? null
+        : submittedFlavor ?? design_text ?? existingFlavor ?? existingDesignText ?? null
+      : null;
+    const resolvedAdminPremadeFlavor = isAdminPremade
+      ? adminPremadeMode === "premade"
+        ? null
+        : submittedFlavor ?? existingFlavor ?? null
+      : resolvedFlavor;
+    if (isAdminPremade && !resolvedAdminPremadeSelection) {
+      throw new Error("A flavor or pre-made candy is required for premade stock orders.");
     }
     if (isAdminPremade && shouldScheduleAfterCreate && !productionSlotDate) {
       throw new Error("Production date is required to slot this premade order.");
     }
 
-    const premadeStockTitle = resolvedFlavor ? `Premade stock - ${resolvedFlavor}` : "Premade stock";
-    const premadeWeightGrams = Math.round(resolvedWeightKg * 1000);
-    const premadeStockDescription = `${premadeWeightGrams}g stock batch`;
+    const premadeStockTitle = resolvedAdminPremadeSelection
+      ? `Premade stock - ${resolvedAdminPremadeSelection}`
+      : "Premade stock";
+    const premadeStockDescription = resolvedAdminPremadeSelection
+      ? `${resolvedAdminPremadeSelection} stock batch`
+      : "Premade stock batch";
 
     const basePayload = {
       title: isAdminPremade ? premadeStockTitle : title ?? syncedTitleFromDesignText ?? existing?.title ?? null,
@@ -287,11 +305,11 @@ export async function upsertOrder(formData: FormData) {
       labels_count: isAdminPremade ? null : labels_count ?? existing?.labels_count ?? null,
       jacket: isAdminPremade ? null : jacket ?? existing?.jacket ?? null,
       design_type: isAdminPremade ? "premade" : design_type ?? existing?.design_type ?? null,
-      design_text: isAdminPremade ? resolvedFlavor : design_text ?? existing?.design_text ?? null,
+      design_text: isAdminPremade ? resolvedAdminPremadeSelection : design_text ?? existing?.design_text ?? null,
       jacket_type: isAdminPremade ? null : jacketType ?? existing?.jacket_type ?? null,
       jacket_color_one: isAdminPremade ? null : jacket_color_one ?? existing?.jacket_color_one ?? null,
       jacket_color_two: isAdminPremade ? null : jacket_color_two ?? existing?.jacket_color_two ?? null,
-      flavor: resolvedFlavor,
+      flavor: resolvedAdminPremadeFlavor,
       jar_lid_color: isAdminPremade ? null : jar_lid_color ?? existing?.jar_lid_color ?? null,
       logo_url: isAdminPremade ? null : logo_url ?? existing?.logo_url ?? null,
       label_image_url: isAdminPremade ? null : label_image_url ?? existing?.label_image_url ?? null,

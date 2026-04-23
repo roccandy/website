@@ -358,6 +358,9 @@ export function NewOrderForm({
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
+  const [adminPremadeMode, setAdminPremadeMode] = useState<"" | "flavor" | "premade">("");
+  const [adminPremadeFlavor, setAdminPremadeFlavor] = useState("");
+  const [adminPremadeCandyId, setAdminPremadeCandyId] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
@@ -388,6 +391,15 @@ export function NewOrderForm({
     () => premadeCandies.filter((item) => item.is_active),
     [premadeCandies]
   );
+  const selectedAdminPremadeCandy = useMemo(
+    () => premadeOptions.find((item) => item.id === adminPremadeCandyId) ?? null,
+    [adminPremadeCandyId, premadeOptions],
+  );
+  const adminPremadeSelectionLabel = useMemo(() => {
+    if (adminPremadeMode === "flavor") return adminPremadeFlavor.trim();
+    if (adminPremadeMode === "premade") return selectedAdminPremadeCandy?.name?.trim() ?? "";
+    return "";
+  }, [adminPremadeFlavor, adminPremadeMode, selectedAdminPremadeCandy]);
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const premadeSubtotal = useMemo(
     () =>
@@ -422,15 +434,15 @@ export function NewOrderForm({
   const isBranded = categoryId === "branded";
   const isDesignDisabled = !categoryId || isAdminPremadeOrder;
   const productionCalendarOrder = useMemo<OrderRow>(() => {
-    const flavorLabel = flavor.trim();
-    const title = flavorLabel ? `Premade stock - ${flavorLabel}` : "Premade stock";
+    const selectionLabel = adminPremadeSelectionLabel;
+    const title = selectionLabel ? `Premade stock - ${selectionLabel}` : "Premade stock";
     const parsedWeight = Number(weightValue);
     const totalWeightKg = Number.isFinite(parsedWeight) && parsedWeight > 0 ? parsedWeight : 0.01;
     return {
       id: "draft-premade-order",
       order_number: null,
       title,
-      order_description: flavorLabel ? `${flavorLabel} stock batch` : "Premade stock batch",
+      order_description: selectionLabel ? `${selectionLabel} stock batch` : "Premade stock batch",
       customer_name: null,
       customer_email: null,
       category_id: null,
@@ -440,13 +452,13 @@ export function NewOrderForm({
       labels_count: null,
       jacket: null,
       design_type: "premade",
-      design_text: flavorLabel || title,
+      design_text: selectionLabel || title,
       jacket_type: null,
       jacket_color_one: null,
       jacket_color_two: null,
       text_color: null,
       heart_color: null,
-      flavor: flavorLabel || null,
+      flavor: adminPremadeMode === "flavor" ? adminPremadeFlavor.trim() || null : null,
       payment_method: null,
       logo_url: null,
       label_image_url: null,
@@ -481,7 +493,7 @@ export function NewOrderForm({
       shipped_at: null,
       created_at: new Date().toISOString(),
     };
-  }, [flavor, productionSlotDate, weightValue]);
+  }, [adminPremadeFlavor, adminPremadeMode, adminPremadeSelectionLabel, productionSlotDate, weightValue]);
   const showJacketColorTwo = jacket === "two_colour" || jacket === "two_colour_pinstripe";
   const customTextLimit = categoryId === "custom-7-14" ? 14 : 6;
   const designTextValue = useMemo(() => {
@@ -724,7 +736,7 @@ export function NewOrderForm({
               <div className="grid flex-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">What gets saved</p>
-                  <p className="mt-1 text-sm text-zinc-100">Flavour and stock weight only.</p>
+                  <p className="mt-1 text-sm text-zinc-100">Selected flavour or premade item and stock weight only.</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Other order fields</p>
@@ -795,21 +807,60 @@ export function NewOrderForm({
           {isAdminPremadeOrder ? (
             <>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Candy flavor
+                Premade order type
                 <select
-                  name="flavor"
-                  value={flavor}
+                  name="admin_premade_mode"
+                  value={adminPremadeMode}
                   required
-                  onChange={(event) => setFlavor(event.target.value)}
+                  onChange={(event) => {
+                    const next = event.target.value as "" | "flavor" | "premade";
+                    setAdminPremadeMode(next);
+                    if (next !== "flavor") setAdminPremadeFlavor("");
+                    if (next !== "premade") setAdminPremadeCandyId("");
+                  }}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 >
-                  <option value="">Select flavor</option>
-                  {flavors.map((item) => (
-                    <option key={item.id} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
+                  <option value="">Select order type</option>
+                  <option value="flavor">Flavor</option>
+                  <option value="premade">Pre-made</option>
                 </select>
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                {adminPremadeMode === "premade" ? "Pre-made candy" : "Candy flavor"}
+                {adminPremadeMode === "premade" ? (
+                  <select
+                    name="admin_premade_candy_id"
+                    value={adminPremadeCandyId}
+                    required
+                    onChange={(event) => setAdminPremadeCandyId(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  >
+                    <option value="">Select pre-made candy</option>
+                    {premadeOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {formatPremadeLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    name="flavor"
+                    value={adminPremadeFlavor}
+                    required={adminPremadeMode === "flavor"}
+                    disabled={adminPremadeMode !== "flavor"}
+                    onChange={(event) => setAdminPremadeFlavor(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                  >
+                    <option value="">
+                      {adminPremadeMode === "flavor" ? "Select flavor" : "Select order type first"}
+                    </option>
+                    {flavors.map((item) => (
+                      <option key={item.id} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </label>
               <div className="md:col-span-2">
                 <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -905,7 +956,7 @@ export function NewOrderForm({
       </div>
 
       <input type="hidden" name="design_type" value={isAdminPremadeOrder ? "premade" : categoryId} />
-      <input type="hidden" name="design_text" value={isAdminPremadeOrder ? flavor : designTextValue} />
+      <input type="hidden" name="design_text" value={isAdminPremadeOrder ? adminPremadeSelectionLabel : designTextValue} />
       <input type="hidden" name="jacket_type" value={isAdminPremadeOrder ? "" : jacketTypeValue} />
       <input type="hidden" name="jacket_color_one" value={isAdminPremadeOrder ? "" : jacketColorOne} />
       <input type="hidden" name="jacket_color_two" value={isAdminPremadeOrder ? "" : jacketColorTwo} />
