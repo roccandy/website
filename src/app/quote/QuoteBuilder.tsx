@@ -584,6 +584,7 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const isAwaitingSelection = !result && !hasBasePrice;
+  const minimumPriceBubbleWidth = isAwaitingSelection && !showSubtype ? 0 : 220;
   const subtitle = subtitleLabel;
   const deriveInitial = (value: string) => (value.trim().charAt(0) || "").toUpperCase();
   const handleSubtypeChange = (nextSubtype: string) => {
@@ -1230,8 +1231,11 @@ export function QuoteBuilder({
       };
 
       reset();
-      const measured = Math.ceil(Math.max(wrap.getBoundingClientRect().width, stickyEl.getBoundingClientRect().width, 220)) + 2;
-      const viewportMax = Math.max(220, window.innerWidth - 16);
+      const measured =
+        Math.ceil(
+          Math.max(wrap.getBoundingClientRect().width, stickyEl.getBoundingClientRect().width, minimumPriceBubbleWidth)
+        ) + 2;
+      const viewportMax = Math.max(minimumPriceBubbleWidth, window.innerWidth - 16);
 
       stickyEl.style.position = prev.position;
       stickyEl.style.top = prev.top;
@@ -1267,7 +1271,7 @@ export function QuoteBuilder({
       if (!lockedWidth) {
         lockedWidth = measureRestingWidth();
       }
-      const width = Math.min(lockedWidth, Math.max(220, window.innerWidth - 16));
+      const width = Math.min(lockedWidth, Math.max(minimumPriceBubbleWidth, window.innerWidth - 16));
       wrap.style.height = `${stickyHeight}px`;
       wrap.style.width = `${width}px`;
       const currentWrapRect = wrap.getBoundingClientRect();
@@ -1317,7 +1321,16 @@ export function QuoteBuilder({
       observer.disconnect();
       reset();
     };
-  }, [showBreakdown, loading, error, needsSubtypeSelection, result?.total, result?.transactionFee, result?.items.length]);
+  }, [
+    error,
+    loading,
+    minimumPriceBubbleWidth,
+    needsSubtypeSelection,
+    result?.items.length,
+    result?.total,
+    result?.transactionFee,
+    showBreakdown,
+  ]);
 
 
   return (
