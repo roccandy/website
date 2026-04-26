@@ -8,10 +8,9 @@ import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { SiteUsps } from "@/components/SiteUsps";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { buildDesignerPath } from "@/lib/designUrls";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { DesignCtaModal } from "./DesignCtaModal";
-import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
+import { getManagedSitePage, getManagedSitePageFaqSection, parseHomeCandyOptions } from "@/lib/sitePages";
 import type { Metadata } from "next";
 
 const LEGACY_HOME_META_DESCRIPTION =
@@ -53,18 +52,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return metadata;
 }
 
-const CANDY_OPTIONS = [
-  { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }), image: "/quote/subtypes/branded.jpg" },
-  { label: "Both Names", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }), image: "/quote/subtypes/weddings-both-names.jpg" },
-  { label: "Initials", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" }), image: "/quote/subtypes/weddings-initials.jpg" },
-  { label: "Custom Text 1-6 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" }), image: "/quote/subtypes/custom-1-6.jpg" },
-  { label: "Custom Text 7-14 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-7-14" }), image: "/quote/subtypes/custom-7-14.jpeg" },
-  { label: "Pre-made candy", href: "/pre-made-candy", image: "/quote/subtypes/premade.jpg" },
-];
-
 export default async function Home() {
   const homePage = await getManagedSitePage("home");
   const faqSection = await getManagedSitePageFaqSection(homePage);
+  const candyOptions = parseHomeCandyOptions(homePage.galleryImageUrls);
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
   const homeDescription = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
@@ -121,7 +112,7 @@ export default async function Home() {
             </div>
 
             <div className="site-home-option-grid grid grid-cols-2 md:grid-cols-3">
-              {CANDY_OPTIONS.map((option) => (
+              {candyOptions.map((option) => (
                 <Link
                   key={option.label}
                   href={option.href}

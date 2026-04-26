@@ -11,7 +11,7 @@ import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, listSiteRedirects, saveSiteRedirect } from "@/lib/siteRedirects";
-import { buildManagedSitePageHref, getManagedSitePage, saveManagedSitePage } from "@/lib/sitePages";
+import { buildManagedSitePageHref, getManagedSitePage, saveManagedSitePage, serializeHomeCandyOption } from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
@@ -39,6 +39,21 @@ function normalizeGalleryImageUrls(values: FormDataEntryValue[]) {
   return values
     .map((value) => normalizeField(value))
     .filter(Boolean);
+}
+
+function normalizeHomeCandyOptions(formData: FormData) {
+  const labels = formData.getAll("homeCandyOptionLabel").map((value) => normalizeField(value));
+  const hrefs = formData.getAll("homeCandyOptionHref").map((value) => normalizeField(value));
+  const images = formData.getAll("homeCandyOptionImage").map((value) => normalizeField(value));
+
+  return labels
+    .map((label, index) => {
+      const href = hrefs[index] ?? "";
+      const image = images[index] ?? "";
+      if (!label || !href || !image) return null;
+      return serializeHomeCandyOption({ label, href, image });
+    })
+    .filter((value): value is string => Boolean(value));
 }
 
 function readCheckbox(formData: FormData, key: string) {
@@ -87,6 +102,10 @@ export async function updateSitePageAction(formData: FormData) {
   const uploadedOgImage =
     ogImageFile instanceof File && ogImageFile.size > 0 ? await uploadSeoImage(ogImageFile, slug) : null;
   const previousPage = await getManagedSitePage(slug);
+  const nextGalleryImageUrls =
+    slug === "home"
+      ? normalizeHomeCandyOptions(formData)
+      : normalizeGalleryImageUrls(formData.getAll("galleryImageUrls"));
 
   await saveManagedSitePage({
     slug,
@@ -100,7 +119,7 @@ export async function updateSitePageAction(formData: FormData) {
     metaDescription: normalizeField(formData.get("metaDescription")) || null,
     ogImageUrl: uploadedOgImage?.publicUrl || normalizeField(formData.get("ogImageUrl")) || null,
     canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
-    galleryImageUrls: normalizeGalleryImageUrls(formData.getAll("galleryImageUrls")),
+    galleryImageUrls: nextGalleryImageUrls,
   });
   const nextPage = await getManagedSitePage(slug);
 
@@ -151,7 +170,7 @@ export async function updateSitePageAction(formData: FormData) {
         metaDescription: "Meta description",
         ogImageUrl: "OG image",
         canonicalUrl: "Canonical URL",
-        galleryImageUrls: "Gallery images",
+        galleryImageUrls: slug === "home" ? "Home category grid" : "Gallery images",
       },
     ),
   });

@@ -17,6 +17,7 @@ import {
   HERO_INTRO_SITE_PAGE_SLUGS,
   HERO_ONLY_SITE_PAGE_SLUGS,
   LANDING_GALLERY_PAGE_SLUGS,
+  parseHomeCandyOptions,
 } from "@/lib/sitePages";
 import {
   createPageFaqAction,
@@ -125,6 +126,70 @@ function LandingGalleryEditor({
   readOnly: boolean;
 }) {
   return <LandingGalleryPicker slug={slug} initialImages={images} readOnly={readOnly} />;
+}
+
+function HomeCandyGridEditor({
+  rawValues,
+  readOnly,
+}: {
+  rawValues: string[];
+  readOnly: boolean;
+}) {
+  const options = parseHomeCandyOptions(rawValues);
+
+  return (
+    <details className="rounded-xl border border-zinc-200 bg-zinc-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <div className="space-y-1">
+          <h3 className="admin-card-title text-zinc-900">Home category grid</h3>
+          <p className="text-xs text-zinc-600">Edit the 2x3 category tiles shown on the home page.</p>
+        </div>
+        <span className="text-xs font-semibold text-zinc-500">▾</span>
+      </summary>
+
+      <div className="grid gap-4 border-t border-zinc-200 px-4 py-4 md:grid-cols-2">
+        {options.map((option, index) => (
+          <div key={`${option.label}-${index}`} className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Tile {index + 1}</p>
+            <label className="block space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Label</span>
+              <input
+                type="text"
+                name="homeCandyOptionLabel"
+                defaultValue={option.label}
+                readOnly={readOnly}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Link</span>
+              <input
+                type="text"
+                name="homeCandyOptionHref"
+                defaultValue={option.href}
+                readOnly={readOnly}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="block space-y-1 text-sm text-zinc-700">
+              <span className="text-xs text-zinc-500">Image path</span>
+              <input
+                type="text"
+                name="homeCandyOptionImage"
+                defaultValue={option.image}
+                readOnly={readOnly}
+                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+              />
+            </label>
+            <div
+              className="h-24 w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+              style={{ backgroundImage: `url("${option.image}")` }}
+            />
+          </div>
+        ))}
+      </div>
+    </details>
+  );
 }
 
 const SEO_IMAGE_PUBLIC_PATH_SEGMENT = "/storage/v1/object/public/seo-images/";
@@ -325,6 +390,7 @@ function SitePageCard({
   const hidesBodyContentEditor = HERO_ONLY_SITE_PAGE_SLUGS.includes(
     page.slug as (typeof HERO_ONLY_SITE_PAGE_SLUGS)[number],
   );
+  const isHomePage = page.slug === "home";
   const isTermsPage = page.slug === "terms-and-conditions";
   const derivedHeroSupportingLine =
     page.heroSupportingLine?.trim() || (hidesBodyContentEditor ? normalizePlainTextFromHtml(page.bodyHtml) : "");
@@ -508,6 +574,10 @@ function SitePageCard({
                 />
               </div>
             </details>
+          ) : null}
+
+          {isHomePage ? (
+            <HomeCandyGridEditor rawValues={page.galleryImageUrls} readOnly={!canWriteSeo} />
           ) : null}
 
           <PageFaqSelector

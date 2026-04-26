@@ -57,6 +57,12 @@ export type ManagedSitePageFaqSection = {
   items: FaqContent[];
 };
 
+export type HomeCandyOption = {
+  label: string;
+  href: string;
+  image: string;
+};
+
 export const LANDING_GALLERY_PAGE_SLUGS = [
   "design/wedding-candy",
   "design/custom-text-candy",
@@ -94,6 +100,15 @@ export const CATCH_ALL_SITE_PAGE_SLUGS = [
 ] as const;
 
 type ManagedSeoField = "seoTitle" | "metaDescription" | "ogImageUrl" | "canonicalUrl";
+
+export const DEFAULT_HOME_CANDY_OPTIONS: HomeCandyOption[] = [
+  { label: "Branded", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }), image: "/quote/subtypes/branded.jpg" },
+  { label: "Both Names", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }), image: "/quote/subtypes/weddings-both-names.jpg" },
+  { label: "Initials", href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" }), image: "/quote/subtypes/weddings-initials.jpg" },
+  { label: "Custom Text 1-6 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" }), image: "/quote/subtypes/custom-1-6.jpg" },
+  { label: "Custom Text 7-14 Letters", href: buildDesignerPath({ orderType: "text", categoryId: "custom-7-14" }), image: "/quote/subtypes/custom-7-14.jpeg" },
+  { label: "Pre-made candy", href: "/pre-made-candy", image: "/quote/subtypes/premade.jpg" },
+];
 
 const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
   home: {
@@ -402,6 +417,37 @@ function normalizeGalleryImageUrls(values: string[] | null | undefined) {
   return (values ?? [])
     .map((value) => normalizeText(value))
     .filter(Boolean);
+}
+
+export function serializeHomeCandyOption(option: HomeCandyOption) {
+  return JSON.stringify({
+    label: normalizeText(option.label),
+    href: normalizeText(option.href),
+    image: normalizeText(option.image),
+  });
+}
+
+export function parseHomeCandyOptions(values: string[] | null | undefined) {
+  const parsed = (values ?? [])
+    .map((value) => {
+      try {
+        const candidate = JSON.parse(value) as Partial<HomeCandyOption>;
+        const label = normalizeText(candidate.label);
+        const href = normalizeText(candidate.href);
+        const image = normalizeText(candidate.image);
+        if (!label || !href || !image) return null;
+        return { label, href, image } satisfies HomeCandyOption;
+      } catch {
+        return null;
+      }
+    })
+    .filter((value): value is HomeCandyOption => Boolean(value));
+
+  if (parsed.length === 0) {
+    return DEFAULT_HOME_CANDY_OPTIONS;
+  }
+
+  return DEFAULT_HOME_CANDY_OPTIONS.map((fallback, index) => parsed[index] ?? fallback);
 }
 
 function normalizeFaqItemIds(values: string[] | null | undefined) {
