@@ -839,9 +839,46 @@ export function QuoteBuilder({
     [packagingImage?.image_path]
   );
 
+  const categoryPackagingImageUrls = useMemo(() => {
+    if (!categoryId) return [];
+    return Array.from(
+      new Set(
+        packagingImages
+          .filter((image) => image.category_id === categoryId)
+          .map((image) => buildPublicImageUrl(image.image_path))
+          .filter((url) => url.length > 0)
+      )
+    );
+  }, [categoryId, packagingImages]);
+
   useEffect(() => {
     setPackagingImageFailed(false);
   }, [packagingImageUrl]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || categoryPackagingImageUrls.length === 0) return;
+
+    const browser = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+
+    const preload = () => {
+      categoryPackagingImageUrls.forEach((url) => {
+        const image = new window.Image();
+        image.decoding = "async";
+        image.src = url;
+      });
+    };
+
+    if (browser.requestIdleCallback && browser.cancelIdleCallback) {
+      const idleId = browser.requestIdleCallback(() => preload(), { timeout: 1200 });
+      return () => browser.cancelIdleCallback?.(idleId);
+    }
+
+    const timeoutId = globalThis.setTimeout(preload, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [categoryPackagingImageUrls]);
 
   const isWedding = orderType === "weddings";
   const isWeddingInitials = isWedding && categoryId.includes("weddings-initials");
@@ -1560,6 +1597,8 @@ export function QuoteBuilder({
                       height={750}
                       sizes="(max-width: 768px) 100vw, 375px"
                       className="h-full w-full object-contain"
+                      priority
+                      unoptimized
                       onError={() => setPackagingImageFailed(true)}
                     />
                   ) : (
