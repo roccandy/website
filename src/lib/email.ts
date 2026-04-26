@@ -229,6 +229,11 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+function renderCandyPreviewImage(imageSrc: string | null, width: number) {
+  if (!imageSrc) return "";
+  return `<img src="${escapeHtml(imageSrc)}" alt="Candy design" width="${width}" style="display:block;width:100%;max-width:${width}px;height:auto;border-radius:12px;margin-bottom:12px;" />`;
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
@@ -378,7 +383,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   const labelImageSrc = labelPreview.src;
   const customSection = order.customDetails
     ? `
-      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="420" style="display:block;max-width:100%;width:420px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${renderCandyPreviewImage(customImageSrc, 420)}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
       <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
@@ -508,7 +513,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   const labelImageSrc = labelPreview.src;
   const customSection = order.customDetails
     ? `
-      ${customImageSrc ? `<img src="${escapeHtml(customImageSrc)}" alt="Candy design" width="210" style="display:block;max-width:100%;width:210px;border-radius:12px;margin-bottom:12px;" />` : ""}
+      ${renderCandyPreviewImage(customImageSrc, 210)}
       <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(displayOrderNumber)}</div>
       <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
       <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>

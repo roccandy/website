@@ -220,6 +220,8 @@ export function QuoteBuilder({
     if (svgs.length === 0) return null;
 
     const baseSvg = svgs[0].cloneNode(true) as SVGSVGElement;
+    baseSvg.style.removeProperty("transform");
+    baseSvg.style.removeProperty("transform-origin");
     for (let i = 1; i < svgs.length; i += 1) {
       const svg = svgs[i];
       const children = Array.from(svg.childNodes).map((node) => node.cloneNode(true));

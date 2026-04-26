@@ -275,7 +275,6 @@ export function CandyPreview({
           textColor={textColorValue}
           heartColor={heartColorValue}
           isInitials={isInitials}
-          zoom={clampedZoom}
         />
       </div>
     </div>
@@ -291,7 +290,6 @@ type OverlayProps = {
   textColor: string;
   heartColor: string;
   isInitials?: boolean;
-  zoom?: number;
 };
 
 function OverlayText({
@@ -303,7 +301,6 @@ function OverlayText({
   textColor,
   heartColor,
   isInitials,
-  zoom = 1,
 }: OverlayProps) {
   // Match the inner circle center in the SVG paths.
   const cx = 544.367;
@@ -337,13 +334,6 @@ function OverlayText({
   const lowerArcYOffset = 24;
   const hasAnyText =
     Boolean((lineOne || "").trim().length) || Boolean((lineTwo || "").trim().length) || Boolean((designText || "").trim().length);
-  const overlayZoomStyle =
-    zoom > 1
-      ? ({
-          transform: `scale(${zoom})`,
-          transformOrigin: "50% 50%",
-        } as const)
-      : undefined;
 
   if (showHeart && !hasAnyText && !logoUrl) {
     return (
@@ -351,13 +341,14 @@ function OverlayText({
         className="pointer-events-none absolute inset-0"
         viewBox={SVG_VIEW_BOX}
         xmlns="http://www.w3.org/2000/svg"
-        style={overlayZoomStyle}
       >
-        <g transform={heartTransform()}>
-          <path
-            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-            fill={heartFill}
-          />
+        <g fontFamily={fontFamily}>
+          <g transform={heartTransform()}>
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+              fill={heartFill}
+            />
+          </g>
         </g>
       </svg>
     );
@@ -368,7 +359,6 @@ function OverlayText({
       className="pointer-events-none absolute inset-0"
       viewBox={SVG_VIEW_BOX}
       xmlns="http://www.w3.org/2000/svg"
-      style={{ fontFamily, ...overlayZoomStyle }}
     >
       <defs>
         <path id="upperArc" d={`M ${cx - arcRadius} ${cy} A ${arcRadius} ${arcRadius} 0 0 1 ${cx + arcRadius} ${cy}`} />
@@ -377,127 +367,129 @@ function OverlayText({
           <rect x={cx - logoOffset} y={cy - logoOffset} width={logoSize} height={logoSize} rx={logoSize * 0.1} ry={logoSize * 0.1} />
         </clipPath>
       </defs>
-      {logoUrl ? (
-        <image
-          href={logoUrl}
-          x={cx - logoOffset}
-          y={cy - logoOffset}
+      <g fontFamily={fontFamily}>
+        {logoUrl ? (
+          <image
+            href={logoUrl}
+            x={cx - logoOffset}
+            y={cy - logoOffset}
             width={logoSize}
             height={logoSize}
             clipPath="url(#logoClip)"
             preserveAspectRatio="xMidYMid slice"
-        />
-      ) : initialsMode ? (
-        <>
-          <text
-            x={cx - 230}
-            y={cy + initialsYOffset}
-            fontSize={initialsFontSize}
-            fontWeight="700"
-            fill={textColor}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            letterSpacing="0.2em"
-          >
-            {(lineOne || "").toUpperCase()}
-          </text>
-          {showHeart && (
-            <g transform={heartTransform()}>
-              <path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                fill={heartFill}
-              />
-            </g>
-          )}
-          <text
-            x={cx + 230}
-            y={cy + initialsYOffset}
-            fontSize={initialsFontSize}
-            fontWeight="700"
-            fill={textColor}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            letterSpacing="0.2em"
-          >
-            {(lineTwo || "").toUpperCase()}
-          </text>
-        </>
-      ) : arcMode && hasTwoLines ? (
-        <>
-          <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
-            <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+          />
+        ) : initialsMode ? (
+          <>
+            <text
+              x={cx - 230}
+              y={cy + initialsYOffset}
+              fontSize={initialsFontSize}
+              fontWeight="700"
+              fill={textColor}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              letterSpacing="0.2em"
+            >
               {(lineOne || "").toUpperCase()}
-            </textPath>
-          </text>
-          {showHeart && (
-            <g transform={heartTransform()}>
-              <path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                fill={heartColor}
-              />
-            </g>
-          )}
-          <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
-            <textPath href="#lowerArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+            </text>
+            {showHeart && (
+              <g transform={heartTransform()}>
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill={heartFill}
+                />
+              </g>
+            )}
+            <text
+              x={cx + 230}
+              y={cy + initialsYOffset}
+              fontSize={initialsFontSize}
+              fontWeight="700"
+              fill={textColor}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              letterSpacing="0.2em"
+            >
               {(lineTwo || "").toUpperCase()}
-            </textPath>
-          </text>
-        </>
-      ) : arcMode && hasAnyWeddingNames ? (
-        <>
-          {showHeart && (
-            <g transform={heartTransform()}>
-              <path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                fill={heartColor}
-              />
-            </g>
-          )}
-          {hasLineOne ? (
+            </text>
+          </>
+        ) : arcMode && hasTwoLines ? (
+          <>
             <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
               <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
                 {(lineOne || "").toUpperCase()}
               </textPath>
             </text>
-          ) : null}
-          {!hasLineTwo ? null : (
+            {showHeart && (
+              <g transform={heartTransform()}>
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill={heartColor}
+                />
+              </g>
+            )}
             <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
               <textPath href="#lowerArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
                 {(lineTwo || "").toUpperCase()}
               </textPath>
             </text>
-          )}
-        </>
-      ) : arcMode ? (
-        <text fontSize={singleArcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
-          <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
-            {cappedDesign.toUpperCase()}
-          </textPath>
-        </text>
-      ) : (
-        <>
-          <text
-            x={cx}
-            y={cy + straightYOffset}
-            fontSize={straightFontSize}
-            fontWeight="700"
-            fill={textColor}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            letterSpacing="0"
-          >
-            {cappedDesign.toUpperCase()}
+          </>
+        ) : arcMode && hasAnyWeddingNames ? (
+          <>
+            {showHeart && (
+              <g transform={heartTransform()}>
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill={heartColor}
+                />
+              </g>
+            )}
+            {hasLineOne ? (
+              <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
+                <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+                  {(lineOne || "").toUpperCase()}
+                </textPath>
+              </text>
+            ) : null}
+            {!hasLineTwo ? null : (
+              <text fontSize={arcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
+                <textPath href="#lowerArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+                  {(lineTwo || "").toUpperCase()}
+                </textPath>
+              </text>
+            )}
+          </>
+        ) : arcMode ? (
+          <text fontSize={singleArcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
+            <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+              {cappedDesign.toUpperCase()}
+            </textPath>
           </text>
-          {showHeart && hasTwoLines && (
-            <g transform={heartTransform(20)}>
-              <path
-                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                fill={heartColor}
-              />
-            </g>
-          )}
-        </>
-      )}
+        ) : (
+          <>
+            <text
+              x={cx}
+              y={cy + straightYOffset}
+              fontSize={straightFontSize}
+              fontWeight="700"
+              fill={textColor}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              letterSpacing="0"
+            >
+              {cappedDesign.toUpperCase()}
+            </text>
+            {showHeart && hasTwoLines && (
+              <g transform={heartTransform(20)}>
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  fill={heartColor}
+                />
+              </g>
+            )}
+          </>
+        )}
+      </g>
     </svg>
   );
 }
