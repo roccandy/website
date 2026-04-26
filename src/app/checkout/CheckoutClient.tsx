@@ -8,7 +8,8 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { ColorPaletteRow, LabelType, PackagingOption, QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
-import { buildCustomPricingInput, type PricingBreakdown } from "@/lib/pricing";
+import { buildCustomPricingInput } from "@/lib/customPricingInput";
+import type { PricingBreakdown } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
 import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
