@@ -15,7 +15,7 @@ import Link from "next/link";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
 import { FrontEndCalendarButton } from "./FrontEndCalendarButton";
-import { buildPricingContext, calculatePricingWithContext } from "@/lib/pricing";
+import { buildCustomPricingInput, buildPricingContext, calculatePricingWithContext } from "@/lib/pricing";
 import { isProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
 
 export const metadata = {
@@ -49,35 +49,26 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
     ]);
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   const pricingByOrderId: Record<string, ReturnType<typeof calculatePricingWithContext> | null> = {};
-  const buildExtras = (jacket: string | null) => {
-    if (!jacket) return [];
-    if (jacket === "two_colour_pinstripe") return [{ jacket: "two_colour" as const }, { jacket: "pinstripe" as const }];
-    if (jacket === "two_colour") return [{ jacket: "two_colour" as const }];
-    if (jacket === "pinstripe") return [{ jacket: "pinstripe" as const }];
-    if (jacket === "rainbow") return [{ jacket: "rainbow" as const }];
-    return [];
-  };
   orders.forEach((order) => {
     if (order.design_type === "premade") {
       pricingByOrderId[order.id] = null;
       return;
     }
-    const quantity = Number(order.quantity);
-    if (!order.category_id || !order.packaging_option_id || !Number.isFinite(quantity) || quantity <= 0) {
+    const pricingInput = buildCustomPricingInput({
+      categoryId: order.category_id,
+      packagingOptionId: order.packaging_option_id,
+      quantity: order.quantity,
+      labelsCount: order.labels_count ?? undefined,
+      notes: order.notes,
+      dueDate: order.due_date ?? undefined,
+      jacket: order.jacket,
+    });
+    if (!pricingInput) {
       pricingByOrderId[order.id] = null;
       return;
     }
     try {
-      pricingByOrderId[order.id] = calculatePricingWithContext(
-        {
-          categoryId: order.category_id,
-          packaging: [{ optionId: order.packaging_option_id, quantity }],
-          labelsCount: order.labels_count ?? undefined,
-          dueDate: order.due_date ?? undefined,
-          extras: buildExtras(order.jacket),
-        },
-        pricingContext
-      );
+      pricingByOrderId[order.id] = calculatePricingWithContext(pricingInput, pricingContext);
     } catch {
       pricingByOrderId[order.id] = null;
     }

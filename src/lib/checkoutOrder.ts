@@ -1,5 +1,5 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { calculatePricing } from "@/lib/pricing";
+import { buildCustomPricingInput, calculatePricing } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumbers";
 import { getSettings } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
@@ -121,16 +121,20 @@ async function buildCustomItemLine(
   dueDate: string | null,
   customProductId: number
 ) {
-  if (!item.categoryId || !item.packagingOptionId) {
+  const pricingInput = buildCustomPricingInput({
+    categoryId: item.categoryId,
+    packagingOptionId: item.packagingOptionId,
+    quantity: item.quantity,
+    labelsCount: item.labelsCount ?? undefined,
+    ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
+    dueDate: dueDate ?? undefined,
+    jacketExtras: item.jacketExtras ?? undefined,
+    jacket: item.jacket ?? null,
+  });
+  if (!pricingInput) {
     throw new Error("Custom item is missing category or packaging.");
   }
-  const pricing = await calculatePricing({
-    categoryId: item.categoryId,
-    packaging: [{ optionId: item.packagingOptionId, quantity: item.quantity }],
-    labelsCount: item.labelsCount ?? undefined,
-    dueDate: dueDate ?? undefined,
-    extras: item.jacketExtras ?? undefined,
-  });
+  const pricing = await calculatePricing(pricingInput);
 
   const totalPrice = pricing.total;
   const totalWeightKg = pricing.totalWeightKg;

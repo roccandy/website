@@ -10,24 +10,14 @@ import {
   type LabelRange,
   type WeightTier,
 } from "@/lib/data";
+import type { CustomPricingInput } from "@/lib/customPricingInput";
+export {
+  buildCustomPricingInput,
+  buildJacketExtras,
+  hasIngredientLabelsRequested,
+} from "@/lib/customPricingInput";
 
-type PackagingSelection = {
-  optionId: string;
-  quantity: number;
-};
-
-type ExtrasSelection = {
-  jacket?: "rainbow" | "two_colour" | "pinstripe";
-};
-
-export type PricingInput = {
-  categoryId: string;
-  packaging: PackagingSelection[];
-  labelsCount?: number;
-  ingredientLabelsCount?: number;
-  dueDate?: string; // ISO date string
-  extras?: ExtrasSelection[];
-};
+export type PricingInput = CustomPricingInput;
 
 export type PricingBreakdown = {
   basePrice: number;

@@ -8,6 +8,7 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { ColorPaletteRow, LabelType, PackagingOption, QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
+import { buildCustomPricingInput, type PricingBreakdown } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
 import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
@@ -21,18 +22,6 @@ type PremadeSuggestion = {
   weightLabel: string;
   imageUrl: string;
   approx_pcs: number | null;
-};
-
-type PricingBreakdown = {
-  basePrice: number;
-  packagingPrice: number;
-  labelsPrice: number;
-  extrasPrice: number;
-  urgencyFee: number;
-  transactionFee: number;
-  total: number;
-  totalWeightKg: number;
-  items: Array<{ label: string; amount: number }>;
 };
 
 type Props = {
@@ -1151,17 +1140,6 @@ export function CheckoutClient({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const trackedBeginCheckoutRef = useRef(false);
 
-  const buildExtrasForItem = (item: CustomCartItem) => {
-    if (item.jacketExtras?.length) return item.jacketExtras;
-    if (item.jacket === "two_colour_pinstripe") {
-      return [{ jacket: "two_colour" as const }, { jacket: "pinstripe" as const }];
-    }
-    if (item.jacket === "two_colour") return [{ jacket: "two_colour" as const }];
-    if (item.jacket === "pinstripe") return [{ jacket: "pinstripe" as const }];
-    if (item.jacket === "rainbow") return [{ jacket: "rainbow" as const }];
-    return [];
-  };
-
   const resolveCustomMaxPackages = useCallback((item: CustomCartItem) => {
     const fromItem = Number(item.maxPackages);
     if (Number.isFinite(fromItem) && fromItem > 0) return Math.floor(fromItem);
@@ -1183,15 +1161,17 @@ export function CheckoutClient({
   }, [customItems, resolveCustomMaxPackages, updateQuantity]);
 
   const fetchPricing = useCallback(async (item: CustomCartItem, date?: string) => {
-    if (!item.categoryId || !item.packagingOptionId || !item.quantity) return null;
-    const extras = buildExtrasForItem(item);
-    const payload = {
+    const payload = buildCustomPricingInput({
       categoryId: item.categoryId,
-      packaging: [{ optionId: item.packagingOptionId, quantity: item.quantity }],
+      packagingOptionId: item.packagingOptionId,
+      quantity: item.quantity,
       labelsCount: item.labelsCount ?? 0,
+      ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
       dueDate: date || undefined,
-      extras: extras.length ? extras : undefined,
-    };
+      jacket: item.jacket ?? null,
+      jacketExtras: item.jacketExtras,
+    });
+    if (!payload) return null;
     const res = await fetch("/api/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1271,7 +1251,12 @@ export function CheckoutClient({
       } else {
         const override = pricingOverrides[item.id];
         if (override) {
-          const baseAmount = override.basePrice + override.packagingPrice + override.labelsPrice + override.extrasPrice;
+          const baseAmount =
+            override.basePrice +
+            override.packagingPrice +
+            override.labelsPrice +
+            override.ingredientLabelsPrice +
+            override.extrasPrice;
           baseSubtotal += baseAmount;
           urgencyTotal += override.urgencyFee;
           transactionTotal += override.transactionFee;
