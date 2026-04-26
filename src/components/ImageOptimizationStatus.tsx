@@ -7,10 +7,12 @@ export function ImageOptimizationStatus({
   summary,
   pendingLabel,
   helperText,
+  showOriginal = true,
 }: {
   summary: ImageOptimizationSummary | null;
   pendingLabel?: string | null;
   helperText?: string | null;
+  showOriginal?: boolean;
 }) {
   if (!summary && !pendingLabel && !helperText) return null;
 
@@ -19,9 +21,11 @@ export function ImageOptimizationStatus({
       {pendingLabel ? <p className="font-semibold text-zinc-900">{pendingLabel}</p> : null}
       {summary ? (
         <div className="space-y-1">
-          <p>
-            Original: {summary.originalType} • {formatBytes(summary.originalBytes)}
-          </p>
+          {showOriginal ? (
+            <p>
+              Original: {summary.originalType} • {formatBytes(summary.originalBytes)}
+            </p>
+          ) : null}
           <p>
             Stored as: {summary.finalType} • {formatBytes(summary.finalBytes)}
           </p>

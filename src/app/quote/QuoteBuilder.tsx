@@ -583,6 +583,7 @@ export function QuoteBuilder({
     SUBTITLE_BY_CATEGORY[categoryId] ?? categories.find((category) => category.id === categoryId)?.name ?? "";
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
+  const isAwaitingSelection = !result && !hasBasePrice;
   const subtitle = subtitleLabel;
   const deriveInitial = (value: string) => (value.trim().charAt(0) || "").toUpperCase();
   const handleSubtypeChange = (nextSubtype: string) => {
@@ -1297,7 +1298,9 @@ export function QuoteBuilder({
         <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
           <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
             <div
-              className={`relative min-w-[320px] border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:min-w-[420px] lg:shadow-lg ${
+              className={`relative border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg ${
+                isAwaitingSelection ? "min-w-0" : "min-w-[320px] lg:min-w-[420px]"
+              } ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
@@ -1707,12 +1710,14 @@ export function QuoteBuilder({
                             <ImageOptimizationStatus
                               summary={null}
                               pendingLabel="Optimising artwork..."
+                              showOriginal={false}
                             />
                           </div>
                         ) : labelImageSummary ? (
                           <div className="mt-2">
                             <ImageOptimizationStatus
                               summary={labelImageSummary}
+                              showOriginal={false}
                             />
                           </div>
                         ) : null}
