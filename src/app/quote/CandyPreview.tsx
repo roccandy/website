@@ -309,7 +309,7 @@ function OverlayText({
   const cx = 544.367;
   const cy = 659.802;
   const arcRadius = 320; // tuned to mimic the live site arc curvature
-  const fontFamily = "sans-serif";
+  const fontFamily = sora.style.fontFamily;
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
   const singleArcFontSize = 122;

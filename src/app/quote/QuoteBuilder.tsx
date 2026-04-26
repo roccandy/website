@@ -1273,7 +1273,7 @@ export function QuoteBuilder({
                   <div className="flex items-center justify-center gap-2 sm:justify-end sm:gap-2">
                     {!result && !hasBasePrice ? (
                       <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
-                        {loading ? "Calculating..." : "Select order type to see base price"}
+                        {loading ? "Calculating..." : "Select order type"}
                       </span>
                     ) : null}
                     {showSubtype && (

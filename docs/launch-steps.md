@@ -80,12 +80,12 @@ These are the env-var changes you can make before cutover without breaking `rocc
 
 ### Square
 
-- [x] Replace `NEXT_PUBLIC_SQUARE_APP_ID` with the live app ID.
-- [x] Replace `NEXT_PUBLIC_SQUARE_LOCATION_ID` with the live location ID.
-- [x] Set `NEXT_PUBLIC_SQUARE_ENV=production`.
-- [x] Replace `SQUARE_ACCESS_TOKEN` with the live access token.
-- [x] Replace `SQUARE_LOCATION_ID` with the live location ID.
-- [x] Clear `SQUARE_API_BASE` if it still points at sandbox, or set it to `https://connect.squareup.com`. #set to squareup
+- [] Replace `NEXT_PUBLIC_SQUARE_APP_ID` with the live app ID.
+- [] Replace `NEXT_PUBLIC_SQUARE_LOCATION_ID` with the live location ID.
+- [] Set `NEXT_PUBLIC_SQUARE_ENV=production`.
+- [] Replace `SQUARE_ACCESS_TOKEN` with the live access token.
+- [] Replace `SQUARE_LOCATION_ID` with the live location ID.
+- [] Clear `SQUARE_API_BASE` if it still points at sandbox, or set it to `https://connect.squareup.com`. #set to squareup
 
 ### PayPal
 
