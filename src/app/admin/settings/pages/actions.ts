@@ -41,19 +41,26 @@ function normalizeGalleryImageUrls(values: FormDataEntryValue[]) {
     .filter(Boolean);
 }
 
-function normalizeHomeCandyOptions(formData: FormData) {
+async function normalizeHomeCandyOptions(formData: FormData) {
   const labels = formData.getAll("homeCandyOptionLabel").map((value) => normalizeField(value));
   const hrefs = formData.getAll("homeCandyOptionHref").map((value) => normalizeField(value));
-  const images = formData.getAll("homeCandyOptionImage").map((value) => normalizeField(value));
 
-  return labels
-    .map((label, index) => {
+  const serializedOptions = await Promise.all(
+    labels.map(async (label, index) => {
       const href = hrefs[index] ?? "";
-      const image = images[index] ?? "";
+      const currentImage = normalizeField(formData.get(`homeCandyOptionImageCurrent-${index}`));
+      const imageFile = formData.get(`homeCandyOptionImageFile-${index}`);
+      const uploadedImage =
+        imageFile instanceof File && imageFile.size > 0
+          ? await uploadSeoImage(imageFile, `home-category-grid-${index + 1}`)
+          : null;
+      const image = uploadedImage?.publicUrl || currentImage || "";
       if (!label || !href || !image) return null;
       return serializeHomeCandyOption({ label, href, image });
-    })
-    .filter((value): value is string => Boolean(value));
+    }),
+  );
+
+  return serializedOptions.filter((value): value is string => Boolean(value));
 }
 
 function readCheckbox(formData: FormData, key: string) {
@@ -104,7 +111,7 @@ export async function updateSitePageAction(formData: FormData) {
   const previousPage = await getManagedSitePage(slug);
   const nextGalleryImageUrls =
     slug === "home"
-      ? normalizeHomeCandyOptions(formData)
+      ? await normalizeHomeCandyOptions(formData)
       : normalizeGalleryImageUrls(formData.getAll("galleryImageUrls"));
 
   await saveManagedSitePage({

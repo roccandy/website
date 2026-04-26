@@ -171,20 +171,28 @@ function HomeCandyGridEditor({
                 className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
               />
             </label>
-            <label className="block space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">Image path</span>
-              <input
-                type="text"
-                name="homeCandyOptionImage"
-                defaultValue={option.image}
-                readOnly={readOnly}
-                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-              />
-            </label>
-            <div
-              className="h-24 w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
-              style={{ backgroundImage: `url("${option.image}")` }}
-            />
+            <input type="hidden" name={`homeCandyOptionImageCurrent-${index}`} value={option.image} readOnly />
+            <div className="space-y-2">
+              {readOnly ? <p className="text-xs text-zinc-500">Tile image</p> : null}
+              {!readOnly ? (
+                <OptimizedImageFileInput
+                  name={`homeCandyOptionImageFile-${index}`}
+                  label="Tile image upload"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  maxWidth={2400}
+                  maxHeight={2400}
+                  quality={0.82}
+                  helperText="Upload a replacement image for this home page tile. Leave it empty to keep the current one."
+                />
+              ) : null}
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-500">Current tile image</p>
+                <div
+                  className="h-24 w-full rounded-lg border border-zinc-200 bg-zinc-100 bg-cover bg-center"
+                  style={{ backgroundImage: `url("${option.image}")` }}
+                />
+              </div>
+            </div>
           </div>
         ))}
       </div>
