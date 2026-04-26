@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
 import { capturePayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { toPublicPaymentError } from "@/lib/publicErrorMessages";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -22,7 +23,10 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as PayPalCaptureRequest;
     if (!body?.order || !body.orderId) {
-      return NextResponse.json({ error: "Order payload and PayPal order ID are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: toPublicPaymentError("Order payload and PayPal order ID are required.") },
+        { status: 400 },
+      );
     }
 
     const capture = await capturePayPalOrder(body.orderId);
@@ -44,6 +48,6 @@ export async function POST(request: Request) {
       stage: "capture",
       message,
     });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: toPublicPaymentError(message) }, { status: 400 });
   }
 }

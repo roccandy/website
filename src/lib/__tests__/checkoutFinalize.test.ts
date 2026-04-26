@@ -137,4 +137,28 @@ describe("finalizePaidCheckoutOrder", () => {
     expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
+
+  it("returns a warning when the Woo order is created but Supabase insert fails", async () => {
+    insert.mockResolvedValue({ error: { message: "insert failed" } });
+
+    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+
+    await expect(
+      finalizePaidCheckoutOrder({
+        order: baseOrder,
+        paymentProvider: "square",
+        paymentMethod: "square",
+        paymentMethodTitle: "Credit Card",
+        transactionId: "txn_789",
+      }),
+    ).resolves.toEqual({
+      wooOrderId: 456,
+      orderNumber: "000123",
+      adminEmailWarning:
+        "Your payment was received, but we had trouble finalising the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.",
+    });
+
+    expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
+    expect(sendAdminOrderSummaryEmail).toHaveBeenCalledTimes(1);
+  });
 });

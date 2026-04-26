@@ -21,6 +21,9 @@ export type FinalizePaidCheckoutResult = {
   adminEmailWarning: string | null;
 };
 
+const INTERNAL_ORDER_SAVE_WARNING =
+  "Your payment was received, but we had trouble finalising the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.";
+
 export async function finalizePaidCheckoutOrder({
   order,
   paymentProvider,
@@ -65,13 +68,14 @@ export async function finalizePaidCheckoutOrder({
     payment_transaction_id: transactionId,
   }));
 
+  let adminEmailWarning: string | null = null;
   const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
   if (insertError) {
     console.error("Supabase order insert failed:", insertError);
+    adminEmailWarning = INTERNAL_ORDER_SAVE_WARNING;
   }
 
   const recipients = getOrdersRecipients();
-  let adminEmailWarning: string | null = null;
   const emailTasks: Array<Promise<unknown>> = [];
   const firstCustomItem = order.customItems?.[0];
   const summaryEmailPayloadPromise = buildAdminOrderSummaryEmailPayload({

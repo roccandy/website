@@ -26,6 +26,7 @@ import {
 } from "@/lib/clientImageOptimization";
 import { buildDesignerPath, resolveDesignerState } from "@/lib/designUrls";
 import { sortPackagingTypes } from "@/lib/packaging";
+import { toPublicPricingError } from "@/lib/publicErrorMessages";
 import {
   buildPaletteGroups,
   clampByte,
@@ -584,7 +585,8 @@ export function QuoteBuilder({
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const isAwaitingSelection = !result && !hasBasePrice;
-  const minimumPriceBubbleWidth = isAwaitingSelection && !showSubtype ? 0 : 220;
+  const shouldUseCompactPriceBubble = !result && !showSubtype;
+  const minimumPriceBubbleWidth = shouldUseCompactPriceBubble ? 0 : 220;
   const subtitle = subtitleLabel;
   const deriveInitial = (value: string) => (value.trim().charAt(0) || "").toUpperCase();
   const handleSubtypeChange = (nextSubtype: string) => {
@@ -1059,7 +1061,7 @@ export function QuoteBuilder({
         });
         const data = (await res.json()) as QuoteResult & { error?: string };
         if (!res.ok) {
-          setError(data.error || "Unable to calculate");
+          setError(toPublicPricingError(data.error || "Unable to calculate"));
           setResult(null);
         } else {
           setResult(data);
@@ -1068,8 +1070,8 @@ export function QuoteBuilder({
       } catch (err) {
         if (controller.signal.aborted) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
-        const message = err instanceof Error ? err.message : "Unable to calculate";
-        setError(message);
+        const message = err instanceof Error ? err.message : null;
+        setError(toPublicPricingError(message));
         setResult(null);
       } finally {
         setLoading(false);
@@ -1349,7 +1351,7 @@ export function QuoteBuilder({
           <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
             <div
               className={`relative border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg ${
-                isAwaitingSelection ? "min-w-0" : "min-w-[320px] lg:min-w-[420px]"
+                shouldUseCompactPriceBubble || isAwaitingSelection ? "min-w-0" : "min-w-[320px] lg:min-w-[420px]"
               } ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}

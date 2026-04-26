@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
@@ -11,6 +12,7 @@ import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { buildCustomPricingInput } from "@/lib/customPricingInput";
 import type { PricingBreakdown } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
+import { toPublicPaymentError, toPublicPricingError } from "@/lib/publicErrorMessages";
 import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
 type PremadeSuggestion = {
@@ -261,7 +263,7 @@ function SquarePayment({
   useEffect(() => {
     if (initializedRef.current || initializingRef.current) return;
     if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
-      setSetupError("Square is not configured.");
+      setSetupError(toPublicPaymentError("Square is not configured."));
       return;
     }
     initializingRef.current = true;
@@ -290,7 +292,8 @@ function SquarePayment({
         setReady(true);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Square setup failed.";
-        setSetupError(message);
+        const friendlyMessage = toPublicPaymentError(message);
+        setSetupError(friendlyMessage);
         onError("setup", message);
         setDebugNote(`Square setup error: ${message}`);
         initializingRef.current = false;
@@ -307,7 +310,9 @@ function SquarePayment({
   return (
     <div className="space-y-4">
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
-      {debugNote ? <p className="mt-2 text-xs text-amber-600">{debugNote}</p> : null}
+      {process.env.NODE_ENV !== "production" && debugNote ? (
+        <p className="mt-2 text-xs text-amber-600">{debugNote}</p>
+      ) : null}
       <div className={selectedMethod === "apple_pay" ? "space-y-3" : "hidden"}>
         {!appleAvailable ? (
           <p className="text-sm text-zinc-500">
@@ -384,7 +389,7 @@ function PayPalPayment({
   useEffect(() => {
     if (renderedRef.current) return;
     if (!PAYPAL_CLIENT_ID) {
-      setSetupError("PayPal is not configured.");
+      setSetupError(toPublicPaymentError("PayPal is not configured."));
       return;
     }
     const sdkBase = PAYPAL_ENV === "sandbox" ? "https://www.sandbox.paypal.com" : "https://www.paypal.com";
@@ -431,13 +436,13 @@ function PayPalPayment({
                 const data = (await response.json().catch(() => ({}))) as { orderId?: string; error?: string };
                 if (!response.ok || !data.orderId) {
                   const message = data.error || "Unable to start PayPal.";
-                  setSetupError(message);
+                  setSetupError(toPublicPaymentError(message));
                   throw new Error(message);
                 }
                 return data.orderId;
               } catch (error) {
                 const message = error instanceof Error ? error.message : "Unable to start PayPal.";
-                setSetupError(message);
+                setSetupError(toPublicPaymentError(message));
                 throw error;
               } finally {
                 onProcessingChange({ active: false, title: "", message: "" });
@@ -477,7 +482,7 @@ function PayPalPayment({
             },
             onError: (err: unknown) => {
               const message = err instanceof Error ? err.message : "PayPal failed.";
-              setSetupError(message);
+              setSetupError(toPublicPaymentError(message));
               onProcessingChange({ active: false, title: "", message: "" });
               onError("flow", message);
             },
@@ -486,7 +491,7 @@ function PayPalPayment({
         renderedRef.current = true;
       } catch (error) {
         const message = error instanceof Error ? error.message : "PayPal setup failed.";
-        setSetupError(message);
+        setSetupError(toPublicPaymentError(message));
         onError("setup", message);
       }
     })();
@@ -638,11 +643,12 @@ function CartItemRow({
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-zinc-200 bg-white p-3">
         {item.imageUrl ? (
-          <img
+          <Image
             src={item.imageUrl}
             alt={item.name}
+            width={64}
+            height={64}
             className="h-16 w-16 rounded-lg border border-zinc-200 object-cover"
-            loading="lazy"
           />
         ) : (
           <div className="h-16 w-16 rounded-lg border border-zinc-200 bg-zinc-50" />
@@ -857,11 +863,12 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
                 >
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
                     {item.imageUrl ? (
-                      <img
+                      <Image
                         src={item.imageUrl}
                         alt={item.name}
+                        fill
                         className="h-full w-full object-cover"
-                        loading="lazy"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
                       />
                     ) : null}
                     <AddPremadeToCartButton
@@ -1170,7 +1177,7 @@ export function CheckoutClient({
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "Unable to update pricing");
+      throw new Error(toPublicPricingError(data.error || "Unable to update pricing"));
     }
     return (await res.json()) as PricingBreakdown;
   }, []);
@@ -1197,7 +1204,8 @@ export function CheckoutClient({
             return await fetchPricing(item, dueDate || undefined);
           } catch (error) {
             if (!errorMessage) {
-              errorMessage = error instanceof Error ? error.message : "Unable to update pricing";
+              errorMessage =
+                error instanceof Error ? error.message : toPublicPricingError("Unable to update pricing");
             }
             return null;
           }
@@ -1511,7 +1519,7 @@ export function CheckoutClient({
 
   const handlePaymentError = (provider: "square" | "paypal", stage: string, message: string) => {
     setPaymentProcessing({ active: false, title: "", message: "" });
-    setPaymentError(message);
+    setPaymentError(toPublicPaymentError(message));
     setAdminEmailWarning(null);
     void logPaymentFailure(provider, stage, message);
   };

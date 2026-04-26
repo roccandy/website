@@ -1,7 +1,7 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildCustomPricingInput, calculatePricing } from "@/lib/pricing";
 import { generateOrderNumber } from "@/lib/orderNumbers";
-import { getSettings } from "@/lib/data";
+import { getQuoteBlocks, getSettings, type QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
 
 const DEFAULT_COUNTRY = "AU";
@@ -53,6 +53,9 @@ type BuildContextResult = {
   totalAmount: number;
 };
 
+const isDateBlocked = (dateKey: string, blocks: QuoteBlock[]) =>
+  blocks.some((block) => dateKey >= block.start_date && dateKey <= block.end_date);
+
 function buildOrderNumbers(hasCustom: boolean, hasPremade: boolean, base: string): OrderNumberBundle {
   if (hasCustom && hasPremade) {
     return { baseOrderNumber: base, customOrderNumber: `${base}-a`, premadeOrderNumber: `${base}-b` };
@@ -101,13 +104,35 @@ function buildBilling(customer: CheckoutOrderPayload["customer"], pickup: boolea
 }
 
 function assertBasePayload(body: CheckoutOrderPayload) {
-  if (!body?.customer?.email || !body?.customer?.firstName || !body?.customer?.lastName) {
-    throw new Error("Customer details are required.");
+  if (!body?.customer?.firstName?.trim()) {
+    throw new Error("First name is required.");
+  }
+  if (!body?.customer?.lastName?.trim()) {
+    throw new Error("Last name is required.");
+  }
+  if (!body?.customer?.email?.trim()) {
+    throw new Error("Email address is required.");
+  }
+  if (!body?.customer?.phone?.trim()) {
+    throw new Error("Phone number is required.");
   }
   const customItems = body.customItems ?? [];
   const premadeItems = body.premadeItems ?? [];
   if (customItems.length === 0 && premadeItems.length === 0) {
     throw new Error("Cart is empty.");
+  }
+  if (customItems.length > 0 && !body.dueDate?.trim()) {
+    throw new Error("Requested date is required.");
+  }
+  if (!body.pickup) {
+    if (
+      !body.customer.addressLine1?.trim() ||
+      !body.customer.suburb?.trim() ||
+      !body.customer.postcode?.trim() ||
+      !body.customer.state?.trim()
+    ) {
+      throw new Error("Delivery address is incomplete.");
+    }
   }
 
   const hasBrandedCustomItems = customItems.some((item) => item.categoryId === "branded" || item.designType === "branded");
@@ -172,11 +197,19 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const dueDate = body.dueDate ?? null;
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
+  const settings = await getSettings();
+  if (hasCustom && dueDate) {
+    const quoteBlocks = await getQuoteBlocks();
+    if (isDateBlocked(dueDate, quoteBlocks)) {
+      throw new Error("Selected date is unavailable.");
+    }
+  }
   const customer = body.customer;
   const organizationName = customer.organizationName?.trim() || null;
   const billing = buildBilling(customer, pickup);
   const lineItems: WooLineItem[] = [];
   let premadeSubtotal = 0;
+  let totalOrderWeightKg = 0;
   const orderPayloads: OrderInsertPayload[] = [];
 
   const baseOrderNumber = await generateOrderNumber();
@@ -189,6 +222,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
       customProductId!
     );
     lineItems.push(lineItem);
+    totalOrderWeightKg += totalWeightKg;
     orderPayloads.push({
       order_number: orderNumbers.customOrderNumber,
       title: item.categoryId === "branded" || item.designType === "branded" ? organizationName : item.title?.trim() || null,
@@ -245,6 +279,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     const weightKg = (premade.weight_g * item.quantity) / 1000;
     const totalPrice = premade.price * item.quantity;
     premadeSubtotal += totalPrice;
+    totalOrderWeightKg += weightKg;
 
     lineItems.push({
       product_id: Number(premade.woo_product_id),
@@ -281,10 +316,13 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     });
   }
 
+  if (totalOrderWeightKg > Number(settings.max_total_kg)) {
+    throw new Error(`Max total kg is ${settings.max_total_kg}.`);
+  }
+
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
   let premadeTransactionFee = 0;
   if (premadeSubtotal > 0) {
-    const settings = await getSettings();
     const percent = Number(settings.transaction_fee_percent ?? 0);
     if (Number.isFinite(percent) && percent > 0) {
       premadeTransactionFee = premadeSubtotal * (percent / 100);

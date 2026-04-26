@@ -3,6 +3,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getSettings } from "@/lib/data";
 import { generateOrderNumber, normalizeBaseOrderNumber, normalizeOrderNumber } from "@/lib/orderNumbers";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
+import { toPublicCheckoutError } from "@/lib/publicErrorMessages";
 
 type OrderPayload = {
   orderNumber?: string;
@@ -65,12 +66,15 @@ export async function POST(req: Request) {
     const totalWeightKg = Number(body.totalWeightKg);
 
     if (!Number.isFinite(totalWeightKg) || totalWeightKg <= 0) {
-      return NextResponse.json({ error: "Order weight is required." }, { status: 400 });
+      return NextResponse.json({ error: toPublicCheckoutError("Order weight is required.") }, { status: 400 });
     }
 
     const settings = await getSettings();
     if (totalWeightKg > settings.max_total_kg) {
-      return NextResponse.json({ error: `Max total kg is ${settings.max_total_kg}.` }, { status: 400 });
+      return NextResponse.json(
+        { error: toPublicCheckoutError(`Max total kg is ${settings.max_total_kg}.`) },
+        { status: 400 },
+      );
     }
 
     const client = supabaseAdminClient;
@@ -81,7 +85,10 @@ export async function POST(req: Request) {
     const organizationName = body.organizationName?.trim() || null;
     const isBranded = body.categoryId === "branded" || body.designType === "branded";
     if (isBranded && !organizationName) {
-      return NextResponse.json({ error: "Organisation name is required for branded candy orders." }, { status: 400 });
+      return NextResponse.json(
+        { error: toPublicCheckoutError("Organisation name is required for branded candy orders.") },
+        { status: 400 },
+      );
     }
     const title = isBranded ? organizationName : body.title?.trim() || null;
     const order_description = body.description?.trim() || null;
@@ -95,7 +102,10 @@ export async function POST(req: Request) {
         .select("start_date,end_date");
       if (quoteError) throw new Error(quoteError.message);
       if (isDateBlocked(due_date, (quoteBlocks ?? []) as QuoteBlockRow[])) {
-        return NextResponse.json({ error: "Selected date is unavailable." }, { status: 400 });
+        return NextResponse.json(
+          { error: toPublicCheckoutError("Selected date is unavailable.") },
+          { status: 400 },
+        );
       }
     }
 
@@ -196,6 +206,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: data.id, orderNumber: data.order_number ?? null });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unable to place order";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: toPublicCheckoutError(message) }, { status: 400 });
   }
 }

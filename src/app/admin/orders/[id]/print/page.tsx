@@ -1,4 +1,5 @@
-﻿import { getServerSession } from "next-auth";
+﻿import Image from "next/image";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -369,9 +370,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       rel="noreferrer"
                       className="block h-16 w-16 shrink-0 overflow-hidden rounded border border-zinc-200 bg-white"
                     >
-                      <img
+                      <Image
                         src={labelImageUrl}
                         alt="Label preview"
+                        width={64}
+                        height={64}
                         className="h-full w-full object-cover"
                       />
                     </a>

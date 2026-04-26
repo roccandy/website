@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
 import { logPaymentFailure } from "@/lib/paymentFailures";
+import { toPublicPaymentError } from "@/lib/publicErrorMessages";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
@@ -33,14 +34,17 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SquarePaymentRequest;
     if (!body?.order || !body.sourceId) {
-      return NextResponse.json({ error: "Order payload and payment source are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: toPublicPaymentError("Order payload and payment source are required.") },
+        { status: 400 },
+      );
     }
 
     const accessToken = process.env.SQUARE_ACCESS_TOKEN?.trim();
     const locationId = process.env.SQUARE_LOCATION_ID?.trim();
     const apiBase = process.env.SQUARE_API_BASE?.trim() || "https://connect.squareup.com";
     if (!accessToken || !locationId) {
-      return NextResponse.json({ error: "Square is not configured." }, { status: 500 });
+      return NextResponse.json({ error: toPublicPaymentError("Square is not configured.") }, { status: 500 });
     }
 
     const { totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
         customerEmail,
         orderTotal: totalAmount,
       });
-      return NextResponse.json({ error: "Invalid order total." }, { status: 400 });
+      return NextResponse.json({ error: toPublicPaymentError("Invalid order total.") }, { status: 400 });
     }
 
     const charge = await fetch(`${apiBase}/v2/payments`, {
@@ -86,7 +90,7 @@ export async function POST(request: Request) {
         customerEmail,
         orderTotal: totalAmount,
       });
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json({ error: toPublicPaymentError(message) }, { status: 400 });
     }
 
     const paymentMethodTitle = body.paymentMethodTitle?.trim() || "Square";
@@ -106,6 +110,6 @@ export async function POST(request: Request) {
       stage: "server",
       message,
     });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: toPublicPaymentError(message) }, { status: 400 });
   }
 }

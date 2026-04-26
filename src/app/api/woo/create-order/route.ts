@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createWooOrder } from "@/lib/woo";
+import { createWooOrder, updateWooOrder } from "@/lib/woo";
+import { toPublicCheckoutError } from "@/lib/publicErrorMessages";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     });
 
     if (!wooOrder?.payment_url) {
-      return NextResponse.json({ error: "Woo payment URL missing." }, { status: 500 });
+      return NextResponse.json({ error: toPublicCheckoutError("Woo payment URL missing.") }, { status: 500 });
     }
 
     const enrichedPayloads = orderPayloads.map((payload) => ({
@@ -41,11 +42,27 @@ export async function POST(request: Request) {
     const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
     if (insertError) {
       console.error("Supabase order insert failed:", insertError);
+      try {
+        await updateWooOrder(String(wooOrder.id), {
+          status: "cancelled",
+          customer_note: "Cancelled automatically because the internal order record could not be created.",
+        });
+      } catch (rollbackError) {
+        console.error("Woo order rollback failed after Supabase insert error:", rollbackError);
+      }
+      return NextResponse.json(
+        {
+          error: toPublicCheckoutError(
+            "We could not save your order details internally after starting checkout.",
+          ),
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ paymentUrl: wooOrder.payment_url });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create Woo order";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: toPublicCheckoutError(message) }, { status: 400 });
   }
 }

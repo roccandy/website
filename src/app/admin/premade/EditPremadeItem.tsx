@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -354,11 +355,12 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
         <div className="flex flex-col gap-3 md:flex-row md:items-start">
           <div className="w-full md:w-32">
             {imageUrl ? (
-              <img
+              <Image
                 src={imageUrl}
                 alt={item.name}
+                width={128}
+                height={96}
                 className="h-24 w-full rounded-lg border border-zinc-200 object-cover"
-                loading="lazy"
               />
             ) : (
               <div className="h-24 w-full rounded-lg border border-zinc-200 bg-zinc-50" />
@@ -521,11 +523,12 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
       <div className="flex flex-col gap-4 md:flex-row">
         <div className="w-full md:w-40">
           {imageUrl ? (
-            <img
+            <Image
               src={imageUrl}
               alt={item.name}
+              width={160}
+              height={128}
               className="h-32 w-full rounded-lg border border-zinc-200 object-cover"
-              loading="lazy"
             />
           ) : (
             <div className="h-32 w-full rounded-lg border border-zinc-200 bg-zinc-50" />
