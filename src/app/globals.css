@@ -1093,7 +1093,7 @@ textarea::placeholder {
   }
 
   body:not([data-admin="true"]) button[data-segmented][data-active="true"] {
-    background-color: #fbd6e3 !important;
+    background-color: #f6c3d5 !important;
     color:  #e91e63 !important;
   }
 

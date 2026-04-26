@@ -911,7 +911,7 @@ export function QuoteBuilder({
       missing.push("Label artwork");
     }
     if (labelsOptIn && !labelTypeValid) {
-      missing.push("Label type");
+      missing.push("Custom Label type");
     }
     return missing;
   }, [
@@ -1571,7 +1571,7 @@ export function QuoteBuilder({
             </div>
 
             <div className="mt-4 w-full border-t border-zinc-200 pt-4">
-              <h2 className="site-small-title text-zinc-900">Labels (optional)</h2>
+              <h2 className="site-small-title text-zinc-900">Custom Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
@@ -1624,7 +1624,7 @@ export function QuoteBuilder({
                                   aria-pressed={isActive}
                                   className="inline-flex w-full items-center justify-between rounded-full px-3 py-2 text-left text-[11px] font-semibold normal-case tracking-[0.08em] transition"
                                   style={{
-                                    backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                                    backgroundColor: isActive ? "rgb(242,215,227)" : "rgb(250,243,247)",
                                     borderColor: "rgb(239,232,239)",
                                     borderWidth: "0.5px",
                                     borderStyle: "solid",
@@ -1643,7 +1643,7 @@ export function QuoteBuilder({
                       </div>
                       {hasBulkSelection && (
                         <label className="block text-xs text-zinc-600">
-                          Labels Count (Max {settings.labels_max_bulk})
+                          Custom Labels Count (Max {settings.labels_max_bulk})
                           <input
                             type="number"
                             min={0}
@@ -1707,14 +1707,12 @@ export function QuoteBuilder({
                             <ImageOptimizationStatus
                               summary={null}
                               pendingLabel="Optimising artwork..."
-                              helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
                             />
                           </div>
                         ) : labelImageSummary ? (
                           <div className="mt-2">
                             <ImageOptimizationStatus
                               summary={labelImageSummary}
-                              helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
                             />
                           </div>
                         ) : null}

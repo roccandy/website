@@ -925,7 +925,7 @@ export function NewOrderForm({
                 ) : null}
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Labels count
+                Custom Labels count
                 <input
                   type="number"
                   name="labels_count"

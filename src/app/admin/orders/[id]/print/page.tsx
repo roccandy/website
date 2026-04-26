@@ -456,7 +456,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
               </p>
               <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Labels to print:</span>
+                <span className={SPEC_LABEL_CLASS}>Custom Labels to print:</span>
                 <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
               </p>
             </div>

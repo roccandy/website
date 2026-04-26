@@ -186,7 +186,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
         label: `Packaging (qty - ${selectedPackaging.reduce((sum, sel) => sum + sel.quantity, 0)})`,
         amount: packagingPrice,
       },
-      { label: "Labels", amount: labelsPrice },
+      { label: "Custom Labels", amount: labelsPrice },
       { label: "Ingredient labels", amount: ingredientLabelsPrice },
       { label: "Extras", amount: extrasPrice },
       { label: "Urgency", amount: urgencyFee },
