@@ -21,7 +21,6 @@ const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
 const OPEN_OVERRIDE_REASON = "Open override";
 const MANUAL_BLOCK_REASON = "Manual block";
-const QUOTE_BLOCK_REASON = "Front-end block";
 const INGREDIENT_LABELS_NOTE = "Ingredient labels requested.";
 const ORDER_SUFFIX_PATTERN = /-[a-z]+$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
@@ -60,25 +59,9 @@ const isNoProductionDay = (slotDate: string, settings: Awaited<ReturnType<typeof
   return settings.no_production_sat;
 };
 
-async function assertAssignableDate(slotDate: string, client: typeof supabaseAdminClient) {
+async function assertAssignableDate(slotDate: string) {
   const settings = await getSettings();
-  const { data: blocks, error } = await client
-    .from("production_blocks")
-    .select("reason")
-    .lte("start_date", slotDate)
-    .gte("end_date", slotDate);
-  if (error) throw new Error(error.message);
-
-  const hasOpenOverride = (blocks ?? []).some((block) => (block.reason ?? "").trim().toLowerCase() === OPEN_OVERRIDE_REASON.toLowerCase());
-  const manualBlock = (blocks ?? []).find(
-    (block) => (block.reason ?? "").trim().toLowerCase() !== OPEN_OVERRIDE_REASON.toLowerCase(),
-  );
-
-  if (manualBlock) {
-    throw new Error(manualBlock.reason || "This production date is blocked.");
-  }
-
-  if (isNoProductionDay(slotDate, settings) && !hasOpenOverride) {
+  if (isNoProductionDay(slotDate, settings)) {
     throw new Error("This production date is unavailable.");
   }
 }
@@ -515,7 +498,7 @@ export async function upsertOrder(formData: FormData) {
       }
 
       if (isAdminPremade && shouldScheduleAfterCreate && productionSlotDate) {
-        await assertAssignableDate(productionSlotDate, client);
+        await assertAssignableDate(productionSlotDate);
         const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
         const slotIndex = await resolveFirstAvailableSlotIndex(productionSlotDate, client, slotsPerDay);
         if (slotIndex === null) {
@@ -750,7 +733,7 @@ export async function assignOrderToSlot(formData: FormData) {
     let resolvedSlotId = slot_id;
 
     if (slot_date) {
-      await assertAssignableDate(slot_date, client);
+      await assertAssignableDate(slot_date);
     }
 
     const { data: order, error: orderError } = await client
@@ -823,7 +806,7 @@ export async function assignOrderToSlot(formData: FormData) {
       if (slotDateError) throw new Error(slotDateError.message);
       if (slotDateRow?.slot_date) {
         resolvedSlotDate = slotDateRow.slot_date;
-        await assertAssignableDate(slotDateRow.slot_date, client);
+        await assertAssignableDate(slotDateRow.slot_date);
       }
     }
 
@@ -1428,82 +1411,6 @@ export async function removeManualBlock(formData: FormData) {
     summary: `Removed the manual production block for ${date}.`,
     path: ORDERS_PATH,
     changedFields: ["Production block"],
-  });
-  redirect(ORDERS_PATH);
-}
-
-export async function addQuoteBlock(formData: FormData) {
-  await requireAdminWriteAccess({ onDenied: "redirect" });
-  const start_date = formData.get("start_date")?.toString();
-  const end_date = formData.get("end_date")?.toString();
-  if (!start_date) throw new Error("Start date is required.");
-  const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
-
-  const client = supabaseAdminClient;
-  const { error } = await client.from("quote_blocks").insert({
-    start_date,
-    end_date: resolvedEnd,
-    reason: QUOTE_BLOCK_REASON,
-  });
-  if (error) throw new Error(error.message);
-
-  await logAdminActivity({
-    area: "operations",
-    action: "created",
-    entityType: "quote-block",
-    entityLabel: start_date,
-    summary: `Added a front-end quote block from ${start_date} to ${resolvedEnd}.`,
-    path: ORDERS_PATH,
-    changedFields: ["Quote block"],
-  });
-  redirect(ORDERS_PATH);
-}
-
-export async function removeQuoteBlock(formData: FormData) {
-  await requireAdminWriteAccess({ onDenied: "redirect" });
-  const id = formData.get("id")?.toString();
-  if (!id) throw new Error("Block id is required.");
-
-  const client = supabaseAdminClient;
-  const { error } = await client.from("quote_blocks").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-
-  await logAdminActivity({
-    area: "operations",
-    action: "deleted",
-    entityType: "quote-block",
-    entityId: id,
-    entityLabel: id,
-    summary: "Removed a front-end quote block.",
-    path: ORDERS_PATH,
-    changedFields: ["Quote block"],
-  });
-  redirect(ORDERS_PATH);
-}
-
-export async function removeQuoteBlockRange(formData: FormData) {
-  await requireAdminWriteAccess({ onDenied: "redirect" });
-  const start_date = formData.get("start_date")?.toString();
-  const end_date = formData.get("end_date")?.toString();
-  if (!start_date) throw new Error("Start date is required.");
-  const resolvedEnd = end_date && end_date.length > 0 ? end_date : start_date;
-
-  const client = supabaseAdminClient;
-  const [{ error: quoteError }, { error: productionError }] = await Promise.all([
-    client.from("quote_blocks").delete().eq("start_date", start_date).eq("end_date", resolvedEnd),
-    client.from("production_blocks").delete().eq("start_date", start_date).eq("end_date", resolvedEnd),
-  ]);
-  if (quoteError) throw new Error(quoteError.message);
-  if (productionError) throw new Error(productionError.message);
-
-  await logAdminActivity({
-    area: "operations",
-    action: "deleted",
-    entityType: "quote-block",
-    entityLabel: `${start_date} to ${resolvedEnd}`,
-    summary: `Removed the front-end block from ${start_date} to ${resolvedEnd}.`,
-    path: ORDERS_PATH,
-    changedFields: ["Quote block"],
   });
   redirect(ORDERS_PATH);
 }

@@ -19,7 +19,6 @@ import type {
   OrderSlot,
   PackagingOption,
   PremadeCandy,
-  ProductionBlock,
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
@@ -305,7 +304,6 @@ type Props = {
   orders: OrderRow[];
   slots: ProductionSlot[];
   assignments: OrderSlot[];
-  blocks: ProductionBlock[];
 };
 
 export function NewOrderForm({
@@ -318,7 +316,6 @@ export function NewOrderForm({
   orders,
   slots,
   assignments,
-  blocks,
 }: Props) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -1508,16 +1505,15 @@ export function NewOrderForm({
       ) : null}
 
       {productionSlotPickerOpen ? (
-        <AssignmentCalendarModal
-          order={productionCalendarOrder}
-          allOrders={orders}
-          assignments={assignments}
-          slots={slots}
-          blocks={blocks}
-          settings={settings}
-          onClose={() => {
-            setProductionSlotPickerOpen(false);
-            setSubmitAfterCalendarPick(false);
+      <AssignmentCalendarModal
+        order={productionCalendarOrder}
+        allOrders={orders}
+        assignments={assignments}
+        slots={slots}
+        settings={settings}
+        onClose={() => {
+          setProductionSlotPickerOpen(false);
+          setSubmitAfterCalendarPick(false);
           }}
           mode="pick"
           onPickSlot={({ slotDate }) => {

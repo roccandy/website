@@ -4,9 +4,7 @@ import {
   getFlavors,
   getOrders,
   getOrderSlots,
-  getProductionBlocks,
   getProductionSlots,
-  getQuoteBlocks,
 } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -14,7 +12,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
-import { FrontEndCalendarButton } from "./FrontEndCalendarButton";
 import { buildCustomPricingInput, buildPricingContext, calculatePricingWithContext } from "@/lib/pricing";
 import { isProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
 
@@ -34,19 +31,16 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
 
-  const [orders, slots, assignments, blocks, pricingContext, flavors, palette, categories, quoteBlocks, activityLog] =
-    await Promise.all([
-      getOrders(),
-      getProductionSlots(),
-      getOrderSlots(),
-      getProductionBlocks(),
-      buildPricingContext(),
-      getFlavors(),
-      getColorPalette(),
-      getCategories(),
-      getQuoteBlocks(),
-      listRecentAdminActivity(200),
-    ]);
+  const [orders, slots, assignments, pricingContext, flavors, palette, categories, activityLog] = await Promise.all([
+    getOrders(),
+    getProductionSlots(),
+    getOrderSlots(),
+    buildPricingContext(),
+    getFlavors(),
+    getColorPalette(),
+    getCategories(),
+    listRecentAdminActivity(200),
+  ]);
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   const pricingByOrderId: Record<string, ReturnType<typeof calculatePricingWithContext> | null> = {};
   orders.forEach((order) => {
@@ -88,7 +82,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
           >
             Create order
           </Link>
-          <FrontEndCalendarButton blocks={quoteBlocks} />
           <Link
             href="/admin/settings/production"
             className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
@@ -102,7 +95,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         orders={orders}
         slots={slots}
         assignments={assignments}
-        blocks={blocks}
         settings={pricingContext.settings}
         packagingOptions={pricingContext.packagingOptions}
         categories={categories}

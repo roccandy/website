@@ -5,7 +5,6 @@ import {
   getOrderSlots,
   getPackagingOptions,
   getPremadeCandies,
-  getProductionBlocks,
   getProductionSlots,
   getSettings,
   getOrders,
@@ -24,7 +23,7 @@ export default async function NewOrderPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
 
-  const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments, blocks] = await Promise.all([
+  const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getFlavors(),
@@ -34,7 +33,6 @@ export default async function NewOrderPage() {
     getOrders(),
     getProductionSlots(),
     getOrderSlots(),
-    getProductionBlocks(),
   ]);
 
   return (
@@ -63,7 +61,6 @@ export default async function NewOrderPage() {
         orders={orders}
         slots={slots}
         assignments={assignments}
-        blocks={blocks}
       />
     </section>
   );

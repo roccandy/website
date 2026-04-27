@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { getSettings } from "@/lib/data";
+import { getQuoteBlocks, getSettings } from "@/lib/data";
 import { generateOrderNumber, normalizeBaseOrderNumber, normalizeOrderNumber } from "@/lib/orderNumbers";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
 import { toPublicCheckoutError } from "@/lib/publicErrorMessages";
@@ -98,11 +98,8 @@ export async function POST(req: Request) {
     const state = body.state?.trim() || null;
     const location = body.location?.trim() || null;
     if (due_date) {
-      const { data: quoteBlocks, error: quoteError } = await client
-        .from("quote_blocks")
-        .select("start_date,end_date");
-      if (quoteError) throw new Error(quoteError.message);
-      if (isDateBlocked(due_date, (quoteBlocks ?? []) as QuoteBlockRow[])) {
+      const quoteBlocks = await getQuoteBlocks();
+      if (isDateBlocked(due_date, quoteBlocks as QuoteBlockRow[])) {
         return NextResponse.json(
           { error: toPublicCheckoutError("Selected date is unavailable.") },
           { status: 400 },

@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
-import { addManualBlock, archiveOrderInline, assignOrderToSlot } from "./actions";
+import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
+import { archiveOrderInline, assignOrderToSlot } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
@@ -26,7 +26,6 @@ type Props = {
   orders: OrderRow[];
   slots: ProductionSlot[];
   assignments: OrderSlot[];
-  blocks: ProductionBlock[];
   settings: SettingsRow;
   unassignedOrders: OrderRow[];
 };
@@ -35,7 +34,6 @@ export default function ProductionScheduleSection({
   orders,
   slots,
   assignments,
-  blocks,
   settings,
   unassignedOrders,
 }: Props) {
@@ -79,9 +77,9 @@ export default function ProductionScheduleSection({
     () =>
       calendarDays.filter((day) => {
         if (day.getMonth() !== calendarMonth.getMonth()) return false;
-        return !isScheduleDateBlocked(day, settings, blocks).blocked;
+        return !isScheduleDateBlocked(day, settings).blocked;
       }),
-    [blocks, calendarDays, calendarMonth, settings],
+    [calendarDays, calendarMonth, settings],
   );
 
   const weekDays = useMemo(() => {
@@ -94,8 +92,8 @@ export default function ProductionScheduleSection({
     });
   }, [calendarMonth]);
   const visibleWeekDays = useMemo(
-    () => weekDays.filter((day) => !isScheduleDateBlocked(day, settings, blocks).blocked),
-    [blocks, settings, weekDays],
+    () => weekDays.filter((day) => !isScheduleDateBlocked(day, settings).blocked),
+    [settings, weekDays],
   );
 
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
@@ -207,7 +205,7 @@ export default function ProductionScheduleSection({
                     key={key}
                     className={`rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                           {day.toLocaleDateString(undefined, { weekday: "short" })}
@@ -216,15 +214,6 @@ export default function ProductionScheduleSection({
                           {day.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                         </p>
                       </div>
-                      <form action={addManualBlock}>
-                        <input type="hidden" name="date" value={key} />
-                        <button
-                          type="submit"
-                          className="rounded border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold text-zinc-600 hover:border-zinc-300"
-                        >
-                          Block
-                        </button>
-                      </form>
                     </div>
                     <div className="mt-2 space-y-1.5">
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
@@ -381,17 +370,8 @@ export default function ProductionScheduleSection({
                     key={key}
                     className={`rounded-lg border px-3 py-3 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200 bg-white"}`}
                   >
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center text-sm">
                       <span className="font-semibold text-zinc-900">{label}</span>
-                      <form action={addManualBlock}>
-                        <input type="hidden" name="date" value={key} />
-                        <button
-                          type="submit"
-                          className="rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300"
-                        >
-                          Block day
-                        </button>
-                      </form>
                     </div>
                     <div className="mt-3 grid gap-2">
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
@@ -608,7 +588,6 @@ export default function ProductionScheduleSection({
           assignment={assignmentModalAssignment}
           assignments={assignments}
           slots={slots}
-          blocks={blocks}
           settings={settings}
           onClose={closeAssignmentModal}
         />

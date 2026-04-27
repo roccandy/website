@@ -203,18 +203,16 @@ export const blockReasonForDate = (key: string, blocks: ProductionBlock[]) => {
 export const hasOpenOverrideForDate = (key: string, blocks: ProductionBlock[]) =>
   blocks.some((block) => key >= block.start_date && key <= block.end_date && isOpenOverride(block.reason));
 
-export const isScheduleDateBlocked = (date: Date, settings: SettingsRow, blocks: ProductionBlock[]) => {
+export const isScheduleDateBlocked = (date: Date, settings: SettingsRow) => {
   const key = dateKey(date);
   const defaultBlocked = isBlockedByDefault(date, settings);
-  const reason = blockReasonForDate(key, blocks);
-  const hasOpenOverride = hasOpenOverrideForDate(key, blocks);
 
   return {
     key,
     defaultBlocked,
-    reason,
-    hasOpenOverride,
-    blocked: (defaultBlocked && !hasOpenOverride) || Boolean(reason),
+    reason: null,
+    hasOpenOverride: false,
+    blocked: defaultBlocked,
   };
 };
 

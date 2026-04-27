@@ -299,21 +299,10 @@ export async function getProductionBlocks() {
 
 export async function getQuoteBlocks() {
   const client = supabaseAdminClient;
-  const [quoteResult, productionResult, settingsResult] = await Promise.all([
-    client.from("quote_blocks").select("*"),
+  const [productionResult, settingsResult] = await Promise.all([
     client.from("production_blocks").select("*"),
     client.from("settings").select("quote_blockout_months").eq("id", 1).maybeSingle(),
   ]);
-
-  let quoteBlocks: QuoteBlock[] = [];
-  if (quoteResult.error) {
-    const message = quoteResult.error.message?.toLowerCase() ?? "";
-    if (!message.includes("quote_blocks") && !message.includes("schema cache")) {
-      throw new Error(quoteResult.error.message);
-    }
-  } else {
-    quoteBlocks = quoteResult.data as QuoteBlock[];
-  }
 
   if (productionResult.error) {
     throw new Error(productionResult.error.message);
@@ -367,9 +356,6 @@ export async function getQuoteBlocks() {
 
   const deduped = new Map<string, QuoteBlock>();
   for (const block of derivedBlocks) {
-    deduped.set(`${block.start_date}:${block.end_date}`, block);
-  }
-  for (const block of quoteBlocks) {
     deduped.set(`${block.start_date}:${block.end_date}`, block);
   }
 

@@ -359,13 +359,13 @@ export default async function SettingsProductionPage() {
 
         <div className="space-y-3">
           <div>
-            <h4 className="admin-card-title text-zinc-900">No-production blockouts</h4>
+            <h4 className="admin-card-title text-zinc-900">Website blockouts</h4>
             <p className="text-xs text-zinc-500">
-              Block dates for holidays etc. Any dates blocked here will show up on the website as
+              Block dates for holidays etc. Customers will see these dates as unavailable, and the
               {" "}
-              <span className="font-semibold text-zinc-700">&quot;Production full between A and B&quot;</span>.
+              <span className="font-semibold text-zinc-700">&quot;Production full between A and B&quot;</span>
               {" "}
-              This will appear on the website X months before the blocked period starts.
+              banner will appear on the website X months before the blocked period starts.
             </p>
           </div>
           <form action={updateBlockoutVisibilityWindow} className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">

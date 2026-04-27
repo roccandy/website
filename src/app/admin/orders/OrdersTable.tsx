@@ -8,7 +8,6 @@ import type {
   OrderRow,
   OrderSlot,
   PackagingOption,
-  ProductionBlock,
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
@@ -50,7 +49,6 @@ type Props = {
   orders: OrderRow[];
   slots: ProductionSlot[];
   assignments: OrderSlot[];
-  blocks: ProductionBlock[];
   settings: SettingsRow;
   packagingOptions: PackagingOption[];
   categories: Category[];
@@ -75,7 +73,6 @@ export function OrdersTable({
   orders,
   slots,
   assignments,
-  blocks,
   settings,
   packagingOptions,
   categories,
@@ -1120,7 +1117,6 @@ export function OrdersTable({
         orders={orders}
         slots={slots}
         assignments={assignments}
-        blocks={blocks}
         settings={settings}
         unassignedOrders={unassignedOrders}
       />
@@ -1131,7 +1127,6 @@ export function OrdersTable({
           assignment={assignmentModalAssignment}
           assignments={assignments}
           slots={slots}
-          blocks={blocks}
           settings={settings}
           onClose={() => setAssignmentModalOrderId(null)}
         />

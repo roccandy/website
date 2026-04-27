@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { OrderRow, OrderSlot, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
+import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
 import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actions";
 import SplitOrderDecisionModal from "./SplitOrderDecisionModal";
 import {
@@ -24,7 +24,6 @@ type Props = {
   assignment?: { assignment: OrderSlot; slot: ProductionSlot | null } | null;
   assignments: OrderSlot[];
   slots: ProductionSlot[];
-  blocks: ProductionBlock[];
   settings: SettingsRow;
   onClose: () => void;
   mode?: "assign" | "pick";
@@ -54,7 +53,6 @@ export default function AssignmentCalendarModal({
   assignment = null,
   assignments,
   slots,
-  blocks,
   settings,
   onClose,
   mode = "assign",
@@ -78,7 +76,7 @@ export default function AssignmentCalendarModal({
     () =>
       monthCells.map((day) => {
         if (!day) return null;
-        const status = isScheduleDateBlocked(day, settings, blocks);
+        const status = isScheduleDateBlocked(day, settings);
         const availableSlotIndex = status.blocked
           ? null
           : findFirstAvailableSlotIndexForDate({
@@ -121,7 +119,7 @@ export default function AssignmentCalendarModal({
           blocked: status.blocked,
         };
       }),
-    [assignment?.assignment.id, assignment?.slot?.slot_date, assignments, blocks, monthCells, settings, slots, slotsPerDay, todayKey],
+    [assignment?.assignment.id, assignment?.slot?.slot_date, assignments, monthCells, settings, slots, slotsPerDay, todayKey],
   );
 
   const actionLabel = mode === "pick" ? "Pick production slot" : assignment ? "Change assignment" : "Assign";
