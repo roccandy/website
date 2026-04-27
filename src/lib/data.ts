@@ -56,7 +56,6 @@ export type SettingsRow = {
   id: number;
   lead_time_days: number;
   urgency_fee: number;
-  transaction_fee_percent: number;
   quote_blockout_months: number | null;
   production_slots_per_day: number;
   no_production_mon: boolean;

@@ -36,7 +36,6 @@ type Props = {
   packagingOptions: PackagingOption[];
   urgencyFeePercent: number;
   urgencyPeriodDays: number;
-  transactionFeePercent: number;
   productionBlockoutMessage?: string | null;
 };
 
@@ -1070,7 +1069,6 @@ export function CheckoutClient({
   packagingOptions,
   urgencyFeePercent,
   urgencyPeriodDays,
-  transactionFeePercent,
   productionBlockoutMessage,
 }: Props) {
   const router = useRouter();
@@ -1231,9 +1229,7 @@ export function CheckoutClient({
   const cartPricing = useMemo(() => {
     let baseSubtotal = 0;
     let urgencyTotal = 0;
-    let transactionTotal = 0;
     let count = 0;
-    let premadeSubtotal = 0;
     let hasPending = false;
     const itemLines: Array<{ id: string; label: string; amount: number; pending?: boolean }> = [];
 
@@ -1241,7 +1237,6 @@ export function CheckoutClient({
       count += item.quantity;
       if (item.type === "premade") {
         const amount = item.price * item.quantity;
-        premadeSubtotal += amount;
         baseSubtotal += amount;
         itemLines.push({
           id: item.id,
@@ -1259,7 +1254,6 @@ export function CheckoutClient({
             override.extrasPrice;
           baseSubtotal += baseAmount;
           urgencyTotal += override.urgencyFee;
-          transactionTotal += override.transactionFee;
           itemLines.push({
             id: item.id,
             label: item.title || item.designText || "Custom order",
@@ -1278,11 +1272,10 @@ export function CheckoutClient({
       }
     }
 
-    transactionTotal += premadeSubtotal * (transactionFeePercent / 100);
-    const total = baseSubtotal + urgencyTotal + transactionTotal;
+    const total = baseSubtotal + urgencyTotal;
 
-    return { total, count, itemLines, urgencyTotal, transactionTotal, hasPending };
-  }, [items, pricingOverrides, transactionFeePercent]);
+    return { total, count, itemLines, urgencyTotal, hasPending };
+  }, [items, pricingOverrides]);
 
   const analyticsItems = useMemo(() => buildAnalyticsItems(items, pricingOverrides), [items, pricingOverrides]);
 
@@ -1463,9 +1456,8 @@ export function CheckoutClient({
         organizationName: organizationName.trim() || null,
       },
       items: summaryItems,
-      subtotal: cartPricing.total - cartPricing.urgencyTotal - cartPricing.transactionTotal,
+      subtotal: cartPricing.total - cartPricing.urgencyTotal,
       urgencyTotal: cartPricing.urgencyTotal,
-      transactionTotal: cartPricing.transactionTotal,
       total: cartPricing.total,
       adminEmailWarning: warning ?? null,
     });
@@ -1877,12 +1869,6 @@ export function CheckoutClient({
                 <div className="flex items-center justify-between gap-3">
                   <span>Urgency surcharge</span>
                   <span className="text-zinc-900">{formatMoney(cartPricing.urgencyTotal)}</span>
-                </div>
-              ) : null}
-              {cartPricing.transactionTotal > 0 ? (
-                <div className="flex items-center justify-between gap-3">
-                  <span>Transaction fee</span>
-                  <span className="text-zinc-900">{formatMoney(cartPricing.transactionTotal)}</span>
                 </div>
               ) : null}
               {cartPricing.hasPending ? (

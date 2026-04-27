@@ -53,7 +53,6 @@ describe("finalizePaidCheckoutOrder", () => {
       dueDate: "2026-04-10",
       pickup: false,
       lineItems: [{ name: "Order item" }],
-      feeLines: [],
       orderPayloads: [{ id: "line-1", title: "Custom Order" }],
       orderNumbers: { baseOrderNumber: "000123" },
       totalAmount: 149.5,

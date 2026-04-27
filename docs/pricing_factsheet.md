@@ -1,6 +1,6 @@
 # Roc Candy Pricing Fact Sheet
 
-Authoritative summary of the current live pricing, packaging, labels, and fees.
+Authoritative summary of the current live pricing, packaging, labels, and extras.
 
 Verified against the live Supabase pricing/config tables on `2026-04-21`.
 
@@ -83,12 +83,11 @@ Each row defines: type | size | candy weight per package | allowed categories | 
   - `labels_max_bulk = 1000`
   - `ingredient_label_price = 0.17`
 
-## Extras and Fees
+## Extras
 
 - Jackets: Rainbow `$35`, 2 Colour `$35`, Pinstripe `$35`.
 - Urgency fee: `10%` if the due date falls within the `14 day` lead-time window.
 - Lead time: `14 days`.
-- Transaction fee: `2.2%` applied at checkout.
 
 ## Operational Guards
 
@@ -104,4 +103,4 @@ These values are intended to stay admin-editable rather than code-driven:
   type, size, candy weight, allowed categories, unit price, max packages, dimensions.
 - Label ranges plus the global label-shipping / markup settings.
 - Settings:
-  lead time, urgency fee, transaction fee, jacket fees, ingredient label price, max total kg.
+  lead time, urgency fee, jacket fees, ingredient label price, max total kg.

@@ -26,7 +26,6 @@ export type PricingBreakdown = {
   ingredientLabelsPrice: number;
   extrasPrice: number;
   urgencyFee: number;
-  transactionFee: number;
   total: number;
   totalWeightKg: number;
   items: Array<{ label: string; amount: number }>;
@@ -47,10 +46,6 @@ function findTierForWeight(tiers: WeightTier[], weightKg: number) {
 function findLabelRange(labelRanges: LabelRange[], count: number) {
   const sorted = [...labelRanges].sort((a, b) => a.upper_bound - b.upper_bound);
   return sorted.find((r) => count <= r.upper_bound);
-}
-
-function calcTransactionFee(subtotal: number, percent: number) {
-  return subtotal * (percent / 100);
 }
 
 export async function calculatePricing(input: PricingInput): Promise<PricingBreakdown> {
@@ -166,9 +161,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     return subtotalBeforeUrgency * (Number(settings.urgency_fee) / 100);
   })();
 
-  const subtotal = subtotalBeforeUrgency + urgencyFee;
-  const transactionFee = calcTransactionFee(subtotal, Number(settings.transaction_fee_percent));
-  const total = subtotal + transactionFee;
+  const total = subtotalBeforeUrgency + urgencyFee;
 
   return {
     basePrice,
@@ -177,7 +170,6 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     ingredientLabelsPrice,
     extrasPrice,
     urgencyFee,
-    transactionFee,
     total,
     totalWeightKg,
     items: [
@@ -190,7 +182,6 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
       { label: "Ingredient labels", amount: ingredientLabelsPrice },
       { label: "Extras", amount: extrasPrice },
       { label: "Urgency", amount: urgencyFee },
-      { label: "Transaction fee", amount: transactionFee },
     ],
   };
 }

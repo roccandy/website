@@ -84,7 +84,6 @@ export default async function CheckoutPage() {
             packagingOptions={packagingOptions}
             urgencyFeePercent={Number(settings?.urgency_fee ?? 0)}
             urgencyPeriodDays={Number(settings?.lead_time_days ?? 0)}
-            transactionFeePercent={Number(settings?.transaction_fee_percent ?? 0)}
             productionBlockoutMessage={productionBlockoutMessage}
           />
         </div>

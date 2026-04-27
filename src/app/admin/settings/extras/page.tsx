@@ -15,7 +15,6 @@ async function updateExtrasPricing(formData: FormData) {
 
   const lead_time_days = Number(formData.get("lead_time_days"));
   const urgency_fee = Number(formData.get("urgency_fee"));
-  const transaction_fee_percent = Number(formData.get("transaction_fee_percent"));
   const jacket_rainbow = Number(formData.get("jacket_rainbow"));
   const jacket_two_colour = Number(formData.get("jacket_two_colour"));
   const jacket_pinstripe = Number(formData.get("jacket_pinstripe"));
@@ -26,7 +25,6 @@ async function updateExtrasPricing(formData: FormData) {
     .update({
       lead_time_days,
       urgency_fee,
-      transaction_fee_percent,
       jacket_rainbow,
       jacket_two_colour,
       jacket_pinstripe,
@@ -44,7 +42,7 @@ async function updateExtrasPricing(formData: FormData) {
     entityLabel: "Extras pricing",
     summary: "Updated extras pricing settings.",
     path: "/admin/settings/extras",
-    changedFields: ["Urgency fee", "Transaction fee", "Jacket pricing"],
+    changedFields: ["Urgency fee", "Jacket pricing"],
   });
   redirect("/admin/settings/extras");
 }
@@ -59,7 +57,7 @@ export default async function SettingsExtrasPage() {
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
         <h2 className="admin-page-title">Extras pricing</h2>
-        <p className="text-sm text-zinc-600">Update jacket options, urgency fees, and transaction fee.</p>
+        <p className="text-sm text-zinc-600">Update jacket options and urgency fees.</p>
       </div>
 
       <form
@@ -85,21 +83,6 @@ export default async function SettingsExtrasPage() {
               step="0.01"
               name="urgency_fee"
               defaultValue={settings.urgency_fee}
-              className="mt-1 w-full rounded border border-zinc-200 px-2 py-1"
-              min={0}
-            />
-          </label>
-        </fieldset>
-
-        <fieldset className="space-y-2 text-sm text-zinc-700">
-          <h3 className="admin-card-title text-zinc-900">Transaction fee</h3>
-          <label className="block">
-            <span className="text-xs text-zinc-500">Transaction fee (%)</span>
-            <input
-              type="number"
-              step="0.01"
-              name="transaction_fee_percent"
-              defaultValue={settings.transaction_fee_percent}
               className="mt-1 w-full rounded border border-zinc-200 px-2 py-1"
               min={0}
             />

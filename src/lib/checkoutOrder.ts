@@ -48,7 +48,6 @@ type BuildContextResult = {
   pickup: boolean;
   paymentPreference: string | null;
   lineItems: WooLineItem[];
-  feeLines: Array<{ name: string; total: string }>;
   orderPayloads: OrderInsertPayload[];
   orderNumbers: OrderNumberBundle;
   totalAmount: number;
@@ -335,18 +334,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   }
 
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
-  let premadeTransactionFee = 0;
-  if (premadeSubtotal > 0) {
-    const percent = Number(settings.transaction_fee_percent ?? 0);
-    if (Number.isFinite(percent) && percent > 0) {
-      premadeTransactionFee = premadeSubtotal * (percent / 100);
-    }
-  }
-  const feeLines =
-    premadeTransactionFee > 0
-      ? [{ name: "Transaction fee", total: premadeTransactionFee.toFixed(2) }]
-      : [];
-  const totalAmount = baseTotal + premadeTransactionFee;
+  const totalAmount = baseTotal;
 
   return {
     billing,
@@ -354,7 +342,6 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     pickup,
     paymentPreference,
     lineItems,
-    feeLines,
     orderPayloads,
     orderNumbers,
     totalAmount,

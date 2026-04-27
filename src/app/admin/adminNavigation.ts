@@ -57,7 +57,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       { label: "Base Pricing", href: "/admin/pricing", description: "Weight tiers and base order pricing." },
       { label: "Label Pricing", href: "/admin/labels", description: "Supplier label costs and markup configuration." },
-      { label: "Extras Pricing", href: "/admin/settings/extras", description: "Urgency fees, transaction fees, and extras." },
+      { label: "Extras Pricing", href: "/admin/settings/extras", description: "Urgency fees and extras." },
       { label: "Packaging Options", href: "/admin/packaging", description: "Packaging types, sizes, lids, and imagery." },
       { label: "Label Types", href: "/admin/packaging/labels", description: "Available label formats and shapes." },
       { label: "Colour Palette", href: "/admin/settings/palette", description: "Designer colour system and palette ordering." },

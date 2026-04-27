@@ -70,7 +70,7 @@ describe("buildWooOrderContext", () => {
 
     buildCustomPricingInput.mockReturnValue({ categoryId: "custom-1-6" });
     calculatePricing.mockResolvedValue({ total: 100, totalWeightKg: 1 });
-    getSettings.mockResolvedValue({ max_total_kg: 100, transaction_fee_percent: 0 });
+    getSettings.mockResolvedValue({ max_total_kg: 100 });
     getQuoteBlocks.mockResolvedValue([]);
     from.mockImplementation((table: string) => {
       if (table === "orders") {

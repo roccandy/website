@@ -28,7 +28,6 @@ export type CheckoutSuccessSummary = {
   items: CheckoutSuccessSummaryItem[];
   subtotal: number;
   urgencyTotal: number;
-  transactionTotal: number;
   total: number;
   adminEmailWarning?: string | null;
 };

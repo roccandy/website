@@ -120,12 +120,6 @@ export function CheckoutSuccessClient() {
                   <span>{formatMoney(summary.urgencyTotal)}</span>
                 </div>
               ) : null}
-              {summary.transactionTotal > 0 ? (
-                <div className="flex items-center justify-between gap-3">
-                  <span>Transaction fee</span>
-                  <span>{formatMoney(summary.transactionTotal)}</span>
-                </div>
-              ) : null}
               <div className="flex items-center justify-between gap-3 border-t border-zinc-200 pt-2 text-base font-semibold text-zinc-900">
                 <span>Total paid</span>
                 <span>{formatMoney(summary.total)}</span>

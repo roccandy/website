@@ -81,7 +81,6 @@ type QuoteResult = {
   ingredientLabelsPrice: number;
   extrasPrice: number;
   urgencyFee: number;
-  transactionFee: number;
   total: number;
   totalWeightKg: number;
   items: QuoteItem[];
@@ -1276,7 +1275,6 @@ export function QuoteBuilder({
     needsSubtypeSelection,
     result?.items.length,
     result?.total,
-    result?.transactionFee,
     showBreakdown,
   ]);
 
@@ -1306,33 +1304,28 @@ export function QuoteBuilder({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
-                      {(() => {
-                        const subtotal = Math.max(0, result.total - result.transactionFee);
-                        return (
-                          <div className="flex items-center justify-center gap-2 sm:justify-start">
-                            <p
-                              className="text-2xl font-semibold leading-none"
-                              style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
-                            >
-                              ${subtotal.toFixed(2)}
-                            </p>
-                            {loading && (
-                              <span className="inline-flex items-center">
-                                <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
-                                <span className="sr-only">Updating</span>
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setShowBreakdown((prev) => !prev)}
-                              data-neutral-button
-                              className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
-                            >
-                              {showBreakdown ? "Hide breakdown" : "Show breakdown"}
-                            </button>
-                          </div>
-                        );
-                      })()}
+                      <div className="flex items-center justify-center gap-2 sm:justify-start">
+                        <p
+                          className="text-2xl font-semibold leading-none"
+                          style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
+                        >
+                          ${result.total.toFixed(2)}
+                        </p>
+                        {loading && (
+                          <span className="inline-flex items-center">
+                            <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
+                            <span className="sr-only">Updating</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowBreakdown((prev) => !prev)}
+                          data-neutral-button
+                          className="whitespace-nowrap rounded px-2 py-1 text-xs font-semibold hover:border-zinc-400"
+                        >
+                          {showBreakdown ? "Hide breakdown" : "Show breakdown"}
+                        </button>
+                      </div>
                     </div>
                   ) : hasBasePrice ? (
                     <div className="flex items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
@@ -1393,9 +1386,9 @@ export function QuoteBuilder({
                     </div>
                   ))}
                   <div className="mt-1 border-t border-zinc-200 pt-1 text-zinc-700">
-                    <p className="text-[11px] text-zinc-500">Subtotal excludes transaction fee.</p>
+                    <p className="text-[11px] text-zinc-500">Urgency surcharge is included when applicable.</p>
                     <div className="flex justify-between text-xs">
-                      <span>Total with fee</span>
+                      <span>Total</span>
                       <span>${result.total.toFixed(2)}</span>
                     </div>
                   </div>
