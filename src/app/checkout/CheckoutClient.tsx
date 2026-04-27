@@ -894,17 +894,12 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
   return (
     <>
       <div className="md:hidden">
-        <div className="overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex gap-1.5">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="w-[calc((100%-0.375rem)/2)] flex-none snap-start"
-              >
-                <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) 46vw, 25vw" />
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 gap-3 px-4">
+          {items.map((item) => (
+            <div key={item.id} className="w-full min-w-0">
+              <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) calc(100vw - 2rem), 25vw" />
+            </div>
+          ))}
         </div>
       </div>
 
