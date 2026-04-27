@@ -346,3 +346,68 @@ export async function uploadPackagingImage(formData: FormData) {
   }
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging image saved."));
 }
+
+export async function removePackagingImage(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+
+  try {
+    const packagingOptionId = formData.get("packaging_option_id")?.toString();
+    const categoryId = formData.get("category_id")?.toString();
+    const lidColor = formData.get("lid_color")?.toString() ?? "";
+
+    if (!packagingOptionId || !categoryId) {
+      throw new Error("Missing packaging image data");
+    }
+
+    const client = supabaseAdminClient;
+    const { data: option, error: optionError } = await client
+      .from("packaging_options")
+      .select("type,size")
+      .eq("id", packagingOptionId)
+      .single();
+    if (optionError || !option) throw new Error(optionError?.message ?? "Packaging option not found");
+
+    const { data: image, error: imageError } = await client
+      .from("packaging_option_images")
+      .select("image_path")
+      .eq("packaging_option_id", packagingOptionId)
+      .eq("category_id", categoryId)
+      .eq("lid_color", lidColor)
+      .maybeSingle();
+    if (imageError) throw new Error(imageError.message);
+
+    const { error: deleteError } = await client
+      .from("packaging_option_images")
+      .delete()
+      .eq("packaging_option_id", packagingOptionId)
+      .eq("category_id", categoryId)
+      .eq("lid_color", lidColor);
+    if (deleteError) throw new Error(deleteError.message);
+
+    if (image?.image_path) {
+      const { error: storageError } = await client.storage.from(PACKAGING_IMAGE_BUCKET).remove([image.image_path]);
+      if (storageError) throw new Error(storageError.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "removed",
+      entityType: "packaging-image",
+      entityId: packagingOptionId,
+      entityLabel: `${option.type} ${option.size}`,
+      summary: `Removed packaging image for "${option.type} ${option.size}".`,
+      path: "/admin/packaging",
+      changedFields: ["Packaging image"],
+      metadata: {
+        categoryId,
+        lidColor,
+        imagePath: image?.image_path ?? null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to remove packaging image.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+
+  redirect(appendAdminToast("/admin/packaging", "success", "Packaging image removed."));
+}

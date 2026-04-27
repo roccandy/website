@@ -17,7 +17,13 @@ import {
   sortPackagingOptions,
   sortPackagingTypes,
 } from "@/lib/packaging";
-import { deletePackaging, updatePackagingTypeOrder, upsertPackaging, uploadPackagingImage } from "./actions";
+import {
+  deletePackaging,
+  removePackagingImage,
+  updatePackagingTypeOrder,
+  upsertPackaging,
+  uploadPackagingImage,
+} from "./actions";
 
 type Props = {
   options: PackagingOption[];
@@ -1535,71 +1541,88 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                           "Not uploaded"
                         )}
                       </td>
-                  <td className="px-3 py-2 min-w-[110px]">
-                        <form action={uploadPackagingImage} className="flex flex-col gap-2">
-                          <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
-                          <input type="hidden" name="category_id" value={row.categoryId} />
-                          <input type="hidden" name="lid_color" value={row.lidColor} />
-                          <input
-                            id={fileInputId}
-                            type="file"
-                            name="image"
-                            accept="image/png,image/jpeg,image/jpg,image/webp"
-                            required
-                            className="sr-only"
-                            onChange={async (event) => {
-                              const file = event.currentTarget.files?.[0];
-                              setUploadSummaries((current) => ({ ...current, [row.key]: null }));
-                              if (!file) return;
-                              setOptimizingRows((current) => ({ ...current, [row.key]: true }));
-                              try {
-                                const summary = await analyzeImageOptimization(file, {
-                                  maxWidth: 1800,
-                                  maxHeight: 1800,
-                                  quality: 0.82,
-                                });
-                                setUploadSummaries((current) => ({ ...current, [row.key]: summary }));
-                              } finally {
-                                setOptimizingRows((current) => ({ ...current, [row.key]: false }));
-                              }
-                            }}
-                          />
-                          <label
-                            htmlFor={fileInputId}
-                            className="inline-flex cursor-pointer items-center justify-center rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-400"
-                          >
-                            {imageUrl ? "Replace image" : "Choose image"}
-                          </label>
-                          <button
-                            type="submit"
-                            className="rounded border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-400"
-                          >
-                            Upload
-                          </button>
-                          {optimizingRows[row.key] ? (
-                            <ImageOptimizationStatus
-                              summary={null}
-                              pendingLabel="Calculating optimised image details..."
-                              helperText="Packaging uploads are stored in the smallest suitable web format."
+                      <td className="min-w-[110px] px-3 py-2">
+                        <div className="flex flex-col gap-2">
+                          <form action={uploadPackagingImage} className="flex flex-col gap-2">
+                            <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
+                            <input type="hidden" name="category_id" value={row.categoryId} />
+                            <input type="hidden" name="lid_color" value={row.lidColor} />
+                            <input
+                              id={fileInputId}
+                              type="file"
+                              name="image"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              required
+                              className="sr-only"
+                              onChange={async (event) => {
+                                const file = event.currentTarget.files?.[0];
+                                setUploadSummaries((current) => ({ ...current, [row.key]: null }));
+                                if (!file) return;
+                                setOptimizingRows((current) => ({ ...current, [row.key]: true }));
+                                try {
+                                  const summary = await analyzeImageOptimization(file, {
+                                    maxWidth: 1800,
+                                    maxHeight: 1800,
+                                    quality: 0.82,
+                                  });
+                                  setUploadSummaries((current) => ({ ...current, [row.key]: summary }));
+                                } finally {
+                                  setOptimizingRows((current) => ({ ...current, [row.key]: false }));
+                                }
+                              }}
                             />
-                          ) : uploadSummaries[row.key] ? (
-                            <ImageOptimizationStatus
-                              summary={uploadSummaries[row.key]}
-                              helperText="Packaging uploads are stored in the smallest suitable web format."
-                            />
-                          ) : image?.image_path ? (
-                            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
-                              <p>
-                                Current stored:{" "}
-                                {storedInfo
-                                  ? formatStoredImageType(storedInfo.contentType)
-                                  : inferStoredImageTypeFromPath(image.image_path)}{" "}
-                                •{" "}
-                                {storedInfo?.sizeBytes != null ? formatBytes(storedInfo.sizeBytes) : "size unavailable"}
-                              </p>
-                            </div>
+                            <label
+                              htmlFor={fileInputId}
+                              className="inline-flex cursor-pointer items-center justify-center rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-400"
+                            >
+                              {imageUrl ? "Replace image" : "Choose image"}
+                            </label>
+                            <button
+                              type="submit"
+                              className="rounded border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-400"
+                            >
+                              Upload
+                            </button>
+                            {optimizingRows[row.key] ? (
+                              <ImageOptimizationStatus
+                                summary={null}
+                                pendingLabel="Calculating optimised image details..."
+                                helperText="Packaging uploads are stored in the smallest suitable web format."
+                              />
+                            ) : uploadSummaries[row.key] ? (
+                              <ImageOptimizationStatus
+                                summary={uploadSummaries[row.key]}
+                                helperText="Packaging uploads are stored in the smallest suitable web format."
+                              />
+                            ) : image?.image_path ? (
+                              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
+                                <p>
+                                  Current stored:{" "}
+                                  {storedInfo
+                                    ? formatStoredImageType(storedInfo.contentType)
+                                    : inferStoredImageTypeFromPath(image.image_path)}{" "}
+                                  •{" "}
+                                  {storedInfo?.sizeBytes != null
+                                    ? formatBytes(storedInfo.sizeBytes)
+                                    : "size unavailable"}
+                                </p>
+                              </div>
+                            ) : null}
+                          </form>
+                          {image?.image_path ? (
+                            <form action={removePackagingImage}>
+                              <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
+                              <input type="hidden" name="category_id" value={row.categoryId} />
+                              <input type="hidden" name="lid_color" value={row.lidColor} />
+                              <button
+                                type="submit"
+                                className="w-full rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
+                              >
+                                Remove image
+                              </button>
+                            </form>
                           ) : null}
-                        </form>
+                        </div>
                       </td>
                     </tr>
                   );
