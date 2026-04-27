@@ -315,6 +315,7 @@ function OverlayText({
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
   const singleArcFontSize = cappedDesign.length > 12 ? 104 : 112;
+  const singleArcLetterSpacing = cappedDesign.length > 6 ? "0.035em" : "0.02em";
   const straightFontSize = 122;
   const initialsFontSize = 180; // maps to ~35px at rendered size
   const heartScale = 9.49;
@@ -471,7 +472,7 @@ function OverlayText({
           )}
         </>
       ) : arcMode ? (
-        <text fontSize={singleArcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
+        <text fontSize={singleArcFontSize} fontWeight="700" fill={textColor} letterSpacing={singleArcLetterSpacing}>
           <textPath href="#singleArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
             {cappedDesign.toUpperCase()}
           </textPath>

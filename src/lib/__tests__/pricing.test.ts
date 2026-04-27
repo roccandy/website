@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildCustomPricingInput, buildJacketExtras, hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 
 describe("pricing helpers", () => {
-  it("derives ingredient label quantity from opt-in state", () => {
+  it("keeps ingredient label quantity empty unless explicitly set", () => {
     expect(
       buildCustomPricingInput({
         categoryId: "custom-1-6",
@@ -11,7 +11,7 @@ describe("pricing helpers", () => {
         ingredientLabelsOptIn: true,
       })
     ).toMatchObject({
-      ingredientLabelsCount: 24,
+      ingredientLabelsCount: 0,
     });
 
     expect(
@@ -50,7 +50,7 @@ describe("pricing helpers", () => {
         notes: "Ingredient labels requested.",
       })
     ).toMatchObject({
-      ingredientLabelsCount: 12,
+      ingredientLabelsCount: 0,
     });
   });
 

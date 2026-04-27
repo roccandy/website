@@ -330,7 +330,6 @@ export function NewOrderForm({
   const [packagingOptionId, setPackagingOptionId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [labelsCount, setLabelsCount] = useState("");
-  const [labelsCountTouched, setLabelsCountTouched] = useState(false);
   const [jacket, setJacket] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [productionSlotDate, setProductionSlotDate] = useState("");
@@ -356,7 +355,6 @@ export function NewOrderForm({
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(false);
   const [ingredientLabelsCount, setIngredientLabelsCount] = useState("");
-  const [ingredientLabelsCountTouched, setIngredientLabelsCountTouched] = useState(false);
   const [labelFileName, setLabelFileName] = useState("");
   const [labelImageUrl, setLabelImageUrl] = useState("");
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
@@ -655,23 +653,15 @@ export function NewOrderForm({
 
   useEffect(() => {
     if (!packagingOptionId) {
-      if (!labelsCountTouched) setLabelsCount("");
-      return;
+      setLabelsCount("");
     }
-    if (!labelsCountTouched) {
-      setLabelsCount(quantity ? quantity : "");
-    }
-  }, [labelsCountTouched, packagingOptionId, quantity]);
+  }, [packagingOptionId]);
 
   useEffect(() => {
     if (!ingredientLabelsOptIn || !hasBulkSelection) {
-      if (!ingredientLabelsCountTouched) setIngredientLabelsCount("");
-      return;
+      setIngredientLabelsCount("");
     }
-    if (!ingredientLabelsCountTouched) {
-      setIngredientLabelsCount(quantity ? quantity : "");
-    }
-  }, [hasBulkSelection, ingredientLabelsCountTouched, ingredientLabelsOptIn, quantity]);
+  }, [hasBulkSelection, ingredientLabelsOptIn]);
 
   useEffect(() => {
     if (isAdminPremadeOrder) {
@@ -694,9 +684,7 @@ export function NewOrderForm({
     const resolvedIngredientLabels =
       ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
         ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
-        : ingredientLabelsOptIn
-          ? qtyNumber
-          : 0;
+        : 0;
     const extras: { jacket: "rainbow" | "two_colour" | "pinstripe" }[] = [];
     if (jacket === "rainbow") extras.push({ jacket: "rainbow" });
     if (jacket === "two_colour") extras.push({ jacket: "two_colour" });
@@ -965,7 +953,6 @@ export function NewOrderForm({
                   max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                   value={labelsCount}
                   onChange={(event) => {
-                    setLabelsCountTouched(true);
                     const parsed = Number(event.target.value);
                     setLabelsCount(
                       Number.isFinite(parsed)
@@ -981,7 +968,6 @@ export function NewOrderForm({
                   }}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
-                <div className="mt-2 text-[11px] text-zinc-500">Defaults to the quantity, but can be edited manually.</div>
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Date required
@@ -1299,7 +1285,6 @@ export function NewOrderForm({
                         max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                         value={ingredientLabelsCount}
                         onChange={(event) => {
-                          setIngredientLabelsCountTouched(true);
                           const parsed = Number(event.target.value);
                           setIngredientLabelsCount(
                             Number.isFinite(parsed)

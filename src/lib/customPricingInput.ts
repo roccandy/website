@@ -56,14 +56,11 @@ export function buildCustomPricingInput(source: CustomPricingSource): CustomPric
   }
 
   const extras = source.jacketExtras?.length ? source.jacketExtras : buildJacketExtras(source.jacket);
-  const ingredientLabelsRequested = hasIngredientLabelsRequested(source);
   const ingredientLabelsCountRaw = Number(source.ingredientLabelsCount ?? 0);
   const ingredientLabelsCount =
     Number.isFinite(ingredientLabelsCountRaw) && ingredientLabelsCountRaw > 0
       ? Math.floor(ingredientLabelsCountRaw)
-      : ingredientLabelsRequested
-        ? quantity
-        : 0;
+      : 0;
 
   return {
     categoryId,

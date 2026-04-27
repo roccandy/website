@@ -846,6 +846,12 @@ export function QuoteBuilder({
 
   useEffect(() => {
     if (!labelsOptIn) {
+      setLabelCountOverride(0);
+    }
+  }, [labelsOptIn]);
+
+  useEffect(() => {
+    if (!labelsOptIn) {
       setLabelImageError(null);
     }
   }, [labelsOptIn]);
@@ -874,10 +880,7 @@ export function QuoteBuilder({
       setIngredientLabelsCountOverride(0);
       return;
     }
-    if (ingredientLabelsCountOverride === 0 && totalPackages > 0) {
-      setIngredientLabelsCountOverride(Math.min(totalPackages, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX));
-    }
-  }, [hasBulkSelection, ingredientLabelsCountOverride, ingredientLabelsOptIn, settings.labels_max_bulk, totalPackages]);
+  }, [hasBulkSelection, ingredientLabelsOptIn]);
 
   useEffect(() => {
     if (!editItemId || !editItem) return;
@@ -1673,7 +1676,7 @@ export function QuoteBuilder({
                             type="number"
                             min={0}
                             max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                            value={labelCountOverride}
+                            value={labelCountOverride > 0 ? labelCountOverride : ""}
                             onChange={(e) =>
                               setLabelCountOverride(
                                 Math.min(
@@ -1815,7 +1818,7 @@ export function QuoteBuilder({
                         type="number"
                         min={0}
                         max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                        value={ingredientLabelsCountOverride}
+                        value={ingredientLabelsCountOverride > 0 ? ingredientLabelsCountOverride : ""}
                         onChange={(e) =>
                           setIngredientLabelsCountOverride(
                             Math.min(
@@ -2163,10 +2166,10 @@ export function QuoteBuilder({
                     const title = designTitle;
                     const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
                     const labelsCount = labelsOptIn
-                        ? hasBulkSelection
+                      ? hasBulkSelection
                           ? labelCountOverride > 0
                             ? Math.min(labelCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
-                            : 0
+                            : null
                           : totalPackages
                         : null;
                     const jacketValue = rainbowJacket
@@ -2205,7 +2208,7 @@ export function QuoteBuilder({
                         ? hasBulkSelection
                           ? ingredientLabelsCountOverride > 0
                             ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
-                            : 0
+                            : null
                           : totalPackages
                         : null,
                       jacket: jacketValue,
