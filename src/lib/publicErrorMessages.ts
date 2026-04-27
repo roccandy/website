@@ -125,7 +125,7 @@ export function toPublicCheckoutError(message?: string | null) {
       "total weight exceeds limit",
     ])
   ) {
-    return "This order is too large for one checkout. Please reduce the quantity or split it into multiple orders.";
+    return "One of the items in your cart is too large for one checkout. Please reduce the quantity or split it into multiple orders.";
   }
 
   if (normalized.includes("ingredient label count exceeds maximum")) {

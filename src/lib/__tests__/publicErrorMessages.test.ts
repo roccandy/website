@@ -38,7 +38,13 @@ describe("public error messages", () => {
 
   it("maps max-weight failures to a split-order message", () => {
     expect(toPublicCheckoutError("Max total kg is 18.")).toBe(
-      "This order is too large for one checkout. Please reduce the quantity or split it into multiple orders.",
+      "One of the items in your cart is too large for one checkout. Please reduce the quantity or split it into multiple orders.",
+    );
+  });
+
+  it("maps max-weight payment failures to the same split-order message", () => {
+    expect(toPublicPaymentError("Max total kg is 18.")).toBe(
+      "One of the items in your cart is too large for one checkout. Please reduce the quantity or split it into multiple orders.",
     );
   });
 

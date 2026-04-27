@@ -76,6 +76,15 @@ function buildOrderNumbers(customCount: number, hasPremade: boolean, base: strin
   };
 }
 
+function assertWeightWithinLimit(weightKg: number, maxTotalKg: number) {
+  if (!Number.isFinite(weightKg) || weightKg <= 0) {
+    throw new Error("Order weight is required.");
+  }
+  if (weightKg > maxTotalKg) {
+    throw new Error(`Max total kg is ${maxTotalKg}.`);
+  }
+}
+
 async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
   const premadeById = new Map<string, PremadeRow>();
   if (premadeItems.length === 0) return premadeById;
@@ -212,6 +221,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
   const settings = await getSettings();
+  const maxTotalKg = Number(settings.max_total_kg);
   if (hasCustom && dueDate) {
     const quoteBlocks = await getQuoteBlocks();
     if (isDateBlocked(dueDate, quoteBlocks)) {
@@ -222,7 +232,6 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const organizationName = customer.organizationName?.trim() || null;
   const billing = buildBilling(customer, pickup);
   const lineItems: WooLineItem[] = [];
-  let totalOrderWeightKg = 0;
   const orderPayloads: OrderInsertPayload[] = [];
 
   const baseOrderNumber = await generateOrderNumber();
@@ -234,8 +243,8 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
       dueDate,
       customProductId!
     );
+    assertWeightWithinLimit(totalWeightKg, maxTotalKg);
     lineItems.push(lineItem);
-    totalOrderWeightKg += totalWeightKg;
     orderPayloads.push({
       order_number: orderNumbers.customOrderNumbers[index] ?? orderNumbers.customOrderNumber,
       title: item.categoryId === "branded" || item.designType === "branded" ? organizationName : item.title?.trim() || null,
@@ -292,7 +301,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
 
     const weightKg = (premade.weight_g * item.quantity) / 1000;
     const totalPrice = premade.price * item.quantity;
-    totalOrderWeightKg += weightKg;
+    assertWeightWithinLimit(weightKg, maxTotalKg);
 
     lineItems.push({
       product_id: Number(premade.woo_product_id),
@@ -327,10 +336,6 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
       status: "pending_payment",
       made: false,
     });
-  }
-
-  if (totalOrderWeightKg > Number(settings.max_total_kg)) {
-    throw new Error(`Max total kg is ${settings.max_total_kg}.`);
   }
 
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);

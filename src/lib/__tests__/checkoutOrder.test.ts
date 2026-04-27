@@ -132,6 +132,58 @@ describe("buildWooOrderContext", () => {
     expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008-a", "0008-b"]);
   });
 
+  it("allows multiple order lines when each line stays under the weight cap", async () => {
+    premadeRows = [
+      {
+        id: "premade-1",
+        name: "Premade Candy",
+        price: 12,
+        weight_g: 200,
+        woo_product_id: "123",
+        description: "Premade",
+      },
+    ];
+    calculatePricing.mockResolvedValue({ total: 100, totalWeightKg: 8.1 });
+    getSettings.mockResolvedValue({ max_total_kg: 8.2 });
+
+    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+
+    const context = await buildWooOrderContext(
+      buildOrder({
+        customItems: [customItem("ONE")],
+        premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
+      })
+    );
+
+    expect(context.orderNumbers.customOrderNumbers).toEqual(["0008-a"]);
+    expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008-a", "0008-b"]);
+  });
+
+  it("rejects a premade line that exceeds the weight cap on its own", async () => {
+    premadeRows = [
+      {
+        id: "premade-1",
+        name: "Premade Candy",
+        price: 12,
+        weight_g: 9000,
+        woo_product_id: "123",
+        description: "Premade",
+      },
+    ];
+    getSettings.mockResolvedValue({ max_total_kg: 8.2 });
+    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildWooOrderContext(
+        buildOrder({
+          customItems: [],
+          premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
+          dueDate: undefined,
+        })
+      )
+    ).rejects.toThrow("Max total kg is 8.2.");
+  });
+
   it("assigns premade orders after multiple custom order suffixes", async () => {
     premadeRows = [
       {
