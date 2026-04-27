@@ -1519,7 +1519,7 @@ export function CheckoutClient({
 
   const handlePaymentError = (provider: "square" | "paypal", stage: string, message: string) => {
     setPaymentProcessing({ active: false, title: "", message: "" });
-    setPaymentError(toPublicPaymentError(message));
+    setPaymentError(stage === "validation" ? message : toPublicPaymentError(message));
     setAdminEmailWarning(null);
     void logPaymentFailure(provider, stage, message);
   };
