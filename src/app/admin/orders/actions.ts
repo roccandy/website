@@ -23,7 +23,7 @@ const OPEN_OVERRIDE_REASON = "Open override";
 const MANUAL_BLOCK_REASON = "Manual block";
 const QUOTE_BLOCK_REASON = "Front-end block";
 const INGREDIENT_LABELS_NOTE = "Ingredient labels requested.";
-const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
+const ORDER_SUFFIX_PATTERN = /-[a-z]+$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
 const isInvalidIntegerInputError = (message: string) =>

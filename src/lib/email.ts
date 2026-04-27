@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import type { AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
+import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 
 type EmailPayload = {
   to: string[];
@@ -46,6 +46,9 @@ type CustomerRefundEmailPayload = {
   amount?: number | null;
   paymentMethod?: string | null;
 };
+
+const CUSTOMER_WEBSITE_FEEDBACK_NOTE =
+  "Our website is new. If you notice any issues or have feedback, please contact enquiries@roccandy.com.au.";
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
@@ -176,6 +179,8 @@ export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderE
     "Tax invoice",
     "",
     `Thanks for your order!`,
+    CUSTOMER_WEBSITE_FEEDBACK_NOTE,
+    "",
     `Order #: ${orderNumber ?? "-"}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
     `Due date: ${order.dueDate ?? "-"}`,
@@ -330,10 +335,95 @@ async function buildInlineAttachment(
   }
 }
 
+function getCustomDetailsList(order: AdminOrderSummaryEmailPayload) {
+  return order.customDetailsList?.length
+    ? order.customDetailsList
+    : order.customDetails
+      ? [order.customDetails]
+      : [];
+}
+
+function buildCustomTextLines(details: AdminCustomOrderDetails[], includeWeight: boolean) {
+  return details.flatMap((detail) => [
+    `Custom order: ${detail.orderNumber ? `#${detail.orderNumber}` : "-"}`,
+    includeWeight ? `Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}` : null,
+    `Outer colour / colours: ${detail.outerColours}`,
+    `Pinstripe: ${detail.pinstripe}`,
+    `Text: ${detail.textColour}`,
+    detail.heartColour ? `Heart: ${detail.heartColour}` : null,
+    `Packaging: ${detail.packaging}`,
+    `Custom label type: ${detail.labels}`,
+    `Ingredient labels: ${detail.ingredientLabels}`,
+    "",
+  ]).filter((line) => line !== null) as string[];
+}
+
+async function buildCustomHtmlSections(
+  details: AdminCustomOrderDetails[],
+  options: {
+    previewWidth: number;
+    labelWidth: number;
+    includeWeight: boolean;
+  }
+) {
+  const attachments: NonNullable<nodemailer.SendMailOptions["attachments"]> = [];
+  const sections = await Promise.all(
+    details.map(async (detail, index) => {
+      const customPreview = await buildInlineAttachment(
+        detail.imageDataUrl ?? detail.imageUrl ?? null,
+        `candy-design-${index}@roccandy`,
+        `candy-design-${index + 1}`
+      );
+      const labelPreview = await buildInlineAttachment(
+        detail.labelImageUrl ?? null,
+        `label-design-${index}@roccandy`,
+        `label-design-${index + 1}`
+      );
+      if (customPreview.attachment) attachments.push(customPreview.attachment);
+      if (labelPreview.attachment) attachments.push(labelPreview.attachment);
+
+      const orderNumber = detail.orderNumber ? `#${detail.orderNumber}` : "-";
+      return `
+        ${renderCandyPreviewImage(customPreview.src, options.previewWidth)}
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
+        ${
+          options.includeWeight
+            ? `<div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>`
+            : ""
+        }
+        <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(detail.outerColours)}</div>
+        <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
+        <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
+        ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
+        <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
+        <div><strong>Custom Label type:</strong> ${escapeHtml(detail.labels)}</div>
+        ${
+          labelPreview.src
+            ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;max-width:100%;width:${options.labelWidth}px;border-radius:10px;border:1px solid #e4e4e7;" /></div>`
+            : ""
+        }
+        ${
+          labelPreview.externalUrl
+            ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>`
+            : ""
+        }
+        <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
+        <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+      `;
+    })
+  );
+
+  return {
+    html: sections.join(""),
+    attachments,
+  };
+}
+
 export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
   const orderNumber = order.orderNumber ? `#${order.orderNumber}` : "New order";
   const subject = `Order placed ${orderNumber}`;
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
+  const customDetailsList = getCustomDetailsList(order);
 
   const productsText = order.items
     .map((item) => {
@@ -345,14 +435,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 
   const lines = [
     `Order #: ${orderNumber}`,
-    order.customDetails ? `Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}` : null,
-    order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
-    order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
-    order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
-    order.customDetails?.heartColour ? `Heart: ${order.customDetails.heartColour}` : null,
-    order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
-    order.customDetails ? `Custom label type: ${order.customDetails.labels}` : null,
-    order.customDetails ? `Ingredient labels: ${order.customDetails.ingredientLabels}` : null,
+    ...buildCustomTextLines(customDetailsList, true),
     "",
     "Order Information",
     `Date ordered: ${formatDate(order.dateOrderedIso)}`,
@@ -369,35 +452,11 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customPreview = await buildInlineAttachment(
-    order.customDetails?.imageDataUrl ?? order.customDetails?.imageUrl ?? null,
-    "candy-design@roccandy",
-    "candy-design"
-  );
-  const labelPreview = await buildInlineAttachment(
-    order.customDetails?.labelImageUrl ?? null,
-    "label-design@roccandy",
-    "label-design"
-  );
-  const customImageSrc = customPreview.src;
-  const labelImageSrc = labelPreview.src;
-  const customSection = order.customDetails
-    ? `
-      ${renderCandyPreviewImage(customImageSrc, 300)}
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
-      <div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${order.customDetails.weightKg ? `${order.customDetails.weightKg.toFixed(2)} kg` : "-"}</div>
-      <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
-      <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
-      <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
-      ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
-      <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
-      <div><strong>Custom Label type:</strong> ${escapeHtml(order.customDetails.labels)}</div>
-      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="130" style="display:block;max-width:100%;width:130px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
-      ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
-      <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
-    `
-    : "";
+  const customSection = await buildCustomHtmlSections(customDetailsList, {
+    previewWidth: 300,
+    labelWidth: 130,
+    includeWeight: true,
+  });
 
   const productsHtml = order.items
     .map((item) => {
@@ -414,7 +473,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
-      ${customSection}
+      ${customSection.html}
       <h3 style="margin:0 0 8px;">Order Information</h3>
       <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
       <div><strong>Order number:</strong> ${escapeHtml(orderNumber)}</div>
@@ -442,7 +501,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     </div>
   `;
 
-  const attachments = [customPreview.attachment, labelPreview.attachment].filter(isAttachment);
+  const attachments = customSection.attachments.filter(isAttachment);
 
   return sendEmail({
     to,
@@ -461,6 +520,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     : "RocCandy Order confirmation";
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
   const gstIncluded = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount / 11).toFixed(2)}` : "-";
+  const customDetailsList = getCustomDetailsList(order);
 
   const productsText = order.items
     .map((item) => {
@@ -473,15 +533,10 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     "Tax invoice",
     "",
     "Thanks for your order. It has been confirmed and is now being prepared.",
+    CUSTOMER_WEBSITE_FEEDBACK_NOTE,
     "",
     `Order #: ${displayOrderNumber}`,
-    order.customDetails ? `Outer colour / colours: ${order.customDetails.outerColours}` : null,
-    order.customDetails ? `Pinstripe: ${order.customDetails.pinstripe}` : null,
-    order.customDetails ? `Text: ${order.customDetails.textColour}` : null,
-    order.customDetails?.heartColour ? `Heart: ${order.customDetails.heartColour}` : null,
-    order.customDetails ? `Packaging: ${order.customDetails.packaging}` : null,
-    order.customDetails ? `Custom label type: ${order.customDetails.labels}` : null,
-    order.customDetails ? `Ingredient labels: ${order.customDetails.ingredientLabels}` : null,
+    ...buildCustomTextLines(customDetailsList, false),
     "",
     "Order Information",
     `Date ordered: ${formatDate(order.dateOrderedIso)}`,
@@ -499,34 +554,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `Payment method: ${order.paymentMethod ?? "-"}`,
   ].filter((line) => line !== null) as string[];
 
-  const customPreview = await buildInlineAttachment(
-    order.customDetails?.imageDataUrl ?? order.customDetails?.imageUrl ?? null,
-    "candy-design@roccandy",
-    "candy-design"
-  );
-  const labelPreview = await buildInlineAttachment(
-    order.customDetails?.labelImageUrl ?? null,
-    "label-design@roccandy",
-    "label-design"
-  );
-  const customImageSrc = customPreview.src;
-  const labelImageSrc = labelPreview.src;
-  const customSection = order.customDetails
-    ? `
-      ${renderCandyPreviewImage(customImageSrc, 180)}
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(displayOrderNumber)}</div>
-      <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(order.customDetails.outerColours)}</div>
-      <div><strong>Pinstripe:</strong> ${escapeHtml(order.customDetails.pinstripe)}</div>
-      <div><strong>Text:</strong> ${escapeHtml(order.customDetails.textColour)}</div>
-      ${order.customDetails.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(order.customDetails.heartColour)}</div>` : ""}
-      <div><strong>Packaging:</strong> ${escapeHtml(order.customDetails.packaging)}</div>
-      <div><strong>Custom Label type:</strong> ${escapeHtml(order.customDetails.labels)}</div>
-      ${labelImageSrc ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelImageSrc)}" alt="Uploaded label" width="260" style="display:block;max-width:100%;width:260px;border-radius:10px;border:1px solid #e4e4e7;" /></div>` : ""}
-      ${labelPreview.externalUrl ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>` : ""}
-      <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(order.customDetails.ingredientLabels)}</div>
-      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
-    `
-    : "";
+  const customSection = await buildCustomHtmlSections(customDetailsList, {
+    previewWidth: 180,
+    labelWidth: 260,
+    includeWeight: false,
+  });
 
   const productsHtml = order.items
     .map((item) => {
@@ -545,7 +577,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <p style="margin:0 0 14px;font-size:15px;">
         Thanks for your order. It has been confirmed and is now being prepared.
       </p>
-      ${customSection}
+      <p style="margin:0 0 14px;font-size:14px;color:#52525b;">
+        Our website is new. If you notice any issues or have feedback, please contact
+        <a href="mailto:enquiries@roccandy.com.au" style="color:#2563eb;text-decoration:underline;">enquiries@roccandy.com.au</a>.
+      </p>
+      ${customSection.html}
       <h3 style="margin:0 0 8px;">Order Information</h3>
       <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
       <div><strong>Order number:</strong> ${escapeHtml(displayOrderNumber)}</div>
@@ -573,7 +609,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     </div>
   `;
 
-  const attachments = [customPreview.attachment, labelPreview.attachment].filter(isAttachment);
+  const attachments = customSection.attachments.filter(isAttachment);
 
   return sendEmail({
     to,

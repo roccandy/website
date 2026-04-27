@@ -1,0 +1,98 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const getColorPalette = vi.fn();
+const getPackagingOptions = vi.fn();
+const getLabelTypes = vi.fn();
+
+vi.mock("@/lib/data", () => ({
+  getColorPalette,
+  getPackagingOptions,
+  getLabelTypes,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  supabaseAdminClient: {
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(),
+      })),
+    },
+  },
+}));
+
+describe("buildAdminOrderSummaryEmailPayload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
+    delete process.env.NEXT_PUBLIC_SITE_URL;
+    delete process.env.SITE_URL;
+
+    getColorPalette.mockResolvedValue([
+      { hex: "#ff0000", category: "red", shade: "main" },
+      { hex: "#000000", category: "black", shade: "main" },
+      { hex: "#ffffff", category: "white", shade: "main" },
+    ]);
+    getPackagingOptions.mockResolvedValue([
+      { id: "pack-1", type: "bag", size: "100g" },
+      { id: "pack-2", type: "jar", size: "250g" },
+    ]);
+    getLabelTypes.mockResolvedValue([{ id: "label-1", shape: "circle", dimensions: "30mm" }]);
+  });
+
+  it("builds separate custom detail blocks for multiple custom order rows", async () => {
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [
+        {
+          order_number: "0008-a",
+          title: "ONE",
+          quantity: 10,
+          packaging_option_id: "pack-1",
+          total_weight_kg: 1,
+          total_price: 100,
+          jacket_color_one: "#ff0000",
+          text_color: "#000000",
+          label_type_id: "label-1",
+          notes: "Ingredient labels requested.",
+        },
+        {
+          order_number: "0008-b",
+          title: "TWO",
+          quantity: 4,
+          packaging_option_id: "pack-2",
+          total_weight_kg: 2,
+          total_price: 150,
+          jacket_color_one: "#ffffff",
+          text_color: "#ff0000",
+        },
+      ],
+      orderNumber: "0008",
+      requestedDate: "2026-05-20",
+      billing: {
+        address_1: "1 Test Street",
+        city: "Perth",
+        state: "WA",
+        postcode: "6000",
+      },
+      pickup: false,
+      paymentMethod: "Credit Card",
+      paymentAmount: 250,
+      customPreviews: [
+        { orderNumber: "0008-a", previewPngDataUrl: "data:image/png;base64,AAAA" },
+        { orderNumber: "0008-b", previewPngDataUrl: "data:image/png;base64,BBBB" },
+      ],
+    });
+
+    expect(summary.customDetailsList).toHaveLength(2);
+    expect(summary.customDetailsList.map((detail) => detail.orderNumber)).toEqual(["0008-a", "0008-b"]);
+    expect(summary.customDetailsList.map((detail) => detail.packaging)).toEqual(["10 x Bag 100g", "4 x Jar 250g"]);
+    expect(summary.customDetailsList.map((detail) => detail.ingredientLabels)).toEqual(["Yes", "No"]);
+    expect(summary.customDetailsList.map((detail) => detail.imageDataUrl)).toEqual([
+      "data:image/png;base64,AAAA",
+      "data:image/png;base64,BBBB",
+    ]);
+    expect(summary.customDetails?.orderNumber).toBe("0008-a");
+  });
+});

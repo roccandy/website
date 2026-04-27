@@ -45,6 +45,7 @@ export type AdminOrderSummaryEmailPayload = {
   paymentAmount: number;
   items: AdminOrderSummaryItem[];
   customDetails: AdminCustomOrderDetails | null;
+  customDetailsList: AdminCustomOrderDetails[];
 };
 
 const normalizeHex = (value: string) => {
@@ -241,6 +242,7 @@ export async function buildAdminOrderSummaryEmailPayload({
   paymentAmount,
   customPreviewSvg,
   customPreviewPngDataUrl,
+  customPreviews,
 }: {
   orderPayloads: OrderPayload[];
   orderNumber: string | null;
@@ -251,6 +253,11 @@ export async function buildAdminOrderSummaryEmailPayload({
   paymentAmount: number;
   customPreviewSvg?: string | null;
   customPreviewPngDataUrl?: string | null;
+  customPreviews?: Array<{
+    orderNumber?: string | null;
+    previewSvg?: string | null;
+    previewPngDataUrl?: string | null;
+  }>;
 }): Promise<AdminOrderSummaryEmailPayload> {
   const palette = await getColorPalette();
   const [packagingOptions, labelTypes] = await Promise.all([
@@ -293,77 +300,85 @@ export async function buildAdminOrderSummaryEmailPayload({
   }));
 
   const customItems = orderPayloads.filter((payload) => Boolean(payload.packaging_option_id));
-  const firstCustom = customItems[0] ?? null;
 
-  let customDetails: AdminCustomOrderDetails | null = null;
-  if (firstCustom) {
-    const jacketTypeRaw = String(firstCustom.jacket_type ?? "").toLowerCase();
-    const jacketRaw = String(firstCustom.jacket ?? "").toLowerCase();
+  const customDetailsList = await Promise.all(customItems.map(async (customItem, index) => {
+    const customOrderNumber = String(customItem.order_number ?? "").trim() || orderNumber;
+    const preview =
+      customPreviews?.find((item) => item.orderNumber && item.orderNumber === customOrderNumber) ??
+      customPreviews?.[index] ??
+      null;
+    const jacketTypeRaw = String(customItem.jacket_type ?? "").toLowerCase();
+    const jacketRaw = String(customItem.jacket ?? "").toLowerCase();
     const jacketCombined = `${jacketTypeRaw} ${jacketRaw}`.trim();
     const rainbow = jacketCombined.includes("rainbow");
     const pinstripe = jacketCombined.includes("pinstripe");
-    const colourOne = formatColour(firstCustom.jacket_color_one);
-    const colourTwoRaw = formatColour(firstCustom.jacket_color_two);
-    const hasSecondColour = typeof firstCustom.jacket_color_two === "string" && firstCustom.jacket_color_two.trim().length > 0;
+    const colourOne = formatColour(customItem.jacket_color_one);
+    const colourTwoRaw = formatColour(customItem.jacket_color_two);
+    const hasSecondColour = typeof customItem.jacket_color_two === "string" && customItem.jacket_color_two.trim().length > 0;
     const outerColours = rainbow
       ? "Rainbow"
       : hasSecondColour
         ? `${colourOne} + ${colourTwoRaw}`
         : colourOne;
 
-    const customWeight = customItems.reduce((sum, payload) => sum + (toNumber(payload.total_weight_kg) ?? 0), 0);
-    const packagingLines = customItems.map((payload) => {
-      const packagingLabel = packagingMap.get(String(payload.packaging_option_id ?? "")) ?? "-";
-      const packageQty = Math.max(1, Number(payload.quantity ?? 1) || 1);
-      const lidColourRaw = String(payload.jar_lid_color ?? "").trim();
-      const lidDetail = lidColourRaw ? ` (Lid colour: ${formatColour(lidColourRaw)})` : "";
-      return `${packageQty} x ${packagingLabel}${lidDetail}`;
-    });
-    const packagingWithQty = packagingLines.join(" | ");
-    const notesRaw = String(firstCustom.notes ?? "").toLowerCase();
+    const customWeight = toNumber(customItem.total_weight_kg) ?? 0;
+    const packagingLabel = packagingMap.get(String(customItem.packaging_option_id ?? "")) ?? "-";
+    const packageQty = Math.max(1, Number(customItem.quantity ?? 1) || 1);
+    const lidColourRaw = String(customItem.jar_lid_color ?? "").trim();
+    const lidDetail = lidColourRaw ? ` (Lid colour: ${formatColour(lidColourRaw)})` : "";
+    const packagingWithQty = `${packageQty} x ${packagingLabel}${lidDetail}`;
+    const notesRaw = String(customItem.notes ?? "").toLowerCase();
     const ingredientLabels = notesRaw.includes("ingredient labels requested") ? "Yes" : "No";
-    const labelType = labelTypeMap.get(String(firstCustom.label_type_id ?? "")) ?? "No label selected";
+    const labelType = labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? "No label selected";
     const labelImageUrl =
-      typeof firstCustom.label_image_url === "string" && firstCustom.label_image_url.trim()
-        ? firstCustom.label_image_url
+      typeof customItem.label_image_url === "string" && customItem.label_image_url.trim()
+        ? customItem.label_image_url
         : null;
     const previewPngDataUrl =
-      typeof customPreviewPngDataUrl === "string" && customPreviewPngDataUrl.trim().startsWith("data:image/")
-        ? customPreviewPngDataUrl.trim()
+      typeof preview?.previewPngDataUrl === "string" && preview.previewPngDataUrl.trim().startsWith("data:image/")
+        ? preview.previewPngDataUrl.trim()
+        : index === 0 && typeof customPreviewPngDataUrl === "string" && customPreviewPngDataUrl.trim().startsWith("data:image/")
+          ? customPreviewPngDataUrl.trim()
         : null;
     const previewSvgDataUrl = buildDataUrlFromSvg(
-      typeof customPreviewSvg === "string" ? customPreviewSvg : null
+      typeof preview?.previewSvg === "string"
+        ? preview.previewSvg
+        : index === 0 && typeof customPreviewSvg === "string"
+          ? customPreviewSvg
+          : null
     );
-    const generatedPreviewUrl = buildCandyPreviewUrl(firstCustom);
+    const generatedPreviewUrl = buildCandyPreviewUrl(customItem);
     const persistedPreviewUrl = await persistEmailPreview(
       previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl,
-      orderNumber
+      customOrderNumber
     );
     const imageUrl =
       persistedPreviewUrl ||
       generatedPreviewUrl ||
-      (typeof firstCustom.logo_url === "string" && firstCustom.logo_url.trim()) ||
+      (typeof customItem.logo_url === "string" && customItem.logo_url.trim()) ||
       null;
     const shouldShowHeart =
-      typeof firstCustom.heart_color === "string" &&
-      firstCustom.heart_color.trim().length > 0 &&
-      String(firstCustom.design_type ?? "").toLowerCase().includes("wedding");
+      typeof customItem.heart_color === "string" &&
+      customItem.heart_color.trim().length > 0 &&
+      String(customItem.design_type ?? "").toLowerCase().includes("wedding");
 
-    customDetails = {
+    const detail: AdminCustomOrderDetails = {
       imageUrl,
       imageDataUrl: previewPngDataUrl,
-      orderNumber,
+      orderNumber: customOrderNumber,
       weightKg: customWeight > 0 ? customWeight : null,
       outerColours,
       pinstripe: pinstripe ? "Yes" : "No",
-      textColour: formatColour(firstCustom.text_color),
-      heartColour: shouldShowHeart ? formatColour(firstCustom.heart_color) : null,
+      textColour: formatColour(customItem.text_color),
+      heartColour: shouldShowHeart ? formatColour(customItem.heart_color) : null,
       packaging: packagingWithQty,
       labels: labelType,
       labelImageUrl,
       ingredientLabels,
     };
-  }
+    return detail;
+  }));
+  const customDetails = customDetailsList[0] ?? null;
 
   const firstItem = orderPayloads[0] ?? {};
   const customerName = String(firstItem.customer_name ?? "").trim() || null;
@@ -388,5 +403,6 @@ export async function buildAdminOrderSummaryEmailPayload({
     paymentAmount,
     items,
     customDetails,
+    customDetailsList,
   };
 }

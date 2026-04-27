@@ -78,6 +78,11 @@ export async function finalizePaidCheckoutOrder({
   const recipients = getOrdersRecipients();
   const emailTasks: Array<Promise<unknown>> = [];
   const firstCustomItem = order.customItems?.[0];
+  const customPreviews = (order.customItems ?? []).map((item, index) => ({
+    orderNumber: orderNumbers.customOrderNumbers?.[index] ?? null,
+    previewSvg: item.previewSvg ?? null,
+    previewPngDataUrl: item.previewPngDataUrl ?? null,
+  }));
   const summaryEmailPayloadPromise = buildAdminOrderSummaryEmailPayload({
     orderPayloads,
     orderNumber: orderNumbers.baseOrderNumber,
@@ -88,6 +93,7 @@ export async function finalizePaidCheckoutOrder({
     paymentAmount: totalAmount,
     customPreviewSvg: firstCustomItem?.previewSvg ?? null,
     customPreviewPngDataUrl: firstCustomItem?.previewPngDataUrl ?? null,
+    customPreviews,
   });
 
   if (customerEmail) {

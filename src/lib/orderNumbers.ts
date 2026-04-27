@@ -1,5 +1,5 @@
 const ORDER_NUMBER_PADDING = 4;
-const ORDER_SUFFIX_PATTERN = /-(a|b)$/i;
+const ORDER_SUFFIX_PATTERN = /-[a-z]+$/i;
 
 export function normalizeOrderNumber(input?: string | null) {
   const trimmed = input?.trim();
@@ -13,6 +13,25 @@ export function normalizeBaseOrderNumber(input?: string | null) {
   const base = normalized.replace(ORDER_SUFFIX_PATTERN, "").trim();
   if (!/^\d+$/.test(base)) return null;
   return base.padStart(ORDER_NUMBER_PADDING, "0");
+}
+
+export function orderNumberSuffixForIndex(index: number) {
+  if (!Number.isInteger(index) || index < 0) {
+    throw new Error("Order suffix index must be a non-negative integer.");
+  }
+
+  let value = index;
+  let suffix = "";
+  do {
+    suffix = String.fromCharCode(97 + (value % 26)) + suffix;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+
+  return suffix;
+}
+
+export function buildSplitOrderNumber(base: string, index: number) {
+  return `${base}-${orderNumberSuffixForIndex(index)}`;
 }
 
 export async function generateOrderNumber() {

@@ -1,6 +1,6 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildCustomPricingInput, calculatePricing } from "@/lib/pricing";
-import { generateOrderNumber } from "@/lib/orderNumbers";
+import { buildSplitOrderNumber, generateOrderNumber } from "@/lib/orderNumbers";
 import { getQuoteBlocks, getSettings, type QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
 
@@ -8,8 +8,9 @@ const DEFAULT_COUNTRY = "AU";
 
 type OrderNumberBundle = {
   baseOrderNumber: string;
+  customOrderNumbers: string[];
   customOrderNumber: string;
-  premadeOrderNumber: string;
+  premadeOrderNumber: string | null;
 };
 
 type PremadeRow = {
@@ -56,11 +57,24 @@ type BuildContextResult = {
 const isDateBlocked = (dateKey: string, blocks: QuoteBlock[]) =>
   blocks.some((block) => dateKey >= block.start_date && dateKey <= block.end_date);
 
-function buildOrderNumbers(hasCustom: boolean, hasPremade: boolean, base: string): OrderNumberBundle {
-  if (hasCustom && hasPremade) {
-    return { baseOrderNumber: base, customOrderNumber: `${base}-a`, premadeOrderNumber: `${base}-b` };
-  }
-  return { baseOrderNumber: base, customOrderNumber: base, premadeOrderNumber: base };
+function buildOrderNumbers(customCount: number, hasPremade: boolean, base: string): OrderNumberBundle {
+  const splitCount = customCount + (hasPremade ? 1 : 0);
+  const shouldSplit = splitCount > 1;
+  const customOrderNumbers = Array.from({ length: customCount }, (_, index) =>
+    shouldSplit ? buildSplitOrderNumber(base, index) : base
+  );
+  const premadeOrderNumber = hasPremade
+    ? shouldSplit
+      ? buildSplitOrderNumber(base, customCount)
+      : base
+    : null;
+
+  return {
+    baseOrderNumber: base,
+    customOrderNumbers,
+    customOrderNumber: customOrderNumbers[0] ?? base,
+    premadeOrderNumber,
+  };
 }
 
 async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
@@ -213,9 +227,9 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const orderPayloads: OrderInsertPayload[] = [];
 
   const baseOrderNumber = await generateOrderNumber();
-  const orderNumbers = buildOrderNumbers(hasCustom, hasPremade, baseOrderNumber);
+  const orderNumbers = buildOrderNumbers(customItems.length, hasPremade, baseOrderNumber);
 
-  for (const item of customItems) {
+  for (const [index, item] of customItems.entries()) {
     const { lineItem, totalPrice, totalWeightKg } = await buildCustomItemLine(
       item,
       dueDate,
@@ -224,7 +238,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     lineItems.push(lineItem);
     totalOrderWeightKg += totalWeightKg;
     orderPayloads.push({
-      order_number: orderNumbers.customOrderNumber,
+      order_number: orderNumbers.customOrderNumbers[index] ?? orderNumbers.customOrderNumber,
       title: item.categoryId === "branded" || item.designType === "branded" ? organizationName : item.title?.trim() || null,
       order_description: item.description?.trim() || null,
       customer_name: `${customer.firstName.trim()} ${customer.lastName.trim()}`.trim(),
@@ -288,7 +302,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     });
 
     orderPayloads.push({
-      order_number: orderNumbers.premadeOrderNumber,
+      order_number: orderNumbers.premadeOrderNumber ?? baseOrderNumber,
       title: premade.name,
       order_description: premade.description ?? null,
       customer_name: `${customer.firstName.trim()} ${customer.lastName.trim()}`.trim(),
