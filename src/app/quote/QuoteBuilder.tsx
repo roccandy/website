@@ -1551,7 +1551,7 @@ export function QuoteBuilder({
                     <p className="text-xs text-zinc-500">
                       <a
                         href={enquiriesHref}
-                        className="font-semibold text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900"
+                        className="font-semibold text-[#ff6f95] underline decoration-[#ffd3df] underline-offset-2 transition hover:text-[#ff4f80]"
                       >
                         Email us
                       </a>{" "}
