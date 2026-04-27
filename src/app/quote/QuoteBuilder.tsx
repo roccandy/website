@@ -92,45 +92,7 @@ const LID_COLOR_SWATCH: Record<string, string> = {
 };
 const INGREDIENT_LABEL_PREVIEW_SRC = "/labels/ingredient-label.png";
 const SVG_NS = "http://www.w3.org/2000/svg";
-const PREVIEW_FONT_FAMILY = "Sora";
-const PREVIEW_FONT_PATH = "/fonts/sora-700.ttf";
-
-let previewFontDataUrlPromise: Promise<string | null> | null = null;
-
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  if (typeof window === "undefined") return "";
-
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = "";
-
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-
-  return window.btoa(binary);
-}
-
-async function loadPreviewFontDataUrl() {
-  if (typeof window === "undefined") return null;
-
-  if (!previewFontDataUrlPromise) {
-    previewFontDataUrlPromise = (async () => {
-      try {
-        const response = await fetch(PREVIEW_FONT_PATH, { cache: "force-cache" });
-        if (!response.ok) return null;
-
-        const contentType = response.headers.get("content-type") || "font/ttf";
-        const fontBuffer = await response.arrayBuffer();
-        return `data:${contentType};base64,${arrayBufferToBase64(fontBuffer)}`;
-      } catch {
-        return null;
-      }
-    })();
-  }
-
-  return previewFontDataUrlPromise;
-}
+const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 
 function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   const overlayGroup = document.createElementNS(SVG_NS, "g");
@@ -152,18 +114,6 @@ function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   if (overlayGroup.childNodes.length > 0) {
     baseSvg.appendChild(overlayGroup);
   }
-}
-
-async function embedPreviewFont(svgMarkup: string) {
-  const fontDataUrl = await loadPreviewFontDataUrl();
-  if (!fontDataUrl) return svgMarkup;
-
-  const fontStyle = `<style><![CDATA[@font-face{font-family:'${PREVIEW_FONT_FAMILY}';src:url(${fontDataUrl}) format('truetype');font-style:normal;font-weight:700;}]]></style>`;
-  if (svgMarkup.includes("<defs>")) {
-    return svgMarkup.replace("<defs>", `<defs>${fontStyle}`);
-  }
-
-  return svgMarkup.replace(/<svg\b([^>]*)>/, `<svg$1><defs>${fontStyle}</defs>`);
 }
 
 export function QuoteBuilder({
@@ -309,8 +259,7 @@ export function QuoteBuilder({
     }
 
     try {
-      const serialized = new XMLSerializer().serializeToString(baseSvg);
-      return embedPreviewFont(serialized);
+      return new XMLSerializer().serializeToString(baseSvg);
     } catch {
       return null;
     }

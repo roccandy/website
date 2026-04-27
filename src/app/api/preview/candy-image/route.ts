@@ -5,16 +5,7 @@ export const runtime = "edge";
 
 const DEFAULT_COLOR = "#b7b7b7";
 const DEFAULT_TEXT = "#5f5f5f";
-const SORA_FONT_PATH = "/fonts/sora-700.ttf";
-
-type LoadedFont = {
-  name: string;
-  data: ArrayBuffer;
-  weight: 700;
-  style: "normal";
-};
-
-let soraFontPromise: Promise<LoadedFont | null> | null = null;
+const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 
 function normalizeHex(value: string | null, fallback: string) {
   if (!value) return fallback;
@@ -36,27 +27,6 @@ function splitWeddingNames(raw: string) {
     }
   }
   return { lineOne: text, lineTwo: "" };
-}
-
-async function loadSoraFont(requestUrl: string) {
-  if (!soraFontPromise) {
-    soraFontPromise = (async () => {
-      try {
-        const response = await fetch(new URL(SORA_FONT_PATH, requestUrl));
-        if (!response.ok) return null;
-        return {
-          name: "Sora",
-          data: await response.arrayBuffer(),
-          weight: 700,
-          style: "normal",
-        } satisfies LoadedFont;
-      } catch {
-        return null;
-      }
-    })();
-  }
-
-  return soraFontPromise;
 }
 
 export async function GET(request: Request) {
@@ -97,7 +67,7 @@ export async function GET(request: Request) {
         justifyContent: "center",
         position: "relative",
         background: "#ffffff",
-        fontFamily: "Sora, sans-serif",
+        fontFamily: PREVIEW_FONT_FAMILY,
       },
     },
     createElement("div", {
@@ -224,12 +194,9 @@ export async function GET(request: Request) {
     )
   );
 
-  const soraFont = await loadSoraFont(request.url);
-
   return new ImageResponse(root, {
     width: 600,
     height: 400,
-    fonts: soraFont ? [soraFont] : undefined,
     headers: {
       "Cache-Control": "public, max-age=3600",
     },

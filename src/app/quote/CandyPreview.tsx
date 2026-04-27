@@ -1,6 +1,5 @@
 "use client";
 
-import { Sora } from "next/font/google";
 import { useMemo } from "react";
 
 type Props = {
@@ -20,10 +19,7 @@ type Props = {
   zoom?: number;
 };
 
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
+const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 const previewDimensions = { width: 350, height: 260 };
 const CANVAS_WIDTH = 1772;
 const CANVAS_HEIGHT = 1300;
@@ -188,7 +184,10 @@ export function CandyPreview({
       : undefined;
 
   return (
-    <div className={`${sora.className} flex w-full items-center justify-center bg-white p-[0.1rem]`}>
+    <div
+      className="flex w-full items-center justify-center bg-white p-[0.1rem]"
+      style={{ fontFamily: PREVIEW_FONT_FAMILY }}
+    >
       <div
         className="relative mx-auto w-full"
         style={{
@@ -309,7 +308,7 @@ function OverlayText({
   const cx = 544.367;
   const cy = 659.802;
   const arcRadius = 320; // tuned to mimic the live site arc curvature
-  const fontFamily = sora.style.fontFamily;
+  const fontFamily = PREVIEW_FONT_FAMILY;
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
   const singleArcFontSize = 122;

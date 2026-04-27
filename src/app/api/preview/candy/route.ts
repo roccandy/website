@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 const DEFAULT_COLOR = "#b7b7b7";
 const DEFAULT_TEXT = "#5f5f5f";
+const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 
 function escapeXml(value: string) {
   return value
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
       : "";
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img" aria-label="Candy preview">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img" aria-label="Candy preview" style="font-family:${PREVIEW_FONT_FAMILY}">
   <defs>
     <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#ff3b30" />
@@ -108,4 +109,3 @@ export async function GET(request: Request) {
     },
   });
 }
-
