@@ -55,6 +55,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
           jacket_color_one: "#ff0000",
           text_color: "#000000",
           label_type_id: "label-1",
+          ingredient_labels_count: 24,
           notes: "Ingredient labels requested.",
         },
         {
@@ -88,7 +89,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     expect(summary.customDetailsList).toHaveLength(2);
     expect(summary.customDetailsList.map((detail) => detail.orderNumber)).toEqual(["0008-a", "0008-b"]);
     expect(summary.customDetailsList.map((detail) => detail.packaging)).toEqual(["10 x Bag 100g", "4 x Jar 250g"]);
-    expect(summary.customDetailsList.map((detail) => detail.ingredientLabels)).toEqual(["Yes", "No"]);
+    expect(summary.customDetailsList.map((detail) => detail.ingredientLabels)).toEqual(["24", "No"]);
     expect(summary.customDetailsList.map((detail) => detail.imageDataUrl)).toEqual([
       "data:image/png;base64,AAAA",
       "data:image/png;base64,BBBB",

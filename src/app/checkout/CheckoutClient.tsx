@@ -703,7 +703,9 @@ function CartItemRow({
   const labelsValue =
     item.labelsCount != null ? `${item.labelsCount}` : item.labelImageUrl ? "Yes" : "No";
   const ingredientLabelsValue = item.ingredientLabelsOptIn ? "Yes" : "No";
-  const labelSummary = `${labelsValue} / ${ingredientLabelsValue}`;
+  const ingredientLabelsCountValue =
+    item.ingredientLabelsCount != null ? `${item.ingredientLabelsCount}` : ingredientLabelsValue;
+  const labelSummary = `${labelsValue} / ${ingredientLabelsCountValue}`;
   const labelTypeLabel = item.labelTypeId ? formatLabelTypeLabel(labelTypeMap?.get(item.labelTypeId)) : "";
   const labelTypeDisplay = labelTypeLabel || item.labelTypeId || "";
   const previewMode =
@@ -1163,6 +1165,7 @@ export function CheckoutClient({
       packagingOptionId: item.packagingOptionId,
       quantity: item.quantity,
       labelsCount: item.labelsCount ?? 0,
+      ingredientLabelsCount: item.ingredientLabelsCount ?? 0,
       ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
       dueDate: date || undefined,
       jacket: item.jacket ?? null,
@@ -1352,6 +1355,7 @@ export function CheckoutClient({
       packagingLabel: item.packagingLabel,
       jarLidColor: item.jarLidColor,
       labelsCount: item.labelsCount ?? null,
+      ingredientLabelsCount: item.ingredientLabelsCount ?? null,
       labelImageUrl: item.labelImageUrl ?? null,
       labelTypeId: item.labelTypeId ?? null,
       ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
@@ -1418,6 +1422,9 @@ export function CheckoutClient({
             paletteMap
           );
       const labelTypeLabel = item.labelTypeId ? formatLabelTypeLabel(labelTypeMap.get(item.labelTypeId)) : "";
+      const ingredientLabelsValue = item.ingredientLabelsOptIn ? "Yes" : "No";
+      const ingredientLabelsCountValue =
+        item.ingredientLabelsCount != null ? `${item.ingredientLabelsCount}` : ingredientLabelsValue;
       const details = [
         { label: "Order type", value: getCustomOrderTypeLine(item.categoryId || item.designType) },
         { label: "Packaging", value: item.packagingLabel ? `${item.quantity} x ${formatPackagingLabel(item.packagingLabel)}` : `Qty ${item.quantity}` },
@@ -1427,7 +1434,7 @@ export function CheckoutClient({
         { label: "Heart colour", value: formatColorValue(item.heartColor, paletteMap) },
         { label: "Flavour", value: item.flavor || "" },
         { label: "Custom Labels", value: item.labelsCount != null ? `${item.labelsCount}` : item.labelImageUrl ? "Yes" : "No" },
-        { label: "Ingredient labels", value: item.ingredientLabelsOptIn ? "Yes" : "No" },
+        { label: "Ingredient labels", value: ingredientLabelsCountValue },
         { label: "Custom Label type", value: labelTypeLabel },
       ].filter((detail) => detail.value);
 

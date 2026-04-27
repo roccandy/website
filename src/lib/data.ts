@@ -130,6 +130,7 @@ export type OrderRow = {
   quantity: number | null;
   jar_lid_color: string | null;
   labels_count: number | null;
+  ingredient_labels_count: number | null;
   jacket: string | null;
   design_type: string | null;
   design_text: string | null;

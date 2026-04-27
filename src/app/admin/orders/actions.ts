@@ -188,6 +188,11 @@ export async function upsertOrder(formData: FormData) {
   const notes = formData.get("notes")?.toString() || null;
   const hasIngredientLabelsControl = formData.has("ingredient_labels_opt_in");
   const ingredientLabelsOptIn = formData.get("ingredient_labels_opt_in")?.toString() === "on";
+  const ingredientLabelsCountRaw = formData.get("ingredient_labels_count");
+  const ingredientLabelsCount =
+    ingredientLabelsCountRaw !== null && ingredientLabelsCountRaw.toString().trim() !== ""
+      ? Number(ingredientLabelsCountRaw)
+      : null;
   const pickup_raw = formData.get("pickup");
   const pickup = pickup_raw !== null ? pickup_raw === "on" : null;
   const state = formData.get("state")?.toString() || null;
@@ -303,6 +308,13 @@ export async function upsertOrder(formData: FormData) {
       packaging_option_id: isAdminPremade ? null : packaging_option_id ?? existing?.packaging_option_id ?? null,
       quantity: isAdminPremade ? null : quantity ?? existing?.quantity ?? null,
       labels_count: isAdminPremade ? null : labels_count ?? existing?.labels_count ?? null,
+      ingredient_labels_count: isAdminPremade
+        ? null
+        : ingredientLabelsOptIn
+          ? Number.isFinite(ingredientLabelsCount)
+            ? ingredientLabelsCount
+            : existing?.ingredient_labels_count ?? null
+          : null,
       jacket: isAdminPremade ? null : jacket ?? existing?.jacket ?? null,
       design_type: isAdminPremade ? "premade" : design_type ?? existing?.design_type ?? null,
       design_text: isAdminPremade ? resolvedAdminPremadeSelection : design_text ?? existing?.design_text ?? null,

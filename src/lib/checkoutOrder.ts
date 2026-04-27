@@ -164,6 +164,7 @@ async function buildCustomItemLine(
     packagingOptionId: item.packagingOptionId,
     quantity: item.quantity,
     labelsCount: item.labelsCount ?? undefined,
+    ingredientLabelsCount: item.ingredientLabelsCount ?? undefined,
     ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
     dueDate: dueDate ?? undefined,
     jacketExtras: item.jacketExtras ?? undefined,
@@ -221,7 +222,6 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const organizationName = customer.organizationName?.trim() || null;
   const billing = buildBilling(customer, pickup);
   const lineItems: WooLineItem[] = [];
-  let premadeSubtotal = 0;
   let totalOrderWeightKg = 0;
   const orderPayloads: OrderInsertPayload[] = [];
 
@@ -258,6 +258,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
       quantity: item.quantity,
       jar_lid_color: item.jarLidColor ?? null,
       labels_count: item.labelsCount ?? null,
+      ingredient_labels_count: item.ingredientLabelsCount ?? null,
       jacket: item.jacket ?? null,
       design_type: item.designType ?? null,
       design_text: item.designText ?? null,
@@ -291,7 +292,6 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
 
     const weightKg = (premade.weight_g * item.quantity) / 1000;
     const totalPrice = premade.price * item.quantity;
-    premadeSubtotal += totalPrice;
     totalOrderWeightKg += weightKg;
 
     lineItems.push({

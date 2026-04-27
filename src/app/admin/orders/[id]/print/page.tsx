@@ -466,7 +466,13 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </p>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
-                <span className={SPEC_VALUE_CLASS}>{ingredientLabelsRequested ? "Yes" : "No"}</span>
+                <span className={SPEC_VALUE_CLASS}>
+                  {order.ingredient_labels_count != null
+                    ? String(order.ingredient_labels_count)
+                    : ingredientLabelsRequested
+                      ? "Yes"
+                      : "No"}
+                </span>
               </p>
             </div>
           </div>

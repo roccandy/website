@@ -354,6 +354,8 @@ export function NewOrderForm({
   const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(false);
+  const [ingredientLabelsCount, setIngredientLabelsCount] = useState("");
+  const [ingredientLabelsCountTouched, setIngredientLabelsCountTouched] = useState(false);
   const [labelFileName, setLabelFileName] = useState("");
   const [labelImageUrl, setLabelImageUrl] = useState("");
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
@@ -384,6 +386,15 @@ export function NewOrderForm({
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
+  const hasBulkSelection = useMemo(() => {
+    const parsedQuantity = Number(quantity);
+    return (
+      !!selectedPackagingOption &&
+      selectedPackagingOption.type.trim().toLowerCase() === "bulk" &&
+      Number.isFinite(parsedQuantity) &&
+      parsedQuantity > 0
+    );
+  }, [quantity, selectedPackagingOption]);
   const packageTypeLabel = useMemo(() => {
     const raw = selectedPackagingOption?.type?.trim().toLowerCase();
     return raw || "package";
@@ -451,6 +462,7 @@ export function NewOrderForm({
       quantity: 1,
       jar_lid_color: null,
       labels_count: null,
+      ingredient_labels_count: null,
       jacket: null,
       design_type: "premade",
       design_text: selectionLabel || title,
@@ -651,6 +663,16 @@ export function NewOrderForm({
   }, [labelsCountTouched, packagingOptionId, quantity]);
 
   useEffect(() => {
+    if (!ingredientLabelsOptIn || !hasBulkSelection) {
+      if (!ingredientLabelsCountTouched) setIngredientLabelsCount("");
+      return;
+    }
+    if (!ingredientLabelsCountTouched) {
+      setIngredientLabelsCount(quantity ? quantity : "");
+    }
+  }, [hasBulkSelection, ingredientLabelsCountTouched, ingredientLabelsOptIn, quantity]);
+
+  useEffect(() => {
     if (isAdminPremadeOrder) {
       setPriceValue("");
       setPricingError(null);
@@ -667,6 +689,13 @@ export function NewOrderForm({
 
     const labelsNumber = Number(labelsCount);
     const resolvedLabels = Number.isFinite(labelsNumber) && labelsNumber > 0 ? labelsNumber : 0;
+    const ingredientLabelsNumber = Number(ingredientLabelsCount);
+    const resolvedIngredientLabels =
+      ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
+        ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk)
+        : ingredientLabelsOptIn
+          ? qtyNumber
+          : 0;
     const extras: { jacket: "rainbow" | "two_colour" | "pinstripe" }[] = [];
     if (jacket === "rainbow") extras.push({ jacket: "rainbow" });
     if (jacket === "two_colour") extras.push({ jacket: "two_colour" });
@@ -686,7 +715,7 @@ export function NewOrderForm({
         categoryId,
         packaging: [{ optionId: packagingOptionId, quantity: qtyNumber }],
         labelsCount: resolvedLabels,
-        ingredientLabelsCount: ingredientLabelsOptIn ? qtyNumber : 0,
+        ingredientLabelsCount: resolvedIngredientLabels,
         dueDate: dueDate || undefined,
         extras: extras.length ? extras : undefined,
       }),
@@ -719,7 +748,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [categoryId, packagingOptionId, quantity, labelsCount, ingredientLabelsOptIn, jacket, dueDate, isAdminPremadeOrder]);
+  }, [categoryId, packagingOptionId, quantity, labelsCount, ingredientLabelsCount, ingredientLabelsOptIn, jacket, dueDate, isAdminPremadeOrder, hasBulkSelection, settings.labels_max_bulk]);
 
   return (
     <form ref={formRef} action={upsertOrder} className="space-y-6">
@@ -966,6 +995,7 @@ export function NewOrderForm({
       {isWedding && !isAdminPremadeOrder ? <input type="hidden" name="heart_color" value={heartColor} /> : null}
       {isBranded && !isAdminPremadeOrder && logoUrl ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
       {!isAdminPremadeOrder && labelImageUrl ? <input type="hidden" name="label_image_url" value={labelImageUrl} /> : null}
+      {!isAdminPremadeOrder ? <input type="hidden" name="ingredient_labels_count" value={ingredientLabelsCount} /> : null}
 
       {!isAdminPremadeOrder ? (
         <>
@@ -1247,6 +1277,22 @@ export function NewOrderForm({
                       </span>
                     </span>
                   </label>
+                  {ingredientLabelsOptIn && hasBulkSelection ? (
+                    <label className="block text-xs text-zinc-600">
+                      Ingredient Labels Count (Max {settings.labels_max_bulk})
+                      <input
+                        type="number"
+                        min={0}
+                        max={settings.labels_max_bulk}
+                        value={ingredientLabelsCount}
+                        onChange={(event) => {
+                          setIngredientLabelsCountTouched(true);
+                          setIngredientLabelsCount(event.target.value);
+                        }}
+                        className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ) : null}
                 </div>
               </div>
             </div>

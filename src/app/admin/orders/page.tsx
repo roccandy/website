@@ -59,6 +59,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
       packagingOptionId: order.packaging_option_id,
       quantity: order.quantity,
       labelsCount: order.labels_count ?? undefined,
+      ingredientLabelsCount: order.ingredient_labels_count ?? undefined,
       notes: order.notes,
       dueDate: order.due_date ?? undefined,
       jacket: order.jacket,

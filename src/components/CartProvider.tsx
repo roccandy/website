@@ -34,6 +34,7 @@ export type CustomCartItem = {
   pickup?: boolean;
   jarLidColor?: string | null;
   labelsCount?: number | null;
+  ingredientLabelsCount?: number | null;
   labelImageUrl?: string | null;
   labelTypeId?: string | null;
   ingredientLabelsOptIn?: boolean;

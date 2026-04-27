@@ -51,6 +51,10 @@ export function toPublicPricingError(message?: string | null) {
     return "The selected label quantity is too high for this order. Please reduce it and try again.";
   }
 
+  if (normalized.includes("ingredient label count exceeds maximum")) {
+    return "The selected ingredient label quantity is too high for this order. Please reduce it and try again.";
+  }
+
   return GENERIC_PRICING_ERROR;
 }
 
@@ -122,6 +126,10 @@ export function toPublicCheckoutError(message?: string | null) {
     ])
   ) {
     return "This order is too large for one checkout. Please reduce the quantity or split it into multiple orders.";
+  }
+
+  if (normalized.includes("ingredient label count exceeds maximum")) {
+    return "The selected ingredient label quantity is too high for this order. Please reduce it and try again.";
   }
 
   if (

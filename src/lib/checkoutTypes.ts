@@ -8,6 +8,7 @@ export type CustomCartItemPayload = {
   packagingLabel?: string | null;
   jarLidColor?: string | null;
   labelsCount?: number | null;
+  ingredientLabelsCount?: number | null;
   labelImageUrl?: string | null;
   labelTypeId?: string | null;
   ingredientLabelsOptIn?: boolean;

@@ -18,6 +18,12 @@ describe("public error messages", () => {
     );
   });
 
+  it("maps ingredient label limit errors to actionable wording", () => {
+    expect(toPublicPricingError("Ingredient label count exceeds maximum")).toBe(
+      "The selected label quantity is too high for this order. Please reduce it and try again.",
+    );
+  });
+
   it("maps checkout cart refresh failures to a review message", () => {
     expect(toPublicCheckoutError("Custom item pricing failed.")).toBe(
       "One or more custom items need to be refreshed. Please review your cart and try again.",
@@ -33,6 +39,12 @@ describe("public error messages", () => {
   it("maps max-weight failures to a split-order message", () => {
     expect(toPublicCheckoutError("Max total kg is 18.")).toBe(
       "This order is too large for one checkout. Please reduce the quantity or split it into multiple orders.",
+    );
+  });
+
+  it("maps ingredient label limit checkout failures to actionable wording", () => {
+    expect(toPublicCheckoutError("Ingredient label count exceeds maximum")).toBe(
+      "The selected ingredient label quantity is too high for this order. Please reduce it and try again.",
     );
   });
 

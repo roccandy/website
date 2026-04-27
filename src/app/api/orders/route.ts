@@ -26,6 +26,7 @@ type OrderPayload = {
   labelImageUrl?: string;
   labelTypeId?: string;
   notes?: string;
+  ingredientLabelsCount?: number;
   customerName?: string;
   customerEmail?: string;
   firstName?: string;
@@ -128,6 +129,7 @@ export async function POST(req: Request) {
       quantity: body.quantity ?? null,
       jar_lid_color: body.jarLidColor ?? null,
       labels_count: body.labelsCount ?? null,
+      ingredient_labels_count: body.ingredientLabelsCount ?? null,
       jacket: body.jacket ?? null,
       design_type: body.designType ?? null,
       design_text: body.designText ?? null,

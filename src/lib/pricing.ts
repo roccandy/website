@@ -136,7 +136,13 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
       Number(settings.labels_markup_multiplier);
   }
 
-  const ingredientLabelsCount = Math.max(0, Number(input.ingredientLabelsCount ?? 0));
+  const ingredientLabelsCountRaw = Number(input.ingredientLabelsCount ?? 0);
+  const ingredientLabelsCount = Number.isFinite(ingredientLabelsCountRaw)
+    ? Math.max(0, Math.floor(ingredientLabelsCountRaw))
+    : 0;
+  if (ingredientLabelsCount > Number(settings.labels_max_bulk)) {
+    throw new Error("Ingredient label count exceeds maximum");
+  }
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const ingredientLabelsPrice =
     ingredientLabelsCount > 0 && ingredientLabelPrice > 0

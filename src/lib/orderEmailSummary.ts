@@ -30,7 +30,7 @@ export type AdminCustomOrderDetails = {
   packaging: string;
   labels: string;
   labelImageUrl: string | null;
-  ingredientLabels: "Yes" | "No";
+  ingredientLabels: string;
 };
 
 export type AdminOrderSummaryEmailPayload = {
@@ -328,7 +328,12 @@ export async function buildAdminOrderSummaryEmailPayload({
     const lidDetail = lidColourRaw ? ` (Lid colour: ${formatColour(lidColourRaw)})` : "";
     const packagingWithQty = `${packageQty} x ${packagingLabel}${lidDetail}`;
     const notesRaw = String(customItem.notes ?? "").toLowerCase();
-    const ingredientLabels = notesRaw.includes("ingredient labels requested") ? "Yes" : "No";
+    const ingredientLabelsCount = toNumber(customItem.ingredient_labels_count);
+    const ingredientLabels = Number.isFinite(ingredientLabelsCount)
+      ? String(Math.max(0, Math.floor(ingredientLabelsCount as number)))
+      : notesRaw.includes("ingredient labels requested")
+        ? "Yes"
+        : "No";
     const labelType = labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? "No label selected";
     const labelImageUrl =
       typeof customItem.label_image_url === "string" && customItem.label_image_url.trim()

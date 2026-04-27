@@ -7,6 +7,7 @@ export type CustomPricingSource = {
   packagingOptionId?: string | null;
   quantity?: number | null;
   labelsCount?: number | null;
+  ingredientLabelsCount?: number | null;
   ingredientLabelsOptIn?: boolean | null;
   notes?: string | null;
   dueDate?: string | null;
@@ -56,12 +57,19 @@ export function buildCustomPricingInput(source: CustomPricingSource): CustomPric
 
   const extras = source.jacketExtras?.length ? source.jacketExtras : buildJacketExtras(source.jacket);
   const ingredientLabelsRequested = hasIngredientLabelsRequested(source);
+  const ingredientLabelsCountRaw = Number(source.ingredientLabelsCount ?? 0);
+  const ingredientLabelsCount =
+    Number.isFinite(ingredientLabelsCountRaw) && ingredientLabelsCountRaw > 0
+      ? Math.floor(ingredientLabelsCountRaw)
+      : ingredientLabelsRequested
+        ? quantity
+        : 0;
 
   return {
     categoryId,
     packaging: [{ optionId: packagingOptionId, quantity }],
     labelsCount: source.labelsCount ?? undefined,
-    ingredientLabelsCount: ingredientLabelsRequested ? quantity : 0,
+    ingredientLabelsCount,
     dueDate: source.dueDate ?? undefined,
     extras: extras.length ? extras : undefined,
   };

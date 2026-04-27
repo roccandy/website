@@ -19,6 +19,18 @@ describe("pricing helpers", () => {
         categoryId: "custom-1-6",
         packagingOptionId: "jar-small",
         quantity: 24,
+        ingredientLabelsCount: 7,
+        ingredientLabelsOptIn: true,
+      })
+    ).toMatchObject({
+      ingredientLabelsCount: 7,
+    });
+
+    expect(
+      buildCustomPricingInput({
+        categoryId: "custom-1-6",
+        packagingOptionId: "jar-small",
+        quantity: 24,
         ingredientLabelsOptIn: false,
       })
     ).toMatchObject({

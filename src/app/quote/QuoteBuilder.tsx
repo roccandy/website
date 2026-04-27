@@ -190,6 +190,7 @@ export function QuoteBuilder({
   const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(false);
   const [labelTypeId, setLabelTypeId] = useState("");
   const [labelCountOverride, setLabelCountOverride] = useState(0);
+  const [ingredientLabelsCountOverride, setIngredientLabelsCountOverride] = useState(0);
   const [labelImageUrl, setLabelImageUrl] = useState("");
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [labelFileName, setLabelFileName] = useState("");
@@ -868,6 +869,16 @@ export function QuoteBuilder({
   }, [hasBulkSelection, labelsOptIn, labelCountOverride, totalPackages, settings.labels_max_bulk]);
 
   useEffect(() => {
+    if (!ingredientLabelsOptIn || !hasBulkSelection) {
+      setIngredientLabelsCountOverride(0);
+      return;
+    }
+    if (ingredientLabelsCountOverride === 0 && totalPackages > 0) {
+      setIngredientLabelsCountOverride(Math.min(totalPackages, settings.labels_max_bulk));
+    }
+  }, [hasBulkSelection, ingredientLabelsCountOverride, ingredientLabelsOptIn, settings.labels_max_bulk, totalPackages]);
+
+  useEffect(() => {
     if (!editItemId || !editItem) return;
     if (appliedEditRef.current === editItemId) return;
     appliedEditRef.current = editItemId;
@@ -904,6 +915,7 @@ export function QuoteBuilder({
     setLabelFileName("");
     setLabelImageError(null);
     setIngredientLabelsOptIn(Boolean(editItem.ingredientLabelsOptIn));
+    setIngredientLabelsCountOverride(Math.max(0, editItem.ingredientLabelsCount ?? 0));
 
     const hasJacketExtra = (name: "rainbow" | "two_colour" | "pinstripe") =>
       Boolean(editItem.jacketExtras?.some((extra) => extra.jacket === name));
@@ -992,7 +1004,11 @@ export function QuoteBuilder({
           }
         }
         if (ingredientLabelsOptIn) {
-          body.ingredientLabelsCount = totalPackages;
+          body.ingredientLabelsCount = hasBulkSelection
+            ? ingredientLabelsCountOverride > 0
+              ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk)
+              : 0
+            : totalPackages;
         }
         const jacketExtras: { jacket: "rainbow" | "two_colour" | "pinstripe" }[] = [];
         if (rainbowJacket) jacketExtras.push({ jacket: "rainbow" });
@@ -1039,6 +1055,7 @@ export function QuoteBuilder({
     twoColourJacket,
     labelsOptIn,
     ingredientLabelsOptIn,
+    ingredientLabelsCountOverride,
     hasBulkSelection,
     labelCountOverride,
     settings.labels_max_bulk,
@@ -1782,6 +1799,19 @@ export function QuoteBuilder({
                       </div>
                     </div>
                   ) : null}
+                  {hasBulkSelection && ingredientLabelsOptIn ? (
+                    <label className="block text-xs text-zinc-600">
+                      Ingredient Labels Count (Max {settings.labels_max_bulk})
+                      <input
+                        type="number"
+                        min={0}
+                        max={settings.labels_max_bulk}
+                        value={ingredientLabelsCountOverride}
+                        onChange={(e) => setIngredientLabelsCountOverride(Number(e.target.value))}
+                        className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
+                      />
+                    </label>
+                  ) : null}
                   {ingredientLabelsOptIn && !ingredientPreviewFailed && (
                     <div className="w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white">
                       <Image
@@ -2045,14 +2075,13 @@ export function QuoteBuilder({
                       <ImageOptimizationStatus
                         summary={null}
                         pendingLabel="Optimising image..."
-                        helperText="Your uploaded design is compressed before it is added to the order."
                       />
                     </div>
                   ) : logoSummary ? (
                     <div className="mt-2">
                       <ImageOptimizationStatus
                         summary={logoSummary}
-                        helperText="Your uploaded design is compressed before it is added to the order."
+                        showOriginal={false}
                       />
                     </div>
                   ) : null}
@@ -2155,6 +2184,13 @@ export function QuoteBuilder({
                       labelImageUrl: labelsOptIn ? labelImageUrl || null : null,
                       labelTypeId: labelsOptIn ? labelTypeId || null : null,
                       ingredientLabelsOptIn,
+                      ingredientLabelsCount: ingredientLabelsOptIn
+                        ? hasBulkSelection
+                          ? ingredientLabelsCountOverride > 0
+                            ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk)
+                            : 0
+                          : totalPackages
+                        : null,
                       jacket: jacketValue,
                       jacketType: previewJacketMode || null,
                       jacketColorOne,
