@@ -95,6 +95,7 @@ const LID_COLOR_SWATCH: Record<string, string> = {
 const INGREDIENT_LABEL_PREVIEW_SRC = "/labels/ingredient-label.png";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+const BULK_LABEL_COUNT_MAX = 1000;
 
 function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   const overlayGroup = document.createElementNS(SVG_NS, "g");
@@ -409,7 +410,7 @@ export function QuoteBuilder({
         isWeddingInitials
           ? undefined
           : isText && !isBranded
-            ? (customText || "").trim()
+            ? (customText || "").trim().toUpperCase()
             : !isWedding && !isText && !isBranded
               ? designTitle || "Candy"
               : undefined
@@ -673,7 +674,7 @@ export function QuoteBuilder({
     if (!selectedOption) return 0;
     const maxPackages = Number(selectedOption.max_packages ?? 0);
     if (!Number.isFinite(maxPackages) || maxPackages <= 0) return 0;
-    return Math.max(0, Math.min(Math.floor(maxPackages), settings.labels_max_bulk));
+    return Math.max(0, Math.min(Math.floor(maxPackages), settings.labels_max_bulk, BULK_LABEL_COUNT_MAX));
   }, [selectedOption, settings.labels_max_bulk]);
   const packageTypeLabel = useMemo(() => {
     if (!selectedOption) return "package";
@@ -758,7 +759,7 @@ export function QuoteBuilder({
       : `${(nameOne || "").trim()} ❤️ ${(nameTwo || "").trim()}`
     : isBranded
       ? (orgName || "").trim()
-      : (customText || "").trim();
+      : (customText || "").trim().toUpperCase();
   const designValid = Boolean(
     (isWedding && (isWeddingInitials ? initialOne && initialTwo : nameOne && nameTwo)) ||
       (isText && customText) ||
@@ -864,7 +865,7 @@ export function QuoteBuilder({
 
   useEffect(() => {
     if (hasBulkSelection && labelsOptIn && labelCountOverride === 0 && totalPackages > 0) {
-      setLabelCountOverride(Math.min(totalPackages, settings.labels_max_bulk));
+      setLabelCountOverride(Math.min(totalPackages, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX));
     }
   }, [hasBulkSelection, labelsOptIn, labelCountOverride, totalPackages, settings.labels_max_bulk]);
 
@@ -874,7 +875,7 @@ export function QuoteBuilder({
       return;
     }
     if (ingredientLabelsCountOverride === 0 && totalPackages > 0) {
-      setIngredientLabelsCountOverride(Math.min(totalPackages, settings.labels_max_bulk));
+      setIngredientLabelsCountOverride(Math.min(totalPackages, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX));
     }
   }, [hasBulkSelection, ingredientLabelsCountOverride, ingredientLabelsOptIn, settings.labels_max_bulk, totalPackages]);
 
@@ -953,7 +954,7 @@ export function QuoteBuilder({
       setCustomText("");
       setOrgName("");
     } else if (nextOrderType === "text") {
-      setCustomText(designSource);
+      setCustomText(designSource.toUpperCase());
       setInitialOne("");
       setInitialTwo("");
       setNameOne("");
@@ -996,7 +997,7 @@ export function QuoteBuilder({
           if (hasBulkSelection) {
             const capped =
               labelCountOverride > 0
-                ? Math.min(labelCountOverride, settings.labels_max_bulk)
+                ? Math.min(labelCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
                 : 0;
             body.labelsCount = capped;
           } else {
@@ -1006,7 +1007,7 @@ export function QuoteBuilder({
         if (ingredientLabelsOptIn) {
           body.ingredientLabelsCount = hasBulkSelection
             ? ingredientLabelsCountOverride > 0
-              ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk)
+              ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
               : 0
             : totalPackages;
         }
@@ -1667,13 +1668,21 @@ export function QuoteBuilder({
                       </div>
                       {hasBulkSelection && (
                         <label className="block text-xs text-zinc-600">
-                          Custom Labels Count (Max {settings.labels_max_bulk})
+                          Custom Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
                           <input
                             type="number"
                             min={0}
-                            max={settings.labels_max_bulk}
+                            max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                             value={labelCountOverride}
-                            onChange={(e) => setLabelCountOverride(Number(e.target.value))}
+                            onChange={(e) =>
+                              setLabelCountOverride(
+                                Math.min(
+                                  Math.max(0, Number(e.target.value) || 0),
+                                  settings.labels_max_bulk,
+                                  BULK_LABEL_COUNT_MAX,
+                                )
+                              )
+                            }
                             className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
                           />
                         </label>
@@ -1801,13 +1810,21 @@ export function QuoteBuilder({
                   ) : null}
                   {hasBulkSelection && ingredientLabelsOptIn ? (
                     <label className="block text-xs text-zinc-600">
-                      Ingredient Labels Count (Max {settings.labels_max_bulk})
+                      Ingredient Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
                       <input
                         type="number"
                         min={0}
-                        max={settings.labels_max_bulk}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                         value={ingredientLabelsCountOverride}
-                        onChange={(e) => setIngredientLabelsCountOverride(Number(e.target.value))}
+                        onChange={(e) =>
+                          setIngredientLabelsCountOverride(
+                            Math.min(
+                              Math.max(0, Number(e.target.value) || 0),
+                              settings.labels_max_bulk,
+                              BULK_LABEL_COUNT_MAX,
+                            )
+                          )
+                        }
                         className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
                       />
                     </label>
@@ -1898,9 +1915,9 @@ export function QuoteBuilder({
                     type="text"
                     value={customText}
                     maxLength={maxCustomLength}
-                    onChange={(e) => setCustomText((e.target.value || "").slice(0, maxCustomLength))}
+                    onChange={(e) => setCustomText((e.target.value || "").toUpperCase().slice(0, maxCustomLength))}
                     required
-                    className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
                     placeholder="Your text"
                   />
                   <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
@@ -2146,12 +2163,12 @@ export function QuoteBuilder({
                     const title = designTitle;
                     const description = selectedOption ? `${selectedOption.type} - ${selectedOption.size}` : "";
                     const labelsCount = labelsOptIn
-                      ? hasBulkSelection
-                        ? labelCountOverride > 0
-                          ? Math.min(labelCountOverride, settings.labels_max_bulk)
-                          : 0
-                        : totalPackages
-                      : null;
+                        ? hasBulkSelection
+                          ? labelCountOverride > 0
+                            ? Math.min(labelCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+                            : 0
+                          : totalPackages
+                        : null;
                     const jacketValue = rainbowJacket
                       ? "rainbow"
                       : twoColourJacket && pinstripeJacket
@@ -2187,7 +2204,7 @@ export function QuoteBuilder({
                       ingredientLabelsCount: ingredientLabelsOptIn
                         ? hasBulkSelection
                           ? ingredientLabelsCountOverride > 0
-                            ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk)
+                            ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
                             : 0
                           : totalPackages
                         : null,

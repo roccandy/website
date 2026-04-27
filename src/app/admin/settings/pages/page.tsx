@@ -161,16 +161,6 @@ function HomeCandyGridEditor({
                 className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
               />
             </label>
-            <label className="block space-y-1 text-sm text-zinc-700">
-              <span className="text-xs text-zinc-500">Link</span>
-              <input
-                type="text"
-                name="homeCandyOptionHref"
-                defaultValue={option.href}
-                readOnly={readOnly}
-                className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-              />
-            </label>
             <input type="hidden" name={`homeCandyOptionImageCurrent-${index}`} value={option.image} readOnly />
             <div className="space-y-2">
               {readOnly ? <p className="text-xs text-zinc-500">Tile image</p> : null}

@@ -27,6 +27,7 @@ import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, ADMIN_PREMADE_ORD
 import { upsertOrder } from "../actions";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
+const BULK_LABEL_COUNT_MAX = 1000;
 
 const STATES = [
   { value: "", label: "Select state" },
@@ -692,7 +693,7 @@ export function NewOrderForm({
     const ingredientLabelsNumber = Number(ingredientLabelsCount);
     const resolvedIngredientLabels =
       ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
-        ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk)
+        ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
         : ingredientLabelsOptIn
           ? qtyNumber
           : 0;
@@ -961,10 +962,22 @@ export function NewOrderForm({
                   type="number"
                   name="labels_count"
                   min={0}
+                  max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                   value={labelsCount}
                   onChange={(event) => {
                     setLabelsCountTouched(true);
-                    setLabelsCount(event.target.value);
+                    const parsed = Number(event.target.value);
+                    setLabelsCount(
+                      Number.isFinite(parsed)
+                        ? String(
+                            Math.min(
+                              Math.max(0, Math.floor(parsed)),
+                              settings.labels_max_bulk,
+                              BULK_LABEL_COUNT_MAX,
+                            )
+                          )
+                        : ""
+                    );
                   }}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
@@ -1279,15 +1292,26 @@ export function NewOrderForm({
                   </label>
                   {ingredientLabelsOptIn && hasBulkSelection ? (
                     <label className="block text-xs text-zinc-600">
-                      Ingredient Labels Count (Max {settings.labels_max_bulk})
+                      Ingredient Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
                       <input
                         type="number"
                         min={0}
-                        max={settings.labels_max_bulk}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                         value={ingredientLabelsCount}
                         onChange={(event) => {
                           setIngredientLabelsCountTouched(true);
-                          setIngredientLabelsCount(event.target.value);
+                          const parsed = Number(event.target.value);
+                          setIngredientLabelsCount(
+                            Number.isFinite(parsed)
+                              ? String(
+                                  Math.min(
+                                    Math.max(0, Math.floor(parsed)),
+                                    settings.labels_max_bulk,
+                                    BULK_LABEL_COUNT_MAX,
+                                  )
+                                )
+                              : ""
+                          );
                         }}
                         className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                       />

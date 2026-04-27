@@ -11,7 +11,13 @@ import { resolveUniquePremadeSlug } from "@/lib/premadeSlugs";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { uploadSeoImage } from "@/lib/seoAssets";
 import { deleteSiteRedirect, listSiteRedirects, saveSiteRedirect } from "@/lib/siteRedirects";
-import { buildManagedSitePageHref, getManagedSitePage, saveManagedSitePage, serializeHomeCandyOption } from "@/lib/sitePages";
+import {
+  DEFAULT_HOME_CANDY_OPTIONS,
+  buildManagedSitePageHref,
+  getManagedSitePage,
+  saveManagedSitePage,
+  serializeHomeCandyOption,
+} from "@/lib/sitePages";
 import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const MANAGED_PAGES_ADMIN_PATH = "/admin/settings/pages";
@@ -43,11 +49,9 @@ function normalizeGalleryImageUrls(values: FormDataEntryValue[]) {
 
 async function normalizeHomeCandyOptions(formData: FormData) {
   const labels = formData.getAll("homeCandyOptionLabel").map((value) => normalizeField(value));
-  const hrefs = formData.getAll("homeCandyOptionHref").map((value) => normalizeField(value));
 
   const serializedOptions = await Promise.all(
     labels.map(async (label, index) => {
-      const href = hrefs[index] ?? "";
       const currentImage = normalizeField(formData.get(`homeCandyOptionImageCurrent-${index}`));
       const imageFile = formData.get(`homeCandyOptionImageFile-${index}`);
       const uploadedImage =
@@ -55,7 +59,8 @@ async function normalizeHomeCandyOptions(formData: FormData) {
           ? await uploadSeoImage(imageFile, `home-category-grid-${index + 1}`)
           : null;
       const image = uploadedImage?.publicUrl || currentImage || "";
-      if (!label || !href || !image) return null;
+      const href = DEFAULT_HOME_CANDY_OPTIONS[index]?.href ?? DEFAULT_HOME_CANDY_OPTIONS[0]?.href ?? "/";
+      if (!label || !image) return null;
       return serializeHomeCandyOption({ label, href, image });
     }),
   );

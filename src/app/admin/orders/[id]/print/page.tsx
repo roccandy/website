@@ -16,15 +16,6 @@ type Params = {
   searchParams?: { id?: string } | Promise<{ id?: string }>;
 };
 
-const formatDate = (iso: string | null) => {
-  if (!iso) return "";
-  try {
-    return new Date(iso).toLocaleDateString();
-  } catch {
-    return iso;
-  }
-};
-
 const hexToCmyk = (hex: string) => {
   const clean = hex.replace("#", "").trim();
   if (clean.length !== 6) return null;
@@ -116,6 +107,7 @@ const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
 const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[20px] leading-[1.15]";
 const SPEC_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
 const SPEC_VALUE_CLASS = "text-[20px] font-semibold text-zinc-900";
+const PRINT_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 
 type ColorDisplay = {
   label: string;
@@ -225,6 +217,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const heartColorDisplay = resolveColorDisplay(heartColorHex, paletteHexMap);
   const jacketColorOneDisplay = resolveColorDisplay(order.jacket_color_one, paletteHexMap);
   const jacketColorTwoDisplay = resolveColorDisplay(order.jacket_color_two, paletteHexMap);
+  const jarLidColorDisplay = resolveColorDisplay(order.jar_lid_color, paletteHexMap);
   const labelImageUrl = order.label_image_url || "";
   const labelImageIsImage = labelImageUrl ? isImageUrl(labelImageUrl) : false;
   const labelDownloadName = (() => {
@@ -251,7 +244,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const packagingSummary = (() => {
     const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
     const quantityLabel = Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0 ? ` (Qty: ${Number(order.quantity)})` : "";
-    return `${packagingLabel}${quantityLabel}`;
+    const lidLabel =
+      packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay
+        ? `, Lid: ${jarLidColorDisplay.label}`
+        : "";
+    return `${packagingLabel}${quantityLabel}${lidLabel}`;
   })();
   const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
   const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
@@ -259,6 +256,20 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const showJacketColorOne =
     order.jacket === "two_colour" || order.jacket === "two_colour_pinstripe" || order.jacket === "pinstripe" || !order.jacket;
   const showJacketColorTwo = order.jacket === "two_colour" || order.jacket === "two_colour_pinstripe";
+
+  const formatPrintDate = (iso: string | null) => {
+    if (!iso) return "";
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "Australia/Perth",
+      }).format(new Date(iso));
+    } catch {
+      return iso;
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 bg-white px-6 py-8 text-[13px] leading-[1.45] text-zinc-900 print:mx-0 print:max-w-none print:space-y-2 print:px-0 print:py-0 print:text-[10.5px] print:leading-[1.3]">
@@ -277,7 +288,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         <div className="space-y-6 print:space-y-2">
           <div className={CARD_CLASS}>
             <h2 className={SECTION_HEADING_CLASS}>Candy design</h2>
-            <div className="mt-4 flex items-center justify-center print:mt-1 print:scale-[0.85]">
+            <div className="mt-4 flex items-center justify-center print:mt-1 print:scale-[0.85]" style={{ fontFamily: PRINT_FONT_FAMILY }}>
               <CandyPreview
                 designText={!isBranded && !isWedding ? designText : undefined}
                 lineOne={isWedding ? lineOne : undefined}
@@ -302,7 +313,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Requested date:</span>
                   <span className="font-semibold text-zinc-900" style={{ fontSize: "32pt", lineHeight: 1.1 }}>
-                    {formatDate(order.due_date) || "-"}
+                    {formatPrintDate(order.due_date) || "-"}
                   </span>
                 </p>
                 <div className="mt-3">
@@ -330,7 +341,13 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       <p className={INLINE_ROW_CLASS}>
                         <span className={INLINE_LABEL_CLASS}>Suburb:</span>
                         <span className={INLINE_VALUE_CLASS}>
-                          {[order.suburb, order.state, order.postcode].filter(Boolean).join(", ") || "-"}
+                          {order.suburb || "-"}
+                          {order.state ? (
+                            <>
+                              , <span style={{ fontSize: "125%" }}>{order.state}</span>
+                            </>
+                          ) : null}
+                          {order.postcode ? <> , {order.postcode}</> : null}
                         </span>
                       </p>
                     </div>
@@ -340,7 +357,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <div className="space-y-1">
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Date ordered:</span>
-                  <span className={INLINE_VALUE_CLASS}>{formatDate(order.created_at)}</span>
+                  <span className={INLINE_VALUE_CLASS}>{formatPrintDate(order.created_at)}</span>
                 </p>
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Order number:</span>
@@ -460,6 +477,12 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
                 <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
               </p>
+              {packaging?.type?.toLowerCase() === "jar" && order.jar_lid_color ? (
+                <p className={SPEC_ROW_CLASS}>
+                  <span className={SPEC_LABEL_CLASS}>Lid colour:</span>
+                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jarLidColorDisplay)}</span>
+                </p>
+              ) : null}
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Custom Labels to print:</span>
                 <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
