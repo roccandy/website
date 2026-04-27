@@ -285,6 +285,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
               minBasePrices={minBasePrices}
               initialOrderType={initialOrderType}
               titleHeadingLevel={initialOrderType ? "h1" : "h2"}
+              enquiriesHref={enquiriesHref}
             />
             {faqSection ? (
               <div className="mx-auto mt-10 max-w-4xl">

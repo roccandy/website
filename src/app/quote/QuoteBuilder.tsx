@@ -69,6 +69,7 @@ type Props = {
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
   titleHeadingLevel?: "h1" | "h2";
+  enquiriesHref: string;
 };
 
 type Selection = { optionId: string; quantity: number };
@@ -127,6 +128,7 @@ export function QuoteBuilder({
   minBasePrices,
   initialOrderType,
   titleHeadingLevel = "h1",
+  enquiriesHref,
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1546,6 +1548,15 @@ export function QuoteBuilder({
                         className="w-full px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />
                     </div>
+                    <p className="text-xs text-zinc-500">
+                      <a
+                        href={enquiriesHref}
+                        className="font-semibold text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900"
+                      >
+                        Email us
+                      </a>{" "}
+                      for larger quantities.
+                    </p>
                   </div>
                   </div>
 
