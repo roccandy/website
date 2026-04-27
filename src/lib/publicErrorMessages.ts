@@ -174,6 +174,33 @@ export function toPublicPaymentError(message?: string | null) {
 
   if (
     includesAny(normalized, [
+      "supabase order insert failed",
+      "finalising the order record",
+      "finalizing the order record",
+      "trouble finalising the order record",
+      "trouble finalizing the order record",
+      "order record could not be saved",
+      "couldn't save the order record",
+      "could not save the order record",
+      "unable to save the order record",
+    ])
+  ) {
+    return "Your payment was received, but we couldn't save the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.";
+  }
+
+  if (
+    includesAny(normalized, [
+      "unable to create woo order",
+      "unable to create paid woo order",
+      "could not create woo order",
+      "could not create paid woo order",
+    ])
+  ) {
+    return "We couldn't finish creating the order after payment was taken. Please try again or contact us with your order number.";
+  }
+
+  if (
+    includesAny(normalized, [
       "cvv",
       "security code",
       "postal",
@@ -229,7 +256,7 @@ export function toPublicPaymentError(message?: string | null) {
       "paypal failed",
     ])
   ) {
-    return GENERIC_PAYMENT_ERROR;
+    return "We couldn't process your payment because the payment provider returned an error. Please try again or use another payment method.";
   }
 
   const checkoutMessage = toPublicCheckoutError(message);

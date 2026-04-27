@@ -48,6 +48,12 @@ describe("public error messages", () => {
     );
   });
 
+  it("maps order record save failures to a clearer payment message", () => {
+    expect(toPublicPaymentError("Supabase order insert failed: column \"ingredient_labels_count\" does not exist")).toBe(
+      "Your payment was received, but we couldn't save the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.",
+    );
+  });
+
   it("maps provider setup failures to a temporary-unavailable message", () => {
     expect(toPublicPaymentError("PayPal is not configured (missing PAYPAL_SECRET).")).toBe(
       "This payment method is temporarily unavailable. Please choose another payment option or contact us.",
@@ -63,6 +69,12 @@ describe("public error messages", () => {
   it("maps declines to a clearer payment message", () => {
     expect(toPublicPaymentError("Card declined")).toBe(
       "Your payment was declined. Please check your details or use another payment method.",
+    );
+  });
+
+  it("maps generic provider payment failures to a more specific message", () => {
+    expect(toPublicPaymentError("Square payment failed")).toBe(
+      "We couldn't process your payment because the payment provider returned an error. Please try again or use another payment method.",
     );
   });
 });
