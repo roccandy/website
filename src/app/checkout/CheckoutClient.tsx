@@ -937,7 +937,11 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
         >
           <div className="flex w-full gap-3">
             {items.map((item, index) => (
-              <div key={item.id} data-suggestion-index={index} className="w-full flex-none snap-start">
+              <div
+                key={item.id}
+                data-suggestion-index={index}
+                className="w-[calc(100vw-3rem)] max-w-full flex-none snap-start"
+              >
                 <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) calc(100vw - 2rem), 25vw" />
               </div>
             ))}
