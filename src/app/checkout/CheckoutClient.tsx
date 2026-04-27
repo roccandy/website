@@ -39,13 +39,19 @@ function chunkSuggestions(items: PremadeSuggestion[], size: number) {
 function PremadeSuggestionCard({
   item,
   imageSizes,
+  compact = false,
 }: {
   item: PremadeSuggestion;
   imageSizes: string;
+  compact?: boolean;
 }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm">
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
+    <article
+      className={`flex h-full flex-col overflow-hidden border border-zinc-200 bg-white/90 shadow-sm ${
+        compact ? "rounded-xl" : "rounded-2xl"
+      }`}
+    >
+      <div className={`relative w-full overflow-hidden bg-zinc-100 ${compact ? "aspect-[2/1]" : "aspect-[4/3]"}`}>
         {item.imageUrl ? (
           <Image
             src={item.imageUrl}
@@ -56,7 +62,7 @@ function PremadeSuggestionCard({
           />
         ) : null}
         <AddPremadeToCartButton
-          className="absolute right-2 top-2"
+          className={`absolute ${compact ? "right-1 top-1" : "right-2 top-2"}`}
           item={{
             premadeId: item.id,
             name: item.name,
@@ -67,11 +73,15 @@ function PremadeSuggestionCard({
           }}
         />
       </div>
-      <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
-        <p className="text-sm font-bold text-[#ff6f95]">{`${item.weightLabel} ${item.name}`}</p>
-        <p className="text-xl font-semibold text-zinc-900">{formatMoney(item.price)}</p>
-        <p className="text-sm text-zinc-500">{item.description}</p>
-        {item.approx_pcs ? <p className="text-sm text-zinc-500">Approx {item.approx_pcs} pcs</p> : null}
+      <div className={`flex flex-1 flex-col text-center ${compact ? "gap-0.5 px-2 py-1.5" : "gap-1.5 px-4 py-3"}`}>
+        <p className={`font-bold text-[#ff6f95] ${compact ? "text-[10px] leading-tight" : "text-sm"}`}>
+          {`${item.weightLabel} ${item.name}`}
+        </p>
+        <p className={`font-semibold text-zinc-900 ${compact ? "text-sm" : "text-xl"}`}>{formatMoney(item.price)}</p>
+        <p className={`text-zinc-500 ${compact ? "truncate text-[10px] leading-snug" : "text-sm"}`}>{item.description}</p>
+        {item.approx_pcs ? (
+          <p className={`text-zinc-500 ${compact ? "text-[10px]" : "text-sm"}`}>Approx {item.approx_pcs} pcs</p>
+        ) : null}
       </div>
     </article>
   );
@@ -869,7 +879,6 @@ function CartItemRow({
 
 function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
   const desktopPages = useMemo(() => chunkSuggestions(items, 4), [items]);
-  const mobilePages = useMemo(() => chunkSuggestions(items, 2), [items]);
   const [page, setPage] = useState(0);
 
   if (!items.length) {
@@ -886,19 +895,13 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
     <>
       <div className="md:hidden">
         <div className="overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex min-w-max gap-3">
-            {mobilePages.map((pageItems, index) => (
+          <div className="flex gap-1.5">
+            {items.map((item) => (
               <div
-                key={`mobile-page-${index}`}
-                className={`min-w-full snap-start grid gap-3 ${pageItems.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+                key={item.id}
+                className="w-[calc((100%-0.375rem)/2)] flex-none snap-start"
               >
-                {pageItems.map((item) => (
-                  <PremadeSuggestionCard
-                    key={item.id}
-                    item={item}
-                    imageSizes="(max-width: 767px) 50vw, 25vw"
-                  />
-                ))}
+                <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) 46vw, 25vw" />
               </div>
             ))}
           </div>
