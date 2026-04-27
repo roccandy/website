@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
@@ -76,11 +77,12 @@ function toDomId(value: string) {
   return value.replace(/[^a-z0-9-_]+/gi, "-");
 }
 
-function buildPublicImageUrl(imagePath?: string | null) {
+function buildPublicImageUrl(imagePath?: string | null, cacheKey?: string | number | null) {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!base || !imagePath) return "";
   const encoded = encodeURIComponent(imagePath);
-  return `${base}/storage/v1/object/public/${PACKAGING_IMAGE_BUCKET}/${encoded}`;
+  const version = cacheKey == null || cacheKey === "" ? "" : `?v=${encodeURIComponent(String(cacheKey))}`;
+  return `${base}/storage/v1/object/public/${PACKAGING_IMAGE_BUCKET}/${encoded}${version}`;
 }
 
 function resolveOrderPrefix(categoryId: string) {
@@ -1432,7 +1434,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Image combinations</p>
             <p className="text-sm text-zinc-600">
-              Generated from the saved packaging rows. Save above to refresh combinations. JPEG only.
+              Generated from the saved packaging rows. Save above to refresh combinations. PNG, JPG, or WEBP.
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -1509,8 +1511,11 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                 )}
                 {sortedComboRows.map((row) => {
                   const image = imageMap.get(row.key);
-                  const imageUrl = buildPublicImageUrl(image?.image_path);
                   const storedInfo = image?.image_path ? imageObjectInfoByPath.get(image.image_path) ?? null : null;
+                  const imageUrl = buildPublicImageUrl(
+                    image?.image_path,
+                    storedInfo?.updatedAt ?? storedInfo?.sizeBytes ?? image?.created_at
+                  );
                   const fileInputId = `combo-upload-${toDomId(row.key)}`;
                   const isMissingImage = !image?.image_path;
                   const categoryName = categoryNameById.get(row.categoryId) ?? row.categoryId;
@@ -1534,6 +1539,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                             height={48}
                             sizes="48px"
                             className="h-12 w-12 rounded border border-zinc-200 object-cover"
+                            unoptimized
                           />
                         ) : image?.image_path ? (
                           image.image_path
@@ -1542,7 +1548,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                         )}
                       </td>
                       <td className="min-w-[110px] px-3 py-2">
-                        <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
                           <form action={uploadPackagingImage} className="flex flex-col gap-2">
                             <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
                             <input type="hidden" name="category_id" value={row.categoryId} />
@@ -1554,8 +1560,12 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                               accept="image/png,image/jpeg,image/jpg,image/webp"
                               required
                               className="sr-only"
+                              onClick={(event) => {
+                                event.currentTarget.value = "";
+                              }}
                               onChange={async (event) => {
                                 const file = event.currentTarget.files?.[0];
+                                const form = event.currentTarget.form;
                                 setUploadSummaries((current) => ({ ...current, [row.key]: null }));
                                 if (!file) return;
                                 setOptimizingRows((current) => ({ ...current, [row.key]: true }));
@@ -1568,6 +1578,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                                   setUploadSummaries((current) => ({ ...current, [row.key]: summary }));
                                 } finally {
                                   setOptimizingRows((current) => ({ ...current, [row.key]: false }));
+                                  form?.requestSubmit();
                                 }
                               }}
                             />
@@ -1575,18 +1586,12 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                               htmlFor={fileInputId}
                               className="inline-flex cursor-pointer items-center justify-center rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-400"
                             >
-                              {imageUrl ? "Replace image" : "Choose image"}
+                              {imageUrl ? "Replace image" : "Upload image"}
                             </label>
-                            <button
-                              type="submit"
-                              className="rounded border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-400"
-                            >
-                              Upload
-                            </button>
                             {optimizingRows[row.key] ? (
                               <ImageOptimizationStatus
                                 summary={null}
-                                pendingLabel="Calculating optimised image details..."
+                                pendingLabel="Preparing upload..."
                                 helperText="Packaging uploads are stored in the smallest suitable web format."
                               />
                             ) : uploadSummaries[row.key] ? (
@@ -1610,15 +1615,17 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                             ) : null}
                           </form>
                           {image?.image_path ? (
-                            <form action={removePackagingImage}>
+                            <form action={removePackagingImage} className="shrink-0">
                               <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
                               <input type="hidden" name="category_id" value={row.categoryId} />
                               <input type="hidden" name="lid_color" value={row.lidColor} />
                               <button
                                 type="submit"
-                                className="w-full rounded border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:border-red-300 hover:bg-red-50"
+                                aria-label={`Remove image for ${categoryName} ${row.packagingOption.type} ${row.packagingOption.size}`}
+                                title="Remove image"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
                               >
-                                Remove image
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
                               </button>
                             </form>
                           ) : null}

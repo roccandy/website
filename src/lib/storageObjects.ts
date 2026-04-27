@@ -4,6 +4,7 @@ export type StorageObjectInfo = {
   path: string;
   contentType: string | null;
   sizeBytes: number | null;
+  updatedAt: string | null;
 };
 
 function readMetadataValue(record: Record<string, unknown> | null | undefined, key: string) {
@@ -34,6 +35,7 @@ export async function listBucketObjectInfo(bucket: string, prefix = ""): Promise
         path: itemPath,
         contentType: typeof mimetype === "string" ? mimetype : null,
         sizeBytes: typeof size === "number" ? size : null,
+        updatedAt: typeof entry.updated_at === "string" ? entry.updated_at : null,
       });
       continue;
     }

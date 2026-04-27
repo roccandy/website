@@ -344,6 +344,8 @@ export async function uploadPackagingImage(formData: FormData) {
     const message = error instanceof Error ? error.message : "Unable to upload packaging image.";
     redirect(appendAdminToast("/admin/packaging", "error", message));
   }
+  revalidatePath("/admin/packaging");
+  revalidatePath("/design");
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging image saved."));
 }
 
@@ -409,5 +411,7 @@ export async function removePackagingImage(formData: FormData) {
     redirect(appendAdminToast("/admin/packaging", "error", message));
   }
 
+  revalidatePath("/admin/packaging");
+  revalidatePath("/design");
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging image removed."));
 }
