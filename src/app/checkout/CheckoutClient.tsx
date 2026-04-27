@@ -893,7 +893,7 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
 
       setMobilePage(normalizedPage);
       if (scroller && target) {
-        scroller.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+        scroller.scrollTo({ left: target.offsetLeft - scroller.offsetLeft, behavior: "smooth" });
       }
     },
     [items.length]
@@ -906,7 +906,7 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
     const slides = Array.from(scroller.querySelectorAll<HTMLElement>("[data-suggestion-index]"));
     const closest = slides.reduce(
       (current, slide) => {
-        const distance = Math.abs(slide.offsetLeft - scroller.scrollLeft);
+        const distance = Math.abs(slide.offsetLeft - scroller.offsetLeft - scroller.scrollLeft);
         return distance < current.distance ? { index: Number(slide.dataset.suggestionIndex || 0), distance } : current;
       },
       { index: 0, distance: Number.POSITIVE_INFINITY }
@@ -933,11 +933,11 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
         <div
           ref={mobileScrollerRef}
           onScroll={handleMobileScroll}
-          className="w-full max-w-full overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          className="w-full max-w-full overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
-          <div className="grid w-full grid-flow-col auto-cols-full gap-3">
+          <div className="flex w-full gap-3">
             {items.map((item, index) => (
-              <div key={item.id} data-suggestion-index={index} className="min-w-0 snap-start">
+              <div key={item.id} data-suggestion-index={index} className="w-full flex-none snap-start">
                 <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) calc(100vw - 2rem), 25vw" />
               </div>
             ))}
