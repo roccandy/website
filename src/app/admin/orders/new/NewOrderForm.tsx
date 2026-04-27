@@ -328,6 +328,7 @@ export function NewOrderForm({
   const [packagingOptionId, setPackagingOptionId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [labelsCount, setLabelsCount] = useState("");
+  const [jarLidColor, setJarLidColor] = useState("");
   const [jacket, setJacket] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [productionSlotDate, setProductionSlotDate] = useState("");
@@ -383,6 +384,14 @@ export function NewOrderForm({
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
+  const isJarOption = useMemo(
+    () => (selectedPackagingOption?.type ?? "").toLowerCase().includes("jar"),
+    [selectedPackagingOption],
+  );
+  const availableLidColors = useMemo(
+    () => (selectedPackagingOption?.lid_colors ?? []).filter(Boolean),
+    [selectedPackagingOption],
+  );
   const hasBulkSelection = useMemo(() => {
     const parsedQuantity = Number(quantity);
     return (
@@ -654,6 +663,16 @@ export function NewOrderForm({
       setLabelsCount("");
     }
   }, [packagingOptionId]);
+
+  useEffect(() => {
+    if (!isJarOption || availableLidColors.length === 0) {
+      if (jarLidColor) setJarLidColor("");
+      return;
+    }
+    if (!availableLidColors.includes(jarLidColor)) {
+      setJarLidColor("");
+    }
+  }, [availableLidColors, isJarOption, jarLidColor]);
 
   useEffect(() => {
     const previousPackagingOptionId = previousPackagingOptionIdRef.current;
@@ -952,6 +971,30 @@ export function NewOrderForm({
                   </div>
                 ) : null}
               </label>
+              {isJarOption ? (
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Lid colour
+                  <select
+                    name="jar_lid_color"
+                    value={jarLidColor}
+                    required={availableLidColors.length > 0}
+                    disabled={availableLidColors.length === 0}
+                    onChange={(event) => setJarLidColor(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                  >
+                    <option value="">
+                      {availableLidColors.length ? "Select lid colour" : "No lid options"}
+                    </option>
+                    {availableLidColors.map((lid) => (
+                      <option key={lid} value={lid}>
+                        {lid}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <input type="hidden" name="jar_lid_color" value="" />
+              )}
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Custom Labels count
                 <input

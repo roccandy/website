@@ -442,9 +442,25 @@ export function OrdersTable({
                             {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
                           {isAdminManagedCustomUnpaid ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                              Unpaid
-                            </span>
+                            <form
+                              action={markOrderAsPaid}
+                              className="inline-flex"
+                              onSubmit={(event) => {
+                                event.stopPropagation();
+                                if (!window.confirm("Mark order as paid?")) {
+                                  event.preventDefault();
+                                }
+                              }}
+                            >
+                              <input type="hidden" name="id" value={order.id} />
+                              <button
+                                type="submit"
+                                onClick={(event) => event.stopPropagation()}
+                                className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                              >
+                                Unpaid
+                              </button>
+                            </form>
                           ) : null}
                           {isAdminPremade ? (
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
