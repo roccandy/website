@@ -28,6 +28,55 @@ type PremadeSuggestion = {
   approx_pcs: number | null;
 };
 
+function chunkSuggestions(items: PremadeSuggestion[], size: number) {
+  const chunks: PremadeSuggestion[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function PremadeSuggestionCard({
+  item,
+  imageSizes,
+}: {
+  item: PremadeSuggestion;
+  imageSizes: string;
+}) {
+  return (
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
+        {item.imageUrl ? (
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            fill
+            className="h-full w-full object-cover"
+            sizes={imageSizes}
+          />
+        ) : null}
+        <AddPremadeToCartButton
+          className="absolute right-2 top-2"
+          item={{
+            premadeId: item.id,
+            name: item.name,
+            flavor: item.flavorLabel || undefined,
+            price: item.price,
+            weight_g: item.weight_g,
+            imageUrl: item.imageUrl,
+          }}
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
+        <p className="text-sm font-bold text-[#ff6f95]">{`${item.weightLabel} ${item.name}`}</p>
+        <p className="text-xl font-semibold text-zinc-900">{formatMoney(item.price)}</p>
+        <p className="text-sm text-zinc-500">{item.description}</p>
+        {item.approx_pcs ? <p className="text-sm text-zinc-500">Approx {item.approx_pcs} pcs</p> : null}
+      </div>
+    </article>
+  );
+}
+
 type Props = {
   suggestions: PremadeSuggestion[];
   palette: ColorPaletteRow[];
@@ -819,14 +868,8 @@ function CartItemRow({
 }
 
 function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
-  const pageSize = 4;
-  const pages = useMemo(() => {
-    const chunks: PremadeSuggestion[][] = [];
-    for (let i = 0; i < items.length; i += pageSize) {
-      chunks.push(items.slice(i, i + pageSize));
-    }
-    return chunks;
-  }, [items]);
+  const desktopPages = useMemo(() => chunkSuggestions(items, 4), [items]);
+  const mobilePages = useMemo(() => chunkSuggestions(items, 2), [items]);
   const [page, setPage] = useState(0);
 
   if (!items.length) {
@@ -837,79 +880,72 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
     );
   }
 
-  const canScroll = pages.length > 1;
+  const canScroll = desktopPages.length > 1;
 
   return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        data-neutral-button
-        disabled={!canScroll}
-        onClick={() => setPage((current) => (current - 1 + pages.length) % pages.length)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-xl font-semibold text-zinc-600 shadow-sm transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label="Previous recommendations"
-      >
-        {"<"}
-      </button>
-      <div className="flex-1 overflow-hidden">
-        <div
-          className="flex transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${page * 100}%)` }}
-        >
-          {pages.map((pageItems, index) => (
-            <div key={`page-${index}`} className="min-w-full grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              {pageItems.map((item) => (
-                <article
-                  key={item.id}
-                  className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white/90 shadow-sm"
-                >
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-zinc-100">
-                    {item.imageUrl ? (
-                      <Image
-                        src={item.imageUrl}
-                        alt={item.name}
-                        fill
-                        className="h-full w-full object-cover"
-                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 25vw"
-                      />
-                    ) : null}
-                    <AddPremadeToCartButton
-                      className="absolute right-2 top-2"
-                      item={{
-                        premadeId: item.id,
-                        name: item.name,
-                        flavor: item.flavorLabel || undefined,
-                        price: item.price,
-                        weight_g: item.weight_g,
-                        imageUrl: item.imageUrl,
-                      }}
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col gap-1.5 px-4 py-3 text-center">
-                    <p className="text-sm font-bold text-[#ff6f95]">{`${item.weightLabel} ${item.name}`}</p>
-                    <p className="text-xl font-semibold text-zinc-900">{formatMoney(item.price)}</p>
-                    <p className="text-sm text-zinc-500">{item.description}</p>
-                    {item.approx_pcs ? (
-                      <p className="text-sm text-zinc-500">Approx {item.approx_pcs} pcs</p>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-          ))}
+    <>
+      <div className="md:hidden">
+        <div className="overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max gap-3">
+            {mobilePages.map((pageItems, index) => (
+              <div
+                key={`mobile-page-${index}`}
+                className={`min-w-full snap-start grid gap-3 ${pageItems.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+              >
+                {pageItems.map((item) => (
+                  <PremadeSuggestionCard
+                    key={item.id}
+                    item={item}
+                    imageSizes="(max-width: 767px) 50vw, 25vw"
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <button
-        type="button"
-        data-neutral-button
-        disabled={!canScroll}
-        onClick={() => setPage((current) => (current + 1) % pages.length)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-xl font-semibold text-zinc-600 shadow-sm transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
-        aria-label="Next recommendations"
-      >
-        {">"}
-      </button>
-    </div>
+
+      <div className="hidden items-center gap-3 md:flex">
+        <button
+          type="button"
+          data-neutral-button
+          disabled={!canScroll}
+          onClick={() => setPage((current) => (current - 1 + desktopPages.length) % desktopPages.length)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-xl font-semibold text-zinc-600 shadow-sm transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Previous recommendations"
+        >
+          {"<"}
+        </button>
+        <div className="flex-1 overflow-hidden">
+          <div
+            className="flex transition-transform duration-500 ease-out"
+            style={{ transform: `translateX(-${page * 100}%)` }}
+          >
+            {desktopPages.map((pageItems, index) => (
+              <div key={`page-${index}`} className="min-w-full grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                {pageItems.map((item) => (
+                  <PremadeSuggestionCard
+                    key={item.id}
+                    item={item}
+                    imageSizes="(max-width: 767px) 50vw, 25vw"
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          data-neutral-button
+          disabled={!canScroll}
+          onClick={() => setPage((current) => (current + 1) % desktopPages.length)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-xl font-semibold text-zinc-600 shadow-sm transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Next recommendations"
+        >
+          {">"}
+        </button>
+      </div>
+    </>
   );
 }
 

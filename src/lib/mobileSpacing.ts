@@ -34,11 +34,11 @@ export const MOBILE_SPACING_CONTROLS = {
     heroColumnsGap: "2.5rem",
     ctaToBoxesGap: "0rem",
     aboveH1: "1rem",
-    belowH1: "2rem",
+    belowH1: "1rem",
     belowH2: "1rem",
     belowParagraph: "0.75rem",
     belowUsp: "1.1rem",
-    belowCta: "0rem",
+    belowCta: "1rem",
     optionGridGap: "1rem",
     lowerSectionGridGap: "1rem",
     infoCardCopyTopGap: "1.5rem",
@@ -48,7 +48,7 @@ export const MOBILE_SPACING_CONTROLS = {
 
   landingPages: {
     aboveH1: "1rem",
-    belowH1: "2rem",
+    belowH1: "1rem",
     belowH2: "1rem",
     belowParagraph: "1rem",
     belowUsp: "1.1rem",
