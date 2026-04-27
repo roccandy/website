@@ -109,7 +109,7 @@ export default async function PremadePage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority />
 
-        <div className="landing-bg landing-bg-faded site-watercolour-hero-mobile-offset -mt-8 pt-8">
+        <div className="landing-bg landing-bg-faded site-watercolour-hero-mobile-offset site-about-mobile-bg -mt-8 pt-8">
           <div className="site-page-frame site-page-stack mx-auto max-w-6xl">
             <section className="site-landing-hero-section text-center">
               <div className="site-landing-hero-stack">

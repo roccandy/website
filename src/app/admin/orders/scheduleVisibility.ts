@@ -1,8 +1,26 @@
 import type { OrderRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 
+type AdminManagedCustomOrderSource = Pick<OrderRow, "design_type" | "woo_order_id" | "woo_payment_url">;
+type AdminManagedCustomOrderPaymentSource = AdminManagedCustomOrderSource & Pick<OrderRow, "paid_at">;
+
 export function isRefundedOrder(order: OrderRow) {
   return Boolean(order.refunded_at);
+}
+
+export function isAdminManagedCustomOrder(order: AdminManagedCustomOrderSource | null | undefined) {
+  if (!order) return false;
+  return (
+    order.design_type !== "premade" &&
+    !order.woo_order_id &&
+    !order.woo_payment_url
+  );
+}
+
+export function isAdminManagedCustomOrderUnpaid(order: AdminManagedCustomOrderPaymentSource | null | undefined) {
+  if (!order) return false;
+  if (!isAdminManagedCustomOrder(order)) return false;
+  return !order.paid_at;
 }
 
 export function isVisibleOnProductionSchedule(order: OrderRow) {

@@ -243,12 +243,14 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   })();
   const packagingSummary = (() => {
     const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
-    const quantityLabel = Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0 ? ` (Qty: ${Number(order.quantity)})` : "";
-    const lidLabel =
-      packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay
-        ? `, Lid: ${jarLidColorDisplay.label}`
-        : "";
-    return `${packagingLabel}${quantityLabel}${lidLabel}`;
+    const summaryParts = [];
+    if (Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0) {
+      summaryParts.push(`Qty: ${Number(order.quantity)}`);
+    }
+    if (packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay) {
+      summaryParts.push(`Lid colour: ${jarLidColorDisplay.label}`);
+    }
+    return summaryParts.length > 0 ? `${packagingLabel} (${summaryParts.join(", ")})` : packagingLabel;
   })();
   const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
   const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
@@ -477,12 +479,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
                 <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
               </p>
-              {packaging?.type?.toLowerCase() === "jar" && order.jar_lid_color ? (
-                <p className={SPEC_ROW_CLASS}>
-                  <span className={SPEC_LABEL_CLASS}>Lid colour:</span>
-                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jarLidColorDisplay)}</span>
-                </p>
-              ) : null}
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Custom Labels to print:</span>
                 <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>

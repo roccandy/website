@@ -12,7 +12,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { archiveOrderInline, upsertOrder } from "./actions";
+import { archiveOrderInline, markOrderAsPaid, upsertOrder } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
@@ -43,7 +43,7 @@ import {
   statusBadge,
   weightLabel,
 } from "./productionScheduleShared";
-import { isVisibleOnProductionSchedule } from "./scheduleVisibility";
+import { isAdminManagedCustomOrderUnpaid, isVisibleOnProductionSchedule } from "./scheduleVisibility";
 
 type Props = {
   orders: OrderRow[];
@@ -410,6 +410,7 @@ export function OrdersTable({
                 const canCompleteFromSchedule = canCompleteOrderForSlotDate(order, assignedSlotDate);
                 const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
                 const isAdminPremade = isAdminPremadeOrder(order);
+                const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -440,6 +441,11 @@ export function OrdersTable({
                           >
                             {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
+                          {isAdminManagedCustomUnpaid ? (
+                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
+                              Unpaid
+                            </span>
+                          ) : null}
                           {isAdminPremade ? (
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                               Premade stock
@@ -1077,6 +1083,16 @@ export function OrdersTable({
                                     ) : (
                                       <span className="text-xs text-zinc-500">Print unavailable</span>
                                     )}
+                                    {isAdminManagedCustomUnpaid ? (
+                                      <button
+                                        type="submit"
+                                        formNoValidate
+                                        formAction={markOrderAsPaid}
+                                        className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                      >
+                                        Mark as Paid
+                                      </button>
+                                    ) : null}
                                     {canCompleteFromSchedule ? (
                                       <SplitAwareActionForm
                                         action={archiveOrderInline}

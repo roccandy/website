@@ -301,6 +301,14 @@ body {
     background-position: center 30px;
   }
 
+  :root .site-about-mobile-bg.landing-bg-home::before,
+  :root .site-about-mobile-bg.landing-bg-faded::before {
+    background-image: url("/about-carousel/watercolour-home-middle.webp");
+    background-repeat: no-repeat;
+    background-size: 1200px auto;
+    background-position: center top;
+  }
+
   .site-hero-title,
   .site-page-title,
   .site-section-title,

@@ -212,7 +212,13 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className={showLandingBackdrop ? "landing-bg landing-bg-faded site-watercolour-hero-mobile-offset -mt-8 pt-8" : "-mt-8 pt-8"}>
+        <div
+          className={
+            showLandingBackdrop
+              ? "landing-bg landing-bg-faded site-watercolour-hero-mobile-offset site-about-mobile-bg -mt-8 pt-8"
+              : "-mt-8 pt-8"
+          }
+        >
           <div className="site-page-frame site-page-stack mx-auto max-w-5xl">
           {landingConfig ? (
             <section className="site-landing-hero-section text-center">

@@ -16,6 +16,7 @@ import {
   isAdminPremadeOrder,
 } from "@/lib/adminPremadeOrder";
 import { findFirstAvailableSlotIndexForDate } from "./productionScheduleShared";
+import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -559,6 +560,86 @@ export async function upsertOrder(formData: FormData) {
     redirect(`${destination}?${params.toString()}`);
   }
   redirect(destination);
+}
+
+export async function markOrderAsPaid(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const orderId = formData.get("id")?.toString() || formData.get("order_id")?.toString() || null;
+  const errorRedirect = (message: string) => {
+    const params = new URLSearchParams({
+      toast: "error",
+      message,
+    });
+    if (orderId) {
+      params.set("selected", orderId);
+    }
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  };
+
+  try {
+    if (!orderId) throw new Error("Missing order id");
+
+    const client = supabaseAdminClient;
+    const { data: existing, error: existingError } = await client
+      .from("orders")
+      .select("id,order_number,title,customer_name,design_type,woo_order_id,woo_payment_url,paid_at,payment_method")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (!existing) throw new Error("Order not found.");
+    if (!isAdminManagedCustomOrder(existing)) {
+      throw new Error("Only admin-created custom orders can be marked as paid.");
+    }
+    if (existing.paid_at) {
+      throw new Error("Order is already marked as paid.");
+    }
+
+    const paidAt = new Date().toISOString();
+    const paymentMethod = existing.payment_method?.trim() || "Manual payment";
+    const { error } = await client
+      .from("orders")
+      .update({
+        paid_at: paidAt,
+        payment_method: paymentMethod,
+      })
+      .eq("id", orderId);
+    if (error) throw new Error(error.message);
+
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: describeOrderTarget({
+        orderNumber: existing.order_number,
+        title: existing.title,
+        customerName: existing.customer_name,
+      }),
+      summary: `Marked ${describeOrderTarget({
+        orderNumber: existing.order_number,
+        title: existing.title,
+        customerName: existing.customer_name,
+      })} as paid.`,
+      path: ORDERS_PATH,
+      changedFields: ["Payment status"],
+      metadata: {
+        paidAt,
+      },
+    });
+
+    revalidatePath(ORDERS_PATH);
+    revalidatePath("/admin/orders/archived");
+
+    const params = new URLSearchParams({
+      selected: orderId,
+      toast: "success",
+      message: "Order marked as paid.",
+    });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to mark order as paid.";
+    errorRedirect(message);
+  }
 }
 
 export async function refundOrder(formData: FormData) {

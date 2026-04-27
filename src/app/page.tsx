@@ -82,7 +82,7 @@ export default async function Home() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} logoPriority dataQuoteHeader />
 
-        <div className="landing-bg landing-bg-home site-watercolour-hero-mobile-offset -mt-8 pt-8">
+        <div className="landing-bg landing-bg-home site-watercolour-hero-mobile-offset site-about-mobile-bg -mt-8 pt-8">
           <div className="site-page-frame relative mx-auto max-w-6xl">
 
           <section className="site-home-hero-section site-home-hero-grid grid items-center lg:grid-cols-[1.2fr,0.8fr]">
