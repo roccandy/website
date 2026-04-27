@@ -10,6 +10,20 @@ function getStorageKey(pathname: string) {
   return `${STORAGE_PREFIX}${pathname}`;
 }
 
+function readSavedScroll(key: string) {
+  const raw = window.sessionStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as { y: number; ts: number };
+    if (!Number.isFinite(parsed.y) || !Number.isFinite(parsed.ts)) return null;
+    if (Date.now() - parsed.ts > MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export function AdminScrollRestoration() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -19,26 +33,20 @@ export function AdminScrollRestoration() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const key = getStorageKey(locationKey);
-    const raw = window.sessionStorage.getItem(key);
-    if (!raw) return;
+    const exactKey = getStorageKey(locationKey);
+    const pathnameKey = getStorageKey(pathname);
+    const parsed = readSavedScroll(exactKey) ?? readSavedScroll(pathnameKey);
+    if (!parsed) return;
 
-    window.sessionStorage.removeItem(key);
+    window.sessionStorage.removeItem(exactKey);
+    window.sessionStorage.removeItem(pathnameKey);
 
-    try {
-      const parsed = JSON.parse(raw) as { y: number; ts: number };
-      if (!Number.isFinite(parsed.y) || !Number.isFinite(parsed.ts)) return;
-      if (Date.now() - parsed.ts > MAX_AGE_MS) return;
-
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: parsed.y, left: 0, behavior: "auto" });
-        });
+        window.scrollTo({ top: parsed.y, left: 0, behavior: "auto" });
       });
-    } catch {
-      // Ignore malformed state.
-    }
-  }, [locationKey]);
+    });
+  }, [locationKey, pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -48,13 +56,13 @@ export function AdminScrollRestoration() {
       if (!(form instanceof HTMLFormElement)) return;
 
       try {
-        window.sessionStorage.setItem(
-          getStorageKey(locationKey),
-          JSON.stringify({
-            y: window.scrollY,
-            ts: Date.now(),
-          }),
-        );
+        const value = JSON.stringify({
+          y: window.scrollY,
+          ts: Date.now(),
+        });
+
+        window.sessionStorage.setItem(getStorageKey(locationKey), value);
+        window.sessionStorage.setItem(getStorageKey(pathname), value);
       } catch {
         // Ignore storage failures.
       }
@@ -62,7 +70,7 @@ export function AdminScrollRestoration() {
 
     window.addEventListener("submit", handleSubmit, true);
     return () => window.removeEventListener("submit", handleSubmit, true);
-  }, [locationKey]);
+  }, [locationKey, pathname]);
 
   return null;
 }
