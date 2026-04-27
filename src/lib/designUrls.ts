@@ -180,6 +180,27 @@ export function buildDesignerPath(input: {
   return query ? `/design?${query}` : "/design";
 }
 
+export function inferDesignerOrderTypeFromCategory(value?: string | null): InternalOrderType {
+  if (!value) return "weddings";
+  if (value === "weddings" || value.startsWith("weddings-")) return "weddings";
+  if (value === "text" || value.startsWith("custom-")) return "text";
+  if (value === "branded") return "branded";
+  return "weddings";
+}
+
+export function buildDesignerEditPath(input: {
+  itemId: string;
+  categoryId?: string | null;
+  designType?: string | null;
+}) {
+  const categoryId = input.categoryId || input.designType || null;
+  return buildDesignerPath({
+    orderType: inferDesignerOrderTypeFromCategory(categoryId),
+    categoryId,
+    extraParams: { edit: input.itemId },
+  });
+}
+
 export function getDesignerCanonicalTarget(input: {
   type?: string | null;
   variant?: string | null;

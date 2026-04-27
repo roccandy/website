@@ -13,6 +13,7 @@ import { buildCustomPricingInput } from "@/lib/customPricingInput";
 import type { PricingBreakdown } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
 import { toPublicPaymentError, toPublicPricingError } from "@/lib/publicErrorMessages";
+import { buildDesignerEditPath } from "@/lib/designUrls";
 import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
 type PremadeSuggestion = {
@@ -1577,7 +1578,16 @@ export function CheckoutClient({
                     pricing={pricingOverrides[item.id]}
                     onRemove={() => removeItem(item.id)}
                     onEditCustom={
-                      item.type === "custom" ? () => window.location.assign(`/design?edit=${encodeURIComponent(item.id)}`) : undefined
+                      item.type === "custom"
+                        ? () =>
+                            window.location.assign(
+                              buildDesignerEditPath({
+                                itemId: item.id,
+                                categoryId: item.categoryId,
+                                designType: item.designType,
+                              })
+                            )
+                        : undefined
                     }
                     onQuantityChange={(qty) => {
                       const nextQtyRaw = Number.isFinite(qty) ? Math.floor(qty) : 1;

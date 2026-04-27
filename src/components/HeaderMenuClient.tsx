@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useCart } from "./CartProvider";
+import { buildDesignerEditPath } from "@/lib/designUrls";
 
 function formatWeight(weight_g: number) {
   if (!Number.isFinite(weight_g) || weight_g <= 0) return "";
@@ -254,7 +255,11 @@ export default function HeaderMenuClient() {
                                 )}
                                 {!isPremade ? (
                                   <a
-                                    href={`/design?edit=${encodeURIComponent(item.id)}`}
+                                    href={buildDesignerEditPath({
+                                      itemId: item.id,
+                                      categoryId: item.categoryId,
+                                      designType: item.designType,
+                                    })}
                                     onClick={closeDrawer}
                                     className="rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
                                   >

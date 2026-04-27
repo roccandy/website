@@ -352,96 +352,6 @@ export function QuoteBuilder({
     });
 
   useEffect(() => {
-    if (!editItemId || !editItem) return;
-    if (appliedEditRef.current === editItemId) return;
-    appliedEditRef.current = editItemId;
-
-    const fallbackCategory =
-      (editItem.categoryId && categories.some((category) => category.id === editItem.categoryId)
-        ? editItem.categoryId
-        : null) ||
-      (editItem.designType && categories.some((category) => category.id === editItem.designType)
-        ? editItem.designType
-        : null) ||
-      "";
-    const nextOrderType = inferOrderTypeFromCategory(fallbackCategory || editItem.designType || orderType) ?? orderType;
-
-    hasManualSubtypeRef.current = true;
-    setOrderType(nextOrderType);
-    setCategoryId(nextOrderType === "branded" ? "branded" : fallbackCategory);
-
-    const matchedPackaging = editItem.packagingOptionId
-      ? packagingOptions.find((option) => option.id === editItem.packagingOptionId)
-      : null;
-    if (matchedPackaging) {
-      setSelectionType(matchedPackaging.type);
-      setSelectionSize(matchedPackaging.size);
-    }
-    setSelectionQtyInput(String(Math.max(1, editItem.quantity || 1)));
-    setJarLidColor(editItem.jarLidColor || "");
-
-    const labelsEnabled = Boolean((editItem.labelsCount ?? 0) > 0 || editItem.labelImageUrl || editItem.labelTypeId);
-    setLabelsOptIn(labelsEnabled);
-    setLabelTypeId(editItem.labelTypeId || "");
-    setLabelCountOverride(Math.max(0, editItem.labelsCount ?? 0));
-    setLabelImageUrl(editItem.labelImageUrl || "");
-    setLabelFileName("");
-    setLabelImageError(null);
-    setIngredientLabelsOptIn(Boolean(editItem.ingredientLabelsOptIn));
-
-    const hasJacketExtra = (name: "rainbow" | "two_colour" | "pinstripe") =>
-      Boolean(editItem.jacketExtras?.some((extra) => extra.jacket === name));
-    const jacketValue = editItem.jacket || "";
-    setRainbowJacket(jacketValue === "rainbow" || hasJacketExtra("rainbow"));
-    setTwoColourJacket(
-      jacketValue === "two_colour" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("two_colour")
-    );
-    setPinstripeJacket(
-      jacketValue === "pinstripe" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("pinstripe")
-    );
-    setJacketColorOne(editItem.jacketColorOne || "");
-    setJacketColorTwo(editItem.jacketColorTwo || "");
-    setTextColor(editItem.textColor || "");
-    setHeartColor(editItem.heartColor || "");
-    setFlavor(editItem.flavor || "");
-    setLogoUrl(editItem.logoUrl || "");
-    setLogoError(null);
-
-    const designSource = (editItem.designText || editItem.title || "").trim();
-    const parsedWedding = splitWeddingDesign(designSource);
-    if (nextOrderType === "weddings") {
-      const useInitials = fallbackCategory === "weddings-initials";
-      if (useInitials) {
-        setInitialOne(parsedWedding.lineOne.slice(0, 1).toUpperCase());
-        setInitialTwo(parsedWedding.lineTwo.slice(0, 1).toUpperCase());
-        setNameOne("");
-        setNameTwo("");
-      } else {
-        setNameOne(parsedWedding.lineOne.slice(0, 8).toUpperCase());
-        setNameTwo(parsedWedding.lineTwo.slice(0, 8).toUpperCase());
-        setInitialOne("");
-        setInitialTwo("");
-      }
-      setCustomText("");
-      setOrgName("");
-    } else if (nextOrderType === "text") {
-      setCustomText(designSource);
-      setInitialOne("");
-      setInitialTwo("");
-      setNameOne("");
-      setNameTwo("");
-      setOrgName("");
-    } else if (nextOrderType === "branded") {
-      setOrgName(designSource);
-      setCustomText("");
-      setInitialOne("");
-      setInitialTwo("");
-      setNameOne("");
-      setNameTwo("");
-    }
-  }, [categories, editItem, editItemId, orderType, packagingOptions]);
-
-  useEffect(() => {
     const urlOrderType =
       typeof window !== "undefined"
         ? resolveDesignerState({
@@ -933,17 +843,12 @@ export function QuoteBuilder({
 
   useEffect(() => {
     if (!labelsOptIn) {
-      setLabelFileName("");
-      setLabelImageUrl("");
       setLabelImageError(null);
     }
   }, [labelsOptIn]);
 
   useEffect(() => {
-    if (!labelsOptIn) {
-      if (labelTypeId) setLabelTypeId("");
-      return;
-    }
+    if (!labelsOptIn) return;
     const hasValidSelection =
       labelTypeId && availableLabelTypes.some((labelType) => labelType.id === labelTypeId);
     if (hasValidSelection) return;
@@ -960,6 +865,96 @@ export function QuoteBuilder({
       setLabelCountOverride(Math.min(totalPackages, settings.labels_max_bulk));
     }
   }, [hasBulkSelection, labelsOptIn, labelCountOverride, totalPackages, settings.labels_max_bulk]);
+
+  useEffect(() => {
+    if (!editItemId || !editItem) return;
+    if (appliedEditRef.current === editItemId) return;
+    appliedEditRef.current = editItemId;
+
+    const fallbackCategory =
+      (editItem.categoryId && categories.some((category) => category.id === editItem.categoryId)
+        ? editItem.categoryId
+        : null) ||
+      (editItem.designType && categories.some((category) => category.id === editItem.designType)
+        ? editItem.designType
+        : null) ||
+      "";
+    const nextOrderType = inferOrderTypeFromCategory(fallbackCategory || editItem.designType || orderType) ?? orderType;
+
+    hasManualSubtypeRef.current = true;
+    setOrderType(nextOrderType);
+    setCategoryId(nextOrderType === "branded" ? "branded" : fallbackCategory);
+
+    const matchedPackaging = editItem.packagingOptionId
+      ? packagingOptions.find((option) => option.id === editItem.packagingOptionId)
+      : null;
+    if (matchedPackaging) {
+      setSelectionType(matchedPackaging.type);
+      setSelectionSize(matchedPackaging.size);
+    }
+    setSelectionQtyInput(String(Math.max(1, editItem.quantity || 1)));
+    setJarLidColor(editItem.jarLidColor || "");
+
+    const labelsEnabled = Boolean((editItem.labelsCount ?? 0) > 0 || editItem.labelImageUrl || editItem.labelTypeId);
+    setLabelsOptIn(labelsEnabled);
+    setLabelTypeId(editItem.labelTypeId || "");
+    setLabelCountOverride(Math.max(0, editItem.labelsCount ?? 0));
+    setLabelImageUrl(editItem.labelImageUrl || "");
+    setLabelFileName("");
+    setLabelImageError(null);
+    setIngredientLabelsOptIn(Boolean(editItem.ingredientLabelsOptIn));
+
+    const hasJacketExtra = (name: "rainbow" | "two_colour" | "pinstripe") =>
+      Boolean(editItem.jacketExtras?.some((extra) => extra.jacket === name));
+    const jacketValue = editItem.jacket || "";
+    setRainbowJacket(jacketValue === "rainbow" || hasJacketExtra("rainbow"));
+    setTwoColourJacket(
+      jacketValue === "two_colour" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("two_colour")
+    );
+    setPinstripeJacket(
+      jacketValue === "pinstripe" || jacketValue === "two_colour_pinstripe" || hasJacketExtra("pinstripe")
+    );
+    setJacketColorOne(editItem.jacketColorOne || "");
+    setJacketColorTwo(editItem.jacketColorTwo || "");
+    setTextColor(editItem.textColor || "");
+    setHeartColor(editItem.heartColor || "");
+    setFlavor(editItem.flavor || "");
+    setLogoUrl(editItem.logoUrl || "");
+    setLogoError(null);
+
+    const designSource = (editItem.designText || editItem.title || "").trim();
+    const parsedWedding = splitWeddingDesign(designSource);
+    if (nextOrderType === "weddings") {
+      const useInitials = fallbackCategory === "weddings-initials";
+      if (useInitials) {
+        setInitialOne(parsedWedding.lineOne.slice(0, 1).toUpperCase());
+        setInitialTwo(parsedWedding.lineTwo.slice(0, 1).toUpperCase());
+        setNameOne("");
+        setNameTwo("");
+      } else {
+        setNameOne(parsedWedding.lineOne.slice(0, 8).toUpperCase());
+        setNameTwo(parsedWedding.lineTwo.slice(0, 8).toUpperCase());
+        setInitialOne("");
+        setInitialTwo("");
+      }
+      setCustomText("");
+      setOrgName("");
+    } else if (nextOrderType === "text") {
+      setCustomText(designSource);
+      setInitialOne("");
+      setInitialTwo("");
+      setNameOne("");
+      setNameTwo("");
+      setOrgName("");
+    } else if (nextOrderType === "branded") {
+      setOrgName(designSource);
+      setCustomText("");
+      setInitialOne("");
+      setInitialTwo("");
+      setNameOne("");
+      setNameTwo("");
+    }
+  }, [categories, editItem, editItemId, orderType, packagingOptions]);
 
   useEffect(() => {
     const controller = new AbortController();

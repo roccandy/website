@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDesignerEditPath,
   buildDesignerPath,
   getDesignerCanonicalTarget,
   isLegacyDesignerQuery,
@@ -40,6 +41,16 @@ describe("designUrls", () => {
         extraParams,
       }),
     ).toBe("/design?type=branded&edit=123&foo=bar");
+  });
+
+  it("builds edit URLs with the saved custom order type and variant", () => {
+    expect(
+      buildDesignerEditPath({
+        itemId: "custom-123",
+        categoryId: "custom-7-14",
+        designType: "text",
+      }),
+    ).toBe("/design?type=text&variant=long&edit=custom-123");
   });
 
   it("points utility designer URLs at the clean canonical target", () => {
