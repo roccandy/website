@@ -7,6 +7,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
+import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
 import { PrintButton } from "./PrintButton";
 
@@ -253,6 +254,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     return `${packagingLabel}${quantityLabel}`;
   })();
   const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
+  const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
 
   const showJacketColorOne =
     order.jacket === "two_colour" || order.jacket === "two_colour_pinstripe" || order.jacket === "pinstripe" || !order.jacket;
@@ -461,6 +463,10 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Custom Labels to print:</span>
                 <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
+              </p>
+              <p className={SPEC_ROW_CLASS}>
+                <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
+                <span className={SPEC_VALUE_CLASS}>{ingredientLabelsRequested ? "Yes" : "No"}</span>
               </p>
             </div>
           </div>
