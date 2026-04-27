@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
@@ -880,6 +881,39 @@ function CartItemRow({
 function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
   const desktopPages = useMemo(() => chunkSuggestions(items, 4), [items]);
   const [page, setPage] = useState(0);
+  const [mobilePage, setMobilePage] = useState(0);
+  const mobileScrollerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToMobilePage = useCallback(
+    (nextPage: number) => {
+      if (!items.length) return;
+      const normalizedPage = (nextPage + items.length) % items.length;
+      const scroller = mobileScrollerRef.current;
+      const target = scroller?.querySelector<HTMLElement>(`[data-suggestion-index="${normalizedPage}"]`);
+
+      setMobilePage(normalizedPage);
+      if (scroller && target) {
+        scroller.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
+      }
+    },
+    [items.length]
+  );
+
+  const handleMobileScroll = useCallback(() => {
+    const scroller = mobileScrollerRef.current;
+    if (!scroller) return;
+
+    const slides = Array.from(scroller.querySelectorAll<HTMLElement>("[data-suggestion-index]"));
+    const closest = slides.reduce(
+      (current, slide) => {
+        const distance = Math.abs(slide.offsetLeft - scroller.scrollLeft);
+        return distance < current.distance ? { index: Number(slide.dataset.suggestionIndex || 0), distance } : current;
+      },
+      { index: 0, distance: Number.POSITIVE_INFINITY }
+    );
+
+    setMobilePage((current) => (current === closest.index ? current : closest.index));
+  }, []);
 
   if (!items.length) {
     return (
@@ -890,19 +924,50 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
   }
 
   const canScroll = desktopPages.length > 1;
+  const canMobileScroll = items.length > 1;
+  const currentMobilePage = Math.min(mobilePage, items.length - 1);
 
   return (
     <>
-      <div className="md:hidden">
-        <div className="overflow-x-auto scroll-smooth snap-x snap-mandatory px-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="grid grid-flow-col auto-cols-[calc(100vw-2rem)] gap-3">
-          {items.map((item) => (
-              <div key={item.id} className="snap-start min-w-0">
+      <div className="space-y-3 overflow-hidden md:hidden">
+        <div
+          ref={mobileScrollerRef}
+          onScroll={handleMobileScroll}
+          className="w-full max-w-full overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="grid w-full grid-flow-col auto-cols-full gap-3">
+            {items.map((item, index) => (
+              <div key={item.id} data-suggestion-index={index} className="min-w-0 snap-start">
                 <PremadeSuggestionCard item={item} compact imageSizes="(max-width: 767px) calc(100vw - 2rem), 25vw" />
               </div>
             ))}
           </div>
         </div>
+        {canMobileScroll ? (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              data-neutral-button
+              onClick={() => scrollToMobilePage(currentMobilePage - 1)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-zinc-600 shadow-sm transition hover:text-zinc-900"
+              aria-label="Previous recommendation"
+            >
+              <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <p className="min-w-12 text-center text-xs font-semibold text-zinc-500" aria-live="polite">
+              {currentMobilePage + 1} / {items.length}
+            </p>
+            <button
+              type="button"
+              data-neutral-button
+              onClick={() => scrollToMobilePage(currentMobilePage + 1)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-zinc-600 shadow-sm transition hover:text-zinc-900"
+              aria-label="Next recommendation"
+            >
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="hidden items-center gap-3 md:flex">
