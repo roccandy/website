@@ -147,6 +147,7 @@ create table if not exists orders (
   quantity numeric,
   jar_lid_color text,
   labels_count numeric,
+  ingredient_labels_count numeric,
   jacket text,
   text_color text,
   heart_color text,

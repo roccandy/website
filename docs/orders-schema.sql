@@ -7,6 +7,7 @@ create table if not exists public.orders (
   packaging_option_id text,
   quantity numeric,
   labels_count numeric,
+  ingredient_labels_count numeric,
   label_type_id uuid,
   jacket text,
   due_date date,
