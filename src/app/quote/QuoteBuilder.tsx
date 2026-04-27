@@ -1603,7 +1603,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="flex h-full items-start justify-center">
-                <div className="aspect-square w-[375px] max-w-full rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="aspect-square w-[375px] max-w-full">
                   {packagingImageUrl && !packagingImageFailed ? (
                     <Image
                       src={packagingImageUrl}
@@ -1611,7 +1611,7 @@ export function QuoteBuilder({
                       width={750}
                       height={750}
                       sizes="(max-width: 768px) 100vw, 375px"
-                      className="h-full w-full object-contain"
+                      className="h-full w-full rounded-md object-contain"
                       priority
                       unoptimized
                       onError={() => setPackagingImageFailed(true)}
