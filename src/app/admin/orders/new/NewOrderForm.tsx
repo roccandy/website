@@ -322,6 +322,7 @@ export function NewOrderForm({
 }: Props) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousPackagingOptionIdRef = useRef<string | null>(null);
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
@@ -655,6 +656,16 @@ export function NewOrderForm({
     if (!packagingOptionId) {
       setLabelsCount("");
     }
+  }, [packagingOptionId]);
+
+  useEffect(() => {
+    const previousPackagingOptionId = previousPackagingOptionIdRef.current;
+    previousPackagingOptionIdRef.current = packagingOptionId;
+    if (previousPackagingOptionId === null || previousPackagingOptionId === packagingOptionId) {
+      return;
+    }
+    setLabelsCount("");
+    setIngredientLabelsCount("");
   }, [packagingOptionId]);
 
   useEffect(() => {

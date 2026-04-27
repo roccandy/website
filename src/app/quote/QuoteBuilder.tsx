@@ -870,12 +870,6 @@ export function QuoteBuilder({
   }, [availableLabelTypes, labelTypeId, labelsOptIn]);
 
   useEffect(() => {
-    if (hasBulkSelection && labelsOptIn && labelCountOverride === 0 && totalPackages > 0) {
-      setLabelCountOverride(Math.min(totalPackages, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX));
-    }
-  }, [hasBulkSelection, labelsOptIn, labelCountOverride, totalPackages, settings.labels_max_bulk]);
-
-  useEffect(() => {
     if (!ingredientLabelsOptIn || !hasBulkSelection) {
       setIngredientLabelsCountOverride(0);
       return;

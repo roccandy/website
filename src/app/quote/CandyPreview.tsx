@@ -309,13 +309,13 @@ function OverlayText({
   const cy = 659.802;
   const arcRadius = 320; // tuned to mimic the live site arc curvature
   const singleArcRadius = 380;
-  const singleArcYOffset = 32;
+  const singleArcYOffset = 36;
   const fontFamily = PREVIEW_FONT_FAMILY;
   const cappedDesign = (designText || lineOne || "").slice(0, 15);
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
-  const singleArcFontSize = cappedDesign.length > 12 ? 104 : 112;
-  const singleArcLetterSpacing = cappedDesign.length > 6 ? "0.035em" : "0.02em";
+  const singleArcFontSize = cappedDesign.length > 12 ? 102 : 110;
+  const singleArcLetterSpacing = cappedDesign.length > 10 ? "0.07em" : "0.05em";
   const straightFontSize = 122;
   const initialsFontSize = 180; // maps to ~35px at rendered size
   const heartScale = 9.49;
