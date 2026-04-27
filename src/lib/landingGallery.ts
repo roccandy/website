@@ -34,8 +34,8 @@ const LANDING_GALLERY_VARIANT_CONFIG: Record<string, LandingGalleryVariantConfig
   "design/custom-text-candy": {
     top: {
       key: "custom-7-14",
-      label: "15 characters max",
-      uploadLabel: "Top row: 15 characters max",
+      label: "7-14 letters",
+      uploadLabel: "Top row: 7-14 letters",
       pathFragment: "custom-7-14",
     },
     bottom: {

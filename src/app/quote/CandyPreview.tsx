@@ -309,6 +309,7 @@ function OverlayText({
   const cy = 659.802;
   const arcRadius = 320; // tuned to mimic the live site arc curvature
   const singleArcRadius = 380;
+  const singleArcYOffset = 32;
   const fontFamily = PREVIEW_FONT_FAMILY;
   const cappedDesign = (designText || lineOne || "").slice(0, 15);
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
@@ -373,7 +374,7 @@ function OverlayText({
       <defs>
         <path id="upperArc" d={`M ${cx - arcRadius} ${cy} A ${arcRadius} ${arcRadius} 0 0 1 ${cx + arcRadius} ${cy}`} />
         <path id="lowerArc" d={`M ${cx - arcRadius} ${cy + lowerArcYOffset} A ${arcRadius} ${arcRadius} 0 0 0 ${cx + arcRadius} ${cy + lowerArcYOffset}`} />
-        <path id="singleArc" d={`M ${cx - singleArcRadius} ${cy} A ${singleArcRadius} ${singleArcRadius} 0 0 1 ${cx + singleArcRadius} ${cy}`} />
+        <path id="singleArc" d={`M ${cx - singleArcRadius} ${cy + singleArcYOffset} A ${singleArcRadius} ${singleArcRadius} 0 0 1 ${cx + singleArcRadius} ${cy + singleArcYOffset}`} />
         <clipPath id="logoClip">
           <rect x={cx - logoOffset} y={cy - logoOffset} width={logoSize} height={logoSize} rx={logoSize * 0.1} ry={logoSize * 0.1} />
         </clipPath>

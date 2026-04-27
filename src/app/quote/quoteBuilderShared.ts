@@ -18,7 +18,7 @@ export const ORDER_SUBTYPES: Record<OrderTypeId, { id: string; label: string }[]
   ],
   text: [
     { id: "custom-1-6", label: "1-6 letters" },
-    { id: "custom-7-14", label: "15 characters max" },
+    { id: "custom-7-14", label: "7-14 letters" },
   ],
   branded: [{ id: "branded", label: "Branded" }],
 };
@@ -33,7 +33,7 @@ export const SUBTITLE_BY_CATEGORY: Record<string, string> = {
   "weddings-both-names": "Names & Hearts",
   "weddings-initials": "Initials & Hearts",
   "custom-1-6": "Text: Up to 6 letters",
-  "custom-7-14": "Text: 15 characters max",
+  "custom-7-14": "Text: 7 - 14 letters",
   branded: "Logo Branded Candy",
 };
 
