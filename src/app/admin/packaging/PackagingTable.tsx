@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
@@ -1518,6 +1518,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                   );
                   const fileInputId = `combo-upload-${toDomId(row.key)}`;
                   const isMissingImage = !image?.image_path;
+                  const isUploadingRow = Boolean(optimizingRows[row.key]);
                   const categoryName = categoryNameById.get(row.categoryId) ?? row.categoryId;
                   return (
                     <tr
@@ -1567,7 +1568,10 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                                 const file = event.currentTarget.files?.[0];
                                 const form = event.currentTarget.form;
                                 setUploadSummaries((current) => ({ ...current, [row.key]: null }));
-                                if (!file) return;
+                                if (!file) {
+                                  setOptimizingRows((current) => ({ ...current, [row.key]: false }));
+                                  return;
+                                }
                                 setOptimizingRows((current) => ({ ...current, [row.key]: true }));
                                 try {
                                   const summary = await analyzeImageOptimization(file, {
@@ -1577,29 +1581,32 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
                                   });
                                   setUploadSummaries((current) => ({ ...current, [row.key]: summary }));
                                 } finally {
-                                  setOptimizingRows((current) => ({ ...current, [row.key]: false }));
                                   form?.requestSubmit();
                                 }
                               }}
                             />
-                            <label
-                              htmlFor={fileInputId}
-                              className="inline-flex cursor-pointer items-center justify-center rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-400"
-                            >
-                              {imageUrl ? "Replace image" : "Upload image"}
-                            </label>
-                            {optimizingRows[row.key] ? (
-                              <ImageOptimizationStatus
-                                summary={null}
-                                pendingLabel="Preparing upload..."
-                                helperText="Packaging uploads are stored in the smallest suitable web format."
-                              />
-                            ) : uploadSummaries[row.key] ? (
+                            {isUploadingRow ? (
+                              <span
+                                className="inline-flex items-center justify-center gap-2 rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-600 shadow-sm"
+                                aria-live="polite"
+                              >
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                                Uploading
+                              </span>
+                            ) : (
+                              <label
+                                htmlFor={fileInputId}
+                                className="inline-flex cursor-pointer items-center justify-center rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-sm hover:border-zinc-400"
+                              >
+                                {imageUrl ? "Replace image" : "Upload image"}
+                              </label>
+                            )}
+                            {!isUploadingRow && uploadSummaries[row.key] ? (
                               <ImageOptimizationStatus
                                 summary={uploadSummaries[row.key]}
                                 helperText="Packaging uploads are stored in the smallest suitable web format."
                               />
-                            ) : image?.image_path ? (
+                            ) : !isUploadingRow && image?.image_path ? (
                               <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-[11px] text-zinc-600">
                                 <p>
                                   Current stored:{" "}
