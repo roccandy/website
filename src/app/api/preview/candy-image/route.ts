@@ -48,6 +48,7 @@ export async function GET(request: Request) {
   const lineTwo = weddingSplit.lineTwo.toUpperCase();
   const designText = rawDesignText.toUpperCase();
   const isWedding = Boolean(lineOne || lineTwo);
+  const singleTextSize = designText.length > 12 ? "32px" : designText.length > 9 ? "36px" : "40px";
 
   const outerBackground =
     mode === "rainbow"
@@ -182,10 +183,13 @@ export async function GET(request: Request) {
                 {
                   style: {
                     color: textColor,
-                    fontSize: "40px",
+                    fontSize: singleTextSize,
                     fontWeight: 700,
                     letterSpacing: "0.02em",
                     lineHeight: 1.05,
+                    maxWidth: "218px",
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
                   },
                 },
                 designText || (showHeart ? "♥" : "")

@@ -47,10 +47,12 @@ import {
   buildPublicImageUrl,
   formatLabelTypeLabel,
   inferOrderTypeFromCategory,
+  LONG_CUSTOM_TEXT_MAX_LENGTH,
   ORDER_SUBTYPES,
   ORDER_TYPE_TITLES,
   resolveInitialDesignerSelection,
   resolveSyncedDesignerSelection,
+  SHORT_CUSTOM_TEXT_MAX_LENGTH,
   splitWeddingDesign,
   SUBTITLE_BY_CATEGORY,
   toTitleCase,
@@ -748,7 +750,7 @@ export function QuoteBuilder({
   const isText = orderType === "text";
   const isBranded = orderType === "branded";
   const isShortCustom = isText && categoryId === "custom-1-6";
-  const maxCustomLength = isShortCustom ? 6 : 14;
+  const maxCustomLength = isShortCustom ? SHORT_CUSTOM_TEXT_MAX_LENGTH : LONG_CUSTOM_TEXT_MAX_LENGTH;
   const designTitle = isWedding
     ? isWeddingInitials
       ? `${(initialOne || "").trim().toUpperCase()} ❤️ ${(initialTwo || "").trim().toUpperCase()}`
@@ -1871,6 +1873,14 @@ export function QuoteBuilder({
                     className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm"
                     placeholder="Your text"
                   />
+                  <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
+                    <span>
+                      {isShortCustom
+                        ? `Up to ${SHORT_CUSTOM_TEXT_MAX_LENGTH} letters`
+                        : `${LONG_CUSTOM_TEXT_MAX_LENGTH} characters max, including spaces`}
+                    </span>
+                    <span>{`${(customText || "").length}/${maxCustomLength}`}</span>
+                  </div>
                 </label>
               )}
               {!isBranded && (

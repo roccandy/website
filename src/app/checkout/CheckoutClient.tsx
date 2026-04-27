@@ -582,7 +582,7 @@ function getCustomOrderTypeLine(value?: string | null) {
   if (value === "weddings-both-names") return "Weddings | Both Names";
   if (value === "weddings") return "Weddings";
   if (value === "custom-1-6") return "Custom Text | 1-6 Letters";
-  if (value === "custom-7-14") return "Custom Text | 7-14 Letters";
+  if (value === "custom-7-14") return "Custom Text | 15 Characters Max";
   if (value === "text") return "Custom Text";
   if (value === "branded") return "Branded";
   return value

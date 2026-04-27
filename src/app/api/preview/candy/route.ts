@@ -59,9 +59,12 @@ export async function GET(request: Request) {
     `
       : "";
 
+  const singleTextSize = designText.length > 12 ? 34 : designText.length > 9 ? 38 : 42;
+  const singleTextFitAttrs =
+    designText.length > 9 ? ` textLength="260" lengthAdjust="spacingAndGlyphs"` : "";
   const singleTextNode =
     !weddingTextNode && !logoNode && designText
-      ? `<text x="300" y="210" text-anchor="middle" font-size="42" font-weight="700" fill="${textColor}">${escapeXml(designText)}</text>`
+      ? `<text x="300" y="210" text-anchor="middle" font-size="${singleTextSize}" font-weight="700" fill="${textColor}"${singleTextFitAttrs}>${escapeXml(designText)}</text>`
       : "";
 
   const heartOnlyNode =

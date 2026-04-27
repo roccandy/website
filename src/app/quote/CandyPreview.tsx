@@ -308,16 +308,17 @@ function OverlayText({
   const cx = 544.367;
   const cy = 659.802;
   const arcRadius = 320; // tuned to mimic the live site arc curvature
+  const singleArcRadius = 380;
   const fontFamily = PREVIEW_FONT_FAMILY;
+  const cappedDesign = (designText || lineOne || "").slice(0, 15);
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
-  const singleArcFontSize = 122;
+  const singleArcFontSize = cappedDesign.length > 12 ? 104 : 112;
   const straightFontSize = 122;
   const initialsFontSize = 180; // maps to ~35px at rendered size
   const heartScale = 9.49;
   const logoSize = 620;
   const logoOffset = logoSize / 2;
-  const cappedDesign = (designText || lineOne || "").slice(0, 14);
   const hasLineOne = Boolean(lineOne);
   const hasLineTwo = Boolean(lineTwo);
   const hasTwoLines = hasLineOne && hasLineTwo;
@@ -372,6 +373,7 @@ function OverlayText({
       <defs>
         <path id="upperArc" d={`M ${cx - arcRadius} ${cy} A ${arcRadius} ${arcRadius} 0 0 1 ${cx + arcRadius} ${cy}`} />
         <path id="lowerArc" d={`M ${cx - arcRadius} ${cy + lowerArcYOffset} A ${arcRadius} ${arcRadius} 0 0 0 ${cx + arcRadius} ${cy + lowerArcYOffset}`} />
+        <path id="singleArc" d={`M ${cx - singleArcRadius} ${cy} A ${singleArcRadius} ${singleArcRadius} 0 0 1 ${cx + singleArcRadius} ${cy}`} />
         <clipPath id="logoClip">
           <rect x={cx - logoOffset} y={cy - logoOffset} width={logoSize} height={logoSize} rx={logoSize * 0.1} ry={logoSize * 0.1} />
         </clipPath>
@@ -469,7 +471,7 @@ function OverlayText({
         </>
       ) : arcMode ? (
         <text fontSize={singleArcFontSize} fontWeight="700" fill={textColor} letterSpacing={arcLetterSpacing}>
-          <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+          <textPath href="#singleArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
             {cappedDesign.toUpperCase()}
           </textPath>
         </text>

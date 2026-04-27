@@ -26,6 +26,7 @@ import type {
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
 import { upsertOrder } from "../actions";
 import { paletteSections } from "@/app/admin/settings/palette";
+import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
 
 const STATES = [
   { value: "", label: "Select state" },
@@ -495,7 +496,8 @@ export function NewOrderForm({
     };
   }, [adminPremadeFlavor, adminPremadeMode, adminPremadeSelectionLabel, productionSlotDate, weightValue]);
   const showJacketColorTwo = jacket === "two_colour" || jacket === "two_colour_pinstripe";
-  const customTextLimit = categoryId === "custom-7-14" ? 14 : 6;
+  const customTextLimit =
+    categoryId === "custom-7-14" ? LONG_CUSTOM_TEXT_MAX_LENGTH : SHORT_CUSTOM_TEXT_MAX_LENGTH;
   const designTextValue = useMemo(() => {
     if (isWedding) {
       const left = isWeddingInitials
@@ -1020,6 +1022,14 @@ export function NewOrderForm({
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                     placeholder="Your text"
                   />
+                  <div className="mt-1 flex items-center justify-between gap-3 text-[11px] normal-case tracking-normal text-zinc-500">
+                    <span>
+                      {categoryId === "custom-7-14"
+                        ? `${LONG_CUSTOM_TEXT_MAX_LENGTH} characters max, including spaces`
+                        : `Up to ${SHORT_CUSTOM_TEXT_MAX_LENGTH} letters`}
+                    </span>
+                    <span>{`${(customText || "").length}/${customTextLimit}`}</span>
+                  </div>
                 </label>
               )}
               {isBranded && (

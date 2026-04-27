@@ -8,6 +8,9 @@ export const ORDER_TYPES: { id: OrderTypeId; label: string }[] = [
   { id: "branded", label: "Branded" },
 ];
 
+export const SHORT_CUSTOM_TEXT_MAX_LENGTH = 6;
+export const LONG_CUSTOM_TEXT_MAX_LENGTH = 15;
+
 export const ORDER_SUBTYPES: Record<OrderTypeId, { id: string; label: string }[]> = {
   weddings: [
     { id: "weddings-initials", label: "Initials" },
@@ -15,7 +18,7 @@ export const ORDER_SUBTYPES: Record<OrderTypeId, { id: string; label: string }[]
   ],
   text: [
     { id: "custom-1-6", label: "1-6 letters" },
-    { id: "custom-7-14", label: "7-14 letters" },
+    { id: "custom-7-14", label: "15 characters max" },
   ],
   branded: [{ id: "branded", label: "Branded" }],
 };
@@ -30,7 +33,7 @@ export const SUBTITLE_BY_CATEGORY: Record<string, string> = {
   "weddings-both-names": "Names & Hearts",
   "weddings-initials": "Initials & Hearts",
   "custom-1-6": "Text: Up to 6 letters",
-  "custom-7-14": "Text: 7 - 14 letters",
+  "custom-7-14": "Text: 15 characters max",
   branded: "Logo Branded Candy",
 };
 
