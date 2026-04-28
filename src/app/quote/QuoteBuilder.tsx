@@ -97,6 +97,16 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 const BULK_LABEL_COUNT_MAX = 1000;
 
+function DesignPageBackgroundBand({ className = "" }: { className?: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className={`pointer-events-none absolute left-1/2 z-0 h-[280px] w-[min(1120px,100%)] -translate-x-1/2 bg-contain bg-center bg-no-repeat opacity-30 [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)] ${className}`}
+      style={{ backgroundImage: "url('/landing/background-no-figures.webp')" }}
+    />
+  );
+}
+
 function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   const overlayGroup = document.createElementNS(SVG_NS, "g");
   if (overlaySvg.querySelector("text, textPath")) {
@@ -1595,7 +1605,9 @@ export function QuoteBuilder({
               </div>
             </div>
 
-            <div className="mt-4 w-full border-t border-zinc-200 pt-4">
+            <div className="relative mt-4 w-full overflow-hidden border-t border-zinc-200 pt-4">
+              <DesignPageBackgroundBand className="top-[48%]" />
+              <div className="relative z-10">
               <h2 className="site-small-title text-zinc-900">Custom Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
@@ -1843,6 +1855,7 @@ export function QuoteBuilder({
                     </div>
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </div>
@@ -2108,7 +2121,9 @@ export function QuoteBuilder({
             </div>
           </div>
         </div>
-          <div className="mt-4 w-full border-t border-zinc-200 pt-4">
+          <div className="relative mt-4 w-full overflow-hidden border-t border-zinc-200 py-4">
+            <DesignPageBackgroundBand className="top-1/2 -translate-y-1/2 opacity-35" />
+            <div className="relative z-10">
             <h2 className="site-small-title text-zinc-900">Flavour</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {flavors.map((f) => {
@@ -2140,6 +2155,7 @@ export function QuoteBuilder({
                   </button>
                 );
               })}
+            </div>
             </div>
           </div>
 
