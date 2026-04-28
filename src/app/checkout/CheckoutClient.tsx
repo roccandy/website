@@ -112,9 +112,7 @@ const AU_STATES = [
 
 type SquarePayments = {
   card: (options?: Record<string, unknown>) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
-  applePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
   googlePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
-  paymentRequest: (request: unknown) => unknown;
 };
 
 declare global {
@@ -132,7 +130,7 @@ const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
-type PaymentMethod = "apple_pay" | "credit_card" | "paypal";
+type PaymentMethod = "credit_card" | "paypal";
 type PaymentProcessingState = {
   active: boolean;
   title: string;
@@ -202,32 +200,25 @@ function buildAnalyticsItems(
 }
 
 function SquarePayment({
-  amount,
   canPay,
   validationMessage,
   getOrderPayload,
   onSuccess,
   onError,
   onProcessingChange,
-  selectedMethod,
 }: {
-  amount: number;
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
   onError: (stage: string, message: string) => void;
   onProcessingChange: (state: PaymentProcessingState) => void;
-  selectedMethod: "apple_pay" | "credit_card";
 }) {
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
-  const [debugNote, setDebugNote] = useState<string | null>(null);
-  const [appleAvailable, setAppleAvailable] = useState(false);
   const paymentsRef = useRef<SquarePayments | null>(null);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
-  const appleRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
   const initializedRef = useRef(false);
   const initializingRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
@@ -289,37 +280,6 @@ function SquarePayment({
     }
   };
 
-  const refreshApplePay = useCallback(async (payments: SquarePayments) => {
-    if (amount <= 0) {
-      appleRef.current = null;
-      setAppleAvailable(false);
-      setDebugNote(null);
-      return null;
-    }
-
-    try {
-      const paymentRequest = payments.paymentRequest({
-        countryCode: "AU",
-        currencyCode: "AUD",
-        total: { amount: amount.toFixed(2), label: "Total" },
-      });
-      const applePay = await payments.applePay(paymentRequest);
-      if (!applePay || typeof (applePay as { tokenize?: unknown }).tokenize !== "function") {
-        throw new Error("Apple Pay not available.");
-      }
-      appleRef.current = applePay;
-      setAppleAvailable(true);
-      setDebugNote(null);
-      return applePay;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : JSON.stringify(error);
-      appleRef.current = null;
-      setAppleAvailable(false);
-      setDebugNote(`Square Apple Pay unavailable: ${message || "applePay() init failed."}`);
-      return null;
-    }
-  }, [amount]);
-
   useEffect(() => {
     if (initializedRef.current || initializingRef.current) return;
     if (!SQUARE_APP_ID || !SQUARE_LOCATION_ID) {
@@ -345,8 +305,6 @@ function SquarePayment({
           cardRef.current = card;
         }
 
-        await refreshApplePay(payments);
-
         initializedRef.current = true;
         initializingRef.current = false;
         setReady(true);
@@ -355,51 +313,16 @@ function SquarePayment({
         const friendlyMessage = toPublicPaymentError(message);
         setSetupError(friendlyMessage);
         onError("setup", message);
-        setDebugNote(`Square setup error: ${message}`);
         initializingRef.current = false;
       }
     })();
 
-  }, [onError, refreshApplePay]);
-
-  useEffect(() => {
-    if (!ready || !paymentsRef.current) return;
-    void refreshApplePay(paymentsRef.current);
-  }, [ready, refreshApplePay]);
+  }, [onError]);
 
   return (
     <div className="space-y-4">
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
-      {process.env.NODE_ENV !== "production" && debugNote ? (
-        <p className="mt-2 text-xs text-amber-600">{debugNote}</p>
-      ) : null}
-      <div className={selectedMethod === "apple_pay" ? "space-y-3" : "hidden"}>
-        {!appleAvailable ? (
-          <p className="text-sm text-zinc-500">
-            {amount <= 0
-              ? "Apple Pay will appear once there is something in the cart to pay for."
-              : "Apple Pay is currently unavailable on this device/browser."}
-          </p>
-        ) : null}
-        <button
-          type="button"
-          data-primary-button
-          disabled={!ready || loading || !appleAvailable}
-          onClick={() => {
-            void (async () => {
-              const payments = paymentsRef.current;
-              if (!payments) return;
-              const applePay = await refreshApplePay(payments);
-              if (!applePay) return;
-              await handleTokenize(() => applePay.tokenize(), "Square - Apple Pay");
-            })();
-          }}
-          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? "Processing..." : "Pay with Apple Pay"}
-        </button>
-      </div>
-      <div className={selectedMethod === "credit_card" ? "space-y-3" : "hidden"}>
+      <div className="space-y-3">
         <div className="rounded-xl border border-zinc-200 bg-white p-2">
           <div id="square-card-container" />
         </div>
@@ -1204,7 +1127,7 @@ export function CheckoutClient({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("apple_pay");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("credit_card");
   const [paymentProcessing, setPaymentProcessing] = useState<PaymentProcessingState>({
     active: false,
     title: "",
@@ -1453,12 +1376,7 @@ export function CheckoutClient({
     premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
   });
 
-  const paymentMethodLabel =
-    selectedPaymentMethod === "apple_pay"
-      ? "Apple Pay"
-      : selectedPaymentMethod === "credit_card"
-        ? "Credit Card"
-        : "PayPal";
+  const paymentMethodLabel = selectedPaymentMethod === "credit_card" ? "Credit Card" : "PayPal";
 
   const deliveryAddress = pickup
     ? "Pickup in North Perth"
@@ -1881,7 +1799,6 @@ export function CheckoutClient({
                   onChange={(event) => setSelectedPaymentMethod(event.target.value as PaymentMethod)}
                   className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 >
-                  <option value="apple_pay">Apple Pay</option>
                   <option value="credit_card">Credit Card</option>
                   <option value="paypal">PayPal</option>
                 </select>
@@ -1899,14 +1816,12 @@ export function CheckoutClient({
                   />
                 ) : (
                   <SquarePayment
-                    amount={cartPricing.total}
                     canPay={canPlace}
                     validationMessage={paymentValidationMessage}
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("square", stage, message)}
                     onProcessingChange={setPaymentProcessing}
-                    selectedMethod={selectedPaymentMethod}
                   />
                 )}
                 {paymentError ? <p className="mt-2 text-sm text-red-600">{paymentError}</p> : null}

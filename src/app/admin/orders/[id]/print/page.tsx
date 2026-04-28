@@ -139,6 +139,27 @@ const resolveColorDisplay = (hex: string | null | undefined, paletteHexMap: Map<
   return { label: "Custom", cmyk: cmyk ?? undefined };
 };
 
+const formatTokenLabel = (value: string) =>
+  value
+    .replace(/[-_]+/g, " ")
+    .replace(/\w\S*/g, (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase());
+
+const resolveJarLidColorDisplay = (
+  value: string | null | undefined,
+  paletteHexMap: Map<string, string>,
+): ColorDisplay | null => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^#?[0-9a-f]{6}$/i.test(trimmed)) {
+    const normalizedHex = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+    return resolveColorDisplay(normalizedHex, paletteHexMap);
+  }
+
+  return { label: formatTokenLabel(trimmed) };
+};
+
 const renderColorDisplay = (display: ColorDisplay | null) => {
   if (!display) return <span className="font-semibold">N/A</span>;
   if (!display.cmyk) return <span className="font-semibold">{display.label}</span>;
@@ -217,7 +238,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const heartColorDisplay = resolveColorDisplay(heartColorHex, paletteHexMap);
   const jacketColorOneDisplay = resolveColorDisplay(order.jacket_color_one, paletteHexMap);
   const jacketColorTwoDisplay = resolveColorDisplay(order.jacket_color_two, paletteHexMap);
-  const jarLidColorDisplay = resolveColorDisplay(order.jar_lid_color, paletteHexMap);
+  const jarLidColorDisplay = resolveJarLidColorDisplay(order.jar_lid_color, paletteHexMap);
   const labelImageUrl = order.label_image_url || "";
   const labelImageIsImage = labelImageUrl ? isImageUrl(labelImageUrl) : false;
   const labelDownloadName = (() => {
