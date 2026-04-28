@@ -3,7 +3,7 @@ import { requireAdminSession } from "@/lib/adminAuth";
 import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
 import {
   dateKey,
-  formatDate,
+  weightLabel,
 } from "@/app/admin/orders/productionScheduleShared";
 import { isVisibleOnProductionSchedule } from "@/app/admin/orders/scheduleVisibility";
 
@@ -79,8 +79,10 @@ function candyText(order: OrderRow) {
   return order.design_text?.trim() || order.title?.trim() || "-";
 }
 
-function customerLabel(order: OrderRow) {
-  return order.customer_name || [order.first_name, order.last_name].filter(Boolean).join(" ") || "";
+function formatDayDate(isoDate: string) {
+  const [year, month, day] = isoDate.split("-");
+  if (!year || !month || !day) return isoDate;
+  return `${day}/${month}/${year}`;
 }
 
 function printHref(order: OrderRow) {
@@ -119,20 +121,12 @@ export default async function ProductionOrdersPage() {
     })),
   }));
   const todayKey = dateKey(new Date());
-  const totalOrders = ordersByWeek.reduce(
-    (sum, window) => sum + window.days.reduce((daySum, day) => daySum + day.orders.length, 0),
-    0
-  );
-
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-0.5">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
           <h1 className="admin-page-title text-zinc-900">Production orders</h1>
-        </div>
-        <div className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-          {totalOrders} order{totalOrders === 1 ? "" : "s"}
         </div>
       </div>
 
@@ -142,16 +136,12 @@ export default async function ProductionOrdersPage() {
             <div>
               <h2 className="text-sm font-semibold text-zinc-900">{window.label}</h2>
               <p className="text-[11px] text-zinc-500">
-                {formatDate(window.start)} to {formatDate(window.end)}
+                {formatDayDate(window.start)} to {formatDayDate(window.end)}
               </p>
             </div>
-            <span className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-zinc-600">
-              {window.days.reduce((sum, day) => sum + day.orders.length, 0)} order
-              {window.days.reduce((sum, day) => sum + day.orders.length, 0) === 1 ? "" : "s"}
-            </span>
           </div>
 
-          <div className="divide-y divide-zinc-100">
+          <div className="space-y-1.5 p-2">
             {window.days.map((day) => {
               const isToday = day.date === todayKey;
               return (
@@ -166,37 +156,23 @@ export default async function ProductionOrdersPage() {
                     <p className="text-xs font-semibold text-zinc-900">
                       {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-AU", { weekday: "long" })}
                     </p>
-                    {isToday ? (
-                      <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800 lg:mt-1 lg:inline-flex">
-                        Today
-                      </span>
-                    ) : null}
                   </div>
                   <p className={`text-[11px] ${isToday ? "font-semibold text-emerald-800" : "text-zinc-500"}`}>
-                    {formatDate(day.date)}
-                  </p>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                    {day.orders.length} order{day.orders.length === 1 ? "" : "s"}
+                    {formatDayDate(day.date)}
                   </p>
                 </div>
 
                 {day.orders.length ? (
                   <div className="space-y-1.5">
                     {day.orders.map((order) => {
-                      const customer = customerLabel(order);
-                      const organization = order.organization_name?.trim();
                       const candy = candyText(order);
                       const orderName = orderDisplayName(order);
-                      const isCandyTextSameAsTitle = candy.toLowerCase() === orderName.toLowerCase();
                       return (
                         <article
                           key={order.id}
-                          className="grid gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] lg:items-center"
+                          className="grid gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_7rem_auto] lg:items-center"
                         >
                           <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                              {order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`}
-                            </p>
                             <h3 className="truncate text-sm font-semibold leading-tight text-zinc-950">{orderName}</h3>
                           </div>
 
@@ -204,18 +180,14 @@ export default async function ProductionOrdersPage() {
                             <p className="truncate text-sm font-semibold leading-snug text-zinc-950">{candy}</p>
                           </div>
 
-                          <div className="flex min-w-0 items-center justify-between gap-2">
-                            <p className="min-w-0 truncate text-[11px] text-zinc-500">
-                              {[!isCandyTextSameAsTitle ? orderName : "", customer, organization].filter(Boolean).join(" · ")}
-                            </p>
-                            <Link
-                              href={printHref(order)}
-                              target="_blank"
-                              className="shrink-0 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900"
-                            >
-                              Print
-                            </Link>
-                          </div>
+                          <p className="text-xs font-semibold text-zinc-700">{weightLabel(order.total_weight_kg) || "-"}</p>
+                          <Link
+                            href={printHref(order)}
+                            target="_blank"
+                            className="shrink-0 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-700 transition hover:border-zinc-300 hover:text-zinc-900"
+                          >
+                            Print
+                          </Link>
                         </article>
                       );
                     })}
