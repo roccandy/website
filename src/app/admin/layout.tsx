@@ -120,13 +120,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </div>
           </div>
         ) : null}
-        {productionUser ? (
-          <div className="border-b border-amber-300 bg-amber-50 print:hidden">
-            <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800 lg:px-6">
-              Production access: this user can view this week and next week orders and print order sheets only
-            </div>
-          </div>
-        ) : !session.user.canWrite && !session.user.canWriteSeo ? (
+        {!productionUser && !session.user.canWrite && !session.user.canWriteSeo ? (
           <div className="border-b border-sky-300 bg-sky-50 print:hidden">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800 lg:px-6">
               Read-only access: this user can view admin pages but cannot make changes beyond their own password
@@ -141,7 +135,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         ) : null}
         <div className="mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6 print:block print:max-w-none print:px-0 print:py-0">
-          <AdminSidebar sections={navSections} user={session.user} />
+          {!productionUser ? <AdminSidebar sections={navSections} user={session.user} /> : null}
           <main className="min-w-0 flex-1 print:w-full">{children}</main>
         </div>
       </div>
