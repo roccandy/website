@@ -158,7 +158,7 @@ export default async function ProductionOrdersPage() {
               <section
                 key={day.date}
                 className={`grid gap-2 px-3 py-2 lg:grid-cols-[8rem,1fr] ${
-                  isToday ? "bg-amber-50/75 ring-1 ring-inset ring-amber-200" : ""
+                  isToday ? "bg-emerald-50/75 ring-1 ring-inset ring-emerald-200" : ""
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-2 lg:block lg:space-y-0.5">
@@ -167,12 +167,12 @@ export default async function ProductionOrdersPage() {
                       {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-AU", { weekday: "long" })}
                     </p>
                     {isToday ? (
-                      <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800 lg:mt-1 lg:inline-flex">
+                      <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800 lg:mt-1 lg:inline-flex">
                         Today
                       </span>
                     ) : null}
                   </div>
-                  <p className={`text-[11px] ${isToday ? "font-semibold text-amber-800" : "text-zinc-500"}`}>
+                  <p className={`text-[11px] ${isToday ? "font-semibold text-emerald-800" : "text-zinc-500"}`}>
                     {formatDate(day.date)}
                   </p>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
