@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getOrders, type OrderRow } from "@/lib/data";
+import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
 import {
   dateKey,
   formatDate,
@@ -55,14 +55,18 @@ function buildWeekWindows(today = new Date()): WeekWindow[] {
   ];
 }
 
-function isInWindow(order: OrderRow, window: WeekWindow) {
-  const dueDate = order.due_date ?? "";
-  return dueDate >= window.start && dueDate <= window.end;
+function scheduleDateForOrder(order: OrderRow, assignedProductionDateByOrderId: Map<string, string>) {
+  return assignedProductionDateByOrderId.get(order.id) ?? order.due_date ?? "";
 }
 
-function sortProductionOrders(a: OrderRow, b: OrderRow) {
-  const aDate = a.due_date ?? "9999-12-31";
-  const bDate = b.due_date ?? "9999-12-31";
+function isInWindow(order: OrderRow, window: Pick<WeekWindow, "start" | "end">, assignedProductionDateByOrderId: Map<string, string>) {
+  const scheduleDate = scheduleDateForOrder(order, assignedProductionDateByOrderId);
+  return scheduleDate >= window.start && scheduleDate <= window.end;
+}
+
+function sortProductionOrders(a: OrderRow, b: OrderRow, assignedProductionDateByOrderId: Map<string, string>) {
+  const aDate = scheduleDateForOrder(a, assignedProductionDateByOrderId) || "9999-12-31";
+  const bDate = scheduleDateForOrder(b, assignedProductionDateByOrderId) || "9999-12-31";
   if (aDate !== bDate) return aDate.localeCompare(bDate);
   return (a.order_number ?? a.id).localeCompare(b.order_number ?? b.id);
 }
@@ -87,15 +91,31 @@ function printHref(order: OrderRow) {
 export default async function ProductionOrdersPage() {
   await requireAdminSession();
 
-  const orders = await getOrders();
+  const [orders, assignments, slots] = await Promise.all([
+    getOrders(),
+    getOrderSlots(),
+    getProductionSlots(),
+  ]);
 
-  const visibleOrders = orders.filter(isVisibleOnProductionSchedule).sort(sortProductionOrders);
+  const slotById = new Map(slots.map((slot) => [slot.id, slot]));
+  const assignedProductionDateByOrderId = new Map<string, string>();
+  for (const assignment of assignments) {
+    if (assignedProductionDateByOrderId.has(assignment.order_id)) continue;
+    const slot = slotById.get(assignment.slot_id);
+    if (slot?.slot_date) {
+      assignedProductionDateByOrderId.set(assignment.order_id, slot.slot_date);
+    }
+  }
+
+  const visibleOrders = orders
+    .filter(isVisibleOnProductionSchedule)
+    .sort((a, b) => sortProductionOrders(a, b, assignedProductionDateByOrderId));
   const weekWindows = buildWeekWindows();
   const ordersByWeek = weekWindows.map((window) => ({
     ...window,
     days: window.days.map((day) => ({
       date: day,
-      orders: visibleOrders.filter((order) => isInWindow(order, { ...window, start: day, end: day })),
+      orders: visibleOrders.filter((order) => isInWindow(order, { start: day, end: day }, assignedProductionDateByOrderId)),
     })),
   }));
   const totalOrders = ordersByWeek.reduce(
