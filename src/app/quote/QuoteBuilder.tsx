@@ -1403,7 +1403,7 @@ export function QuoteBuilder({
                     </div>
                   ))}
                   <div className="mt-1 border-t border-zinc-200 pt-1 text-zinc-700">
-                    <p className="text-[11px] text-zinc-500">Urgency surcharge is included when applicable.</p>
+                    <p className="text-[11px] text-zinc-500">Urgency surcharge added if applicable</p>
                     <div className="flex justify-between text-xs">
                       <span>Total</span>
                       <span>${result.total.toFixed(2)}</span>
@@ -1437,6 +1437,9 @@ export function QuoteBuilder({
                                 key={type}
                                 type="button"
                                 onClick={() => {
+                                  if (selectionType !== type) {
+                                    setSelectionQtyInput("");
+                                  }
                                   setSelectionType(type);
                                   setSelectionSize("");
                                 }}
