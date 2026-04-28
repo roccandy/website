@@ -8,7 +8,7 @@ import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminNav } from "@/app/admin/AdminNav";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
-import { buildAdminNavSections, isSeoFocusedUser } from "@/app/admin/adminNavigation";
+import { buildAdminNavSections, isProductionUser, isSeoFocusedUser } from "@/app/admin/adminNavigation";
 import { getAdminSession } from "@/lib/adminAuth";
 
 const PAYMENTS_SANDBOX_MODE =
@@ -57,6 +57,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
   const navSections = buildAdminNavSections(session.user);
   const seoFocused = isSeoFocusedUser(session.user);
+  const productionUser = isProductionUser(session.user);
   const roleLabel =
     session.user.role === "admin"
       ? "Full admin"
@@ -64,7 +65,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         ? "Editor"
         : session.user.role === "seo"
           ? "SEO editor"
-          : "Viewer";
+          : session.user.role === "production"
+            ? "Production"
+            : "Viewer";
 
   return (
     <ToastProvider>
@@ -76,7 +79,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
               <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">
-                {seoFocused ? "SEO Workspace" : "Roc Candy Admin"}
+                {seoFocused ? "SEO Workspace" : productionUser ? "Production" : "Roc Candy Admin"}
               </Link>
               <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">
                 {roleLabel}
@@ -96,14 +99,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signed in</p>
                 <p className="text-xs font-medium normal-case text-zinc-700">{signedInDisplay}</p>
               </div>
-              <Link
-                href="/admin/stats"
-                title="Open the secret stats room"
-                aria-label="Open the secret stats room"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-700"
-              >
-                <span aria-hidden="true">◔</span>
-              </Link>
+              {!productionUser ? (
+                <Link
+                  href="/admin/stats"
+                  title="Open the secret stats room"
+                  aria-label="Open the secret stats room"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-700"
+                >
+                  <span aria-hidden="true">◔</span>
+                </Link>
+              ) : null}
               <LogoutButton />
             </div>
           </div>
@@ -115,7 +120,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </div>
           </div>
         ) : null}
-        {!session.user.canWrite && !session.user.canWriteSeo ? (
+        {productionUser ? (
+          <div className="border-b border-amber-300 bg-amber-50 print:hidden">
+            <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-800 lg:px-6">
+              Production access: this user can view this week and next week orders and print order sheets only
+            </div>
+          </div>
+        ) : !session.user.canWrite && !session.user.canWriteSeo ? (
           <div className="border-b border-sky-300 bg-sky-50 print:hidden">
             <div className="mx-auto max-w-[92rem] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-800 lg:px-6">
               Read-only access: this user can view admin pages but cannot make changes beyond their own password

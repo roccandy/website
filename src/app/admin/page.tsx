@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import {
   buildAdminNavSections,
   getAdminNavToneClasses,
+  isProductionUser,
   isSeoFocusedUser,
 } from "@/app/admin/adminNavigation";
 import { isNonProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
@@ -41,6 +43,9 @@ function makePremadeGroupKey(order: { order_number: string | null; id: string })
 
 export default async function AdminHome() {
   const session = await requireAdminSession();
+  if (isProductionUser(session.user)) {
+    redirect("/admin/production");
+  }
   const seoFocused = isSeoFocusedUser(session.user);
   const sections = buildAdminNavSections(session.user);
   const seoSection = sections.find((section) => section.key === "content-seo") ?? null;

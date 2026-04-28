@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 import {
   normalizeRedirectDestinationPath,
   normalizeRedirectSourcePath,
@@ -43,6 +44,15 @@ function shouldSkipRedirectLookup(pathname: string) {
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/manifest.webmanifest"
+  );
+}
+
+function isAllowedProductionAdminPath(pathname: string) {
+  return (
+    pathname === "/admin/login" ||
+    pathname === "/admin/production" ||
+    pathname.startsWith("/admin/production/") ||
+    /^\/admin\/orders\/[^/]+\/print$/.test(pathname)
   );
 }
 
@@ -108,6 +118,14 @@ function resolveDestinationUrl(request: NextRequest, redirect: SiteRedirect) {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  if (pathname.startsWith("/admin")) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (token?.role === "production" && !isAllowedProductionAdminPath(pathname)) {
+      return attachPreviewNoIndexHeader(request, NextResponse.redirect(new URL("/admin/production", request.url)));
+    }
+    return attachPreviewNoIndexHeader(request, NextResponse.next());
+  }
+
   if (shouldSkipRedirectLookup(pathname)) {
     return attachPreviewNoIndexHeader(request, NextResponse.next());
   }
@@ -137,5 +155,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|admin|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest).*)"],
 };

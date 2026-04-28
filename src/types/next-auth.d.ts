@@ -1,7 +1,7 @@
 import "next-auth";
 import "next-auth/jwt";
 
-export type AdminRole = "viewer" | "seo" | "editor" | "admin";
+export type AdminRole = "viewer" | "seo" | "editor" | "production" | "admin";
 
 declare module "next-auth" {
   interface Session {

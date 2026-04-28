@@ -22,7 +22,7 @@ function normalizeField(value: FormDataEntryValue | null) {
 }
 
 function parseRole(value: string): AdminRole {
-  if (value === "viewer" || value === "seo" || value === "editor" || value === "admin") {
+  if (value === "viewer" || value === "seo" || value === "editor" || value === "production" || value === "admin") {
     return value;
   }
   throw new Error("Invalid role.");

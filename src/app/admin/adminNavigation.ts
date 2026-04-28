@@ -106,7 +106,29 @@ export function isSeoFocusedUser(user: AdminSessionUser) {
   return user.canWriteSeo && !user.canWrite;
 }
 
+export function isProductionUser(user: AdminSessionUser) {
+  return user.role === "production";
+}
+
 export function buildAdminNavSections(user: AdminSessionUser): AdminNavSection[] {
+  if (isProductionUser(user)) {
+    return [
+      {
+        key: "production",
+        label: "Production",
+        description: "This week and next week order list.",
+        tone: "amber",
+        items: [
+          {
+            label: "Production Orders",
+            href: "/admin/production",
+            description: "Read-only list of orders due this week and next week.",
+          },
+        ],
+      },
+    ];
+  }
+
   const sections = BASE_NAV_SECTIONS.map((section) => ({
     ...section,
     items: [...section.items],
