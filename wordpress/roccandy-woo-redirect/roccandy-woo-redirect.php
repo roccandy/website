@@ -11,7 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 add_filter('woocommerce_get_checkout_order_received_url', function ($url, $order) {
-  // TODO: update to your live domain when switching.
-  $return_url = 'https://roccandy.vercel.app/checkout/success';
+  $return_url = 'https://roccandy.com.au/checkout/success';
   return $return_url;
 }, 10, 2);

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat, Open_Sans } from "next/font/google";
 import Script from "next/script";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
 import { JsonLd } from "@/components/JsonLd";
@@ -97,6 +98,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           </noscript>
         ) : null}
         <Analytics />
+        <SpeedInsights />
         <JsonLd
           data={buildSchemaGraph([
             buildOrganizationSchema(),
