@@ -141,11 +141,15 @@ export type CustomerStats = {
 };
 
 export type CustomerFilter = "all" | "repeat" | "company" | "orders" | "enquiries" | "low-confidence";
+export type CustomerSortField = "last_activity" | "first_seen" | "name" | "orders" | "spend" | "enquiries";
+export type CustomerSortDirection = "asc" | "desc";
 
 export type CustomerListOptions = {
   query?: string | null;
   filter?: CustomerFilter;
   source?: CustomerSourceSystem | "all";
+  sort?: CustomerSortField;
+  direction?: CustomerSortDirection;
   limit?: number;
 };
 
@@ -195,6 +199,21 @@ export function isCustomerSourceSystem(value: string | null | undefined): value 
   return value === "legacy_old" || value === "legacy_new" || value === "current_next";
 }
 
+export function isCustomerSortField(value: string | null | undefined): value is CustomerSortField {
+  return (
+    value === "last_activity" ||
+    value === "first_seen" ||
+    value === "name" ||
+    value === "orders" ||
+    value === "spend" ||
+    value === "enquiries"
+  );
+}
+
+export function isCustomerSortDirection(value: string | null | undefined): value is CustomerSortDirection {
+  return value === "asc" || value === "desc";
+}
+
 export function customerSourceLabel(source: string | null | undefined) {
   if (source === "legacy_old") return "Old site";
   if (source === "legacy_new") return "New legacy site";
@@ -218,14 +237,14 @@ export async function listCustomerSummaries(
   const queryText = options.query?.trim() ?? "";
   const source = options.source && options.source !== "all" ? options.source : null;
   const filter = options.filter ?? "all";
+  const sort = options.sort ?? "last_activity";
+  const direction = options.direction ?? defaultCustomerSortDirection(sort);
   const client = supabaseAdminClient;
 
   try {
     let customerQuery = client
       .from("customers")
-      .select(CUSTOMER_SELECT)
-      .order("last_seen_at", { ascending: false, nullsFirst: false })
-      .limit(limit);
+      .select(CUSTOMER_SELECT);
 
     if (source) {
       customerQuery = customerQuery.contains("source_systems", [source]);
@@ -249,6 +268,38 @@ export async function listCustomerSummaries(
         ].join(","),
       );
     }
+
+    const ascending = direction === "asc";
+    if (sort === "name") {
+      customerQuery = customerQuery
+        .order("display_name", { ascending, nullsFirst: false })
+        .order("primary_email", { ascending, nullsFirst: false })
+        .order("last_seen_at", { ascending: false, nullsFirst: false });
+    } else if (sort === "orders") {
+      customerQuery = customerQuery
+        .order("order_count", { ascending, nullsFirst: false })
+        .order("lifetime_value", { ascending: false, nullsFirst: false })
+        .order("last_seen_at", { ascending: false, nullsFirst: false });
+    } else if (sort === "spend") {
+      customerQuery = customerQuery
+        .order("lifetime_value", { ascending, nullsFirst: false })
+        .order("order_count", { ascending: false, nullsFirst: false })
+        .order("last_seen_at", { ascending: false, nullsFirst: false });
+    } else if (sort === "enquiries") {
+      customerQuery = customerQuery
+        .order("enquiry_count", { ascending, nullsFirst: false })
+        .order("last_seen_at", { ascending: false, nullsFirst: false });
+    } else if (sort === "first_seen") {
+      customerQuery = customerQuery
+        .order("first_seen_at", { ascending, nullsFirst: false })
+        .order("last_seen_at", { ascending: false, nullsFirst: false });
+    } else {
+      customerQuery = customerQuery
+        .order("last_seen_at", { ascending, nullsFirst: false })
+        .order("lifetime_value", { ascending: false, nullsFirst: false });
+    }
+
+    customerQuery = customerQuery.limit(limit);
 
     const { data, error } = await customerQuery;
     if (error) throw error;
@@ -281,7 +332,7 @@ export async function listCustomerSummaries(
       }
     }
 
-    return { ok: true, data: customers.slice(0, limit) };
+    return { ok: true, data: sortCustomers(customers, sort, direction).slice(0, limit) };
   } catch (error) {
     if (isMissingCustomerHistorySchemaError(error as { message?: string })) {
       return {
@@ -293,6 +344,51 @@ export async function listCustomerSummaries(
     }
     throw error;
   }
+}
+
+function defaultCustomerSortDirection(sort: CustomerSortField): CustomerSortDirection {
+  return sort === "name" ? "asc" : "desc";
+}
+
+function sortCustomers(customers: CustomerSummary[], sort: CustomerSortField, direction: CustomerSortDirection) {
+  return [...customers].sort((a, b) => {
+    const primary = compareCustomerField(a, b, sort, direction);
+    if (primary !== 0) return primary;
+    return (
+      compareCustomerField(a, b, "last_activity", "desc") ||
+      compareCustomerField(a, b, "spend", "desc") ||
+      compareCustomerField(a, b, "name", "asc")
+    );
+  });
+}
+
+function compareCustomerField(
+  a: CustomerSummary,
+  b: CustomerSummary,
+  sort: CustomerSortField,
+  direction: CustomerSortDirection,
+) {
+  const multiplier = direction === "asc" ? 1 : -1;
+  if (sort === "name") {
+    return customerSortName(a).localeCompare(customerSortName(b), "en-AU", { sensitivity: "base" }) * multiplier;
+  }
+  if (sort === "orders") return (Number(a.order_count ?? 0) - Number(b.order_count ?? 0)) * multiplier;
+  if (sort === "spend") return (Number(a.lifetime_value ?? 0) - Number(b.lifetime_value ?? 0)) * multiplier;
+  if (sort === "enquiries") return (Number(a.enquiry_count ?? 0) - Number(b.enquiry_count ?? 0)) * multiplier;
+  if (sort === "first_seen") return compareNullableDate(a.first_seen_at, b.first_seen_at, direction);
+  return compareNullableDate(a.last_seen_at, b.last_seen_at, direction);
+}
+
+function customerSortName(customer: CustomerSummary) {
+  return customer.display_name || customer.primary_email || customer.primary_phone || "zzzzzz";
+}
+
+function compareNullableDate(a: string | null, b: string | null, direction: CustomerSortDirection) {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  const multiplier = direction === "asc" ? 1 : -1;
+  return (new Date(a).getTime() - new Date(b).getTime()) * multiplier;
 }
 
 export async function getCustomerHistoryStats(): Promise<CustomerHistorySchemaResult<CustomerStats>> {

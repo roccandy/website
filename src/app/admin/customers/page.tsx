@@ -8,9 +8,13 @@ import {
   getCustomerHistoryStats,
   isCustomerFilter,
   isCustomerSourceSystem,
+  isCustomerSortDirection,
+  isCustomerSortField,
   listCustomerSummaries,
   type CustomerFilter,
   type CustomerSourceSystem,
+  type CustomerSortDirection,
+  type CustomerSortField,
   type CustomerSummary,
 } from "@/lib/customerHistory";
 
@@ -26,6 +30,8 @@ type SearchParams = {
   q?: string | string[];
   filter?: string | string[];
   source?: string | string[];
+  sort?: string | string[];
+  direction?: string | string[];
 };
 
 const money = new Intl.NumberFormat("en-AU", {
@@ -52,8 +58,40 @@ const SOURCES: Array<{ value: "all" | CustomerSourceSystem; label: string }> = [
   { value: "current_next", label: "Current site" },
 ];
 
+const SORTS: Array<{ value: CustomerSortField; label: string }> = [
+  { value: "last_activity", label: "Last activity date" },
+  { value: "first_seen", label: "First seen date" },
+  { value: "spend", label: "Total purchased" },
+  { value: "orders", label: "Number of orders" },
+  { value: "name", label: "Customer name" },
+  { value: "enquiries", label: "Enquiries" },
+];
+
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function defaultSortDirection(sort: CustomerSortField): CustomerSortDirection {
+  return sort === "name" ? "asc" : "desc";
+}
+
+function sortDirectionOptions(sort: CustomerSortField): Array<{ value: CustomerSortDirection; label: string }> {
+  if (sort === "name") {
+    return [
+      { value: "asc", label: "A to Z" },
+      { value: "desc", label: "Z to A" },
+    ];
+  }
+  if (sort === "last_activity" || sort === "first_seen") {
+    return [
+      { value: "desc", label: "Newest first" },
+      { value: "asc", label: "Oldest first" },
+    ];
+  }
+  return [
+    { value: "desc", label: "Highest first" },
+    { value: "asc", label: "Lowest first" },
+  ];
 }
 
 function formatDate(value: string | null) {
@@ -102,11 +140,15 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
   const query = firstParam(resolvedSearchParams?.q)?.trim() ?? "";
   const filterParam = firstParam(resolvedSearchParams?.filter);
   const sourceParam = firstParam(resolvedSearchParams?.source);
+  const sortParam = firstParam(resolvedSearchParams?.sort);
+  const directionParam = firstParam(resolvedSearchParams?.direction);
   const filter = isCustomerFilter(filterParam) ? filterParam : "all";
   const source = isCustomerSourceSystem(sourceParam) ? sourceParam : "all";
+  const sort = isCustomerSortField(sortParam) ? sortParam : "last_activity";
+  const direction = isCustomerSortDirection(directionParam) ? directionParam : defaultSortDirection(sort);
 
   const [listResult, statsResult] = await Promise.all([
-    listCustomerSummaries({ query, filter, source }),
+    listCustomerSummaries({ query, filter, source, sort, direction }),
     getCustomerHistoryStats(),
   ]);
   const customers = listResult.data;
@@ -177,7 +219,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
       </div>
 
       <form className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm" action="/admin/customers">
-        <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_12rem_12rem_13rem_11rem_auto]">
           <label className="relative block">
             <span className="sr-only">Search customers</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -210,6 +252,34 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
               className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
             >
               {SOURCES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="sr-only">Sort customers by</span>
+            <select
+              name="sort"
+              defaultValue={sort}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            >
+              {SORTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="sr-only">Sort direction</span>
+            <select
+              name="direction"
+              defaultValue={direction}
+              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+            >
+              {sortDirectionOptions(sort).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
