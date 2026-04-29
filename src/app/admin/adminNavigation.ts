@@ -110,6 +110,10 @@ export function isProductionUser(user: AdminSessionUser) {
   return user.role === "production";
 }
 
+function canAccessCustomerCrmNav(user: AdminSessionUser) {
+  return user.role !== "production" && user.role !== "seo";
+}
+
 export function buildAdminNavSections(user: AdminSessionUser): AdminNavSection[] {
   if (isProductionUser(user)) {
     return [
@@ -141,6 +145,17 @@ export function buildAdminNavSections(user: AdminSessionUser): AdminNavSection[]
         label: "Admin Users",
         href: "/admin/settings/users",
         description: "Emails, passwords, roles, and account status.",
+      });
+    }
+  }
+
+  if (canAccessCustomerCrmNav(user)) {
+    const adminSection = sections.find((section) => section.key === "admin");
+    if (adminSection) {
+      adminSection.items.push({
+        label: "Customers",
+        href: "/admin/customers",
+        description: "Customer profiles, historic orders, enquiries, and repeat-customer insight.",
       });
     }
   }

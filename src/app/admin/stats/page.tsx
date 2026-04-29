@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { BarChart3, CircleDollarSign, Clock3, MapPinned, Sparkles, Users, WalletCards } from "lucide-react";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getCategories, getOrders, getPackagingOptions, type OrderRow } from "@/lib/data";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
+import { canAccessCustomerCrm } from "@/lib/customerHistory";
 
 export const metadata: Metadata = {
   title: "Order Observatory | Roc Candy Admin",
@@ -418,7 +420,7 @@ function MonthlyRevenueChart({ months }: { months: MonthlyPoint[] }) {
 }
 
 export default async function OrderStatsPage() {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const [orders, categories, packagingOptions] = await Promise.all([
     getOrders(),
@@ -508,6 +510,14 @@ export default async function OrderStatsPage() {
                 A grouped view of how Roc Candy is selling, where orders are coming from, and what customers keep choosing.
                 Split orders are rolled up into one checkout where possible so the numbers stay readable.
               </p>
+              {canAccessCustomerCrm(session.user) ? (
+                <Link
+                  href="/admin/customers"
+                  className="inline-flex rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+                >
+                  Open customer history
+                </Link>
+              ) : null}
             </div>
           </div>
           <div className="grid gap-3 rounded-3xl border border-zinc-200 bg-white/80 p-4 text-sm text-zinc-600 shadow-sm sm:grid-cols-3">

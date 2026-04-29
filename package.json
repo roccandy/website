@@ -12,6 +12,7 @@
     "db:apply-sql": "node scripts/run-supabase-sql.mjs",
     "sync-managed-content": "tsx scripts/sync-managed-content.ts",
     "import-packaging-images": "node scripts/import-packaging-images.mjs",
+    "import-customer-history": "tsx scripts/import-customer-history.ts",
     "normalize-jar-sizes": "node scripts/normalize-jar-sizes.mjs",
     "optimize-uploaded-images": "node scripts/optimize-uploaded-images.mjs"
   },
@@ -35,6 +36,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
