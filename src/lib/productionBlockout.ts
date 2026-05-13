@@ -1,5 +1,7 @@
 import { getProductionBlocks, getSettings } from "@/lib/data";
 
+export const FREE_DELIVERY_BANNER_MESSAGE = "Free Delivery Australia-Wide";
+
 function isOpenOverrideReason(reason: string | null | undefined) {
   return (reason ?? "").trim().toLowerCase() === "open override";
 }
@@ -14,16 +16,19 @@ function formatOrdinalDay(day: number) {
   return `${day}th`;
 }
 
-function formatDisplayDate(isoDate: string) {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  if (!year || !month || !day) return isoDate;
-  const parsed = new Date(year, month - 1, day);
-  const monthName = parsed.toLocaleString("en-AU", { month: "long" });
-  return `${formatOrdinalDay(day)} ${monthName} ${year}`;
+function formatDisplayDateFromDate(date: Date) {
+  const monthName = date.toLocaleString("en-AU", { month: "long" });
+  return `${formatOrdinalDay(date.getDate())} ${monthName} ${date.getFullYear()}`;
 }
 
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }
 
 function parseIsoDateAtStart(isoDate: string) {
@@ -60,7 +65,7 @@ export async function getActiveProductionBlockoutMessage() {
       active.push({
         startDate,
         endDate,
-        message: `Production full between ${formatDisplayDate(block.start_date)} and ${formatDisplayDate(block.end_date)}`,
+        message: `Deliveries resume ${formatDisplayDateFromDate(addDays(endDate, 1))} due to limited production`,
       });
     }
   }
@@ -69,4 +74,8 @@ export async function getActiveProductionBlockoutMessage() {
 
   active.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   return active[0].message;
+}
+
+export async function getSiteBannerMessage() {
+  return (await getActiveProductionBlockoutMessage()) ?? FREE_DELIVERY_BANNER_MESSAGE;
 }

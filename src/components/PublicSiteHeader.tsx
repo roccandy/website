@@ -4,7 +4,7 @@ import HeaderMenu from "@/components/HeaderMenu";
 import HeaderNav from "@/components/HeaderNav";
 import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
-import { getActiveProductionBlockoutMessage } from "@/lib/productionBlockout";
+import { getSiteBannerMessage } from "@/lib/productionBlockout";
 
 type PublicSiteHeaderProps = {
   enquiriesHref: string;
@@ -22,8 +22,8 @@ export default async function PublicSiteHeader({
   className = DEFAULT_HEADER_CLASS_NAME,
   dataQuoteHeader = false,
 }: PublicSiteHeaderProps) {
-  const blockoutMessage = await getActiveProductionBlockoutMessage();
-  const resolvedClassName = blockoutMessage ? className.replace(" shadow-[0_4px_10px_rgba(63,63,70,0.36)]", "") : className;
+  const bannerMessage = await getSiteBannerMessage();
+  const resolvedClassName = bannerMessage ? className.replace(" shadow-[0_4px_10px_rgba(63,63,70,0.36)]", "") : className;
 
   return (
     <div className={resolvedClassName} data-site-header="true" data-quote-header={dataQuoteHeader ? "true" : undefined}>
@@ -71,7 +71,7 @@ export default async function PublicSiteHeader({
           </div>
         </div>
       </div>
-      <ProductionBlockoutBanner message={blockoutMessage} />
+      <ProductionBlockoutBanner message={bannerMessage} />
     </div>
   );
 }

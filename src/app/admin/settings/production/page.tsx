@@ -363,7 +363,7 @@ export default async function SettingsProductionPage() {
             <p className="text-xs text-zinc-500">
               Block dates for holidays etc. Customers will see these dates as unavailable, and the
               {" "}
-              <span className="font-semibold text-zinc-700">&quot;Production full between A and B&quot;</span>
+              <span className="font-semibold text-zinc-700">&quot;Deliveries resume [date] due to limited production&quot;</span>
               {" "}
               banner will appear on the website X months before the blocked period starts.
             </p>

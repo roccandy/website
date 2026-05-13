@@ -331,12 +331,15 @@ export async function getQuoteBlocks() {
     return `${day}th`;
   };
 
-  const formatDisplayDate = (isoDate: string) => {
-    const [year, month, day] = isoDate.split("-").map(Number);
-    if (!year || !month || !day) return isoDate;
-    const parsed = new Date(year, month - 1, day);
-    const monthName = parsed.toLocaleString("en-AU", { month: "long" });
-    return `${formatOrdinalDay(day)} ${monthName} ${year}`;
+  const formatDisplayDateFromDate = (date: Date) => {
+    const monthName = date.toLocaleString("en-AU", { month: "long" });
+    return `${formatOrdinalDay(date.getDate())} ${monthName} ${date.getFullYear()}`;
+  };
+
+  const addDays = (date: Date, days: number) => {
+    const next = new Date(date);
+    next.setDate(next.getDate() + days);
+    return next;
   };
 
   const derivedBlocks: QuoteBlock[] = (productionResult.data ?? [])
@@ -350,7 +353,7 @@ export async function getQuoteBlocks() {
       id: `production-${block.id}`,
       start_date: block.start_date,
       end_date: block.end_date,
-      reason: `Production full between ${formatDisplayDate(block.start_date)} and ${formatDisplayDate(block.end_date)}`,
+      reason: `Deliveries resume ${formatDisplayDateFromDate(addDays(new Date(`${block.end_date}T00:00:00`), 1))} due to limited production`,
       created_at: block.created_at,
     }));
 
