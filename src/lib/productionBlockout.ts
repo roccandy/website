@@ -31,6 +31,16 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+function buildBlockoutMessage(today: Date, startDate: Date, endDate: Date) {
+  if (today < startOfDay(startDate)) {
+    return `Deliveries paused between ${formatDisplayDateFromDate(startDate)} and ${formatDisplayDateFromDate(
+      endDate
+    )} due to limited production`;
+  }
+
+  return `Deliveries resume ${formatDisplayDateFromDate(addDays(endDate, 1))} due to limited production`;
+}
+
 function parseIsoDateAtStart(isoDate: string) {
   const [year, month, day] = isoDate.split("-").map(Number);
   if (!year || !month || !day) return null;
@@ -65,7 +75,7 @@ export async function getActiveProductionBlockoutMessage() {
       active.push({
         startDate,
         endDate,
-        message: `Deliveries resume ${formatDisplayDateFromDate(addDays(endDate, 1))} due to limited production`,
+        message: buildBlockoutMessage(today, startDate, endDate),
       });
     }
   }

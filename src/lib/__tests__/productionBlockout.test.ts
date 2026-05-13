@@ -43,6 +43,23 @@ describe("productionBlockout", () => {
     );
   });
 
+  it("uses the delivery paused message before a visible blockout starts", async () => {
+    vi.setSystemTime(new Date(2026, 3, 15));
+    getProductionBlocks.mockResolvedValue([
+      {
+        id: "block-1",
+        start_date: "2026-05-01",
+        end_date: "2026-06-01",
+        reason: "Limited production",
+        created_at: "2026-04-01T00:00:00Z",
+      },
+    ]);
+
+    await expect(getActiveProductionBlockoutMessage()).resolves.toBe(
+      "Deliveries paused between 1st May 2026 and 1st June 2026 due to limited production"
+    );
+  });
+
   it("falls back to the free delivery banner when there is no active blockout", async () => {
     await expect(getActiveProductionBlockoutMessage()).resolves.toBeNull();
     await expect(getSiteBannerMessage()).resolves.toBe(FREE_DELIVERY_BANNER_MESSAGE);

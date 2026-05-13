@@ -342,6 +342,16 @@ export async function getQuoteBlocks() {
     return next;
   };
 
+  const buildBlockoutReason = (startDate: Date, endDate: Date) => {
+    if (startOfToday < startDate) {
+      return `Deliveries paused between ${formatDisplayDateFromDate(startDate)} and ${formatDisplayDateFromDate(
+        endDate
+      )} due to limited production`;
+    }
+
+    return `Deliveries resume ${formatDisplayDateFromDate(addDays(endDate, 1))} due to limited production`;
+  };
+
   const derivedBlocks: QuoteBlock[] = (productionResult.data ?? [])
     .filter((block) => !isOpenOverrideReason(block.reason))
     .filter((block) => {
@@ -349,13 +359,17 @@ export async function getQuoteBlocks() {
       if (Number.isNaN(start.getTime())) return false;
       return start <= cutoff;
     })
-    .map((block) => ({
-      id: `production-${block.id}`,
-      start_date: block.start_date,
-      end_date: block.end_date,
-      reason: `Deliveries resume ${formatDisplayDateFromDate(addDays(new Date(`${block.end_date}T00:00:00`), 1))} due to limited production`,
-      created_at: block.created_at,
-    }));
+    .map((block) => {
+      const start = new Date(`${block.start_date}T00:00:00`);
+      const end = new Date(`${block.end_date}T00:00:00`);
+      return {
+        id: `production-${block.id}`,
+        start_date: block.start_date,
+        end_date: block.end_date,
+        reason: buildBlockoutReason(start, end),
+        created_at: block.created_at,
+      };
+    });
 
   const deduped = new Map<string, QuoteBlock>();
   for (const block of derivedBlocks) {

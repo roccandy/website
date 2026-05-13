@@ -363,9 +363,13 @@ export default async function SettingsProductionPage() {
             <p className="text-xs text-zinc-500">
               Block dates for holidays etc. Customers will see these dates as unavailable, and the
               {" "}
-              <span className="font-semibold text-zinc-700">&quot;Deliveries resume [date] due to limited production&quot;</span>
+              <span className="font-semibold text-zinc-700">&quot;Deliveries paused between [date] and [date]&quot;</span>
               {" "}
-              banner will appear on the website X months before the blocked period starts.
+              banner will appear on the website X months before the blocked period starts, then switch to
+              {" "}
+              <span className="font-semibold text-zinc-700">&quot;Deliveries resume [date]&quot;</span>
+              {" "}
+              during the blocked period.
             </p>
           </div>
           <form action={updateBlockoutVisibilityWindow} className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">
