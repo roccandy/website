@@ -21,6 +21,7 @@ type SearchParams = {
   view?: string | string[] | undefined;
   sort?: string | string[] | undefined;
   dir?: string | string[] | undefined;
+  q?: string | string[] | undefined;
 };
 
 type FilterView = "all" | "archived" | "uncompleted";
@@ -179,13 +180,23 @@ const resolveSortDirection = (value: string | string[] | undefined): SortDirecti
   return firstValue === "desc" ? "desc" : "asc";
 };
 
-const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "asc") => {
+const resolveSearchQuery = (value: string | string[] | undefined) => {
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  return firstValue?.trim().slice(0, 100) ?? "";
+};
+
+const normalizedIncludes = (value: string | number | null | undefined, query: string) =>
+  String(value ?? "").toLowerCase().includes(query);
+
+const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "asc", searchQuery = "") => {
   const params = new URLSearchParams();
   if (view !== "all") params.set("view", view);
   if (sort !== "order" || direction !== "asc") {
     params.set("sort", sort);
     params.set("dir", direction);
   }
+  const trimmedSearch = searchQuery.trim();
+  if (trimmedSearch) params.set("q", trimmedSearch);
   const query = params.toString();
   return query ? `/admin/orders/archived?${query}` : "/admin/orders/archived";
 };
@@ -201,7 +212,9 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
   const activeView = resolveFilterView(resolvedSearchParams?.view);
   const activeSort = resolveSortKey(resolvedSearchParams?.sort);
   const activeDirection = resolveSortDirection(resolvedSearchParams?.dir);
-  const redirectTo = buildOrdersHref(activeView, activeSort, activeDirection);
+  const activeSearchQuery = resolveSearchQuery(resolvedSearchParams?.q);
+  const normalizedSearchQuery = activeSearchQuery.toLowerCase();
+  const redirectTo = buildOrdersHref(activeView, activeSort, activeDirection, activeSearchQuery);
 
   const [orders, slots, assignments] = await Promise.all([getOrders(), getProductionSlots(), getOrderSlots()]);
   const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
@@ -398,6 +411,40 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
       };
     })
     .filter((group): group is NonNullable<typeof group> => group !== null)
+    .filter((group) => {
+      if (!normalizedSearchQuery) return true;
+      const groupFields = [
+        group.orderNumber,
+        group.orderNumberSort,
+        group.customer,
+        group.dueDate,
+        group.titleSort,
+        group.weight,
+        group.statusSort,
+      ];
+      const orderFields = group.visibleOrders.flatMap((order) => [
+        order.order_number,
+        normalizeOrderNumber(order.order_number),
+        order.title,
+        order.order_description,
+        order.customer_name,
+        order.first_name,
+        order.last_name,
+        order.customer_email,
+        order.phone,
+        order.organization_name,
+        order.due_date,
+        formatDate(order.due_date),
+        weightLabel(order.total_weight_kg),
+        order.status,
+        order.woo_order_status,
+        order.payment_method,
+        order.payment_provider,
+        order.payment_transaction_id,
+        order.refund_reason,
+      ]);
+      return [...groupFields, ...orderFields].some((value) => normalizedIncludes(value, normalizedSearchQuery));
+    })
     .sort((a, b) => {
       let result = 0;
       if (activeSort === "order") {
@@ -427,7 +474,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
     return (
       <th key={option.value} className={`px-3 py-3 text-left ${option.className ?? ""}`}>
         <Link
-          href={buildOrdersHref(activeView, option.value, nextDirection)}
+          href={buildOrdersHref(activeView, option.value, nextDirection, activeSearchQuery)}
           className="inline-flex items-center gap-1 text-zinc-500 hover:text-zinc-900"
         >
           <span>{option.label}</span>
@@ -456,7 +503,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             return (
               <Link
                 key={option.value}
-                href={buildOrdersHref(option.value, activeSort, activeDirection)}
+                href={buildOrdersHref(option.value, activeSort, activeDirection, activeSearchQuery)}
                 className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
                   isActive ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 }`}
@@ -466,7 +513,37 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             );
           })}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <form action="/admin/orders/archived" className="flex items-center gap-2">
+            {activeView !== "all" ? <input type="hidden" name="view" value={activeView} /> : null}
+            {activeSort !== "order" || activeDirection !== "asc" ? (
+              <>
+                <input type="hidden" name="sort" value={activeSort} />
+                <input type="hidden" name="dir" value={activeDirection} />
+              </>
+            ) : null}
+            <input
+              type="search"
+              name="q"
+              defaultValue={activeSearchQuery}
+              placeholder="Search orders"
+              className="w-56 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
+            />
+            <button
+              type="submit"
+              className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+            >
+              Search
+            </button>
+            {activeSearchQuery ? (
+              <Link
+                href={buildOrdersHref(activeView, activeSort, activeDirection)}
+                className="text-xs font-semibold text-zinc-500 hover:text-zinc-900"
+              >
+                Clear
+              </Link>
+            ) : null}
+          </form>
           <span className="text-sm text-zinc-500">{groupedList.length} orders</span>
           <Link
             href="/admin/orders"
