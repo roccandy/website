@@ -8,6 +8,7 @@ type RefundPersistenceInput = {
   client: ServerClient;
   order: OrderRow;
   refundReason: string | null;
+  isPartialRefund?: boolean;
   refundedAt?: string;
 };
 
@@ -15,6 +16,7 @@ type GroupRefundPersistenceInput = {
   client: ServerClient;
   orders: OrderRow[];
   refundReason: string | null;
+  isPartialRefund?: boolean;
   refundedAt?: string;
 };
 
@@ -28,12 +30,13 @@ async function updateRefundRecord(
   orderId: string,
   refundedAt: string,
   refundReason: string | null,
+  orderStatus: string,
   wooOrderStatus: string
 ) {
   const refundUpdateWithReason = await client
     .from("orders")
     .update({
-      status: "refunded",
+      status: orderStatus,
       refunded_at: refundedAt,
       refund_reason: refundReason,
       woo_order_status: wooOrderStatus,
@@ -50,7 +53,7 @@ async function updateRefundRecord(
   const refundUpdateFallback = await client
     .from("orders")
     .update({
-      status: "refunded",
+      status: orderStatus,
       refunded_at: refundedAt,
       woo_order_status: wooOrderStatus,
     })
@@ -65,6 +68,7 @@ export async function persistOrderRefund({
   client,
   order,
   refundReason,
+  isPartialRefund = false,
   refundedAt = new Date().toISOString(),
 }: RefundPersistenceInput): Promise<RefundPersistenceResult> {
   const provider = order.payment_provider;
@@ -88,14 +92,17 @@ export async function persistOrderRefund({
   const remainingRelatedOrders = normalizedRelatedOrders.filter(
     (relatedOrder) => relatedOrder.id !== order.id && !relatedOrder.refunded_at
   );
-  const fullyRefundedPayment = remainingRelatedOrders.length === 0;
+  const fullyRefundedPayment = !isPartialRefund && remainingRelatedOrders.length === 0;
+  const orderStatus = isPartialRefund ? "partially-refunded" : "refunded";
+  const wooOrderStatus = fullyRefundedPayment ? "refunded" : "partially-refunded";
 
   await updateRefundRecord(
     client,
     order.id,
     refundedAt,
     refundReason,
-    fullyRefundedPayment ? "refunded" : "partially-refunded"
+    orderStatus,
+    wooOrderStatus
   );
 
   if (!fullyRefundedPayment) {
@@ -132,6 +139,7 @@ export async function persistOrderRefunds({
   client,
   orders,
   refundReason,
+  isPartialRefund = false,
   refundedAt = new Date().toISOString(),
 }: GroupRefundPersistenceInput): Promise<RefundPersistenceResult> {
   const normalizedOrders = orders.filter(Boolean);
@@ -168,11 +176,12 @@ export async function persistOrderRefunds({
   const remainingRelatedOrders = normalizedRelatedOrders.filter(
     (relatedOrder) => !refundedOrderIds.has(relatedOrder.id) && !relatedOrder.refunded_at,
   );
-  const fullyRefundedPayment = remainingRelatedOrders.length === 0;
+  const fullyRefundedPayment = !isPartialRefund && remainingRelatedOrders.length === 0;
+  const orderStatus = isPartialRefund ? "partially-refunded" : "refunded";
   const wooOrderStatus = fullyRefundedPayment ? "refunded" : "partially-refunded";
 
   for (const order of normalizedOrders) {
-    await updateRefundRecord(client, order.id, refundedAt, refundReason, wooOrderStatus);
+    await updateRefundRecord(client, order.id, refundedAt, refundReason, orderStatus, wooOrderStatus);
   }
 
   if (!fullyRefundedPayment) {

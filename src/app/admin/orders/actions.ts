@@ -33,6 +33,7 @@ const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
 };
+const toMoneyCents = (value: number) => Math.round(value * 100);
 
 const syncIngredientLabelsNote = (notes: string | null, enabled: boolean) => {
   const existingLines = (notes ?? "")
@@ -652,6 +653,8 @@ export async function refundOrder(formData: FormData) {
   const id = formData.get("id")?.toString() || ids[0] || null;
   const refundReasonRaw = formData.get("refund_reason")?.toString() || null;
   const refundReason = refundReasonRaw ? refundReasonRaw.trim().slice(0, 255) : null;
+  const refundType = formData.get("refund_type")?.toString() === "partial" ? "partial" : "full";
+  const refundAmountRaw = formData.get("refund_amount")?.toString() || "";
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
   const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ORDERS_PATH;
   if (!id) {
@@ -682,14 +685,27 @@ export async function refundOrder(formData: FormData) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Orders%20must%20share%20the%20same%20payment`);
   }
 
-  const amount = orders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const maxRefundAmount = orders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
+  const maxRefundCents = toMoneyCents(maxRefundAmount);
+  if (!Number.isFinite(maxRefundAmount) || maxRefundCents <= 0) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
   }
 
+  const requestedRefundAmount = Number(refundAmountRaw);
+  const requestedRefundCents = Number.isFinite(requestedRefundAmount) ? toMoneyCents(requestedRefundAmount) : NaN;
+  const amountCents = refundType === "partial" ? requestedRefundCents : maxRefundCents;
+  if (!Number.isFinite(amountCents) || amountCents <= 0) {
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20refund%20amount`);
+  }
+  if (amountCents > maxRefundCents) {
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Refund%20amount%20exceeds%20order%20total`);
+  }
+  const amount = amountCents / 100;
+  const isPartialRefund = amountCents < maxRefundCents;
+
   try {
     if (provider === "square") {
-      await refundSquarePayment(String(transactionId), Math.round(amount * 100), refundReason);
+      await refundSquarePayment(String(transactionId), amountCents, refundReason);
     } else if (provider === "paypal") {
       await refundPayPalCapture(String(transactionId), amount.toFixed(2), refundReason);
     } else {
@@ -702,11 +718,13 @@ export async function refundOrder(formData: FormData) {
             client,
             orders,
             refundReason,
+            isPartialRefund,
           })
         : await persistOrderRefund({
             client,
             order: orders[0]!,
             refundReason,
+            isPartialRefund,
           });
 
     const recipientEmails = Array.from(new Set(orders.map((order) => order.customer_email).filter(Boolean)));
@@ -715,12 +733,16 @@ export async function refundOrder(formData: FormData) {
         orderNumber: orders[0]?.order_number ?? null,
         amount,
         paymentMethod: orders[0]?.payment_method ?? orders[0]?.payment_provider ?? null,
+        reason: refundReason,
       });
     }
 
+    const successOrderLabel = orders[0]?.order_number ? `#${orders[0].order_number}` : "order";
     const successMessage =
-      refundResult.sharedPayment && !refundResult.fullyRefundedPayment
-        ? `Refund processed for #${orders[0]?.order_number}. Other split items on this payment can still be refunded separately.`
+      isPartialRefund
+        ? `Partial refund processed for ${successOrderLabel}.`
+        : refundResult.sharedPayment && !refundResult.fullyRefundedPayment
+        ? `Refund processed for ${successOrderLabel}. Other split items on this payment can still be refunded separately.`
         : "Refund processed";
     await logAdminActivity({
       area: "operations",
@@ -738,6 +760,7 @@ export async function refundOrder(formData: FormData) {
       metadata: {
         orderCount: orders.length,
         amount,
+        refundType: isPartialRefund ? "partial" : "full",
       },
     });
     redirect(`${redirectBase}?toast_success=${encodeURIComponent(successMessage)}`);

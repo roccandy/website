@@ -7,7 +7,7 @@ import { archiveOrderInline, markAdditionalItemsShipped, refundOrder, unarchiveO
 import { RefundForm } from "../RefundForm";
 import SplitAwareActionForm from "../SplitAwareActionForm";
 import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButton";
-import { completionActionLabel, getPremadeSiblingMeta, getScheduleStatus } from "../productionScheduleShared";
+import { getPremadeSiblingMeta, getScheduleStatus } from "../productionScheduleShared";
 
 export const metadata = {
   title: "All Orders | Roc Candy Admin",
@@ -47,8 +47,16 @@ const FILTER_OPTIONS: { value: FilterView; label: string }[] = [
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-");
+    return `${day}/${month}/${year}`;
+  }
   try {
-    return new Date(iso).toLocaleDateString();
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(iso));
   } catch {
     return iso;
   }
@@ -71,6 +79,9 @@ const isResettableCompletedOrder = (order: OrderRow) => order.status === "archiv
 const isRefundableOrder = (order: OrderRow) =>
   Boolean(order.paid_at && order.payment_transaction_id && !order.refunded_at && !isResettableCompletedOrder(order));
 const isCompletablePremadeOrder = (order: OrderRow) => order.design_type === "premade" && order.status !== "shipped" && !order.refunded_at;
+const isPartiallyRefundedOrder = (order: OrderRow) =>
+  order.status === "partially-refunded" || order.woo_order_status === "partially-refunded";
+const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Refunded");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -233,8 +244,9 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
               : "pending"
             : resolveScheduleGroupStatus(statusList);
           const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
-          const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length;
-          const partiallyRefunded = refundedCount > 0 && !allRefunded;
+          const partiallyRefundedCount = subgroup.orders.filter((order) => isPartiallyRefundedOrder(order)).length;
+          const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length && partiallyRefundedCount === 0;
+          const partiallyRefunded = partiallyRefundedCount > 0 || (refundedCount > 0 && !allRefunded);
           const isPickup = subgroup.orders.every((order) => order.pickup);
           const completionTimes = subgroup.orders
             .map((order) => toTime(resolveCompletedAt(order)))
@@ -413,7 +425,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                 const subgroupRefundableOrders = subgroup.orders.filter((order) => isRefundableOrder(order));
                 const subgroupCompletablePremadeOrders = subgroup.orders.filter((order) => isCompletablePremadeOrder(order));
                 const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
-                const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Collected" : "Delivered";
+                const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Mark as collected" : "Mark as shipped";
                 const baseOrderNumber = normalizeOrderNumber(subgroup.orders[0]?.order_number) ?? group.orderNumber ?? null;
                 const companionOrders =
                   subgroup.isPremadeGroup && baseOrderNumber
@@ -491,7 +503,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                 <p className="font-semibold text-zinc-900">{title}</p>
                                 {order.refunded_at ? (
                                   <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                                    Refunded
+                                    {refundBadgeLabel(order)}
                                   </span>
                                 ) : null}
                               </div>
@@ -588,7 +600,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   <SplitAwareActionForm
                                     action={archiveOrderInline}
                                     hiddenFields={[{ name: "order_id", value: order.id }]}
-                                    buttonLabel={completionActionLabel(order)}
+                                    buttonLabel={order.pickup ? "Mark as collected" : "Mark as shipped"}
                                     buttonClassName="inline-flex items-center rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                                     confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order?`}
                                     companionMeta={premadeSiblingMeta}

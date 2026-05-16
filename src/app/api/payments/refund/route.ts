@@ -11,6 +11,8 @@ type RefundRequest = {
   reason?: string;
 };
 
+const toMoneyCents = (value: number) => Math.round(value * 100);
+
 export async function POST(request: Request) {
   try {
     const session = await getAdminSession();
@@ -39,24 +41,27 @@ export async function POST(request: Request) {
     }
 
     const orderAmount = Number(order.total_price);
+    const orderAmountCents = toMoneyCents(orderAmount);
     const amount = Number.isFinite(body.amount ?? NaN) ? Number(body.amount) : orderAmount;
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amountCents = toMoneyCents(amount);
+    if (!Number.isFinite(amount) || !Number.isFinite(orderAmount) || amountCents <= 0) {
       return NextResponse.json({ error: "Invalid refund amount." }, { status: 400 });
     }
-    if (Number.isFinite(orderAmount) && Math.abs(amount - orderAmount) > 0.009) {
+    if (amountCents > orderAmountCents) {
       return NextResponse.json(
-        { error: "Custom refund amounts are not supported here. Refund the split order row separately instead." },
+        { error: "Refund amount cannot be higher than the order total." },
         { status: 400 }
       );
     }
+    const refundAmount = amountCents / 100;
+    const isPartialRefund = amountCents < orderAmountCents;
 
     const reason = body.reason?.toString().trim() || null;
 
     if (provider === "square") {
-      const cents = Math.round(amount * 100);
-      await refundSquarePayment(transactionId, cents, reason);
+      await refundSquarePayment(transactionId, amountCents, reason);
     } else if (provider === "paypal") {
-      await refundPayPalCapture(transactionId, amount.toFixed(2), reason);
+      await refundPayPalCapture(transactionId, refundAmount.toFixed(2), reason);
     } else {
       return NextResponse.json({ error: "Unsupported payment provider." }, { status: 400 });
     }
@@ -65,13 +70,15 @@ export async function POST(request: Request) {
       client,
       order,
       refundReason: reason,
+      isPartialRefund,
     });
 
     if (order.customer_email) {
       await sendCustomerRefundEmail([order.customer_email], {
         orderNumber: order.order_number ?? null,
-        amount,
+        amount: refundAmount,
         paymentMethod: order.payment_method ?? order.payment_provider ?? null,
+        reason,
       });
     }
 

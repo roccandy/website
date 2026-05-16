@@ -3,8 +3,16 @@ import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 
 export const formatDate = (iso: string | null) => {
   if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-");
+    return `${day}/${month}/${year}`;
+  }
   try {
-    return new Date(iso).toLocaleDateString();
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(iso));
   } catch {
     return iso;
   }
@@ -129,10 +137,10 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
 };
 
 export const completionActionLabel = (order: OrderRow) =>
-  order.pickup ? "Collected" : "Delivered";
+  order.pickup ? "Mark as collected" : "Mark as shipped";
 
 export const productionCompletionActionLabel = (order: OrderRow) =>
-  order.pickup ? "Mark collected" : "Mark delivered";
+  order.pickup ? "Mark as collected" : "Mark as shipped";
 
 const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 

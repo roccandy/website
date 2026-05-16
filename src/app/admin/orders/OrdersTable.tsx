@@ -68,6 +68,9 @@ const JACKET_OPTIONS = [
 const WEDDING_HEART = "❤️";
 const normalizeWeddingHeartText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s*[♥❤]\s*/g, ` ${WEDDING_HEART} `).replace(/\s+/g, " ").trim();
+const isPartiallyRefundedOrder = (order: OrderRow) =>
+  order.status === "partially-refunded" || order.woo_order_status === "partially-refunded";
+const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Refunded");
 
 export function OrdersTable({
   orders,
@@ -477,7 +480,7 @@ export function OrdersTable({
                           ) : null}
                           {order.refunded_at ? (
                             <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                              Refunded
+                              {refundBadgeLabel(order)}
                             </span>
                           ) : null}
                         </div>

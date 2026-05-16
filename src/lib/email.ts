@@ -45,6 +45,7 @@ type CustomerRefundEmailPayload = {
   orderNumber?: string | null;
   amount?: number | null;
   paymentMethod?: string | null;
+  reason?: string | null;
 };
 
 const CUSTOMER_WEBSITE_FEEDBACK_NOTE =
@@ -208,12 +209,14 @@ export async function sendCustomerRefundEmail(to: string[], refund: CustomerRefu
     Number.isFinite(refund.amount ?? NaN) && refund.amount !== null
       ? `$${Number(refund.amount).toFixed(2)}`
       : "-";
+  const reason = refund.reason?.trim();
 
   const lines = [
     `A refund has been processed.`,
     `Order #: ${refund.orderNumber ? `#${refund.orderNumber}` : "-"}`,
     `Amount: ${amount}`,
     `Payment method: ${refund.paymentMethod ?? "-"}`,
+    ...(reason ? [`Refund reason: ${reason}`] : []),
     "",
     "Please allow a few business days for the refund to appear on your statement.",
   ];

@@ -19,8 +19,16 @@ type SearchParams = {
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-");
+    return `${day}/${month}/${year}`;
+  }
   try {
-    return new Date(iso).toLocaleDateString();
+    return new Intl.DateTimeFormat("en-AU", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(iso));
   } catch {
     return iso;
   }
@@ -154,7 +162,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
               <th className="px-3 py-3 text-left">Qty</th>
               <th className="px-3 py-3 text-left">Customer</th>
               <th className="px-3 py-3 text-left">Quote order</th>
-              <th className="px-3 py-3 text-left">Ordered</th>
+              <th className="px-3 py-3 text-left">Date required</th>
               <th className="px-3 py-3 text-left">Total</th>
               <th className="px-3 py-3 text-left">Status</th>
               <th className="px-3 py-3 text-left">Action</th>
@@ -197,7 +205,8 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                 .filter((value) => Number.isFinite(value));
               const totalPriceLabel =
                 totals.length > 0 ? formatMoney(totals.reduce((sum, value) => sum + value, 0)) : "-";
-              const orderedDate = group.latestDate ? formatDate(group.latestDate) : "";
+              const uniqueDueDates = Array.from(new Set(groupOrders.map((order) => order.due_date).filter(Boolean)));
+              const requiredDate = uniqueDueDates.length <= 1 ? formatDate(uniqueDueDates[0] ?? null) : "Multiple";
               const shippedAt = isShipped ? resolveShippedAt(groupOrders) : null;
               const groupAnchor = `premade-group-${(group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
               const groupKey = (group.orderNumber?.trim() || firstOrder?.id || "group").replace(/[^a-zA-Z0-9_-]/g, "-");
@@ -249,7 +258,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                 return `${labels[0]} and ${labels.length - 1} more item${labels.length > 2 ? "s" : ""}`;
               })();
               const completionActionLabel = pickup ? "collected" : "delivered";
-              const primaryActionLabel = pickup ? "Mark collected" : "Mark shipped";
+              const primaryActionLabel = pickup ? "Mark as collected" : "Mark as shipped";
               const completedButtonLabel = pickup ? "Collected" : "Shipped";
               const completedDateLabel = (() => {
                 const label = shippedOnLabel(shippedAt);
@@ -286,7 +295,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                   <td className="px-3 py-2 text-zinc-700">{totalQuantityLabel}</td>
                   <td className="px-3 py-2 text-zinc-700">{customer}</td>
                   <td className="px-3 py-2 text-zinc-700">{quoteOrder}</td>
-                  <td className="px-3 py-2 text-zinc-700">{orderedDate}</td>
+                  <td className="px-3 py-2 text-zinc-700">{requiredDate}</td>
                   <td className="px-3 py-2 text-zinc-700">{totalPriceLabel}</td>
                   <td className="px-3 py-2 text-zinc-700">
                     {status === "shipped" ? (
