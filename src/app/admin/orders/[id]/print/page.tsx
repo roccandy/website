@@ -280,9 +280,9 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     if (Number.isFinite(storedCount) && storedCount > 0) {
       return String(Math.floor(storedCount));
     }
-    if (!ingredientLabelsRequested) return "0";
+    if (!ingredientLabelsRequested) return "-";
     const packagingType = packaging?.type?.trim().toLowerCase();
-    if (packagingType === "bulk") return "0";
+    if (packagingType === "bulk") return "-";
     const quantity = Number(order.quantity);
     if (Number.isFinite(quantity) && quantity > 0) {
       return String(Math.floor(quantity));
@@ -515,7 +515,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
               </p>
               <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Custom Labels to print:</span>
+                <span className={SPEC_LABEL_CLASS}>Custom Labels:</span>
                 <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
               </p>
               <p className={SPEC_ROW_CLASS}>
