@@ -423,7 +423,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
   const renderSortHeader = (option: (typeof SORT_OPTIONS)[number]) => {
     const isActive = activeSort === option.value;
     const nextDirection: SortDirection = isActive && activeDirection === "asc" ? "desc" : "asc";
-    const indicator = isActive ? activeDirection : "sort";
+    const indicator = activeDirection === "asc" ? "^" : "v";
     return (
       <th key={option.value} className={`px-3 py-3 text-left ${option.className ?? ""}`}>
         <Link
@@ -431,9 +431,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
           className="inline-flex items-center gap-1 text-zinc-500 hover:text-zinc-900"
         >
           <span>{option.label}</span>
-          <span className="text-[10px]" aria-hidden="true">
-            {indicator}
-          </span>
+          {isActive ? (
+            <span className="text-[10px]" aria-hidden="true">
+              {indicator}
+            </span>
+          ) : null}
         </Link>
       </th>
     );
