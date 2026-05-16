@@ -275,6 +275,20 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   })();
   const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
   const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
+  const ingredientLabelsToPrint = (() => {
+    const storedCount = Number(order.ingredient_labels_count);
+    if (Number.isFinite(storedCount) && storedCount > 0) {
+      return String(Math.floor(storedCount));
+    }
+    if (!ingredientLabelsRequested) return "0";
+    const packagingType = packaging?.type?.trim().toLowerCase();
+    if (packagingType === "bulk") return "0";
+    const quantity = Number(order.quantity);
+    if (Number.isFinite(quantity) && quantity > 0) {
+      return String(Math.floor(quantity));
+    }
+    return "1";
+  })();
 
   const showJacketColorOne =
     order.jacket === "two_colour" || order.jacket === "two_colour_pinstripe" || order.jacket === "pinstripe" || !order.jacket;
@@ -506,13 +520,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </p>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
-                <span className={SPEC_VALUE_CLASS}>
-                  {order.ingredient_labels_count != null
-                    ? String(order.ingredient_labels_count)
-                    : ingredientLabelsRequested
-                      ? "Yes"
-                      : "No"}
-                </span>
+                <span className={SPEC_VALUE_CLASS}>{ingredientLabelsToPrint}</span>
               </p>
             </div>
           </div>
