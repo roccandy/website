@@ -13,6 +13,7 @@ type RefundFormProps = {
   helperText?: string | null;
   action: (formData: FormData) => void;
   redirectTo?: string;
+  buttonLabel?: string;
   compact?: boolean;
 };
 
@@ -34,6 +35,7 @@ export function RefundForm({
   helperText,
   action,
   redirectTo,
+  buttonLabel: buttonLabelOverride,
   compact = false,
 }: RefundFormProps) {
   const [reason, setReason] = useState("");
@@ -45,7 +47,7 @@ export function RefundForm({
   const maxRefundAmount = Number.isFinite(amount) && Number(amount) > 0 ? Number(amount) : null;
   const amountLabel = formatAmount(amount);
   const refundLabel = amountLabel ? `Refund ${label} (${amountLabel})` : `Refund ${label}`;
-  const buttonLabel = compact ? `Refund ${label}` : refundLabel;
+  const buttonLabel = buttonLabelOverride ?? (compact ? "Refund" : refundLabel);
   const modalTitleId = `refund-title-${orderId}`;
   const parsedRefundAmount = Number(refundAmount);
   const hasValidPartialAmount =

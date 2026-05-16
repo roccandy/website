@@ -12,6 +12,12 @@ type RefundRequest = {
 };
 
 const toMoneyCents = (value: number) => Math.round(value * 100);
+const refundedCentsForOrder = (order: { refunded_amount?: number | null; refunded_at?: string | null; status?: string | null; total_price?: number | null }) => {
+  const stored = Number(order.refunded_amount);
+  if (Number.isFinite(stored) && stored > 0) return toMoneyCents(stored);
+  if (order.refunded_at && order.status !== "partially-refunded") return toMoneyCents(Number(order.total_price ?? 0));
+  return 0;
+};
 
 export async function POST(request: Request) {
   try {
@@ -42,19 +48,22 @@ export async function POST(request: Request) {
 
     const orderAmount = Number(order.total_price);
     const orderAmountCents = toMoneyCents(orderAmount);
+    const remainingRefundCents = Math.max(0, orderAmountCents - refundedCentsForOrder(order));
     const amount = Number.isFinite(body.amount ?? NaN) ? Number(body.amount) : orderAmount;
     const amountCents = toMoneyCents(amount);
     if (!Number.isFinite(amount) || !Number.isFinite(orderAmount) || amountCents <= 0) {
       return NextResponse.json({ error: "Invalid refund amount." }, { status: 400 });
     }
-    if (amountCents > orderAmountCents) {
+    if (remainingRefundCents <= 0) {
+      return NextResponse.json({ error: "No refundable amount remaining." }, { status: 400 });
+    }
+    if (amountCents > remainingRefundCents) {
       return NextResponse.json(
-        { error: "Refund amount cannot be higher than the order total." },
+        { error: "Refund amount cannot be higher than the remaining refundable amount." },
         { status: 400 }
       );
     }
     const refundAmount = amountCents / 100;
-    const isPartialRefund = amountCents < orderAmountCents;
 
     const reason = body.reason?.toString().trim() || null;
 
@@ -69,8 +78,8 @@ export async function POST(request: Request) {
     await persistOrderRefund({
       client,
       order,
+      refundAmount,
       refundReason: reason,
-      isPartialRefund,
     });
 
     if (order.customer_email) {

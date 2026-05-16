@@ -508,6 +508,7 @@ export function NewOrderForm({
       payment_transaction_id: null,
       refunded_at: null,
       refund_reason: null,
+      refunded_amount: null,
       archived_at: null,
       shipped_at: null,
       created_at: new Date().toISOString(),

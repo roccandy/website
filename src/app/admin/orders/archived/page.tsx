@@ -80,12 +80,23 @@ const formatStatusLabel = (status: string) =>
   status === "pending completion" ? "pending" : status.replace(/_/g, " ");
 const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
 const isResettableCompletedOrder = (order: OrderRow) => order.status === "archived" || order.status === "shipped";
+const toMoneyCents = (value: number) => Math.round(value * 100);
+const refundedCentsForOrder = (order: OrderRow) => {
+  const stored = Number(order.refunded_amount);
+  if (Number.isFinite(stored) && stored > 0) return toMoneyCents(stored);
+  if (order.refunded_at && order.status !== "partially-refunded") return toMoneyCents(Number(order.total_price ?? 0));
+  return 0;
+};
+const remainingRefundCentsForOrder = (order: OrderRow) =>
+  Math.max(0, toMoneyCents(Number(order.total_price ?? 0)) - refundedCentsForOrder(order));
+const isFullyRefundedOrder = (order: OrderRow) =>
+  Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) <= 0;
 const isRefundableOrder = (order: OrderRow) =>
-  Boolean(order.paid_at && order.payment_transaction_id && !order.refunded_at && !isResettableCompletedOrder(order));
+  Boolean(order.paid_at && order.payment_transaction_id && remainingRefundCentsForOrder(order) > 0 && !isResettableCompletedOrder(order));
 const isCompletablePremadeOrder = (order: OrderRow) => order.design_type === "premade" && order.status !== "shipped" && !order.refunded_at;
 const isPartiallyRefundedOrder = (order: OrderRow) =>
-  order.status === "partially-refunded" || order.woo_order_status === "partially-refunded";
-const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Refunded");
+  Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
+const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
   const match = orderNumber?.match(/-(a|b)$/i);
   return match ? match[1].toLowerCase() : null;
@@ -270,7 +281,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
               ? "shipped"
               : "pending"
             : resolveScheduleGroupStatus(statusList);
-          const refundedCount = subgroup.orders.filter((order) => Boolean(order.refunded_at)).length;
+          const refundedCount = subgroup.orders.filter((order) => isFullyRefundedOrder(order)).length;
           const partiallyRefundedCount = subgroup.orders.filter((order) => isPartiallyRefundedOrder(order)).length;
           const allRefunded = refundedCount > 0 && refundedCount === subgroup.orders.length && partiallyRefundedCount === 0;
           const partiallyRefunded = partiallyRefundedCount > 0 || (refundedCount > 0 && !allRefunded);
@@ -331,7 +342,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
         new Set(
           visibleSubgroups.map((subgroup) =>
             subgroup.allRefunded
-              ? "Refunded"
+              ? "Fully refunded"
               : subgroup.partiallyRefunded
                 ? "Partially refunded"
                 : subgroup.completionLabel ?? subgroup.statusLabel,
@@ -491,7 +502,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                 const subgroupResettableOrders = subgroup.orders.filter((order) => isResettableCompletedOrder(order));
                 const subgroupRefundableOrders = subgroup.orders.filter((order) => isRefundableOrder(order));
                 const subgroupCompletablePremadeOrders = subgroup.orders.filter((order) => isCompletablePremadeOrder(order));
-                const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
+                const subgroupRefundAmount = subgroupRefundableOrders.reduce((sum, order) => sum + remainingRefundCentsForOrder(order) / 100, 0);
                 const premadeCompletionLabel = subgroup.orders.every((order) => order.pickup) ? "Mark as collected" : "Mark as shipped";
                 const baseOrderNumber = normalizeOrderNumber(subgroup.orders[0]?.order_number) ?? group.orderNumber ?? null;
                 const companionOrders =
@@ -581,7 +592,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       <div className="space-y-1">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
                           {subgroup.allRefunded
-                            ? "Refunded"
+                            ? "Fully refunded"
                             : subgroup.partiallyRefunded
                               ? "Partially refunded"
                               : subgroup.completionLabel ?? subgroup.statusLabel}
@@ -633,14 +644,17 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                               orderIds={subgroupRefundableOrders.map((order) => order.id)}
                               orderNumber={subgroupRefundableOrders[0]?.order_number}
                               amount={subgroupRefundAmount}
+                              buttonLabel={subgroup.partiallyRefunded ? "Partially refunded" : "Refund"}
                               action={refundOrder}
                               redirectTo={redirectTo}
                               compact
                             />
                           ) : null}
+                          {subgroup.allRefunded ? <span className="text-xs font-semibold text-rose-700">Fully Refunded</span> : null}
                           {subgroupCompletablePremadeOrders.length === 0 &&
                           subgroupResettableOrders.length === 0 &&
-                          subgroupRefundableOrders.length === 0 ? (
+                          subgroupRefundableOrders.length === 0 &&
+                          !subgroup.allRefunded ? (
                             <span className="text-xs text-zinc-400">-</span>
                           ) : null}
                         </div>
@@ -649,6 +663,8 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                           {subgroup.orders.map((order) => {
                             const hasReset = isResettableCompletedOrder(order);
                             const hasRefund = isRefundableOrder(order);
+                            const isFullyRefunded = isFullyRefundedOrder(order);
+                            const isPartiallyRefunded = isPartiallyRefundedOrder(order);
                             const assignedSlotDate = assignmentByOrderId.get(order.id)
                               ? slotMap.get(assignmentByOrderId.get(order.id)!.slot_id)?.slot_date ?? null
                               : null;
@@ -683,13 +699,15 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   <RefundForm
                                     orderId={order.id}
                                     orderNumber={order.order_number}
-                                    amount={order.total_price}
+                                    amount={remainingRefundCentsForOrder(order) / 100}
+                                    buttonLabel={isPartiallyRefunded ? "Partially refunded" : "Refund"}
                                     action={refundOrder}
                                     redirectTo={redirectTo}
                                     compact
                                   />
                                 ) : null}
-                                {!canComplete && !hasReset && !hasRefund ? <span className="text-xs text-zinc-400">-</span> : null}
+                                {isFullyRefunded ? <span className="text-xs font-semibold text-rose-700">Fully Refunded</span> : null}
+                                {!canComplete && !hasReset && !hasRefund && !isFullyRefunded ? <span className="text-xs text-zinc-400">-</span> : null}
                               </div>
                             );
                           })}

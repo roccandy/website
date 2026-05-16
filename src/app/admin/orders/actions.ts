@@ -34,6 +34,14 @@ const toSafeInteger = (value: number, fallback = 1) => {
   return Math.max(fallback, Math.round(value));
 };
 const toMoneyCents = (value: number) => Math.round(value * 100);
+const refundedCentsForOrder = (order: { refunded_amount?: number | null; refunded_at?: string | null; status?: string | null; total_price?: number | null }) => {
+  const stored = Number(order.refunded_amount);
+  if (Number.isFinite(stored) && stored > 0) return toMoneyCents(stored);
+  if (order.refunded_at && order.status !== "partially-refunded") return toMoneyCents(Number(order.total_price ?? 0));
+  return 0;
+};
+const remainingRefundCentsForOrder = (order: { refunded_amount?: number | null; refunded_at?: string | null; status?: string | null; total_price?: number | null }) =>
+  Math.max(0, toMoneyCents(Number(order.total_price ?? 0)) - refundedCentsForOrder(order));
 
 const syncIngredientLabelsNote = (notes: string | null, enabled: boolean) => {
   const existingLines = (notes ?? "")
@@ -685,10 +693,10 @@ export async function refundOrder(formData: FormData) {
     redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Orders%20must%20share%20the%20same%20payment`);
   }
 
-  const maxRefundAmount = orders.reduce((sum, order) => sum + Number(order.total_price ?? 0), 0);
-  const maxRefundCents = toMoneyCents(maxRefundAmount);
+  const maxRefundCents = orders.reduce((sum, order) => sum + remainingRefundCentsForOrder(order), 0);
+  const maxRefundAmount = maxRefundCents / 100;
   if (!Number.isFinite(maxRefundAmount) || maxRefundCents <= 0) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20amount`);
+    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20No%20refundable%20amount%20remaining`);
   }
 
   const requestedRefundAmount = Number(refundAmountRaw);
@@ -717,14 +725,14 @@ export async function refundOrder(formData: FormData) {
         ? await persistOrderRefunds({
             client,
             orders,
+            refundAmount: amount,
             refundReason,
-            isPartialRefund,
           })
         : await persistOrderRefund({
             client,
             order: orders[0]!,
+            refundAmount: amount,
             refundReason,
-            isPartialRefund,
           });
 
     const recipientEmails = Array.from(new Set(orders.map((order) => order.customer_email).filter(Boolean)));

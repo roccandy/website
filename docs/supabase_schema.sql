@@ -156,6 +156,7 @@ create table if not exists orders (
   due_date date,
   total_weight_kg numeric not null check (total_weight_kg > 0),
   total_price numeric,
+  refunded_amount numeric,
   status text not null default 'pending',
   notes text,
   created_at timestamptz not null default now()

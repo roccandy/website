@@ -68,9 +68,20 @@ const JACKET_OPTIONS = [
 const WEDDING_HEART = "❤️";
 const normalizeWeddingHeartText = (value: string | null | undefined) =>
   (value ?? "").replace(/\s*[♥❤]\s*/g, ` ${WEDDING_HEART} `).replace(/\s+/g, " ").trim();
+const toMoneyCents = (value: number) => Math.round(value * 100);
+const remainingRefundCentsForOrder = (order: OrderRow) => {
+  const stored = Number(order.refunded_amount);
+  const refundedCents =
+    Number.isFinite(stored) && stored > 0
+      ? toMoneyCents(stored)
+      : order.refunded_at && order.status !== "partially-refunded"
+        ? toMoneyCents(Number(order.total_price ?? 0))
+        : 0;
+  return Math.max(0, toMoneyCents(Number(order.total_price ?? 0)) - refundedCents);
+};
 const isPartiallyRefundedOrder = (order: OrderRow) =>
-  order.status === "partially-refunded" || order.woo_order_status === "partially-refunded";
-const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Refunded");
+  Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
+const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
 
 export function OrdersTable({
   orders,
