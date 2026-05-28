@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
+import { formatPremadeWeight } from "@/lib/premadeCatalog";
 import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";
 import { PremadeGroupShipButton } from "./PremadeGroupShipButton";
 import { dateKey, getScheduleStatus } from "../productionScheduleShared";
@@ -43,6 +44,31 @@ const formatQuantity = (quantity: number | null | undefined) => {
 const formatMoney = (amount: number | null | undefined) => {
   if (!Number.isFinite(amount ?? NaN)) return "-";
   return `$${Number(amount).toFixed(2)}`;
+};
+
+const formatPremadeOrderWeight = (order: { quantity: number | null; total_weight_kg: number | null }) => {
+  const totalWeightKg = Number(order.total_weight_kg);
+  if (!Number.isFinite(totalWeightKg) || totalWeightKg <= 0) return "";
+  const quantity = Number(order.quantity);
+  const unitWeightKg = Number.isFinite(quantity) && quantity > 0 ? totalWeightKg / quantity : totalWeightKg;
+  return formatPremadeWeight(Math.round(unitWeightKg * 1000));
+};
+
+const formatDeliverySummary = (order: {
+  pickup: boolean;
+  address_line1: string | null;
+  address_line2: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  location: string | null;
+}) => {
+  if (order.pickup) return "Pickup";
+  const address = [order.address_line1, order.address_line2, order.suburb, order.state, order.postcode]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+  return address || order.location?.trim() || "";
 };
 
 const statusBadge = (status: string) => {
@@ -276,8 +302,10 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                   <td className="px-3 py-2 text-zinc-800">
                     <div className="space-y-2">
                       {groupOrders.map((order) => {
-                        const title = order.title?.trim() || order.order_description?.trim() || "Additional item";
-                        const description = order.title?.trim() ? order.order_description?.trim() : "";
+                        const baseTitle = order.title?.trim() || order.order_description?.trim() || "Additional item";
+                        const weightLabel = formatPremadeOrderWeight(order);
+                        const title = weightLabel ? `${weightLabel} ${baseTitle}` : baseTitle;
+                        const description = formatDeliverySummary(order);
                         const qty = formatQuantity(order.quantity);
                         const qtyLabel = qty !== "-" ? `x ${qty}` : "";
                         return (
