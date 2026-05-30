@@ -143,7 +143,7 @@ function assertBasePayload(body: CheckoutOrderPayload) {
   if (customItems.length === 0 && premadeItems.length === 0) {
     throw new Error("Cart is empty.");
   }
-  if (customItems.length > 0 && !body.dueDate?.trim()) {
+  if (!body.dueDate?.trim()) {
     throw new Error("Requested date is required.");
   }
   if (!body.pickup) {
@@ -217,7 +217,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   }
 
   const premadeById = await loadPremadeItems(premadeItems);
-  const dueDate = body.dueDate ?? null;
+  const dueDate = body.dueDate?.trim() ?? null;
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
   const settings = await getSettings();

@@ -1304,7 +1304,7 @@ export function CheckoutClient({
       missing.push("items");
       return missing;
     }
-    if (hasCustomItems && !dueDate) missing.push("date required");
+    if (!dueDate) missing.push("date required");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
     if (!firstName.trim()) missing.push("first name");
     if (!lastName.trim()) missing.push("surname");

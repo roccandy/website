@@ -178,10 +178,33 @@ describe("buildWooOrderContext", () => {
         buildOrder({
           customItems: [],
           premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
-          dueDate: undefined,
         })
       )
     ).rejects.toThrow("Max total kg is 8.2.");
+  });
+
+  it("rejects premade-only checkout without a requested date", async () => {
+    premadeRows = [
+      {
+        id: "premade-1",
+        name: "Premade Candy",
+        price: 12,
+        weight_g: 200,
+        woo_product_id: "123",
+        description: "Premade",
+      },
+    ];
+    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildWooOrderContext(
+        buildOrder({
+          customItems: [],
+          premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
+          dueDate: undefined,
+        })
+      )
+    ).rejects.toThrow("Requested date is required.");
   });
 
   it("assigns premade orders after multiple custom order suffixes", async () => {
