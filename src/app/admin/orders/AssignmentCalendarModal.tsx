@@ -32,6 +32,44 @@ type Props = {
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function SlotAvailabilityBar({
+  openSlotCount,
+  slotsPerDay,
+  disabled,
+  isCurrentAssignment,
+}: {
+  openSlotCount: number;
+  slotsPerDay: number;
+  disabled: boolean;
+  isCurrentAssignment: boolean;
+}) {
+  const totalSlots = Math.max(1, slotsPerDay);
+  const openSlots = Math.max(0, Math.min(openSlotCount, totalSlots));
+
+  return (
+    <div
+      className="mt-1.5 flex h-1.5 w-full gap-0.5"
+      role="img"
+      aria-label={`${openSlots} of ${totalSlots} production slots open`}
+    >
+      {Array.from({ length: totalSlots }, (_, index) => {
+        const isOpen = index < openSlots;
+        const segmentClass = isOpen
+          ? isCurrentAssignment
+            ? "bg-blue-500"
+            : disabled
+              ? "bg-zinc-300"
+              : "bg-emerald-500"
+          : disabled
+            ? "bg-zinc-200"
+            : "bg-zinc-200";
+
+        return <span key={index} className={`h-full min-w-0 flex-1 rounded-sm ${segmentClass}`} />;
+      })}
+    </div>
+  );
+}
+
 function buildMonthCells(month: Date) {
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -102,16 +140,17 @@ export default function AssignmentCalendarModal({
         const isCurrentAssignment = assignment?.slot?.slot_date === status.key;
         const disabled = status.blocked || availableSlotIndex === null;
 
-        let helper = `${openSlotCount} of ${slotsPerDay} open`;
-        if (status.blocked) helper = status.reason ?? "Blocked";
-        if (availableSlotIndex === null && !status.blocked) helper = "Full";
-        if (isPast) helper = "Past date";
-        if (isCurrentAssignment && !disabled) helper = "Current date";
+        let statusLabel: string | null = null;
+        if (status.blocked) statusLabel = status.reason ?? "Blocked";
+        if (availableSlotIndex === null && !status.blocked) statusLabel = "Full";
+        if (isPast) statusLabel = "Past date";
+        if (isCurrentAssignment && !disabled) statusLabel = "Current date";
 
         return {
           day,
           key: status.key,
-          helper,
+          openSlotCount,
+          statusLabel,
           disabled,
           isPast,
           isCurrentAssignment,
@@ -314,7 +353,15 @@ export default function AssignmentCalendarModal({
                   }`}
                 >
                   <p className="text-[13px] font-semibold">{label}</p>
-                  <p className="mt-0.5 text-[10px] font-medium leading-snug">{item.helper}</p>
+                  <SlotAvailabilityBar
+                    openSlotCount={item.openSlotCount}
+                    slotsPerDay={slotsPerDay}
+                    disabled={item.disabled}
+                    isCurrentAssignment={item.isCurrentAssignment}
+                  />
+                  {item.statusLabel ? (
+                    <p className="mt-1 text-[10px] font-medium leading-snug">{item.statusLabel}</p>
+                  ) : null}
                 </button>
               );
             })}
