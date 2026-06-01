@@ -385,7 +385,7 @@ function OverlayText({
           fill
           sizes="220px"
           unoptimized
-          className="object-cover"
+          className="object-contain"
         />
       </div>
     );

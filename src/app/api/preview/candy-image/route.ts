@@ -131,7 +131,7 @@ export async function GET(request: Request) {
               alt: "Logo",
               width: 168,
               height: 168,
-              style: { borderRadius: "16px", objectFit: "cover" },
+              style: { borderRadius: "16px", objectFit: "contain" },
             })
           : isWedding
             ? [

@@ -47,7 +47,7 @@ export async function GET(request: Request) {
       : "";
 
   const logoNode = logoUrl
-    ? `<image href="${escapeXml(logoUrl)}" x="210" y="110" width="180" height="180" preserveAspectRatio="xMidYMid slice" clip-path="url(#logoClip)" />`
+    ? `<image href="${escapeXml(logoUrl)}" x="210" y="110" width="180" height="180" preserveAspectRatio="xMidYMid meet" clip-path="url(#logoClip)" />`
     : "";
 
   const weddingTextNode =
