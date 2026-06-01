@@ -11,6 +11,10 @@ import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
 import { PrintButton } from "./PrintButton";
 
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 type Params = {
   params?: { id?: string } | Promise<{ id?: string }>;
   searchParams?: { id?: string } | Promise<{ id?: string }>;

@@ -56,7 +56,7 @@ function buildWeekWindows(today = new Date()): WeekWindow[] {
 }
 
 function scheduleDateForOrder(order: OrderRow, assignedProductionDateByOrderId: Map<string, string>) {
-  return assignedProductionDateByOrderId.get(order.id) ?? order.due_date ?? "";
+  return assignedProductionDateByOrderId.get(order.id) ?? "";
 }
 
 function isInWindow(order: OrderRow, window: Pick<WeekWindow, "start" | "end">, assignedProductionDateByOrderId: Map<string, string>) {
@@ -110,7 +110,7 @@ export default async function ProductionOrdersPage() {
   }
 
   const visibleOrders = orders
-    .filter(isVisibleOnProductionSchedule)
+    .filter((order) => isVisibleOnProductionSchedule(order) && assignedProductionDateByOrderId.has(order.id))
     .sort((a, b) => sortProductionOrders(a, b, assignedProductionDateByOrderId));
   const weekWindows = buildWeekWindows();
   const ordersByWeek = weekWindows.map((window) => ({

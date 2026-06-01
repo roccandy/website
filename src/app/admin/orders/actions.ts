@@ -569,8 +569,12 @@ export async function upsertOrder(formData: FormData) {
   }
   revalidatePath(ORDERS_PATH);
   revalidatePath("/admin");
+  revalidatePath("/admin/orders/[id]/print", "page");
   if (id) {
     revalidatePath(`/admin/orders/${id}/print`);
+  }
+  if (existing?.order_number) {
+    revalidatePath(`/admin/orders/${encodeURIComponent(existing.order_number)}/print`);
   }
   if (redirectTo?.startsWith("/")) {
     revalidatePath(redirectTo);
