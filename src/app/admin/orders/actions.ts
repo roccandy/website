@@ -157,7 +157,8 @@ export async function upsertOrder(formData: FormData) {
   const jar_lid_color = formData.get("jar_lid_color")?.toString() || null;
   const logo_url = formData.get("logo_url")?.toString() || null;
   const label_image_url = formData.get("label_image_url")?.toString() || null;
-  const due_date = formData.get("due_date")?.toString() || null;
+  const hasDueDateField = formData.has("due_date");
+  const due_date = hasDueDateField ? formData.get("due_date")?.toString() || null : null;
   const created_at_raw = formData.get("created_at")?.toString() || null;
   const first_name = formData.get("first_name")?.toString() || null;
   const last_name = formData.get("last_name")?.toString() || null;
@@ -245,7 +246,9 @@ export async function upsertOrder(formData: FormData) {
     ? shouldScheduleAfterCreate
       ? productionSlotDate ?? null
       : null
-    : due_date ?? existing?.due_date ?? null;
+    : hasDueDateField
+      ? due_date
+      : existing?.due_date ?? null;
 
   const resolvedWeightKg = Number.isFinite(total_weight_kg)
     ? total_weight_kg
@@ -562,6 +565,14 @@ export async function upsertOrder(formData: FormData) {
 
   if (activity) {
     await logAdminActivity(activity);
+  }
+  revalidatePath(ORDERS_PATH);
+  revalidatePath("/admin");
+  if (id) {
+    revalidatePath(`/admin/orders/${id}/print`);
+  }
+  if (redirectTo?.startsWith("/")) {
+    revalidatePath(redirectTo);
   }
   const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
   if (redirectTo && toastSuccess) {
