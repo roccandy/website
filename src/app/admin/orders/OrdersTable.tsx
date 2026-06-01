@@ -72,9 +72,13 @@ const JACKET_OPTIONS = [
   { value: "two_colour_pinstripe", label: "Two colour + Pin stripe" },
   { value: "rainbow", label: "Rainbow" },
 ];
-const WEDDING_HEART = "❤️";
+const WEDDING_HEART = "♥";
 const normalizeWeddingHeartText = (value: string | null | undefined) =>
-  (value ?? "").replace(/\s*[♥❤]\s*/g, ` ${WEDDING_HEART} `).replace(/\s+/g, " ").trim();
+  (value ?? "")
+    .replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, ` ${WEDDING_HEART} `)
+    .replace(/\ufe0f/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 const toMoneyCents = (value: number) => Math.round(value * 100);
 const remainingRefundCentsForOrder = (order: OrderRow) => {
   const stored = Number(order.refunded_amount);
@@ -600,6 +604,7 @@ export function OrdersTable({
                                   <input type="hidden" name="redirect_to" value="/admin/orders" />
                                   <input type="hidden" name="toast_success" value="Order updated." />
                                   <input type="hidden" name="toast_error" value="Failed to update order." />
+                                  {isBranded ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
                                   <fieldset disabled={!isEditing} className="space-y-4">
                                   <div className="grid gap-6 md:grid-cols-3">
                                     <div className="space-y-3">
@@ -741,7 +746,6 @@ export function OrdersTable({
                                             <p className={detailMetaClass}>Uploaded logo</p>
                                             {isEditing ? (
                                               <div className="mt-1 space-y-3">
-                                                <input type="hidden" name="logo_url" value={logoUrl} />
                                                 {logoUrl ? (
                                                   <a
                                                     href={logoUrl}
@@ -1194,9 +1198,10 @@ export function OrdersTable({
                                       <>
                                         <button
                                           type="submit"
+                                          disabled={isOptimisingLogo || Boolean(logoError)}
                                           className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
                                         >
-                                          Save changes
+                                          {isOptimisingLogo ? "Optimising logo..." : "Save changes"}
                                         </button>
                                         <button
                                           type="button"

@@ -26,6 +26,12 @@ const INGREDIENT_LABELS_NOTE = "Ingredient labels requested.";
 const ORDER_SUFFIX_PATTERN = /-[a-z]+$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
+const normalizeWeddingDesignText = (value: string | null) =>
+  value
+    ?.replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, " ♥ ")
+    .replace(/\ufe0f/g, "")
+    .replace(/\s+/g, " ")
+    .trim() || null;
 const isInvalidIntegerInputError = (message: string) =>
   message.toLowerCase().includes("invalid input syntax for type integer");
 const isInlineResponse = (formData: FormData) => formData.get("response_mode")?.toString() === "inline";
@@ -224,6 +230,7 @@ export async function upsertOrder(formData: FormData) {
     });
   const isBranded = resolvedCategoryId === "branded";
   const isWedding = resolvedCategoryId?.startsWith("weddings");
+  const resolvedDesignText = isWedding ? normalizeWeddingDesignText(design_text) : design_text;
   const nameFromParts = [first_name, last_name].filter(Boolean).join(" ") || null;
   const resolvedCustomerName = customer_name_raw ?? nameFromParts ?? existing?.customer_name ?? null;
   const resolvedTextColor = !isBranded && !isAdminPremade ? text_color_raw ?? existing?.text_color ?? null : null;
@@ -255,8 +262,8 @@ export async function upsertOrder(formData: FormData) {
     ? total_weight_kg
     : existing?.total_weight_kg ?? NaN;
   const syncedTitleFromDesignText =
-    id && design_text !== null && design_text !== (existing?.design_text ?? null)
-      ? design_text
+    id && resolvedDesignText !== null && resolvedDesignText !== (existing?.design_text ?? null)
+      ? resolvedDesignText
       : null;
   try {
     if (!Number.isFinite(resolvedWeightKg) || resolvedWeightKg <= 0) {
@@ -274,8 +281,8 @@ export async function upsertOrder(formData: FormData) {
     const resolvedFlavor = submittedFlavor || existingFlavor || null;
     const resolvedAdminPremadeSelection = isAdminPremade
       ? adminPremadeMode === "premade"
-        ? design_text ?? existingDesignText ?? null
-        : submittedFlavor ?? design_text ?? existingFlavor ?? existingDesignText ?? null
+        ? resolvedDesignText ?? existingDesignText ?? null
+        : submittedFlavor ?? resolvedDesignText ?? existingFlavor ?? existingDesignText ?? null
       : null;
     const resolvedAdminPremadeFlavor = isAdminPremade
       ? adminPremadeMode === "premade"
@@ -314,7 +321,7 @@ export async function upsertOrder(formData: FormData) {
           : null,
       jacket: isAdminPremade ? null : jacket ?? existing?.jacket ?? null,
       design_type: isAdminPremade ? "premade" : design_type ?? existing?.design_type ?? null,
-      design_text: isAdminPremade ? resolvedAdminPremadeSelection : design_text ?? existing?.design_text ?? null,
+      design_text: isAdminPremade ? resolvedAdminPremadeSelection : resolvedDesignText ?? existing?.design_text ?? null,
       jacket_type: isAdminPremade ? null : jacketType ?? existing?.jacket_type ?? null,
       jacket_color_one: isAdminPremade ? null : jacket_color_one ?? existing?.jacket_color_one ?? null,
       jacket_color_two: isAdminPremade ? null : jacket_color_two ?? existing?.jacket_color_two ?? null,

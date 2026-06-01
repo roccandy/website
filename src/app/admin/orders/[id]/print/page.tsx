@@ -56,7 +56,8 @@ const normalizeHeart = (text: string) =>
   text
     .replace(/&#x2665;|&#9829;|&hearts;|&heart;/gi, "\u2665")
     .replace(/\u00E2\u009D\u00A4\u00EF\u00B8\u008F|\u00E2\u009D\u00A4|\u00E2\u0099\u00A5|\u0192T\u00BE/g, "\u2665")
-    .replace(/[\u2665\u2764]/g, "\u2665")
+    .replace(/[\u2665\u2764]\ufe0f?/g, "\u2665")
+    .replace(/\ufe0f/g, "")
     .replace(/\s*\u2665\s*/g, " \u2665 ");
 
 const isImageUrl = (value: string) => {

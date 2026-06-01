@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 
 type Props = {
   designText?: string;
@@ -365,6 +366,31 @@ function OverlayText({
     );
   }
 
+  if (logoUrl) {
+    return (
+      <div
+        className="pointer-events-none absolute overflow-hidden rounded-[10%]"
+        style={{
+          left: `${((cx - logoOffset) / CANVAS_WIDTH) * 100}%`,
+          top: `${((cy - logoOffset) / CANVAS_HEIGHT) * 100}%`,
+          width: `${(logoSize / CANVAS_WIDTH) * 100}%`,
+          height: `${(logoSize / CANVAS_HEIGHT) * 100}%`,
+          ...overlayZoomStyle,
+        }}
+      >
+        <Image
+          key={logoUrl}
+          src={logoUrl}
+          alt=""
+          fill
+          sizes="220px"
+          unoptimized
+          className="object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
     <svg
       className="pointer-events-none absolute inset-0"
@@ -380,17 +406,7 @@ function OverlayText({
           <rect x={cx - logoOffset} y={cy - logoOffset} width={logoSize} height={logoSize} rx={logoSize * 0.1} ry={logoSize * 0.1} />
         </clipPath>
       </defs>
-      {logoUrl ? (
-        <image
-          href={logoUrl}
-          x={cx - logoOffset}
-          y={cy - logoOffset}
-            width={logoSize}
-            height={logoSize}
-            clipPath="url(#logoClip)"
-            preserveAspectRatio="xMidYMid slice"
-        />
-      ) : initialsMode ? (
+      {initialsMode ? (
         <>
           <text
             x={cx - 230}
