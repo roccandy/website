@@ -9,6 +9,7 @@ import {
   canCompleteOrderForSlotDate,
   dateKey,
   findFirstAvailableSlotIndexForDate,
+  formatDayMonthLabel,
   formatMonthLabel,
   formatScheduleStatusLabel,
   getScheduleStatus,
@@ -291,10 +292,7 @@ export default function AssignmentCalendarModal({
                 return <div key={`blank-${index}`} className="min-h-[5rem] rounded-lg border border-transparent bg-transparent" />;
               }
 
-              const label = item.day.toLocaleDateString(undefined, {
-                day: "numeric",
-                month: "short",
-              });
+              const label = formatDayMonthLabel(item.day);
 
               return (
                 <button

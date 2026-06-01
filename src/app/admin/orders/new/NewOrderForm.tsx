@@ -24,6 +24,7 @@ import type {
 } from "@/lib/data";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
 import { upsertOrder } from "../actions";
+import { formatFullDateLabel } from "../productionScheduleShared";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
 const BULK_LABEL_COUNT_MAX = 1000;
@@ -916,7 +917,7 @@ export function NewOrderForm({
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Production date</p>
                     <p className="text-sm text-zinc-700">
                       {productionSlotDate
-                        ? `Selected: ${new Date(`${productionSlotDate}T00:00:00`).toLocaleDateString()}`
+                        ? `Selected: ${formatFullDateLabel(new Date(`${productionSlotDate}T00:00:00`))}`
                         : "Choose a slot from the production calendar."}
                     </p>
                   </div>

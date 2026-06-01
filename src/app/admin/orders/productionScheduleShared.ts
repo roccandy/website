@@ -84,8 +84,37 @@ export const dateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const WEEKDAY_SHORT_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_LONG_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_SHORT_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_LONG_LABELS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 export const formatMonthLabel = (date: Date) =>
-  date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  `${MONTH_LONG_LABELS[date.getMonth()]} ${date.getFullYear()}`;
+
+export const formatWeekdayShortLabel = (date: Date) => WEEKDAY_SHORT_LABELS[date.getDay()];
+
+export const formatDayMonthLabel = (date: Date) =>
+  `${date.getDate()} ${MONTH_SHORT_LABELS[date.getMonth()]}`;
+
+export const formatWeekdayDayMonthLabel = (date: Date) =>
+  `${WEEKDAY_LONG_LABELS[date.getDay()]} ${formatDayMonthLabel(date)}`;
+
+export const formatFullDateLabel = (date: Date) =>
+  `${date.getDate()} ${MONTH_LONG_LABELS[date.getMonth()]} ${date.getFullYear()}`;
 
 export const getScheduleStatus = (
   order: OrderRow,

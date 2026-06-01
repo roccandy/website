@@ -155,7 +155,8 @@ export async function upsertOrder(formData: FormData) {
   const heart_color_raw = formData.get("heart_color")?.toString() || null;
   const flavor = formData.get("flavor")?.toString() || null;
   const jar_lid_color = formData.get("jar_lid_color")?.toString() || null;
-  const logo_url = formData.get("logo_url")?.toString() || null;
+  const hasLogoUrlField = formData.has("logo_url");
+  const logo_url = hasLogoUrlField ? formData.get("logo_url")?.toString() || null : null;
   const label_image_url = formData.get("label_image_url")?.toString() || null;
   const hasDueDateField = formData.has("due_date");
   const due_date = hasDueDateField ? formData.get("due_date")?.toString() || null : null;
@@ -319,7 +320,7 @@ export async function upsertOrder(formData: FormData) {
       jacket_color_two: isAdminPremade ? null : jacket_color_two ?? existing?.jacket_color_two ?? null,
       flavor: resolvedAdminPremadeFlavor,
       jar_lid_color: isAdminPremade ? null : jar_lid_color ?? existing?.jar_lid_color ?? null,
-      logo_url: isAdminPremade ? null : logo_url ?? existing?.logo_url ?? null,
+      logo_url: isAdminPremade || !isBranded ? null : hasLogoUrlField ? logo_url : existing?.logo_url ?? null,
       label_image_url: isAdminPremade ? null : label_image_url ?? existing?.label_image_url ?? null,
       due_date: resolvedDueDate,
       total_weight_kg: resolvedWeightKg,

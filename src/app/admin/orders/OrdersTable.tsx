@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import type {
   ColorPaletteRow,
   Category,
@@ -14,6 +15,12 @@ import type {
 import type { PricingBreakdown } from "@/lib/pricing";
 import { archiveOrderInline, markOrderAsPaid, upsertOrder } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
+import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
+import {
+  analyzeImageOptimization,
+  optimizeBrowserImageToDataUrl,
+  type ImageOptimizationSummary,
+} from "@/lib/clientImageOptimization";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -122,6 +129,10 @@ export function OrdersTable({
   const [heartColorInput, setHeartColorInput] = useState("");
   const [jacketColorOneInput, setJacketColorOneInput] = useState("");
   const [jacketColorTwoInput, setJacketColorTwoInput] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
+  const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editKey, setEditKey] = useState(0);
   const designTextInputRef = useRef<HTMLInputElement | null>(null);
@@ -168,7 +179,45 @@ export function OrdersTable({
     setHeartColorInput(formatColorInput(nextHeartColor, "hex"));
     setJacketColorOneInput(formatColorInput(nextJacketColorOne, "hex"));
     setJacketColorTwoInput(formatColorInput(nextJacketColorTwo, "hex"));
+    setLogoUrl(order.logo_url ?? "");
+    setLogoError(null);
+    setLogoSummary(null);
+    setIsOptimisingLogo(false);
   }, [packagingById, paletteHexSet]);
+
+  const handleLogoUpload = async (file?: File | null) => {
+    if (!file) {
+      setLogoError(null);
+      setLogoSummary(null);
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("File is too large. Max 2MB.");
+      setLogoSummary(null);
+      return;
+    }
+    try {
+      setIsOptimisingLogo(true);
+      const summary = await analyzeImageOptimization(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      const result = await optimizeBrowserImageToDataUrl(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      setLogoUrl(result);
+      setLogoSummary(summary);
+      setLogoError(null);
+    } catch {
+      setLogoSummary(null);
+      setLogoError("Unable to read the file.");
+    } finally {
+      setIsOptimisingLogo(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -186,16 +235,6 @@ export function OrdersTable({
       cancelled = true;
     };
   }, [selected, syncEditableState]);
-
-  useEffect(() => {
-    if (!selectedId) return;
-    const frame = window.requestAnimationFrame(() => {
-      const target =
-        document.getElementById(`order-detail-${selectedId}`) ?? document.getElementById(`order-${selectedId}`);
-      target?.scrollIntoView({ block: "start", behavior: "smooth" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectedId]);
 
   useEffect(() => {
     if (!showJacketColorTwo) {
@@ -697,6 +736,96 @@ export function OrdersTable({
                                             </>
                                           )}
                                         </div>
+                                        {isBranded ? (
+                                          <div>
+                                            <p className={detailMetaClass}>Uploaded logo</p>
+                                            {isEditing ? (
+                                              <div className="mt-1 space-y-3">
+                                                <input type="hidden" name="logo_url" value={logoUrl} />
+                                                {logoUrl ? (
+                                                  <a
+                                                    href={logoUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block w-fit rounded-lg border border-zinc-200 bg-white p-2 hover:border-zinc-300"
+                                                  >
+                                                    <Image
+                                                      src={logoUrl}
+                                                      alt="Uploaded logo"
+                                                      width={192}
+                                                      height={128}
+                                                      unoptimized
+                                                      className="max-h-32 max-w-48 object-contain"
+                                                    />
+                                                  </a>
+                                                ) : (
+                                                  <p className="text-sm font-semibold text-zinc-900">-</p>
+                                                )}
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <input
+                                                    id={`logo-upload-${order.id}`}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
+                                                    className="sr-only"
+                                                  />
+                                                  <label
+                                                    htmlFor={`logo-upload-${order.id}`}
+                                                    className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                                  >
+                                                    Choose logo
+                                                  </label>
+                                                  {logoUrl ? (
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => {
+                                                        setLogoUrl("");
+                                                        setLogoError(null);
+                                                        setLogoSummary(null);
+                                                      }}
+                                                      className="inline-flex items-center rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:border-red-300"
+                                                    >
+                                                      Remove logo
+                                                    </button>
+                                                  ) : null}
+                                                </div>
+                                                {logoError ? (
+                                                  <p className="text-xs font-semibold text-red-600">{logoError}</p>
+                                                ) : null}
+                                                {isOptimisingLogo ? (
+                                                  <ImageOptimizationStatus
+                                                    summary={null}
+                                                    pendingLabel="Optimising image..."
+                                                    helperText="This artwork is compressed before it is attached to the order."
+                                                  />
+                                                ) : logoSummary ? (
+                                                  <ImageOptimizationStatus
+                                                    summary={logoSummary}
+                                                    helperText="This artwork is compressed before it is attached to the order."
+                                                  />
+                                                ) : null}
+                                              </div>
+                                            ) : logoUrl ? (
+                                              <a
+                                                href={logoUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-1 block w-fit rounded-lg border border-zinc-200 bg-white p-2 hover:border-zinc-300"
+                                              >
+                                                <Image
+                                                  src={logoUrl}
+                                                  alt="Uploaded logo"
+                                                  width={192}
+                                                  height={128}
+                                                  unoptimized
+                                                  className="max-h-32 max-w-48 object-contain"
+                                                />
+                                              </a>
+                                            ) : (
+                                              <p className={detailValueClass}>-</p>
+                                            )}
+                                          </div>
+                                        ) : null}
                                       </div>
                                     </div>
 

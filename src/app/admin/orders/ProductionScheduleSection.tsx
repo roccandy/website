@@ -11,9 +11,12 @@ import {
   buildSlotIdByKey,
   canCompleteOrderForSlotDate,
   dateKey,
+  formatDayMonthLabel,
   formatDate,
   formatMonthLabel,
   formatOrderDescription,
+  formatWeekdayDayMonthLabel,
+  formatWeekdayShortLabel,
   getScheduleStatus,
   getPremadeSiblingMeta,
   isScheduleDateBlocked,
@@ -208,10 +211,10 @@ export default function ProductionScheduleSection({
                     <div className="flex items-center gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                          {day.toLocaleDateString(undefined, { weekday: "short" })}
+                          {formatWeekdayShortLabel(day)}
                         </p>
                         <p className="text-sm font-semibold text-zinc-900">
-                          {day.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                          {formatDayMonthLabel(day)}
                         </p>
                       </div>
                     </div>
@@ -364,7 +367,7 @@ export default function ProductionScheduleSection({
               visibleWeekDays.map((day) => {
                 const key = dateKey(day);
                 const isToday = dateKey(new Date()) === key;
-                const label = day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+                const label = formatWeekdayDayMonthLabel(day);
                 return (
                   <div
                     key={key}
