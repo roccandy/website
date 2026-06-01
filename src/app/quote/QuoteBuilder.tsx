@@ -1563,7 +1563,7 @@ export function QuoteBuilder({
                         onChange={(e) => setSelectionQtyInput(e.target.value)}
                         placeholder="Enter quantity"
                         aria-label="Quantity"
-                        className="w-full px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
+                        className="w-full bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />
                     </div>
                     <p className="text-xs text-zinc-500">
@@ -1893,7 +1893,7 @@ export function QuoteBuilder({
                             : setNameOne((e.target.value || "").slice(0, 8).toUpperCase())
                         }
                         required
-                        className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
+                        className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
                         placeholder={isWeddingInitials ? "R" : "Romeo"}
                       />
                     {!isWeddingInitials && (
@@ -1912,7 +1912,7 @@ export function QuoteBuilder({
                             : setNameTwo((e.target.value || "").slice(0, 8).toUpperCase())
                         }
                         required
-                        className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
+                        className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
                         placeholder={isWeddingInitials ? "J" : "Juliet"}
                       />
                     {!isWeddingInitials && (
@@ -1930,7 +1930,7 @@ export function QuoteBuilder({
                     maxLength={maxCustomLength}
                     onChange={(e) => setCustomText((e.target.value || "").toUpperCase().slice(0, maxCustomLength))}
                     required
-                    className="mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm uppercase"
+                    className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
                     placeholder="Your text"
                   />
                   <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
@@ -2400,7 +2400,7 @@ export function QuoteBuilder({
                           }}
                           placeholder="#RRGGBB"
                           aria-label="Hex"
-                          className="w-full rounded border border-zinc-200 px-2 py-1 text-xs font-medium uppercase tracking-[0.08em]"
+                          className="w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium uppercase tracking-[0.08em]"
                         />
                       </div>
                     ) : customInputMode === "cmyk" ? (
@@ -2430,7 +2430,7 @@ export function QuoteBuilder({
                               if (nextRgba) setCustomRgba(nextRgba);
                             }}
                             aria-label={`CMYK ${key.toUpperCase()}`}
-                            className="rounded border border-zinc-200 px-2 py-1 text-xs"
+                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs"
                             />
                           ))}
                         </div>
@@ -2461,7 +2461,7 @@ export function QuoteBuilder({
                               if (nextCmyk) setCustomCmyk(nextCmyk);
                             }}
                             aria-label={`RGB ${key.toUpperCase()}`}
-                            className="rounded border border-zinc-200 px-2 py-1 text-xs"
+                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs"
                           />
                         ))}
                       </div>

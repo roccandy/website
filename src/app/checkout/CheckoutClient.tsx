@@ -647,7 +647,7 @@ function CartItemRow({
             min={1}
             value={item.quantity}
             onChange={(event) => onQuantityChange?.(Number(event.target.value))}
-            className="w-16 rounded border border-zinc-200 px-2 py-1 text-sm"
+            className="w-16 rounded border border-zinc-200 bg-white px-2 py-1 text-sm"
             aria-label={`Quantity for ${item.name}`}
           />
           <button
@@ -737,7 +737,7 @@ function CartItemRow({
             max={maxPackages ?? undefined}
             value={item.quantity}
             onChange={(event) => onQuantityChange?.(Number(event.target.value))}
-            className="w-20 rounded border border-zinc-200 px-2 py-1 text-sm"
+            className="w-20 rounded border border-zinc-200 bg-white px-2 py-1 text-sm"
             aria-label={`Packages for ${item.title || "custom order"}`}
           />
           {maxPackages ? <span className="text-xs text-zinc-500">/ {maxPackages} max</span> : null}
@@ -1692,7 +1692,7 @@ export function CheckoutClient({
                   <input
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
-                    className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
@@ -1700,7 +1700,7 @@ export function CheckoutClient({
                   <input
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
-                    className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
               </div>
@@ -1711,7 +1711,7 @@ export function CheckoutClient({
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
@@ -1720,7 +1720,7 @@ export function CheckoutClient({
                     type="tel"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
-                    className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
               </div>
@@ -1729,7 +1729,7 @@ export function CheckoutClient({
                 <input
                   value={organizationName}
                   onChange={(event) => setOrganizationName(event.target.value)}
-                  className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
@@ -1797,7 +1797,7 @@ export function CheckoutClient({
                 <select
                   value={selectedPaymentMethod}
                   onChange={(event) => setSelectedPaymentMethod(event.target.value as PaymentMethod)}
-                  className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                 >
                   <option value="credit_card">Credit Card</option>
                   <option value="paypal">PayPal</option>

@@ -597,6 +597,7 @@ export async function upsertOrder(formData: FormData) {
 export async function markOrderAsPaid(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("id")?.toString() || formData.get("order_id")?.toString() || null;
+  let successRedirect: string | null = null;
   const errorRedirect = (message: string) => {
     const params = new URLSearchParams({
       toast: "error",
@@ -667,10 +668,14 @@ export async function markOrderAsPaid(formData: FormData) {
       toast: "success",
       message: "Order marked as paid.",
     });
-    redirect(`${ORDERS_PATH}?${params.toString()}`);
+    successRedirect = `${ORDERS_PATH}?${params.toString()}`;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to mark order as paid.";
     errorRedirect(message);
+  }
+
+  if (successRedirect) {
+    redirect(successRedirect);
   }
 }
 
