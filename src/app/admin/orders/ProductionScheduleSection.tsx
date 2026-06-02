@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
 import { archiveOrderInline, assignOrderToSlot } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
+import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildAssignmentBySlotKey,
@@ -13,6 +14,7 @@ import {
   dateKey,
   formatDayMonthLabel,
   formatDate,
+  formatDueDateDistance,
   formatMonthLabel,
   formatOrderDescription,
   formatWeekdayDayMonthLabel,
@@ -227,6 +229,7 @@ export default function ProductionScheduleSection({
                         const printTarget = order?.id ?? order?.order_number;
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
+                        const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
                         const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
@@ -287,10 +290,22 @@ export default function ProductionScheduleSection({
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1">
-                                    <p className="break-words text-[13px] font-semibold leading-tight text-zinc-900">{title}</p>
+                                    <p className="break-words text-[13px] font-semibold leading-tight text-zinc-900">
+                                      <OrderTitleWithLogo
+                                        order={order}
+                                        title={title}
+                                        logoClassName="h-4 w-4"
+                                        imageClassName="h-5 w-5"
+                                      />
+                                    </p>
                                     <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
                                       <p>{weightLabel(order.total_weight_kg)}</p>
-                                      <p>{formatDate(order.due_date)}</p>
+                                      <p>
+                                        {formatDate(order.due_date)}
+                                        {dueDateDistance ? (
+                                          <span className="ml-1 text-zinc-400">{dueDateDistance}</span>
+                                        ) : null}
+                                      </p>
                                     </div>
                                   </div>
                                   <div className="flex w-[5.4rem] shrink-0 flex-col items-stretch gap-1">
@@ -385,6 +400,7 @@ export default function ProductionScheduleSection({
                         const printTarget = order?.id ?? order?.order_number;
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
+                        const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
                         const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
@@ -443,10 +459,17 @@ export default function ProductionScheduleSection({
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-base font-semibold leading-tight text-zinc-900">{title}</p>
+                                    <p className="text-base font-semibold leading-tight text-zinc-900">
+                                      <OrderTitleWithLogo order={order} title={title} />
+                                    </p>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-700">
                                       <span>{weightLabel(order.total_weight_kg)}</span>
-                                      <span>Due {formatDate(order.due_date)}</span>
+                                      <span>
+                                        Due {formatDate(order.due_date)}
+                                        {dueDateDistance ? (
+                                          <span className="ml-1 text-zinc-400">{dueDateDistance}</span>
+                                        ) : null}
+                                      </span>
                                       <span>{order.pickup ? "Pickup" : "Delivery"}</span>
                                     </div>
                                   </div>
@@ -574,7 +597,12 @@ export default function ProductionScheduleSection({
                         }}
                         className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-xs font-semibold text-zinc-800 hover:border-zinc-300"
                       >
-                        {order.title ?? "Untitled"}
+                        <OrderTitleWithLogo
+                          order={order}
+                          title={order.title ?? "Untitled"}
+                          logoClassName="h-4 w-4"
+                          imageClassName="h-5 w-5"
+                        />
                       </button>
                     </div>
                   );

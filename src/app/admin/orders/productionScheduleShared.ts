@@ -18,6 +18,31 @@ export const formatDate = (iso: string | null) => {
   }
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const parseCalendarDate = (iso: string | null | undefined) => {
+  if (!iso) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.valueOf())) return null;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+export const formatDueDateDistance = (iso: string | null | undefined, today = new Date()) => {
+  const dueDate = parseCalendarDate(iso);
+  if (!dueDate) return "";
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((dueDate.getTime() - todayDate.getTime()) / DAY_MS);
+  if (days === 0) return "today";
+  if (days === 1) return "in 1 day";
+  if (days > 1) return `in ${days} days`;
+  if (days === -1) return "1 day ago";
+  return `${Math.abs(days)} days ago`;
+};
+
 export const formatDateInput = (iso: string | null | undefined) => {
   if (!iso) return "";
   const date = new Date(iso);

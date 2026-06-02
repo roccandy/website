@@ -22,6 +22,7 @@ import {
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
 import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
+import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import SplitAwareActionForm from "./SplitAwareActionForm";
@@ -39,6 +40,7 @@ import {
   canCompleteOrderForSlotDate,
   formatDate,
   formatDateInput,
+  formatDueDateDistance,
   formatMoney,
   formatOrderDescription,
   formatQuantity,
@@ -468,6 +470,7 @@ export function OrdersTable({
                 const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
                 const isAdminPremade = isAdminPremadeOrder(order);
                 const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
+                const dueDateDistance = formatDueDateDistance(order.due_date);
                 return (
                   <Fragment key={order.id}>
                     <tr
@@ -539,8 +542,13 @@ export function OrdersTable({
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-zinc-800">{order.title ?? "Untitled"}</td>
-                      <td className="px-3 py-2 text-zinc-700">{formatDate(order.due_date)}</td>
+                      <td className="px-3 py-2 text-zinc-800">
+                        <OrderTitleWithLogo order={order} title={order.title ?? "Untitled"} />
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        {formatDate(order.due_date)}
+                        {dueDateDistance ? <span className="ml-2 text-zinc-400">{dueDateDistance}</span> : null}
+                      </td>
                       <td className="px-3 py-2 text-zinc-700">
                         {formatOrderDescription(order, packagingById.get(order.packaging_option_id ?? "") ?? null)}
                       </td>
