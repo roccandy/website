@@ -74,7 +74,7 @@ const JACKET_OPTIONS = [
   { value: "two_colour_pinstripe", label: "Two colour + Pin stripe" },
   { value: "rainbow", label: "Rainbow" },
 ];
-const WEDDING_HEART = "♥";
+const WEDDING_HEART = "❤️";
 const normalizeWeddingHeartText = (value: string | null | undefined) =>
   (value ?? "")
     .replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, ` ${WEDDING_HEART} `)
