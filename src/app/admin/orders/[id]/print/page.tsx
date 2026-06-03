@@ -9,6 +9,7 @@ import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
+import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 import { PrintButton } from "./PrintButton";
 
 export const revalidate = 0;
@@ -258,6 +259,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const [lineOne, lineTwo] = hasHeart ? designText.split("\u2665").map((part) => part.trim()) : ["", ""];
   const isWeddingInitials = order.category_id === "weddings-initials";
   const isWedding = order.category_id?.startsWith("weddings");
+  const jacketPreview = resolveCandyPreviewJacket(order);
   const isBranded = order.category_id === "branded";
 
   const jacketLabel = (() => {
@@ -336,8 +338,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 lineOne={isWedding ? lineOne : undefined}
                 lineTwo={isWedding ? lineTwo : undefined}
                 showHeart={isWedding}
-                mode={(order.jacket_type as "" | "rainbow" | "pinstripe" | "two_colour") || ""}
-                showPinstripe={order.jacket === "pinstripe" || order.jacket === "two_colour_pinstripe"}
+                mode={jacketPreview.mode}
+                showPinstripe={jacketPreview.showPinstripe}
                 colorOne={order.jacket_color_one || "#000000"}
                 colorTwo={order.jacket_color_two || "#000000"}
                 logoUrl={isBranded ? order.logo_url : undefined}

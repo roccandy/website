@@ -9,6 +9,7 @@ import {
   weightLabel,
 } from "@/app/admin/orders/productionScheduleShared";
 import { isVisibleOnProductionSchedule } from "@/app/admin/orders/scheduleVisibility";
+import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 
 export const metadata = {
   title: "Production Orders | Roc Candy Admin",
@@ -24,8 +25,6 @@ type WeekWindow = {
   end: string;
   days: string[];
 };
-
-type CandyPreviewMode = "" | "rainbow" | "pinstripe" | "two_colour";
 
 function addDays(date: Date, days: number) {
   const next = new Date(date);
@@ -117,18 +116,15 @@ function previewPropsForOrder(order: OrderRow) {
   const [lineOne, lineTwo] = hasHeart ? designText.split("❤️").map((part) => part.trim()) : ["", ""];
   const isBranded = isBrandedOrder(order);
   const isWedding = isWeddingOrder(order);
-  const mode: CandyPreviewMode =
-    order.jacket_type === "rainbow" || order.jacket_type === "pinstripe" || order.jacket_type === "two_colour"
-      ? order.jacket_type
-      : "";
+  const jacketPreview = resolveCandyPreviewJacket(order);
 
   return {
     designText: !isBranded && !isWedding ? designText : undefined,
     lineOne: isWedding ? lineOne : undefined,
     lineTwo: isWedding ? lineTwo : undefined,
     showHeart: isWedding,
-    mode,
-    showPinstripe: order.jacket === "pinstripe" || order.jacket === "two_colour_pinstripe",
+    mode: jacketPreview.mode,
+    showPinstripe: jacketPreview.showPinstripe,
     colorOne: order.jacket_color_one || "#b7b7b7",
     colorTwo: order.jacket_color_two || order.jacket_color_one || "#b7b7b7",
     logoUrl: isBranded ? order.logo_url : undefined,
@@ -220,8 +216,8 @@ export default async function ProductionOrdersPage() {
                 </div>
 
                 {day.orders.length ? (
-                  <div className="overflow-x-auto pb-1">
-                    <div className="space-y-1.5" style={{ minWidth: 920 }}>
+                  <div className="pb-1 sm:overflow-x-auto">
+                    <div className="space-y-1.5 sm:min-w-[920px]">
                       {day.orders.map((order, index) => {
                         const orderName = `${index + 1}. ${orderDisplayName(order)}`;
                         const isBranded = isBrandedOrder(order);
@@ -229,16 +225,15 @@ export default async function ProductionOrdersPage() {
                         return (
                           <div
                             key={order.id}
-                            className="grid items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm shadow-sm"
-                            style={{ gridTemplateColumns: "88px minmax(0, 1fr) minmax(0, 1fr) 104px 150px" }}
+                            className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-x-2 gap-y-2 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm shadow-sm sm:grid-cols-[88px_minmax(0,1fr)_minmax(0,1fr)_104px_150px] sm:px-3 sm:py-1.5"
                           >
-                            <div className="flex h-14 w-20 items-center justify-center pr-4">
+                            <div className="flex h-14 w-16 items-center justify-center sm:w-20 sm:pr-4">
                               <CandyPreview {...previewProps} dimensions={{ width: 78, height: 56 }} zoom={1} />
                             </div>
-                            <h3 className="truncate whitespace-nowrap text-[15px] font-semibold leading-tight text-zinc-950">
+                            <h3 className="min-w-0 truncate whitespace-nowrap text-[15px] font-semibold leading-tight text-zinc-950">
                               <OrderTitleWithLogo order={order} title={orderName} className="max-w-full whitespace-nowrap" />
                             </h3>
-                            <div className="min-w-0 px-2">
+                            <div className="col-span-2 min-w-0 sm:col-span-1 sm:px-2">
                               {isBranded && order.logo_url ? (
                                 <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
                                   <span className="shrink-0 text-sm font-semibold leading-snug text-zinc-950">Logo:</span>

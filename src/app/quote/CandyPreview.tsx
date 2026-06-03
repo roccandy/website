@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import Image from "next/image";
 
 type Props = {
@@ -50,6 +50,7 @@ export function CandyPreview({
   const heartColorValue = heartColor || "#b7b7b7";
   const pinOpacity = showPinstripe || mode === "pinstripe" ? 1 : 0;
   const pinFill = "#ffffff";
+  const gradientPrefix = useId().replace(/:/g, "");
 
   const gradStops = useMemo(() => {
     type Grad = {
@@ -206,7 +207,7 @@ export function CandyPreview({
             {gradStops.map((stop) => (
               <linearGradient
                 key={stop.id}
-                id={stop.id}
+                id={`${gradientPrefix}-${stop.id}`}
                 x1={stop.x1}
                 y1={stop.y1}
                 x2={stop.x2}
@@ -222,7 +223,6 @@ export function CandyPreview({
       <style>
         {`
           .outerOdd, .outerEven { transition: 0.2s ease-in-out; }
-          .pinStripe { fill: ${pinFill}; opacity: ${pinOpacity}; transition: 0.2s ease-in-out; }
             `}
           </style>
           {/* Shadow */}
@@ -237,7 +237,7 @@ export function CandyPreview({
             <g key={idx} transform={seg.transform}>
               <path
                 d={seg.d}
-                fill={`url(#${seg.grad})`}
+                fill={`url(#${gradientPrefix}-${seg.grad})`}
                 className={seg.cls}
               />
             </g>
@@ -254,7 +254,7 @@ export function CandyPreview({
             "M1135.12,1000.26L1115.88,1093.03C1104.22,1092.12 1088.07,1091.77 1076.38,1091.75C1064.43,1091.72 1052.94,1092.27 1041.02,1093.13L1025.02,999.291L1679.64,898.627C1679.64,898.627 1694.48,899.121 1705.58,899.698C1711.71,900.017 1763.08,908.147 1763.08,908.147L1135.12,1000.26Z",
           ].map((d, idx) => (
             <g key={idx} transform="matrix(1,0,0,1,-531.051,-867.499)" style={{ opacity: pinOpacity }}>
-              <path d={d} className="pinStripe" />
+              <path d={d} className="pinStripe" style={{ fill: pinFill, opacity: pinOpacity, transition: "0.2s ease-in-out" }} />
             </g>
           ))}
           {/* Inner circles */}

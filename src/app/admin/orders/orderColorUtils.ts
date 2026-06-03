@@ -3,6 +3,7 @@ import { paletteSections } from "@/app/admin/settings/palette";
 
 export type ColorOption = { value: string; label: string; hex: string };
 export type ColorFormat = "hex" | "rgb" | "cmyk";
+export type CandyPreviewMode = "" | "rainbow" | "pinstripe" | "two_colour";
 
 export const COLOR_FORMAT_OPTIONS: { value: ColorFormat; label: string }[] = [
   { value: "hex", label: "Hex" },
@@ -176,3 +177,34 @@ export const selectValueForColor = (value: string) => {
   const normalized = normalizeHex(value);
   return isHexColor(normalized) ? normalized.toLowerCase() : value;
 };
+
+const normalizeJacketSearchText = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+export function resolveCandyPreviewJacket(
+  order: { jacket?: string | null; jacket_type?: string | null },
+): { mode: CandyPreviewMode; showPinstripe: boolean } {
+  const jacket = normalizeJacketSearchText(order.jacket);
+  const jacketType = normalizeJacketSearchText(order.jacket_type);
+  const combined = `${jacketType} ${jacket}`;
+  const hasPinstripe = combined.includes("pinstripe") || combined.includes("pinstrip");
+  const hasTwoColour =
+    combined.includes("twocolour") ||
+    combined.includes("twocolor") ||
+    combined.includes("2colour") ||
+    combined.includes("2color");
+
+  if (combined.includes("rainbow")) {
+    return { mode: "rainbow", showPinstripe: false };
+  }
+
+  if (hasTwoColour) {
+    return { mode: "two_colour", showPinstripe: hasPinstripe };
+  }
+
+  if (hasPinstripe) {
+    return { mode: "pinstripe", showPinstripe: true };
+  }
+
+  return { mode: "", showPinstripe: false };
+}
