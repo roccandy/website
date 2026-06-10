@@ -8,6 +8,7 @@ const DEFAULT_DESCRIPTION =
 const DEFAULT_OG_IMAGE_PATH = "/landing/home-feature-poster.jpg";
 const DEFAULT_PHONE = "+61 414 519 211";
 const DEFAULT_EMAIL = "enquiries@roccandy.com.au";
+const DEFAULT_GOOGLE_SITE_VERIFICATION = "okLJF9Mw8HF57frA0m7vEQTCr8Te61e-lcsGrnESwWs";
 
 type BuildMetadataInput = {
   title?: string;
@@ -113,7 +114,7 @@ export function buildMetadata({
 }
 
 export function buildSearchConsoleVerification(): Metadata["verification"] {
-  const google = process.env.GOOGLE_SITE_VERIFICATION?.trim() || undefined;
+  const google = process.env.GOOGLE_SITE_VERIFICATION?.trim() || DEFAULT_GOOGLE_SITE_VERIFICATION;
   const yandex = process.env.YANDEX_SITE_VERIFICATION?.trim() || undefined;
   const bing = process.env.BING_SITE_VERIFICATION?.trim() || undefined;
 
