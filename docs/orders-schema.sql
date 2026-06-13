@@ -29,6 +29,16 @@ create table if not exists public.production_slots (
 );
 create index if not exists production_slots_slot_date_idx on public.production_slots (slot_date);
 
+create table if not exists public.production_day_notes (
+  id uuid primary key default gen_random_uuid(),
+  note_date date not null,
+  note text not null check (length(btrim(note)) > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (note_date)
+);
+create index if not exists production_day_notes_note_date_idx on public.production_day_notes (note_date);
+
 -- Join table mapping orders to slots, with kg assigned.
 create table if not exists public.order_slots (
   id uuid primary key default gen_random_uuid(),

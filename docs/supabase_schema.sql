@@ -189,6 +189,16 @@ create table if not exists production_slots (
 create index if not exists production_slots_slot_date_idx on public.production_slots (slot_date);
 create unique index if not exists production_slots_unique_day_slot_idx on public.production_slots (slot_date, slot_index);
 
+create table if not exists production_day_notes (
+  id uuid primary key default gen_random_uuid(),
+  note_date date not null,
+  note text not null check (length(btrim(note)) > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (note_date)
+);
+create index if not exists production_day_notes_note_date_idx on public.production_day_notes (note_date);
+
 create table if not exists production_blocks (
   id uuid primary key default gen_random_uuid(),
   start_date date not null,
@@ -234,6 +244,7 @@ alter table label_types enable row level security;
   alter table premade_candies enable row level security;
   alter table orders enable row level security;
 alter table production_slots enable row level security;
+alter table production_day_notes enable row level security;
 alter table production_blocks enable row level security;
 alter table quote_blocks enable row level security;
 alter table order_slots enable row level security;
@@ -259,9 +270,10 @@ create policy "packaging_images_admin_write" on packaging_option_images for all 
   create policy "settings_admin_write" on settings for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "color_palette_admin_write" on color_palette for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "site_faqs_admin_write" on site_faqs for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
-  create policy "premade_candies_admin_write" on premade_candies for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
+create policy "premade_candies_admin_write" on premade_candies for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "orders_admin_access" on orders for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "slots_admin_access" on production_slots for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
+create policy "production_day_notes_admin_access" on production_day_notes for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "blocks_admin_access" on production_blocks for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "order_slots_admin_access" on order_slots for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "roles_admin_access" on user_roles for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));

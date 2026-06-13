@@ -62,15 +62,15 @@ export default function OrderColorField({
     const swatchTextColor = canPreviewColor ? getContrastTextColor(normalized) : "#111827";
     return (
       <div>
-        <p className="text-sm text-zinc-500 capitalize">{label}</p>
+        <p className="text-xs text-zinc-500 capitalize">{label}</p>
         {canPreviewColor ? (
-          <div className="relative mt-1">
+          <div className="relative mt-0.5">
             <div
-              className="flex h-9 w-full items-center justify-center rounded border border-zinc-200"
+              className="flex h-7 w-full items-center justify-center rounded border border-zinc-200"
               style={{ backgroundColor: normalized }}
             />
             <span
-              className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-sm font-semibold capitalize"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center px-2 text-center text-xs font-semibold capitalize"
               style={{
                 color: swatchTextColor,
                 textShadow:
@@ -83,14 +83,14 @@ export default function OrderColorField({
             </span>
           </div>
         ) : (
-          <p className="mt-1 text-sm font-semibold text-zinc-900 capitalize">{swatchLabel}</p>
+          <p className="mt-0.5 text-xs font-semibold text-zinc-900 capitalize">{swatchLabel}</p>
         )}
       </div>
     );
   }
 
   return (
-    <label className="block text-[11px] uppercase tracking-[0.18em] text-zinc-400">
+    <label className="block text-[10px] uppercase tracking-[0.14em] text-zinc-400">
       {label}
       <select
         value={selectValue}
@@ -113,7 +113,7 @@ export default function OrderColorField({
           setValue(next);
           setInputValue(formatColorInput(next, format));
         }}
-        className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+        className="mt-0.5 w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900"
       >
         <option value="">Select colour</option>
         <option value="custom">Custom</option>
@@ -126,12 +126,12 @@ export default function OrderColorField({
       <input type="hidden" name={name} value={value} />
       {showSelectPreview && (
         <div
-          className="mt-2 h-9 w-full rounded border border-zinc-200"
+          className="mt-1 h-7 w-full rounded border border-zinc-200"
           style={{ backgroundColor: normalized }}
         />
       )}
       {isCustomMode && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-1 space-y-1.5">
           <input
             type="color"
             value={toHexColor(value)}
@@ -140,7 +140,7 @@ export default function OrderColorField({
               setValue(nextValue);
               setInputValue(formatColorInput(nextValue, format));
             }}
-            className="h-9 w-full cursor-pointer rounded border border-zinc-200 bg-white"
+            className="h-7 w-full cursor-pointer rounded border border-zinc-200 bg-white"
           />
           <input
             type="text"
@@ -158,10 +158,10 @@ export default function OrderColorField({
               const parsed = format === "rgb" ? parseRgbInput(raw) : parseCmykInput(raw);
               if (parsed) setValue(parsed);
             }}
-            className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+            className="mt-0.5 w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900"
             placeholder={placeholder}
           />
-          <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">Format</div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-zinc-400">Format</div>
           <select
             value={format}
             onChange={(event) => {
@@ -169,7 +169,7 @@ export default function OrderColorField({
               setFormat(nextFormat);
               setInputValue(formatColorInput(value, nextFormat));
             }}
-            className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+            className="w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900"
           >
             {COLOR_FORMAT_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>

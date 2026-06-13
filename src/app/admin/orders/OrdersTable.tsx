@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type {
   ColorPaletteRow,
   Category,
@@ -9,11 +10,12 @@ import type {
   OrderRow,
   OrderSlot,
   PackagingOption,
+  ProductionDayNote,
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { archiveOrderInline, markOrderAsPaid, upsertOrder } from "./actions";
+import { archiveOrderInline, markOrderAsPaid, upsertOrder, upsertOrderInline } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
@@ -64,6 +66,7 @@ type Props = {
   pricingBreakdowns: Record<string, PricingBreakdown | null>;
   flavors: Flavor[];
   palette: ColorPaletteRow[];
+  dayNotes: ProductionDayNote[];
   initialSelectedId?: string | null;
 };
 
@@ -106,8 +109,10 @@ export function OrdersTable({
   pricingBreakdowns,
   flavors,
   palette,
+  dayNotes,
   initialSelectedId = null,
 }: Props) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [pickupMode, setPickupMode] = useState<"on" | "off">("off");
   const [jacketMode, setJacketMode] = useState<string>("");
@@ -140,6 +145,7 @@ export function OrdersTable({
   const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSavingOrder, startOrderSaveTransition] = useTransition();
   const [editKey, setEditKey] = useState(0);
   const designTextInputRef = useRef<HTMLInputElement | null>(null);
   const selected = useMemo(() => orders.find((o) => o.id === selectedId) ?? null, [orders, selectedId]);
@@ -252,6 +258,33 @@ export function OrdersTable({
       });
     }
   }, [showJacketColorTwo]);
+  useEffect(() => {
+    if (!selectedId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const detail = document.getElementById(`order-detail-${selectedId}`);
+      if (!detail) return;
+      const rect = detail.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const margin = 16;
+
+      if (rect.height + margin * 2 >= viewportHeight) {
+        window.scrollTo({
+          top: window.scrollY + rect.top - margin,
+          behavior: "smooth",
+        });
+        return;
+      }
+
+      if (rect.bottom > viewportHeight - margin || rect.top < margin) {
+        window.scrollBy({
+          top: rect.bottom - viewportHeight + margin,
+          behavior: "smooth",
+        });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedId]);
   const categoryOptions = useMemo(
     () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
     [categories]
@@ -445,6 +478,27 @@ export function OrdersTable({
       input.setSelectionRange(start + heart.length, start + heart.length);
     });
   }, [designTextInput]);
+  const emitToast = (tone: "success" | "error", message: string) => {
+    window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
+  };
+  const saveOrderInline = (form: HTMLFormElement) => {
+    const formData = new FormData(form);
+    formData.set("response_mode", "inline");
+    startOrderSaveTransition(async () => {
+      try {
+        const result = await upsertOrderInline(formData);
+        if (result?.message) {
+          emitToast(result.tone, result.message);
+        }
+        if (result?.ok) {
+          setIsEditing(false);
+          router.refresh();
+        }
+      } catch (error) {
+        emitToast("error", error instanceof Error ? error.message : "Failed to update order.");
+      }
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -561,7 +615,7 @@ export function OrdersTable({
                         <td colSpan={7} className="px-3 pb-4">
                           <div
                             id={`order-detail-${order.id}`}
-                            className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700"
+                            className="mt-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700"
                           >
                             {(() => {
                               const nameFallback = splitCustomerName(order.customer_name);
@@ -594,30 +648,42 @@ export function OrdersTable({
                                   ? [order.flavor, ...flavors.map((item) => item.name)]
                                   : flavors.map((item) => item.name);
                               const detailSectionLabelClass = isEditing
-                                ? "text-xs uppercase tracking-[0.2em] text-zinc-500"
-                                : "text-sm text-zinc-500 capitalize";
+                                ? "text-[10px] uppercase tracking-[0.16em] text-zinc-500"
+                                : "text-xs text-zinc-500 capitalize";
                               const detailLabelClass = isEditing
-                                ? "block text-[11px] uppercase tracking-[0.18em] text-zinc-400"
-                                : "block text-sm text-zinc-500 capitalize";
+                                ? "block text-[10px] uppercase tracking-[0.14em] text-zinc-400"
+                                : "block text-xs text-zinc-500 capitalize";
                               const detailMetaClass = isEditing
-                                ? "text-[11px] uppercase tracking-[0.18em] text-zinc-400"
-                                : "text-sm text-zinc-500 capitalize";
-                              const detailValueClass = "mt-1 text-sm font-semibold text-zinc-900 capitalize";
-                              const detailBodyValueClass = "text-sm font-semibold text-zinc-900 capitalize";
+                                ? "text-[10px] uppercase tracking-[0.14em] text-zinc-400"
+                                : "text-xs text-zinc-500 capitalize";
+                              const detailValueClass = "mt-0.5 text-xs font-semibold text-zinc-900 capitalize";
+                              const detailBodyValueClass = "text-xs font-semibold text-zinc-900 capitalize";
+                              const compactFieldClass =
+                                "mt-0.5 w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900";
 
                               return (
-                                <form key={`${order.id}-${editKey}`} action={upsertOrder} className="space-y-4">
+                                <form
+                                  key={`${order.id}-${editKey}`}
+                                  action={upsertOrder}
+                                  className="space-y-3"
+                                  onSubmit={(event) => {
+                                    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+                                    if (submitter?.dataset.submitIntent === "mark-paid") return;
+                                    event.preventDefault();
+                                    saveOrderInline(event.currentTarget);
+                                  }}
+                                >
                                   <input type="hidden" name="id" value={order.id} />
                                   <input type="hidden" name="status" value={order.status ?? "pending"} />
                                   <input type="hidden" name="redirect_to" value="/admin/orders" />
-                                  <input type="hidden" name="toast_success" value="Order updated." />
+                                  <input type="hidden" name="toast_success" value="Order Updated" />
                                   <input type="hidden" name="toast_error" value="Failed to update order." />
                                   {isBranded ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
-                                  <fieldset disabled={!isEditing} className="space-y-4">
-                                  <div className="grid gap-6 md:grid-cols-3">
-                                    <div className="space-y-3">
+                                  <fieldset disabled={!isEditing} className="space-y-3">
+                                  <div className="grid gap-4 md:grid-cols-3">
+                                    <div className="space-y-2">
                                       <p className={detailSectionLabelClass}>Customer details</p>
-                                      <div className="space-y-2">
+                                      <div className="space-y-1.5">
                                         <label className={detailLabelClass}>
                                           Delivery / Pickup
                                           {isEditing ? (
@@ -627,7 +693,7 @@ export function OrdersTable({
                                               onChange={(event) =>
                                                 setPickupMode(event.target.value === "on" ? "on" : "off")
                                               }
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               <option value="off">Delivery</option>
                                               <option value="on">Pickup</option>
@@ -638,14 +704,14 @@ export function OrdersTable({
                                             </p>
                                           )}
                                         </label>
-                                        <div className="grid gap-2 md:grid-cols-2">
+                                        <div className="grid gap-1.5 md:grid-cols-2">
                                           <label className={detailLabelClass}>
                                             First name
                                             {isEditing ? (
                                               <input
                                                 name="first_name"
                                                 defaultValue={firstNameValue}
-                                                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                className={compactFieldClass}
                                               />
                                             ) : (
                                               <p className={detailValueClass}>{firstNameValue || "-"}</p>
@@ -657,7 +723,7 @@ export function OrdersTable({
                                               <input
                                                 name="last_name"
                                                 defaultValue={lastNameValue}
-                                                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                className={compactFieldClass}
                                               />
                                             ) : (
                                               <p className={detailValueClass}>{lastNameValue || "-"}</p>
@@ -671,7 +737,7 @@ export function OrdersTable({
                                               type="email"
                                               name="customer_email"
                                               defaultValue={order.customer_email ?? ""}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             />
                                           ) : (
                                             <p className={detailValueClass}>{order.customer_email ?? "-"}</p>
@@ -684,7 +750,7 @@ export function OrdersTable({
                                               type="tel"
                                               name="phone"
                                               defaultValue={order.phone ?? ""}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             />
                                           ) : (
                                             <p className={detailValueClass}>{order.phone ?? "-"}</p>
@@ -694,42 +760,42 @@ export function OrdersTable({
                                           <p className={detailMetaClass}>Address</p>
                                           {isDelivery ? (
                                             isEditing ? (
-                                              <div className="mt-1 space-y-2">
+                                              <div className="mt-0.5 space-y-1.5">
                                                 <input
                                                   name="address_line1"
                                                   defaultValue={order.address_line1 ?? ""}
-                                                  className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                  className={compactFieldClass}
                                                   placeholder="Address line 1"
                                                 />
                                                 <input
                                                   name="address_line2"
                                                   defaultValue={order.address_line2 ?? ""}
-                                                  className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                  className={compactFieldClass}
                                                   placeholder="Address line 2"
                                                 />
-                                                <div className="grid gap-2 md:grid-cols-3">
+                                                <div className="grid gap-1.5 md:grid-cols-3">
                                                   <input
                                                     name="suburb"
                                                     defaultValue={order.suburb ?? ""}
-                                                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                    className={compactFieldClass}
                                                     placeholder="Suburb"
                                                   />
                                                   <input
                                                     name="state"
                                                     defaultValue={order.state ?? ""}
-                                                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                    className={compactFieldClass}
                                                     placeholder="State"
                                                   />
                                                   <input
                                                     name="postcode"
                                                     defaultValue={order.postcode ?? ""}
-                                                    className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                    className={compactFieldClass}
                                                     placeholder="Postcode"
                                                   />
                                                 </div>
                                               </div>
                                             ) : (
-                                              <div className={`mt-1 space-y-1 ${detailBodyValueClass}`}>
+                                              <div className={`mt-0.5 space-y-0.5 ${detailBodyValueClass}`}>
                                                 <p>{order.address_line1?.trim() || "-"}</p>
                                                 {order.address_line2?.trim() ? <p>{order.address_line2.trim()}</p> : null}
                                                 <p>
@@ -753,27 +819,27 @@ export function OrdersTable({
                                           <div>
                                             <p className={detailMetaClass}>Uploaded logo</p>
                                             {isEditing ? (
-                                              <div className="mt-1 space-y-3">
+                                              <div className="mt-0.5 space-y-2">
                                                 {logoUrl ? (
                                                   <a
                                                     href={logoUrl}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block w-fit rounded-lg border border-zinc-200 bg-white p-2 hover:border-zinc-300"
+                                                    className="block w-fit rounded-md border border-zinc-200 bg-white p-1.5 hover:border-zinc-300"
                                                   >
                                                     <Image
                                                       src={logoUrl}
                                                       alt="Uploaded logo"
-                                                      width={192}
-                                                      height={128}
+                                                      width={144}
+                                                      height={96}
                                                       unoptimized
-                                                      className="max-h-32 max-w-48 object-contain"
+                                                      className="max-h-24 max-w-36 object-contain"
                                                     />
                                                   </a>
                                                 ) : (
-                                                  <p className="text-sm font-semibold text-zinc-900">-</p>
+                                                  <p className="text-xs font-semibold text-zinc-900">-</p>
                                                 )}
-                                                <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-1.5">
                                                   <input
                                                     id={`logo-upload-${order.id}`}
                                                     type="file"
@@ -783,7 +849,7 @@ export function OrdersTable({
                                                   />
                                                   <label
                                                     htmlFor={`logo-upload-${order.id}`}
-                                                    className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                                    className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                                                   >
                                                     Choose logo
                                                   </label>
@@ -795,7 +861,7 @@ export function OrdersTable({
                                                         setLogoError(null);
                                                         setLogoSummary(null);
                                                       }}
-                                                      className="inline-flex items-center rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:border-red-300"
+                                                      className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-700 hover:border-red-300"
                                                     >
                                                       Remove logo
                                                     </button>
@@ -822,15 +888,15 @@ export function OrdersTable({
                                                 href={logoUrl}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="mt-1 block w-fit rounded-lg border border-zinc-200 bg-white p-2 hover:border-zinc-300"
+                                                className="mt-0.5 block w-fit rounded-md border border-zinc-200 bg-white p-1.5 hover:border-zinc-300"
                                               >
                                                 <Image
                                                   src={logoUrl}
                                                   alt="Uploaded logo"
-                                                  width={192}
-                                                  height={128}
+                                                  width={144}
+                                                  height={96}
                                                   unoptimized
-                                                  className="max-h-32 max-w-48 object-contain"
+                                                  className="max-h-24 max-w-36 object-contain"
                                                 />
                                               </a>
                                             ) : (
@@ -841,9 +907,9 @@ export function OrdersTable({
                                       </div>
                                     </div>
 
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                       <p className={detailSectionLabelClass}>Order details</p>
-                                      <div className="space-y-2">
+                                      <div className="space-y-1.5">
                                         <div>
                                           <p className={detailMetaClass}>Order #</p>
                                           <p className={detailValueClass}>
@@ -861,7 +927,7 @@ export function OrdersTable({
                                               type="date"
                                               name="due_date"
                                               defaultValue={formatDateInput(order.due_date)}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             />
                                           ) : (
                                             <p className={detailValueClass}>{formatDate(order.due_date) || "-"}</p>
@@ -884,7 +950,7 @@ export function OrdersTable({
                                               min={1}
                                               required
                                               defaultValue={weightG}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             />
                                           ) : (
                                             <p className={detailValueClass}>{weightG ? `${weightG}` : "-"}</p>
@@ -896,7 +962,7 @@ export function OrdersTable({
                                             <select
                                               name="flavor"
                                               defaultValue={order.flavor ?? ""}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               <option value="">Select flavour</option>
                                               {flavorOptions.map((name) => (
@@ -910,26 +976,26 @@ export function OrdersTable({
                                           )}
                                         </label>
                                       </div>
-                                      <div className="space-y-2">
+                                      <div className="space-y-1.5">
                                         <p className={detailMetaClass}>
                                           Colours & info
                                         </p>
                                         <label className={detailLabelClass}>
                                           Text / design
                                           {isEditing ? (
-                                            <div className="mt-1 flex items-center gap-2">
+                                            <div className="mt-0.5 flex items-center gap-1.5">
                                               <input
                                                 ref={designTextInputRef}
                                                 name="design_text"
                                                 value={designTextInput}
                                                 onChange={(event) => setDesignTextInput(event.target.value)}
-                                                className="w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                className={compactFieldClass}
                                               />
                                               {isWedding ? (
                                                 <button
                                                   type="button"
                                                   onClick={insertWeddingHeart}
-                                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-base font-semibold text-rose-700 hover:border-rose-300"
+                                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:border-rose-300"
                                                   aria-label="Insert heart"
                                                   title="Insert heart"
                                                 >
@@ -948,7 +1014,7 @@ export function OrdersTable({
                                               name="jacket"
                                               value={jacketMode}
                                               onChange={(event) => setJacketMode(event.target.value)}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               {JACKET_OPTIONS.map((option) => (
                                                 <option key={option.value || "none"} value={option.value}>
@@ -962,7 +1028,7 @@ export function OrdersTable({
                                             </p>
                                           )}
                                         </label>
-                                        <div className="grid gap-2 md:grid-cols-2">
+                                        <div className="grid gap-1.5 md:grid-cols-2">
                                           {renderColorField({
                                             label: "Jacket colour 1",
                                             name: "jacket_color_one",
@@ -1033,9 +1099,9 @@ export function OrdersTable({
                                       </div>
                                     </div>
 
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                       <p className={detailSectionLabelClass}>Packaging info</p>
-                                      <div className="space-y-2">
+                                      <div className="space-y-1.5">
                                         <label className={detailLabelClass}>
                                           Order type
                                           {isEditing ? (
@@ -1043,7 +1109,7 @@ export function OrdersTable({
                                               name="category_id"
                                               value={orderCategoryId}
                                               onChange={(event) => setOrderCategoryId(event.target.value)}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               <option value="">Select order type</option>
                                               {orderCategoryOptions.map((category) => (
@@ -1067,7 +1133,7 @@ export function OrdersTable({
                                               value={packagingType}
                                               onChange={(event) => setPackagingType(event.target.value)}
                                               disabled={!orderCategoryId || packagingTypes.length === 0}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               <option value="">
                                                 {!orderCategoryId
@@ -1093,7 +1159,7 @@ export function OrdersTable({
                                               value={packagingSize}
                                               onChange={(event) => setPackagingSize(event.target.value)}
                                               disabled={!packagingType || sizesForType.length === 0}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             >
                                               <option value="">
                                                 {!packagingType
@@ -1125,7 +1191,7 @@ export function OrdersTable({
                                               max={Number.isFinite(maxPackages ?? NaN) ? Number(maxPackages) : undefined}
                                               value={quantityInput}
                                               onChange={(event) => setQuantityInput(event.target.value)}
-                                              className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                              className={compactFieldClass}
                                             />
                                           ) : (
                                             <p className={detailValueClass}>
@@ -1133,7 +1199,7 @@ export function OrdersTable({
                                             </p>
                                           )}
                                           {isEditing && Number.isFinite(maxPackages ?? NaN) && Number(maxPackages) > 0 ? (
-                                            <p className="mt-1 text-[10px] font-semibold text-zinc-500">
+                                            <p className="mt-0.5 text-[10px] font-semibold text-zinc-500">
                                               Max {Number(maxPackages)}
                                             </p>
                                           ) : null}
@@ -1147,7 +1213,7 @@ export function OrdersTable({
                                                 value={jarLidColorValue}
                                                 onChange={(event) => setJarLidColorValue(event.target.value)}
                                                 disabled={availableLidColors.length === 0}
-                                                className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm text-zinc-900"
+                                                className={compactFieldClass}
                                               >
                                                 <option value="">
                                                   {availableLidColors.length ? "Select lid colour" : "No lid options"}
@@ -1166,7 +1232,7 @@ export function OrdersTable({
                                           <input type="hidden" name="jar_lid_color" value="" />
                                         )}
                                       </div>
-                                      <div className="space-y-2">
+                                      <div className="space-y-1.5">
                                         <p className={detailSectionLabelClass}>Pricing details</p>
                                         <div>
                                           <p className={detailMetaClass}>
@@ -1175,7 +1241,7 @@ export function OrdersTable({
                                           <p className={detailValueClass}>{order.payment_method ?? "-"}</p>
                                         </div>
                                         {pricing ? (
-                                          <div className="space-y-1 text-xs text-zinc-600">
+                                          <div className="space-y-0.5 text-[11px] text-zinc-600">
                                             {pricing.items.map((item) => (
                                               <div key={item.label} className="flex items-center justify-between">
                                                 <span>{item.label}</span>
@@ -1201,79 +1267,96 @@ export function OrdersTable({
                                     </div>
                                   )}
                                   </fieldset>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    {isEditing ? (
-                                      <>
-                                        <button
-                                          type="submit"
-                                          disabled={isOptimisingLogo || Boolean(logoError)}
-                                          className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-                                        >
-                                          {isOptimisingLogo ? "Optimising logo..." : "Save changes"}
-                                        </button>
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {isEditing ? (
+                                        <>
+                                          <button
+                                            type="submit"
+                                            disabled={isOptimisingLogo || Boolean(logoError) || isSavingOrder}
+                                            className="inline-flex min-w-[112px] items-center justify-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                          >
+                                            {isSavingOrder ? (
+                                              <>
+                                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                                                Saving
+                                              </>
+                                            ) : isOptimisingLogo ? (
+                                              "Optimising logo..."
+                                            ) : (
+                                              "Save changes"
+                                            )}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              syncEditableState(order);
+                                              setIsEditing(false);
+                                              setEditKey((prev) => prev + 1);
+                                            }}
+                                            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </>
+                                      ) : (
                                         <button
                                           type="button"
                                           onClick={() => {
                                             syncEditableState(order);
-                                            setIsEditing(false);
+                                            setIsEditing(true);
                                             setEditKey((prev) => prev + 1);
                                           }}
-                                          className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                          className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
                                         >
-                                          Cancel
+                                          Edit
                                         </button>
-                                      </>
-                                    ) : (
+                                      )}
                                       <button
                                         type="button"
-                                        onClick={() => {
-                                          syncEditableState(order);
-                                          setIsEditing(true);
-                                          setEditKey((prev) => prev + 1);
-                                        }}
-                                        className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+                                        onClick={() => setAssignmentModalOrderId(order.id)}
+                                        className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
                                       >
-                                        Edit
+                                        {assignedSlotDate ? "Change assignment" : "Assign"}
                                       </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => setAssignmentModalOrderId(order.id)}
-                                      className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
-                                    >
-                                      {assignedSlotDate ? "Change assignment" : "Assign"}
-                                    </button>
-                                    {printTarget ? (
-                                      <a
-                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                      >
-                                        Print order
-                                      </a>
-                                    ) : (
-                                      <span className="text-xs text-zinc-500">Print unavailable</span>
-                                    )}
+                                      {printTarget ? (
+                                        <a
+                                          href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                        >
+                                          Print order
+                                        </a>
+                                      ) : (
+                                        <span className="text-xs text-zinc-500">Print unavailable</span>
+                                      )}
+                                      {canCompleteFromSchedule ? (
+                                        <SplitAwareActionForm
+                                          action={archiveOrderInline}
+                                          hiddenFields={[{ name: "order_id", value: order.id }]}
+                                          buttonLabel={productionCompletionActionLabel(order)}
+                                          buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                          confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                          companionMeta={premadeSiblingMeta}
+                                        />
+                                      ) : null}
+                                    </div>
                                     {isAdminManagedCustomUnpaid ? (
                                       <button
                                         type="submit"
                                         formNoValidate
                                         formAction={markOrderAsPaid}
+                                        data-submit-intent="mark-paid"
+                                        onClick={(event) => {
+                                          if (!window.confirm("Mark order as paid?")) {
+                                            event.preventDefault();
+                                          }
+                                        }}
                                         className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                                       >
                                         Mark as Paid
                                       </button>
-                                    ) : null}
-                                    {canCompleteFromSchedule ? (
-                                      <SplitAwareActionForm
-                                        action={archiveOrderInline}
-                                        hiddenFields={[{ name: "order_id", value: order.id }]}
-                                        buttonLabel={productionCompletionActionLabel(order)}
-                                        buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
-                                        companionMeta={premadeSiblingMeta}
-                                      />
                                     ) : null}
                                   </div>
                                 </form>
@@ -1307,6 +1390,7 @@ export function OrdersTable({
         assignments={assignments}
         settings={settings}
         unassignedOrders={unassignedOrders}
+        dayNotes={dayNotes}
       />
       {assignmentModalOrder ? (
         <AssignmentCalendarModal

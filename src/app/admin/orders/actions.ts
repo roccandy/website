@@ -127,8 +127,9 @@ async function resolveFirstAvailableSlotIndex(
   });
 }
 
-export async function upsertOrder(formData: FormData) {
+async function upsertOrderShared(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
+  const inlineResponse = isInlineResponse(formData);
   const submitIntent = formData.get("submit_intent")?.toString() || "save";
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
@@ -564,6 +565,10 @@ export async function upsertOrder(formData: FormData) {
       };
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to save order.";
+    if (inlineResponse) {
+      return { ok: false, tone: "error" as const, message: toastError ?? message };
+    }
     if (redirectTo && toastError) {
       const params = new URLSearchParams({ toast: "error", message: toastError });
       redirect(`${redirectTo}?${params.toString()}`);
@@ -586,12 +591,24 @@ export async function upsertOrder(formData: FormData) {
   if (redirectTo?.startsWith("/")) {
     revalidatePath(redirectTo);
   }
+  if (inlineResponse) {
+    return { ok: true, tone: "success" as const, message: toastSuccess ?? "Order Updated" };
+  }
   const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
   if (redirectTo && toastSuccess) {
     const params = new URLSearchParams({ toast: "success", message: toastSuccess });
     redirect(`${destination}?${params.toString()}`);
   }
   redirect(destination);
+}
+
+export async function upsertOrder(formData: FormData) {
+  await upsertOrderShared(formData);
+}
+
+export async function upsertOrderInline(formData: FormData) {
+  formData.set("response_mode", "inline");
+  return upsertOrderShared(formData);
 }
 
 export async function markOrderAsPaid(formData: FormData) {
@@ -850,6 +867,53 @@ export async function upsertSlot(formData: FormData) {
     changedFields: ["Slot date", "Capacity", "Status"],
   });
   redirect(ORDERS_PATH);
+}
+
+export async function upsertProductionDayNote(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const noteDate = formData.get("note_date")?.toString().trim() || "";
+  const note = formData.get("note")?.toString().trim() || "";
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(noteDate)) {
+    return { ok: false, tone: "error" as const, message: "Production date is required." };
+  }
+
+  try {
+    const client = supabaseAdminClient;
+    if (note) {
+      const { error } = await client.from("production_day_notes").upsert(
+        {
+          note_date: noteDate,
+          note,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "note_date" },
+      );
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await client.from("production_day_notes").delete().eq("note_date", noteDate);
+      if (error) throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "operations",
+      action: note ? "updated" : "deleted",
+      entityType: "production-day-note",
+      entityLabel: noteDate,
+      summary: note ? `Saved production note for ${noteDate}.` : `Cleared production note for ${noteDate}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Production note"],
+    });
+    revalidatePath(ORDERS_PATH);
+    revalidatePath("/admin/production");
+    return { ok: true, tone: "success" as const, message: note ? "Note saved." : "Note cleared." };
+  } catch (error) {
+    return {
+      ok: false,
+      tone: "error" as const,
+      message: error instanceof Error ? error.message : "Unable to save note.",
+    };
+  }
 }
 
 export async function assignOrderToSlot(formData: FormData) {

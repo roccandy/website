@@ -4,6 +4,7 @@ import {
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
 } from "./scheduleVisibility";
+import { productionCompletionActionLabel } from "./productionScheduleShared";
 
 const makeOrder = (input: Partial<OrderRow>) => input as OrderRow;
 
@@ -45,5 +46,17 @@ describe("admin custom order payment helpers", () => {
 
     expect(isAdminManagedCustomOrder(order)).toBe(true);
     expect(isAdminManagedCustomOrderUnpaid(order)).toBe(false);
+  });
+});
+
+describe("production completion labels", () => {
+  it("shows completed delivery orders as shipped", () => {
+    expect(productionCompletionActionLabel(makeOrder({ status: "archived", pickup: false }))).toBe("Shipped");
+    expect(productionCompletionActionLabel(makeOrder({ status: "shipped", pickup: false }))).toBe("Shipped");
+  });
+
+  it("shows completed pickup orders as collected", () => {
+    expect(productionCompletionActionLabel(makeOrder({ status: "archived", pickup: true }))).toBe("Collected");
+    expect(productionCompletionActionLabel(makeOrder({ status: "shipped", pickup: true }))).toBe("Collected");
   });
 });

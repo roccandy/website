@@ -191,10 +191,22 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
 };
 
 export const completionActionLabel = (order: OrderRow) =>
-  order.pickup ? "Mark as collected" : "Mark as shipped";
+  order.status === "archived" || order.status === "shipped"
+    ? order.pickup
+      ? "Collected"
+      : "Shipped"
+    : order.pickup
+      ? "Mark as collected"
+      : "Mark as shipped";
 
 export const productionCompletionActionLabel = (order: OrderRow) =>
-  order.pickup ? "Mark as collected" : "Mark as shipped";
+  order.status === "archived" || order.status === "shipped"
+    ? order.pickup
+      ? "Collected"
+      : "Shipped"
+    : order.pickup
+      ? "Mark as collected"
+      : "Mark as shipped";
 
 const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 

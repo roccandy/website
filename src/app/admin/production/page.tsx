@@ -1,14 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
+import { getOrders, getOrderSlots, getProductionDayNotes, getProductionSlots, type OrderRow } from "@/lib/data";
 import OrderTitleWithLogo from "@/app/admin/orders/OrderTitleWithLogo";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
   dateKey,
   weightLabel,
 } from "@/app/admin/orders/productionScheduleShared";
-import { isVisibleOnProductionSchedule } from "@/app/admin/orders/scheduleVisibility";
 import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 
 export const metadata = {
@@ -148,10 +147,11 @@ function printHref(order: OrderRow) {
 export default async function ProductionOrdersPage() {
   await requireAdminSession();
 
-  const [orders, assignments, slots] = await Promise.all([
+  const [orders, assignments, slots, dayNotes] = await Promise.all([
     getOrders(),
     getOrderSlots(),
     getProductionSlots(),
+    getProductionDayNotes(),
   ]);
 
   const slotById = new Map(slots.map((slot) => [slot.id, slot]));
@@ -164,8 +164,9 @@ export default async function ProductionOrdersPage() {
     }
   }
 
+  const noteByDate = new Map(dayNotes.map((note) => [note.note_date, note.note]));
   const visibleOrders = orders
-    .filter((order) => isVisibleOnProductionSchedule(order) && assignedProductionDateByOrderId.has(order.id))
+    .filter((order) => !order.refunded_at && assignedProductionDateByOrderId.has(order.id))
     .sort((a, b) => sortProductionOrders(a, b, assignedProductionDateByOrderId));
   const weekWindows = buildWeekWindows();
   const ordersByWeek = weekWindows.map((window) => ({
@@ -199,6 +200,7 @@ export default async function ProductionOrdersPage() {
           <div className="divide-y divide-zinc-200">
             {window.days.map((day) => {
               const isToday = day.date === todayKey;
+              const note = noteByDate.get(day.date)?.trim() ?? "";
               return (
               <section
                 key={day.date}
@@ -214,6 +216,11 @@ export default async function ProductionOrdersPage() {
                     </span>
                   </p>
                 </div>
+                {note ? (
+                  <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900">
+                    {note}
+                  </p>
+                ) : null}
 
                 {day.orders.length ? (
                   <div className="pb-1 sm:overflow-x-auto">

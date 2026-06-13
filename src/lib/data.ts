@@ -186,6 +186,14 @@ export type ProductionSlot = {
   created_at: string;
 };
 
+export type ProductionDayNote = {
+  id: string;
+  note_date: string; // ISO date
+  note: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProductionBlock = {
   id: string;
   start_date: string; // ISO date
@@ -223,6 +231,16 @@ async function fetchTable<T>(table: string) {
   const { data, error } = await client.from(table).select("*");
   if (error) throw new Error(error.message);
   return data as T[];
+}
+
+function isMissingTableError(error: { message?: string | null; code?: string | null }) {
+  const message = error.message?.toLowerCase() ?? "";
+  return (
+    error.code === "42P01" ||
+    message.includes("relation") ||
+    message.includes("schema cache") ||
+    message.includes("does not exist")
+  );
 }
 
 function inferPackagingDimensions(option: Pick<PackagingOption, "type" | "size" | "dimensions">) {
@@ -292,6 +310,19 @@ export async function getOrders() {
 
 export async function getProductionSlots() {
   return fetchTable<ProductionSlot>("production_slots");
+}
+
+export async function getProductionDayNotes() {
+  const client = supabaseAdminClient;
+  const { data, error } = await client
+    .from("production_day_notes")
+    .select("*")
+    .order("note_date", { ascending: true });
+  if (error) {
+    if (isMissingTableError(error)) return [];
+    throw new Error(error.message);
+  }
+  return data as ProductionDayNote[];
 }
 
 export async function getProductionBlocks() {

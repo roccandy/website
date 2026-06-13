@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
-import { archiveOrderInline, assignOrderToSlot } from "./actions";
+import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
+import { archiveOrderInline, assignOrderToSlot, upsertProductionDayNote } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
@@ -33,7 +33,11 @@ type Props = {
   assignments: OrderSlot[];
   settings: SettingsRow;
   unassignedOrders: OrderRow[];
+  dayNotes: ProductionDayNote[];
 };
+
+const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
+  order.status === "archived" || order.status === "shipped";
 
 export default function ProductionScheduleSection({
   orders,
@@ -41,15 +45,22 @@ export default function ProductionScheduleSection({
   assignments,
   settings,
   unassignedOrders,
+  dayNotes,
 }: Props) {
   const router = useRouter();
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [viewMode, setViewMode] = useState<"calendar" | "week">("week");
+  const [viewMode, setViewMode] = useState<"calendar" | "week">("calendar");
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
   const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [savingNoteDate, setSavingNoteDate] = useState<string | null>(null);
+  const [isNotePending, startNoteTransition] = useTransition();
+  const [expandedCompletedCalendarAssignments, setExpandedCompletedCalendarAssignments] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const todayKey = dateKey(new Date());
   const ordersById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
@@ -57,6 +68,7 @@ export default function ProductionScheduleSection({
   const assignmentBySlotKey = useMemo(() => buildAssignmentBySlotKey(assignments, slots), [assignments, slots]);
   const slotIdByKey = useMemo(() => buildSlotIdByKey(slots), [slots]);
   const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
+  const dayNoteByDate = useMemo(() => new Map(dayNotes.map((note) => [note.note_date, note])), [dayNotes]);
   const assignmentByOrderId = useMemo(() => {
     const map = new Map<string, { assignment: OrderSlot; slot: ProductionSlot | null }>();
     assignments.forEach((assignment) => {
@@ -149,6 +161,82 @@ export default function ProductionScheduleSection({
       refreshAfterAssignment();
     }
   };
+  const toggleCompletedCalendarAssignment = (assignmentId: string) => {
+    setExpandedCompletedCalendarAssignments((current) => {
+      const next = new Set(current);
+      if (next.has(assignmentId)) {
+        next.delete(assignmentId);
+      } else {
+        next.add(assignmentId);
+      }
+      return next;
+    });
+  };
+  const submitDayNote = (noteDate: string, note: string) => {
+    setSavingNoteDate(noteDate);
+    startNoteTransition(async () => {
+      const formData = new FormData();
+      formData.set("note_date", noteDate);
+      formData.set("note", note);
+      const result = await upsertProductionDayNote(formData);
+      if (result?.message) {
+        emitToast(result.tone, result.message);
+      }
+      if (result?.ok) {
+        setNoteDrafts((current) => {
+          const next = { ...current };
+          delete next[noteDate];
+          return next;
+        });
+        router.refresh();
+      }
+      setSavingNoteDate(null);
+    });
+  };
+  const renderDayNoteForm = (noteDate: string, compact = false) => {
+    const savedNote = dayNoteByDate.get(noteDate)?.note ?? "";
+    const draft = noteDrafts[noteDate] ?? savedNote;
+    const isSaving = isNotePending && savingNoteDate === noteDate;
+
+    return (
+      <form
+        className={`border-t border-zinc-100 ${compact ? "mt-1.5 pt-1.5" : "mt-2 pt-2"}`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submitDayNote(noteDate, draft);
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <label className="sr-only" htmlFor={`production-note-${noteDate}`}>
+            Notes
+          </label>
+          <input
+            id={`production-note-${noteDate}`}
+            value={draft}
+            onChange={(event) => setNoteDrafts((current) => ({ ...current, [noteDate]: event.target.value }))}
+            placeholder="Notes"
+            className={`min-w-0 flex-1 rounded border border-zinc-200 bg-white px-2 text-zinc-800 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none ${
+              compact ? "h-7 text-[10px]" : "h-8 text-xs"
+            }`}
+          />
+          <button
+            type="submit"
+            disabled={isSaving || draft === savedNote}
+            aria-label={isSaving ? "Saving note" : "Save note"}
+            className={`inline-flex shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50 font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+              compact ? "h-7 px-2 text-[9px]" : "h-8 px-2.5 text-[11px]"
+            }`}
+          >
+            {isSaving ? (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700" />
+            ) : (
+              "Save"
+            )}
+          </button>
+        </div>
+      </form>
+    );
+  };
 
   return (
     <>
@@ -233,6 +321,11 @@ export default function ProductionScheduleSection({
                         const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
                         const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
+                        const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
+                        const isCollapsedCompletedCalendarOrder =
+                          Boolean(assignment) &&
+                          isCompletedCalendarOrder &&
+                          !expandedCompletedCalendarAssignments.has(assignment?.id ?? "");
                         return (
                           <div
                             key={slotKey}
@@ -275,7 +368,7 @@ export default function ProductionScheduleSection({
                           >
                             {assignment && order ? (
                               <div
-                                draggable={canDragSlotOrder}
+                                draggable={canDragSlotOrder && !isCompletedCalendarOrder}
                                 onDragStart={() => {
                                   setDraggingAssignmentId(assignment.id);
                                   setHoveredDropSlotKey(null);
@@ -288,64 +381,104 @@ export default function ProductionScheduleSection({
                                   getScheduleStatus(order, key, todayKey),
                                 )}`}
                               >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="break-words text-[13px] font-semibold leading-tight text-zinc-900">
-                                      <OrderTitleWithLogo
-                                        order={order}
-                                        title={title}
-                                        logoClassName="h-4 w-4"
-                                        imageClassName="h-5 w-5"
-                                      />
-                                    </p>
-                                    <div className="mt-1 space-y-0 text-[9px] text-zinc-700">
-                                      <p>{weightLabel(order.total_weight_kg)}</p>
-                                      <p>
-                                        {formatDate(order.due_date)}
-                                        {dueDateDistance ? (
-                                          <span className="ml-1 text-zinc-400">{dueDateDistance}</span>
-                                        ) : null}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex w-[5.4rem] shrink-0 flex-col items-stretch gap-1">
-                                    {printTarget ? (
-                                      <a
-                                        href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[8px] font-semibold text-zinc-700 hover:border-zinc-300"
-                                      >
-                                        Print
-                                      </a>
-                                    ) : null}
-                                    {canCompleteSlotOrder ? (
-                                      <SplitAwareActionForm
-                                        action={archiveOrderInline}
-                                        hiddenFields={[{ name: "order_id", value: order.id }]}
-                                        buttonLabel={productionCompletionActionLabel(order)}
-                                        buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
-                                        companionMeta={premadeSiblingMeta}
-                                      />
-                                    ) : (
+                                {isCollapsedCompletedCalendarOrder ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
+                                    className="block w-full truncate whitespace-nowrap text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                    aria-expanded="false"
+                                    title={title}
+                                  >
+                                    <OrderTitleWithLogo
+                                      order={order}
+                                      title={title}
+                                      className="block max-w-full truncate whitespace-nowrap"
+                                      logoClassName="h-4 w-4"
+                                      imageClassName="h-5 w-5"
+                                    />
+                                  </button>
+                                ) : (
+                                  <div className="space-y-1.5">
+                                    {isCompletedCalendarOrder ? (
                                       <button
                                         type="button"
-                                        disabled
-                                        className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[8px] font-semibold text-zinc-400"
+                                        onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
+                                        className="block w-full truncate whitespace-nowrap text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                        aria-expanded="true"
+                                        title={title}
                                       >
-                                        {productionCompletionActionLabel(order)}
+                                        <OrderTitleWithLogo
+                                          order={order}
+                                          title={title}
+                                          className="block max-w-full truncate whitespace-nowrap"
+                                          logoClassName="h-4 w-4"
+                                          imageClassName="h-5 w-5"
+                                        />
                                       </button>
+                                    ) : (
+                                      <p
+                                        className="truncate whitespace-nowrap text-[13px] font-semibold leading-tight text-zinc-900"
+                                        title={title}
+                                      >
+                                        <OrderTitleWithLogo
+                                          order={order}
+                                          title={title}
+                                          className="block max-w-full truncate whitespace-nowrap"
+                                          logoClassName="h-4 w-4"
+                                          imageClassName="h-5 w-5"
+                                        />
+                                      </p>
                                     )}
-                                    <button
-                                      type="button"
-                                      onClick={() => setAssignmentModalOrderId(order.id)}
-                                      className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[8px] font-semibold text-blue-700 hover:border-blue-300"
-                                    >
-                                      Change
-                                    </button>
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0 flex-1 space-y-0 text-[9px] text-zinc-700">
+                                        <p>{weightLabel(order.total_weight_kg)}</p>
+                                        <p className="flex flex-wrap gap-x-1">
+                                          <span className="whitespace-nowrap">{formatDate(order.due_date)}</span>
+                                          {dueDateDistance ? (
+                                            <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
+                                          ) : null}
+                                        </p>
+                                      </div>
+                                      <div className="flex w-[5.4rem] shrink-0 flex-col items-stretch gap-1">
+                                        {printTarget ? (
+                                          <a
+                                            href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[8px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                          >
+                                            Print
+                                          </a>
+                                        ) : null}
+                                        {canCompleteSlotOrder ? (
+                                          <SplitAwareActionForm
+                                            action={archiveOrderInline}
+                                            hiddenFields={[{ name: "order_id", value: order.id }]}
+                                            buttonLabel={productionCompletionActionLabel(order)}
+                                            buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
+                                            confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                            companionMeta={premadeSiblingMeta}
+                                          />
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            disabled
+                                            className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[8px] font-semibold text-zinc-400"
+                                          >
+                                            {productionCompletionActionLabel(order)}
+                                          </button>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={() => setAssignmentModalOrderId(order.id)}
+                                          className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[8px] font-semibold text-blue-700 hover:border-blue-300"
+                                        >
+                                          Change
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             ) : (
                               <div className="flex items-center justify-between gap-2 rounded px-1 py-0.5">
@@ -367,6 +500,7 @@ export default function ProductionScheduleSection({
                         );
                       })}
                     </div>
+                    {renderDayNoteForm(key, true)}
                   </div>
                 );
               })
@@ -464,10 +598,10 @@ export default function ProductionScheduleSection({
                                     </p>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-700">
                                       <span>{weightLabel(order.total_weight_kg)}</span>
-                                      <span>
-                                        Due {formatDate(order.due_date)}
+                                      <span className="flex flex-wrap gap-x-1">
+                                        <span className="whitespace-nowrap">Due {formatDate(order.due_date)}</span>
                                         {dueDateDistance ? (
-                                          <span className="ml-1 text-zinc-400">{dueDateDistance}</span>
+                                          <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
                                         ) : null}
                                       </span>
                                       <span>{order.pickup ? "Pickup" : "Delivery"}</span>
@@ -532,6 +666,7 @@ export default function ProductionScheduleSection({
                         );
                       })}
                     </div>
+                    {renderDayNoteForm(key)}
                   </div>
                 );
               })

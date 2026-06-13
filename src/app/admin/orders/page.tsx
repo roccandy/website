@@ -4,6 +4,7 @@ import {
   getFlavors,
   getOrders,
   getOrderSlots,
+  getProductionDayNotes,
   getProductionSlots,
 } from "@/lib/data";
 import { getServerSession } from "next-auth";
@@ -31,10 +32,11 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
 
-  const [orders, slots, assignments, pricingContext, flavors, palette, categories, activityLog] = await Promise.all([
+  const [orders, slots, assignments, dayNotes, pricingContext, flavors, palette, categories, activityLog] = await Promise.all([
     getOrders(),
     getProductionSlots(),
     getOrderSlots(),
+    getProductionDayNotes(),
     buildPricingContext(),
     getFlavors(),
     getColorPalette(),
@@ -101,6 +103,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         pricingBreakdowns={pricingByOrderId}
         flavors={flavors}
         palette={palette}
+        dayNotes={dayNotes}
         initialSelectedId={selectedOrderId}
       />
 

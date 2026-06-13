@@ -180,7 +180,7 @@ export default async function Home() {
                 A little about us
               </h2>
               <p className="site-home-card-copy normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
-                We are very happy Australian artisan confectioners specialising in personalised and custom handmade
+                We are Australian artisan confectioners specialising in personalised and custom handmade
                 rock candies for all types of occasions. Established in 1999, our rock candy treats are vegan,
                 gluten-free and dairy-free. Each piece of candy is meticulously handcrafted with the finest
                 ingredients, sourced from trusted suppliers, 98% of which are Australian. We offer Free Delivery
