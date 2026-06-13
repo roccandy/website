@@ -52,22 +52,9 @@ const CATEGORY_TO_PUBLIC_STATE: Record<string, DesignerRouteState> = {
   },
 };
 
-const TYPE_TO_STATE: Record<PublicDesignerType, Omit<DesignerRouteState, "categoryId" | "publicVariant">> = {
-  wedding: {
-    orderType: "weddings",
-    publicType: "wedding",
-    landingPath: "/design/wedding-candy",
-  },
-  text: {
-    orderType: "text",
-    publicType: "text",
-    landingPath: "/design/custom-text-candy",
-  },
-  branded: {
-    orderType: "branded",
-    publicType: "branded",
-    landingPath: "/design/branded-logo-candy",
-  },
+const DEFAULT_CATEGORY_BY_TYPE: Partial<Record<PublicDesignerType, string>> = {
+  wedding: "weddings-initials",
+  text: "custom-1-6",
 };
 
 function normalizeType(raw?: string | null): PublicDesignerType | undefined {
@@ -114,12 +101,11 @@ export function resolveDesignerState(input: {
 
   const publicVariant = resolveVariantForType(type, input.variant, input.subtype);
   if (!publicVariant) {
-    const base = TYPE_TO_STATE[type];
-    return {
-      ...base,
-      categoryId: null,
-      publicVariant: null,
-    };
+    const defaultCategoryId = DEFAULT_CATEGORY_BY_TYPE[type];
+    if (defaultCategoryId) {
+      return CATEGORY_TO_PUBLIC_STATE[defaultCategoryId];
+    }
+    return CATEGORY_TO_PUBLIC_STATE.branded;
   }
 
   if (type === "wedding") {
@@ -165,9 +151,9 @@ export function buildDesignerPath(input: {
   const state =
     (input.categoryId ? CATEGORY_TO_PUBLIC_STATE[input.categoryId] : null) ??
     (input.orderType === "weddings"
-      ? { ...TYPE_TO_STATE.wedding, categoryId: null, publicVariant: null }
+      ? CATEGORY_TO_PUBLIC_STATE["weddings-initials"]
       : input.orderType === "text"
-        ? { ...TYPE_TO_STATE.text, categoryId: null, publicVariant: null }
+        ? CATEGORY_TO_PUBLIC_STATE["custom-1-6"]
         : CATEGORY_TO_PUBLIC_STATE.branded);
 
   const searchParams = new URLSearchParams();

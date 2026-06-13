@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeftRight } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import { SiteUsps } from "@/components/SiteUsps";
 import type {
@@ -96,16 +97,6 @@ const INGREDIENT_LABEL_PREVIEW_SRC = "/labels/ingredient-label.png";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 const BULK_LABEL_COUNT_MAX = 1000;
-
-function DesignPageBackgroundBand({ className = "" }: { className?: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`pointer-events-none absolute left-1/2 z-0 h-[360px] w-screen -translate-x-1/2 bg-cover bg-center bg-no-repeat opacity-75 [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_86%,transparent)] ${className}`}
-      style={{ backgroundImage: "url('/landing/background-no-figures.webp')" }}
-    />
-  );
-}
 
 function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   const overlayGroup = document.createElementNS(SVG_NS, "g");
@@ -733,6 +724,15 @@ export function QuoteBuilder({
   }, [packagingImageUrl]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !packagingImageUrl) return;
+
+    const image = new window.Image();
+    image.decoding = "async";
+    image.fetchPriority = "high";
+    image.src = packagingImageUrl;
+  }, [packagingImageUrl]);
+
+  useEffect(() => {
     if (typeof window === "undefined" || categoryPackagingImageUrls.length === 0) return;
 
     const browser = window as Window & {
@@ -742,6 +742,7 @@ export function QuoteBuilder({
 
     const preload = () => {
       categoryPackagingImageUrls.forEach((url) => {
+        if (url === packagingImageUrl) return;
         const image = new window.Image();
         image.decoding = "async";
         image.src = url;
@@ -755,7 +756,7 @@ export function QuoteBuilder({
 
     const timeoutId = globalThis.setTimeout(preload, 0);
     return () => globalThis.clearTimeout(timeoutId);
-  }, [categoryPackagingImageUrls]);
+  }, [categoryPackagingImageUrls, packagingImageUrl]);
 
   const isWedding = orderType === "weddings";
   const isWeddingInitials = isWedding && categoryId.includes("weddings-initials");
@@ -1374,26 +1375,35 @@ export function QuoteBuilder({
                       </span>
                     ) : null}
                     {showSubtype && (
-                      <div className="flex flex-wrap items-center justify-center gap-1 sm:flex-nowrap sm:justify-end">
-                        {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:flex-nowrap sm:justify-end">
+                        {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                           const isActive = categoryId === sub.id;
                           return (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => handleSubtypeChange(sub.id)}
-                              className="rounded-full px-2.5 py-1 text-[10px] font-semibold normal-case tracking-[0.04em] transition sm:px-3 sm:py-1.5 sm:text-[11px] sm:tracking-[0.06em]"
-                              style={{
-                                backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                                borderColor: "rgb(239,232,239)",
-                                borderWidth: "0.5px",
-                                borderStyle: "solid",
-                                color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
-                                fontFamily: "var(--font-body), sans-serif",
-                              }}
-                            >
-                              {toTitleCase(sub.label)}
-                            </button>
+                            <Fragment key={sub.id}>
+                              {index > 0 ? (
+                                <span
+                                  aria-hidden="true"
+                                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgb(250,243,247)] text-[#c87093]"
+                                >
+                                  <ArrowLeftRight className="h-3 w-3" strokeWidth={2.4} />
+                                </span>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => handleSubtypeChange(sub.id)}
+                                className="rounded-full px-2.5 py-1 text-[10px] font-semibold normal-case tracking-[0.04em] transition sm:px-3 sm:py-1.5 sm:text-[11px] sm:tracking-[0.06em]"
+                                style={{
+                                  backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(255,255,255)",
+                                  borderColor: isActive ? "rgb(219,166,190)" : "rgb(239,232,239)",
+                                  borderWidth: "0.5px",
+                                  borderStyle: "solid",
+                                  color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                                  fontFamily: "var(--font-body), sans-serif",
+                                }}
+                              >
+                                {toTitleCase(sub.label)}
+                              </button>
+                            </Fragment>
                           );
                         })}
                       </div>
@@ -1606,7 +1616,6 @@ export function QuoteBuilder({
             </div>
 
             <div className="relative mt-4 w-full border-t border-zinc-200 py-8">
-              <DesignPageBackgroundBand className="bottom-[-170px]" />
               <div className="relative z-10">
               <h2 className="site-small-title text-zinc-900">Custom Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
@@ -1865,9 +1874,10 @@ export function QuoteBuilder({
             ref={designSectionRef}
             className="mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible"
           >
-          <div>
-            <h2 className="site-small-title text-zinc-900">Design</h2>
-          </div>
+            <div className="relative z-10">
+              <div>
+                <h2 className="site-small-title text-zinc-900">Design</h2>
+              </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2 md:items-start">
             <div
               ref={previewWrapRef}
@@ -2120,9 +2130,9 @@ export function QuoteBuilder({
             </div>
             </div>
           </div>
+          </div>
         </div>
           <div className="relative mt-4 w-full border-t border-zinc-200 py-8">
-            <DesignPageBackgroundBand className="top-1/2 -translate-y-1/2 opacity-80" />
             <div className="relative z-10">
             <h2 className="site-small-title text-zinc-900">Flavour</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -2160,11 +2170,11 @@ export function QuoteBuilder({
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
-            <p className="mt-2 text-sm text-zinc-600">
-              You can add delivery, payment, and contact details in the cart.
-            </p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
+              <p className="mt-2 text-sm text-zinc-600">
+                You can add delivery, payment, and contact details in the cart.
+              </p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
                 onClick={async () => {
@@ -2276,8 +2286,8 @@ export function QuoteBuilder({
               >
                 {placing ? (isEditing ? "Updating..." : "Adding...") : isEditing ? "Update cart item" : "Continue to cart"}
               </button>
-            </div>
-            {placeError && <p className="mt-2 text-xs text-red-600">{placeError}</p>}
+              </div>
+              {placeError && <p className="mt-2 text-xs text-red-600">{placeError}</p>}
           </div>
         </div>
 

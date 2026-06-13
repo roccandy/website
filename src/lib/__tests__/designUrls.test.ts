@@ -32,6 +32,24 @@ describe("designUrls", () => {
     ).toBe("/design?type=text&variant=long");
   });
 
+  it("defaults type-only designer paths to the first selectable subtype", () => {
+    expect(buildDesignerPath({ orderType: "weddings" })).toBe("/design?type=wedding&variant=initials");
+    expect(buildDesignerPath({ orderType: "text" })).toBe("/design?type=text&variant=short");
+  });
+
+  it("resolves type-only designer queries to the default subtype", () => {
+    expect(resolveDesignerState({ type: "wedding" })).toMatchObject({
+      orderType: "weddings",
+      categoryId: "weddings-initials",
+      publicVariant: "initials",
+    });
+    expect(resolveDesignerState({ type: "text" })).toMatchObject({
+      orderType: "text",
+      categoryId: "custom-1-6",
+      publicVariant: "short",
+    });
+  });
+
   it("keeps non-designer query params when rebuilding a designer path", () => {
     const extraParams = new URLSearchParams("edit=123&foo=bar&type=ignore-me");
     expect(

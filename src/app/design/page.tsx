@@ -257,7 +257,6 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
         />
 
         <div className="relative pb-16">
-          <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 z-0 h-[300px] w-[1400px] max-w-full -translate-x-1/2 bg-top bg-no-repeat bg-contain opacity-95 [mask-image:linear-gradient(to_bottom,black_75%,transparent)]" style={{ backgroundImage: "url('/landing/design-top.webp')" }} />
           <div className="site-page-frame relative z-10 mx-auto max-w-7xl">
             {!initialOrderType ? (
               <section className="site-page-header mx-auto mb-8 max-w-4xl rounded-3xl border border-zinc-200 bg-white/90 p-6 text-center shadow-sm">
