@@ -46,14 +46,21 @@ import {
 } from "./quoteBuilderPalette";
 import {
   buildPublicImageUrl,
+  countCustomTextLetters,
   formatLabelTypeLabel,
+  hasLongCustomTextSingleWordLimitIssue,
+  hasLongCustomTextWordLimitIssue,
   inferOrderTypeFromCategory,
+  isCustomTextValid,
   LONG_CUSTOM_TEXT_MAX_LENGTH,
+  LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH,
+  LONG_CUSTOM_TEXT_MAX_SPACES,
   ORDER_SUBTYPES,
   ORDER_TYPE_TITLES,
   resolveInitialDesignerSelection,
   resolveSyncedDesignerSelection,
   SHORT_CUSTOM_TEXT_MAX_LENGTH,
+  sanitizeCustomTextInput,
   splitWeddingDesign,
   SUBTITLE_BY_CATEGORY,
   toTitleCase,
@@ -213,6 +220,8 @@ export function QuoteBuilder({
   const [nameOne, setNameOne] = useState("");
   const [nameTwo, setNameTwo] = useState("");
   const [customText, setCustomText] = useState("");
+  const [customTextInputWarning, setCustomTextInputWarning] = useState<string | null>(null);
+  const [shortCustomOverflowText, setShortCustomOverflowText] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [flavor, setFlavor] = useState("");
   const [jacketColorOne, setJacketColorOne] = useState("");
@@ -435,6 +444,7 @@ export function QuoteBuilder({
       colorOne={previewJacketColorOne}
       colorTwo={previewJacketColorTwo}
       showHeart={isWedding}
+      customTextVariant={isText ? customTextVariant : undefined}
       logoUrl={isBranded ? logoUrl : undefined}
       heartColor={previewHeartColor}
       textColor={previewTextColor}
@@ -461,7 +471,19 @@ export function QuoteBuilder({
       setInitialOne(deriveInitial(nameOne || initialOne));
       setInitialTwo(deriveInitial(nameTwo || initialTwo));
     }
+    if (orderType === "text") {
+      setCustomText(sanitizeCustomTextInput(customText, nextSubtype === "custom-1-6" ? "short" : "long"));
+      setCustomTextInputWarning(null);
+      setShortCustomOverflowText(null);
+    }
     setCategoryId(nextSubtype);
+  };
+  const switchToLongCustomText = () => {
+    hasManualSubtypeRef.current = true;
+    setCategoryId("custom-7-14");
+    setCustomText(sanitizeCustomTextInput(shortCustomOverflowText || customText, "long"));
+    setCustomTextInputWarning(null);
+    setShortCustomOverflowText(null);
   };
   const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
@@ -763,7 +785,12 @@ export function QuoteBuilder({
   const isText = orderType === "text";
   const isBranded = orderType === "branded";
   const isShortCustom = isText && categoryId === "custom-1-6";
-  const maxCustomLength = isShortCustom ? SHORT_CUSTOM_TEXT_MAX_LENGTH : LONG_CUSTOM_TEXT_MAX_LENGTH;
+  const customTextVariant = isShortCustom ? "short" : "long";
+  const customTextLetterCount = isShortCustom ? (customText || "").length : countCustomTextLetters(customText || "");
+  const customTextIsValid = !isText || isCustomTextValid(customText || "", customTextVariant);
+  const customTextWordLimitMessage = `For 3 words, each word can be up to ${SHORT_CUSTOM_TEXT_MAX_LENGTH} characters.`;
+  const customTextSingleWordLimitMessage = `Each word can be up to ${LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH} characters.`;
+  const showShortCustomSwitchPrompt = isShortCustom && Boolean(shortCustomOverflowText);
   const designTitle = isWedding
     ? isWeddingInitials
       ? `${(initialOne || "").trim().toUpperCase()} ❤️ ${(initialTwo || "").trim().toUpperCase()}`
@@ -773,7 +800,7 @@ export function QuoteBuilder({
       : (customText || "").trim().toUpperCase();
   const designValid = Boolean(
     (isWedding && (isWeddingInitials ? initialOne && initialTwo : nameOne && nameTwo)) ||
-      (isText && customText) ||
+      (isText && customTextIsValid) ||
       (isBranded && logoUrl) ||
       (!isWedding && !isText && !isBranded) // fallback
   );
@@ -803,6 +830,19 @@ export function QuoteBuilder({
     colorsValid &&
     labelTypeValid &&
     (!labelsOptIn || !!labelImageUrl);
+
+  useEffect(() => {
+    if (!isText) {
+      setCustomTextInputWarning(null);
+      setShortCustomOverflowText(null);
+    }
+  }, [isText]);
+
+  useEffect(() => {
+    setCustomTextInputWarning(null);
+    setShortCustomOverflowText(null);
+  }, [customTextVariant]);
+
   const missingFields = useMemo(() => {
     const missing: string[] = [];
     if (!selectedOptionId || selectionQty <= 0) {
@@ -962,7 +1002,7 @@ export function QuoteBuilder({
       setCustomText("");
       setOrgName("");
     } else if (nextOrderType === "text") {
-      setCustomText(designSource.toUpperCase());
+      setCustomText(sanitizeCustomTextInput(designSource, fallbackCategory === "custom-1-6" ? "short" : "long"));
       setInitialOne("");
       setInitialTwo("");
       setNameOne("");
@@ -1391,7 +1431,7 @@ export function QuoteBuilder({
                               <button
                                 type="button"
                                 onClick={() => handleSubtypeChange(sub.id)}
-                                className="rounded-full px-2.5 py-1 text-[10px] font-semibold normal-case tracking-[0.04em] transition sm:px-3 sm:py-1.5 sm:text-[11px] sm:tracking-[0.06em]"
+                                className="inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-2.5 text-[10px] font-semibold normal-case leading-none tracking-[0.04em] transition sm:h-8 sm:px-3 sm:text-[11px] sm:tracking-[0.06em]"
                                 style={{
                                   backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(255,255,255)",
                                   borderColor: isActive ? "rgb(219,166,190)" : "rgb(239,232,239)",
@@ -1937,8 +1977,24 @@ export function QuoteBuilder({
                   <input
                     type="text"
                     value={customText}
-                    maxLength={maxCustomLength}
-                    onChange={(e) => setCustomText((e.target.value || "").toUpperCase().slice(0, maxCustomLength))}
+                    onChange={(e) => {
+                      const rawValue = e.target.value || "";
+                      const shortOverflow = isShortCustom && rawValue.length > SHORT_CUSTOM_TEXT_MAX_LENGTH;
+                      const nextValue = sanitizeCustomTextInput(rawValue, customTextVariant);
+                      setShortCustomOverflowText(
+                        shortOverflow ? sanitizeCustomTextInput(rawValue, "long") : null
+                      );
+                      setCustomTextInputWarning(
+                        shortOverflow
+                          ? null
+                          : hasLongCustomTextSingleWordLimitIssue(rawValue, customTextVariant)
+                          ? customTextSingleWordLimitMessage
+                          : hasLongCustomTextWordLimitIssue(rawValue, customTextVariant)
+                          ? customTextWordLimitMessage
+                          : null
+                      );
+                      setCustomText(nextValue);
+                    }}
                     required
                     className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
                     placeholder="Your text"
@@ -1947,10 +2003,32 @@ export function QuoteBuilder({
                     <span>
                       {isShortCustom
                         ? `Up to ${SHORT_CUSTOM_TEXT_MAX_LENGTH} letters`
-                        : `${LONG_CUSTOM_TEXT_MAX_LENGTH} characters max, including spaces`}
+                        : `${LONG_CUSTOM_TEXT_MAX_LENGTH} letters max, ${LONG_CUSTOM_TEXT_MAX_SPACES} spaces max`}
                     </span>
-                    <span>{`${(customText || "").length}/${maxCustomLength}`}</span>
+                    <span>{`${customTextLetterCount}/${
+                      isShortCustom ? SHORT_CUSTOM_TEXT_MAX_LENGTH : LONG_CUSTOM_TEXT_MAX_LENGTH
+                    }`}</span>
                   </div>
+                  {customTextInputWarning ? (
+                    <p className="mt-1 text-[11px] text-amber-600">{customTextInputWarning}</p>
+                  ) : showShortCustomSwitchPrompt ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+                      <span>More letters?</span>
+                      <button
+                        type="button"
+                        onClick={switchToLongCustomText}
+                        className="inline-flex h-6 items-center justify-center rounded-full border border-[#ffd3df] bg-[#fff5f8] px-2.5 text-[11px] font-semibold text-[#ff6f95] transition hover:border-[#ffb7cc] hover:bg-[#ffeaf1] hover:text-[#ff4f80]"
+                      >
+                        7-14 letters
+                      </button>
+                    </div>
+                  ) : isText && !customTextIsValid && customText ? (
+                    <p className="mt-1 text-[11px] text-red-600">
+                      {hasLongCustomTextSingleWordLimitIssue(customText, customTextVariant)
+                        ? customTextSingleWordLimitMessage
+                        : customTextWordLimitMessage}
+                    </p>
+                  ) : null}
                 </label>
               )}
               {!isBranded && (

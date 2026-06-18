@@ -233,4 +233,45 @@ describe("buildWooOrderContext", () => {
       "0008-c",
     ]);
   });
+
+  it("applies the checkout test promo across Woo lines and stored order payloads", async () => {
+    premadeRows = [
+      {
+        id: "premade-1",
+        name: "Premade Candy",
+        price: 12,
+        weight_g: 100,
+        woo_product_id: "123",
+        description: "Premade",
+      },
+    ];
+    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+
+    const context = await buildWooOrderContext(
+      buildOrder({
+        promoCode: "FH*#HK@NXsh83D=-S",
+        customItems: [customItem("ONE")],
+        premadeItems: [{ premadeId: "premade-1", quantity: 2 }],
+      })
+    );
+
+    expect(context.totalAmount).toBe(0.01);
+    expect(context.lineItems.map((item) => item.total)).toEqual(["0.01", "0.00"]);
+    expect(context.orderPayloads.map((payload) => payload.total_price)).toEqual([0.01, 0]);
+  });
+
+  it("ignores non-matching checkout promo codes", async () => {
+    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+
+    const context = await buildWooOrderContext(
+      buildOrder({
+        promoCode: "FH*#HK@NXsh83D=-X",
+        customItems: [customItem("ONE")],
+      })
+    );
+
+    expect(context.totalAmount).toBe(100);
+    expect(context.lineItems.map((item) => item.total)).toEqual(["100.00"]);
+    expect(context.orderPayloads.map((payload) => payload.total_price)).toEqual([100]);
+  });
 });

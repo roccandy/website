@@ -2,7 +2,8 @@ import type { OrderRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 
 type AdminManagedCustomOrderSource = Pick<OrderRow, "design_type" | "woo_order_id" | "woo_payment_url">;
-type AdminManagedCustomOrderPaymentSource = AdminManagedCustomOrderSource & Pick<OrderRow, "paid_at">;
+type AdminManagedCustomOrderPaymentSource = AdminManagedCustomOrderSource &
+  Pick<OrderRow, "paid_at" | "payment_provider" | "square_invoice_id" | "status">;
 
 export function isRefundedOrder(order: OrderRow) {
   return Boolean(order.refunded_at);
@@ -10,11 +11,12 @@ export function isRefundedOrder(order: OrderRow) {
 
 export function isAdminManagedCustomOrder(order: AdminManagedCustomOrderSource | null | undefined) {
   if (!order) return false;
-  return (
-    order.design_type !== "premade" &&
-    !order.woo_order_id &&
-    !order.woo_payment_url
-  );
+  const source = order as Partial<AdminManagedCustomOrderPaymentSource>;
+  if (order.design_type === "premade") return false;
+  if (source.payment_provider === "square_invoice" || source.square_invoice_id) return true;
+  if (source.status === "pending_payment") return false;
+  if (!order.woo_order_id && !order.woo_payment_url) return true;
+  return source.status === "pending" || source.status === "unassigned";
 }
 
 export function isAdminManagedCustomOrderUnpaid(order: AdminManagedCustomOrderPaymentSource | null | undefined) {

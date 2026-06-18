@@ -210,16 +210,25 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
       : modeRaw.includes("pinstripe")
         ? "pinstripe"
         : "solid";
-  const showHeart =
-    Boolean(payload.heart_color) &&
-    designType.includes("wedding");
+  const showHeart = designType.includes("wedding");
+  const isInitials = designType === "weddings-initials" || String(payload.category_id ?? "").toLowerCase() === "weddings-initials";
+  const isBranded = designType === "branded" || String(payload.category_id ?? "").toLowerCase() === "branded";
+  const categoryId = String(payload.category_id ?? "").toLowerCase();
+  const customTextVariant =
+    categoryId === "custom-1-6"
+      ? "short"
+      : categoryId === "custom-7-14" || designType.includes("custom")
+        ? "long"
+        : "";
   const sourceText = String(payload.design_text ?? payload.title ?? "").trim();
   const { lineOne, lineTwo } = designType.includes("wedding")
     ? deriveWeddingNames(sourceText)
     : { lineOne: "", lineTwo: "" };
+  const logoUrl = isBranded && typeof payload.logo_url === "string" ? payload.logo_url.trim() : "";
 
   const params = new URLSearchParams({
     mode,
+    showPinstripe: modeRaw.includes("pinstripe") ? "1" : "0",
     colorOne: String(payload.jacket_color_one ?? "#b7b7b7"),
     colorTwo: String(payload.jacket_color_two ?? payload.jacket_color_one ?? "#b7b7b7"),
     textColor: String(payload.text_color ?? "#5f5f5f"),
@@ -228,7 +237,10 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
     lineOne,
     lineTwo,
     showHeart: showHeart ? "1" : "0",
+    isInitials: isInitials ? "1" : "0",
   });
+  if (logoUrl) params.set("logoUrl", logoUrl);
+  if (customTextVariant) params.set("customTextVariant", customTextVariant);
   return `${baseUrl}/api/preview/candy-image?${params.toString()}`;
 };
 
@@ -307,6 +319,9 @@ export async function buildAdminOrderSummaryEmailPayload({
       customPreviews?.find((item) => item.orderNumber && item.orderNumber === customOrderNumber) ??
       customPreviews?.[index] ??
       null;
+    const designType = String(customItem.design_type ?? customItem.category_id ?? "").toLowerCase();
+    const isBranded = designType === "branded" || String(customItem.category_id ?? "").toLowerCase() === "branded";
+    const hasLogoUrl = typeof customItem.logo_url === "string" && customItem.logo_url.trim().length > 0;
     const jacketTypeRaw = String(customItem.jacket_type ?? "").toLowerCase();
     const jacketRaw = String(customItem.jacket ?? "").toLowerCase();
     const jacketCombined = `${jacketTypeRaw} ${jacketRaw}`.trim();
@@ -353,8 +368,12 @@ export async function buildAdminOrderSummaryEmailPayload({
           : null
     );
     const generatedPreviewUrl = buildCandyPreviewUrl(customItem);
+    const previewSource =
+      isBranded && hasLogoUrl
+        ? previewPngDataUrl ?? generatedPreviewUrl ?? previewSvgDataUrl
+        : previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl;
     const persistedPreviewUrl = await persistEmailPreview(
-      previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl,
+      previewSource,
       customOrderNumber
     );
     const imageUrl =

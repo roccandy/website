@@ -146,21 +146,100 @@ export const getScheduleStatus = (
   assignedSlotDate: string | null | undefined,
   todayKey = dateKey(new Date()),
 ) => {
+  if (order.status === "test") return "test";
   if (order.status === "archived") return "archived";
   if (!assignedSlotDate) return "unassigned";
-  if (assignedSlotDate < todayKey) return "pending completion";
+  if (assignedSlotDate < todayKey) return "made";
   return "scheduled";
 };
 
-export const formatScheduleStatusLabel = (status: string) =>
-  status === "pending completion" ? "pending" : status.replace(/_/g, " ");
+export const batchWeightsForOrder = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
+  const weights = Array.isArray(order.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg
+        .map((weight) => Number(weight))
+        .filter((weight) => Number.isFinite(weight) && weight > 0)
+    : [];
+  if (weights.length > 0) return weights;
+  const total = Number(order.total_weight_kg);
+  return Number.isFinite(total) && total > 0 ? [total] : [];
+};
+
+const formatKgValue = (weight: number) => {
+  const rounded = Math.round(weight * 100) / 100;
+  return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+};
+
+export const formatBatchBreakdown = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
+  const weights = batchWeightsForOrder(order);
+  if (weights.length <= 1) return "";
+  const groups = weights.reduce<Array<{ weight: number; count: number }>>((acc, weight) => {
+    const existing = acc.find((entry) => Math.abs(entry.weight - weight) < 0.005);
+    if (existing) {
+      existing.count += 1;
+      return acc;
+    }
+    acc.push({ weight, count: 1 });
+    return acc;
+  }, []);
+  return groups.map((entry) => `${entry.count} x ${formatKgValue(entry.weight)}kg`).join(" + ");
+};
+
+export const assignedKgForOrder = (assignments: OrderSlot[]) =>
+  assignments.reduce((sum, assignment) => sum + Number(assignment.kg_assigned || 0), 0);
+
+export const remainingKgForOrder = (order: OrderRow, assignments: OrderSlot[]) => {
+  const total = Number(order.total_weight_kg);
+  if (!Number.isFinite(total) || total <= 0) return 0;
+  return Math.max(0, total - assignedKgForOrder(assignments));
+};
+
+export const nextAssignableKgForOrder = (order: OrderRow, assignments: OrderSlot[]) => {
+  const weights = batchWeightsForOrder(order);
+  const assignedCount = assignments.length;
+  const planned = weights[assignedCount];
+  if (Number.isFinite(planned) && planned > 0) return planned;
+  const remaining = remainingKgForOrder(order, assignments);
+  return remaining > 0 ? remaining : 0;
+};
+
+export const getMultiAssignmentScheduleStatus = (
+  order: OrderRow,
+  assignedSlotDates: string[],
+  todayKey = dateKey(new Date()),
+) => {
+  if (order.status === "test") return "test";
+  if (order.status === "archived") return "archived";
+  if (assignedSlotDates.length === 0) return "unassigned";
+  const plannedBatchCount = Math.max(1, batchWeightsForOrder(order).length);
+  const pastCount = assignedSlotDates.filter((slotDate) => slotDate < todayKey).length;
+  if (pastCount >= plannedBatchCount) return "made";
+  if (pastCount > 0) return "partially made";
+  if (assignedSlotDates.length < plannedBatchCount) return "partially scheduled";
+  return "scheduled";
+};
+
+export const formatScheduleStatusLabel = (status: string) => {
+  if (status === "test") return "Test";
+  if (status === "pending completion") return "made";
+  if (status === "partially complete") return "partially made";
+  return status.replace(/_/g, " ");
+};
 
 export const statusBadge = (status: string) => {
+  if (status === "test") {
+    return "border-zinc-950 bg-zinc-950 text-white";
+  }
   if (status === "archived") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-  if (status === "pending completion") {
+  if (status === "pending completion" || status === "made") {
     return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  if (status === "partially complete" || status === "partially made") {
+    return "border-orange-200 bg-orange-50 text-orange-700";
+  }
+  if (status === "partially scheduled") {
+    return "border-orange-300 bg-orange-100 text-orange-900";
   }
   if (status === "scheduled") {
     return "border-blue-200 bg-blue-50 text-blue-700";
@@ -172,11 +251,20 @@ export const statusBadge = (status: string) => {
 };
 
 export const statusCard = (status: string) => {
+  if (status === "test") {
+    return "border-zinc-950 bg-zinc-950 text-white";
+  }
   if (status === "archived") {
     return "border-emerald-300 bg-emerald-50 text-emerald-900";
   }
-  if (status === "pending completion") {
+  if (status === "pending completion" || status === "made") {
     return "border-amber-300 bg-amber-50 text-amber-900";
+  }
+  if (status === "partially complete" || status === "partially made") {
+    return "border-orange-300 bg-orange-50 text-orange-900";
+  }
+  if (status === "partially scheduled") {
+    return "border-orange-400 bg-orange-100 text-orange-950";
   }
   if (status === "scheduled") {
     return "border-blue-300 bg-blue-50 text-blue-900";
@@ -188,6 +276,14 @@ export const canCompleteOrderForSlotDate = (order: OrderRow, slotDate: string | 
   if (!slotDate) return false;
   if (order.status === "archived" || order.refunded_at) return false;
   return slotDate <= dateKey(new Date());
+};
+
+export const canCompleteOrderForSlotDates = (order: OrderRow, slotDates: string[]) => {
+  const validDates = slotDates.filter(Boolean);
+  if (validDates.length === 0) return false;
+  if (order.status === "archived" || order.refunded_at) return false;
+  const today = dateKey(new Date());
+  return validDates.every((slotDate) => slotDate <= today);
 };
 
 export const completionActionLabel = (order: OrderRow) =>

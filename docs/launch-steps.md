@@ -8,7 +8,7 @@ Rule for this document:
 - Admin auth must keep working right up until cutover.
 - Any change that would break `roccandy.vercel.app` stays in the post-cutover section.
 
-Last reviewed against the repo on `2026-04-21`.
+Last reviewed against the live production site on `2026-04-29`.
 
 ## Use This Document
 
@@ -80,12 +80,12 @@ These are the env-var changes you can make before cutover without breaking `rocc
 
 ### Square
 
-- [] Replace `NEXT_PUBLIC_SQUARE_APP_ID` with the live app ID.
-- [] Replace `NEXT_PUBLIC_SQUARE_LOCATION_ID` with the live location ID.
-- [] Set `NEXT_PUBLIC_SQUARE_ENV=production`.
-- [] Replace `SQUARE_ACCESS_TOKEN` with the live access token.
-- [] Replace `SQUARE_LOCATION_ID` with the live location ID.
-- [] Clear `SQUARE_API_BASE` if it still points at sandbox, or set it to `https://connect.squareup.com`. #set to squareup
+- [x] Replace `NEXT_PUBLIC_SQUARE_APP_ID` with the live app ID.
+- [x] Replace `NEXT_PUBLIC_SQUARE_LOCATION_ID` with the live location ID.
+- [x] Set `NEXT_PUBLIC_SQUARE_ENV=production`.
+- [x] Replace `SQUARE_ACCESS_TOKEN` with the live access token.
+- [x] Replace `SQUARE_LOCATION_ID` with the live location ID.
+- [x] Clear `SQUARE_API_BASE` if it still points at sandbox, or set it to `https://connect.squareup.com`. #set to squareup
 
 ### PayPal
 
@@ -144,35 +144,35 @@ These are the env-var changes you can make before cutover without breaking `rocc
 
 ## Phase 6: Run Pre-Cutover Functional QA On `roccandy.vercel.app`
 
-- [ ] Test homepage on desktop and mobile.
-- [ ] Test About page.
-- [ ] Test FAQ page.
-- [ ] Test Design page.
-- [ ] Test Wedding landing page.
-- [ ] Test Custom Text landing page.
-- [ ] Test Branded landing page.
-- [ ] Test Pre-made Candy listing page.
-- [ ] Test several pre-made product pages.
-- [ ] Test Contact page.
-- [ ] Test Shipping and Returns page.
-- [ ] Test Privacy page.
-- [ ] Test Terms page.
-- [ ] Test 404 page.
-- [ ] Test cart add / remove / update.
-- [ ] Test custom order flow from designer to checkout.
-- [ ] Test pre-made order flow from product page to checkout.
-- [ ] Test redirects already entered in the SEO workspace.
+- [x] Test homepage on desktop and mobile.
+- [x] Test About page.
+- [x] Test FAQ page.
+- [x] Test Design page.
+- [x] Test Wedding landing page.
+- [x] Test Custom Text landing page.
+- [x] Test Branded landing page.
+- [x] Test Pre-made Candy listing page.
+- [x] Test several pre-made product pages.
+- [x] Test Contact page.
+- [x] Test Shipping and Returns page.
+- [x] Test Privacy page.
+- [x] Test Terms page.
+- [x] Test 404 page.
+- [x] Test cart add / remove / update.
+- [x] Test custom order flow from designer to checkout.
+- [x] Test pre-made order flow from product page to checkout.
+- [X] Test redirects already entered in the SEO workspace.
 
 ## Phase 7: Run Pre-Cutover Payment QA On `roccandy.vercel.app`
 
-- [ ] Run one live Square payment on `roccandy.vercel.app` if operationally safe.
-- [ ] Run one live PayPal payment on `roccandy.vercel.app` if operationally safe.
-- [ ] Confirm successful payments create Woo orders.
-- [ ] Confirm successful payments create Supabase order rows.
-- [ ] Confirm Woo order totals, line items, and statuses look correct.
-- [ ] Confirm admin email notifications are received.
-- [ ] Confirm customer email notifications are received.
-- [ ] Confirm refunds / payment-failure handling are acceptable.
+- [x] Run one live Square payment on `roccandy.vercel.app` if operationally safe.
+- [x] Run one live PayPal payment on `roccandy.vercel.app` if operationally safe.
+- [x] Confirm successful payments create Woo orders.
+- [x] Confirm successful payments create Supabase order rows.
+- [x] Confirm Woo order totals, line items, and statuses look correct.
+- [X] Confirm admin email notifications are received.
+- [X] Confirm customer email notifications are received.
+- [X] Confirm refunds / payment-failure handling are acceptable.
 
 ## Phase 8: Run Pre-Cutover Analytics QA On `roccandy.vercel.app`
 
@@ -188,10 +188,10 @@ These are the env-var changes you can make before cutover without breaking `rocc
 
 ### Search Console
 
-- [ ] Create the real-domain property for `roccandy.com.au`.
-- [ ] Verify it now if you are using DNS verification.
-- [ ] Do not treat `roccandy.vercel.app` as the main indexed property.
-- [ ] Do not submit the final-domain sitemap yet unless the domain is already live.
+- [x] Create the real-domain property for `roccandy.com.au`.
+- [x] Verify it now if you are using DNS verification.
+- [x] Do not treat `roccandy.vercel.app` as the main indexed property.
+- [x] Do not submit the final-domain sitemap yet unless the domain is already live.
 
 ### Merchant Center
 
@@ -200,6 +200,7 @@ These are the env-var changes you can make before cutover without breaking `rocc
 - [ ] Do not point Merchant product URLs at `vercel.app`.
 - [ ] Do not claim the staging host as the real website.
 - [ ] Wait until cutover before refreshing the live crawl/feed.
+- [ ] Damien to work on Google Merchant Center account and product feed on Tuesday, May 5, 2026.
 
 ### Google Ads
 
@@ -208,44 +209,44 @@ These are the env-var changes you can make before cutover without breaking `rocc
 
 ### Cloudflare
 
-- [ ] Prepare the DNS change plan for `@` and `www`.
-- [ ] Do not move DNS yet.
+- [x] Prepare the DNS change plan for `@` and `www`.
+- [x] Do not move DNS yet.
 
 ### GitHub Actions
 
-- [ ] Note that `KEEPALIVE_URL` must stay on the current working host until cutover.
+- [x] Note that `KEEPALIVE_URL` must stay on the current working host until cutover.
 
 ### Woo / WordPress
 
-- [ ] Note that Woo webhook delivery URL must stay on the current working host until cutover.
-- [ ] Note that the Woo return/success URL must stay on the current working host until cutover.
-- [ ] Confirm the current plugin source is [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php).
-- [ ] Confirm the packaged plugin zips that will need updating after cutover are:
+- [x] Note that Woo webhook delivery URL must stay on the current working host until cutover.
+- [x] Note that the Woo return/success URL must stay on the current working host until cutover.
+- [x] Confirm the current plugin source is [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php).
+- [x] Confirm the packaged plugin zips that will need updating after cutover are:
   - [roccandy-woo-redirect.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect.zip)
   - [roccandy-woo-redirect-clean.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect-clean.zip)
 
 ### Square Apple Pay
 
-- [ ] Confirm the verification file exists at [apple-developer-merchantid-domain-association](/Users/joeconlin/dev/roccandy/public/.well-known/apple-developer-merchantid-domain-association).
-- [ ] Wait until cutover before verifying Apple Pay against `roccandy.com.au`.
+- [x] Confirm the verification file exists at [apple-developer-merchantid-domain-association](/Users/joeconlin/dev/roccandy/public/.well-known/apple-developer-merchantid-domain-association).
+- [x] Wait until cutover before verifying Apple Pay against `roccandy.com.au`.
 
 ### Supabase Auth
 
-- [ ] If you use Supabase Auth email links or redirect URLs anywhere, note that Site URL / Redirect URLs should be changed after cutover.
+- [x] If you use Supabase Auth email links or redirect URLs anywhere, note that Site URL / Redirect URLs should be changed after cutover.
 
 ## Phase 10: Final Go / No-Go Check Before DNS Cutover
 
-- [ ] `roccandy.vercel.app` public site is working.
-- [ ] `roccandy.vercel.app` admin is working.
-- [ ] Live payments are working on `roccandy.vercel.app`.
-- [ ] Woo sync is working.
-- [ ] Supabase order inserts are working.
-- [ ] Admin and customer emails are working.
+- [x] `roccandy.vercel.app` public site is working.
+- [x] `roccandy.vercel.app` admin is working.
+- [x] Live payments are working on `roccandy.vercel.app`.
+- [x] Woo sync is working.
+- [x] Supabase order inserts are working.
+- [x] Admin and customer emails are working.
 - [ ] GA4 purchase tracking is working.
-- [ ] Redirect map is entered.
-- [ ] Vercel domains are prepared.
-- [ ] Cloudflare DNS plan is ready.
-- [ ] You are ready to perform the cutover immediately after the next section starts.
+- [x] Redirect map is entered.
+- [x] Vercel domains are prepared.
+- [x] Cloudflare DNS plan is ready.
+- [x] You are ready to perform the cutover immediately after the next section starts.
 
 If any of the above is false, stop here and fix it before cutover.
 
@@ -255,15 +256,15 @@ Do these in order once you are ready to switch.
 
 ### Host / Auth Switch
 
-- [ ] In Vercel `Production`, set `NEXTAUTH_URL=https://roccandy.com.au`.
-- [ ] Redeploy `Production` immediately after changing `NEXTAUTH_URL`.
+- [x] In Vercel `Production`, set `NEXTAUTH_URL=https://roccandy.com.au`.
+- [x] Redeploy `Production` immediately after changing `NEXTAUTH_URL`.
 
 ### DNS Switch
 
-- [ ] Update Cloudflare DNS so `@` points to Vercel.
-- [ ] Update Cloudflare DNS so `www` points to Vercel.
-- [ ] Confirm `www` redirects to `roccandy.com.au`.
-- [ ] Keep `woo.roccandy.com.au` unchanged if Woo stays on its current host.
+- [x] Update Cloudflare DNS so `@` points to Vercel.
+- [x] Update Cloudflare DNS so `www` points to Vercel.
+- [x] Confirm `www` redirects to `roccandy.com.au`.
+- [x] Keep `woo.roccandy.com.au` unchanged if Woo stays on its current host.
 
 ### GitHub Actions
 
@@ -271,21 +272,21 @@ Do these in order once you are ready to switch.
 
 ### Woo / WordPress
 
-- [ ] Change the Woo webhook delivery URL to `https://roccandy.com.au/api/woo/webhook`.
-- [ ] Update the Woo return/success URL from `https://roccandy.vercel.app/checkout/success` to `https://roccandy.com.au/checkout/success`.
-- [ ] Update [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php) to the live domain.
-- [ ] Rebuild or replace:
+- [x] Change the Woo webhook delivery URL to `https://roccandy.com.au/api/woo/webhook`.
+- [x] Update the Woo return/success URL from `https://roccandy.vercel.app/checkout/success` to `https://roccandy.com.au/checkout/success`.
+- [x] Update [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php) to the live domain.
+- [x] Rebuild or replace:
   - [roccandy-woo-redirect.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect.zip)
   - [roccandy-woo-redirect-clean.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect-clean.zip)
-- [ ] Re-upload or update the installed WordPress plugin if needed.
+- [x] Re-upload or update the installed WordPress plugin if needed.
 
 ### Square Apple Pay
 
-- [ ] Verify Apple Pay against `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association`.
+- [ ] Verify Apple Pay against `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association` if Apple Pay is re-enabled.
 
 ### Search Console
 
-- [ ] Submit `https://roccandy.com.au/sitemap.xml`.
+- [x] Submit `https://roccandy.com.au/sitemap.xml`.
 - [ ] Use URL inspection on the homepage and key landing/product pages.
 
 ### Merchant Center
@@ -293,11 +294,12 @@ Do these in order once you are ready to switch.
 - [ ] Switch the website/product URLs to `https://roccandy.com.au`.
 - [ ] Refresh or fetch the feed / crawl.
 - [ ] Confirm website claim / verification is tied to the real domain.
+- [ ] Damien to work on Merchant Center account and product feed on Tuesday, May 5, 2026.
 
 ### Supabase Auth
 
-- [ ] If used, set Supabase Auth Site URL to `https://roccandy.com.au`.
-- [ ] If used, add Supabase Auth Redirect URLs for `https://roccandy.com.au/**`.
+- [x] If used, set Supabase Auth Site URL to `https://roccandy.com.au` or confirm Supabase Auth is not used.
+- [x] If used, add Supabase Auth Redirect URLs for `https://roccandy.com.au/**` or confirm Supabase Auth is not used.
 
 ### External Links Still Using `vercel.app`
 
@@ -307,13 +309,13 @@ Do these in order once you are ready to switch.
 
 ## Phase 12: Immediate Post-Cutover Smoke Test
 
-- [ ] Homepage loads on `https://roccandy.com.au`.
+- [x] Homepage loads on `https://roccandy.com.au`.
 - [ ] Admin login works on `https://roccandy.com.au`.
 - [ ] Admin logout works on `https://roccandy.com.au`.
-- [ ] Core landing pages load.
-- [ ] Key pre-made product pages load.
-- [ ] Old high-value URLs redirect correctly.
-- [ ] Checkout loads.
+- [x] Core landing pages load.
+- [x] Key pre-made product pages load.
+- [x] Old high-value URLs redirect correctly.
+- [x] Checkout loads.
 - [ ] Run one live payment on the live domain if operationally safe.
 - [ ] Confirm Woo order creation from the live domain.
 - [ ] Confirm Supabase order rows from the live domain.
@@ -325,21 +327,25 @@ Do these in order once you are ready to switch.
 
 ### SEO / Indexing
 
-- [ ] Confirm `https://roccandy.com.au/sitemap.xml` loads.
-- [ ] Confirm `https://roccandy.com.au/robots.txt` loads.
-- [ ] Confirm canonicals point to `roccandy.com.au`.
-- [ ] Confirm no important pages point canonicals at preview hosts.
-- [ ] Confirm Open Graph metadata is correct.
-- [ ] Confirm structured data is present on key pages.
-- [ ] Confirm preview deployments remain non-indexable.
+- [x] Confirm `https://roccandy.com.au/sitemap.xml` loads.
+- [x] Confirm `https://roccandy.com.au/robots.txt` loads.
+- [x] Confirm canonicals point to `roccandy.com.au`.
+- [x] Confirm no important pages point canonicals at preview hosts.
+- [x] Confirm Open Graph metadata is correct.
+- [x] Confirm structured data is present on key pages.
+- [x] Confirm preview deployments remain non-indexable.
+- [ ] Resolve or intentionally document the non-critical `/design` canonical warning between `/design` and `/design/wedding-candy`.
 
 ### Analytics / Ads / Merchant
 
-- [ ] Check GA4 Realtime.
+- [x] Check GA4 Realtime.
 - [ ] Check GA4 DebugView.
 - [ ] Check Google Ads conversion diagnostics.
 - [ ] Check Merchant Center diagnostics.
 - [ ] Check Search Console coverage and URL inspection.
+- [x] Confirm GTM / GA4 page-view tracking fires on the live domain.
+- [x] Enable Vercel Speed Insights and confirm live data is coming in.
+- [x] Enable Vercel Web Analytics and confirm the live site injects the analytics script.
 
 ### Operations
 
@@ -351,8 +357,8 @@ Do these in order once you are ready to switch.
 
 ### Performance
 
-- [ ] Re-run Lighthouse / CWV checks on `roccandy.com.au`.
-- [ ] Use the live production domain as the benchmark, not `roccandy.vercel.app`.
+- [x] Re-run Lighthouse / CWV checks on `roccandy.com.au`.
+- [x] Use the live production domain as the benchmark, not `roccandy.vercel.app`.
 
 ## Deferred / Not Required For Launch
 
@@ -366,12 +372,12 @@ Do these in order once you are ready to switch.
 
 ## Launch Complete When All Of These Are True
 
-- [ ] `roccandy.vercel.app` worked all the way up until cutover.
-- [ ] `roccandy.com.au` is now the live public domain.
+- [x] `roccandy.vercel.app` worked all the way up until cutover.
+- [x] `roccandy.com.au` is now the live public domain.
 - [ ] Admin works on the live domain.
 - [ ] Live payments work.
 - [ ] Woo and Supabase both receive orders.
 - [ ] Admin and customer emails send.
 - [ ] GA4 purchase tracking works.
-- [ ] Important old URLs redirect correctly.
+- [x] Important old URLs redirect correctly.
 - [ ] Search Console and Merchant are tied to the real domain, not `vercel.app`.

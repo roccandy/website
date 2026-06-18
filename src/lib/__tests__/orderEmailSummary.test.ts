@@ -25,6 +25,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     vi.clearAllMocks();
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_URL;
+    delete process.env.VERCEL_URL;
     delete process.env.NEXT_PUBLIC_SITE_URL;
     delete process.env.SITE_URL;
 
@@ -95,5 +96,93 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
       "data:image/png;base64,BBBB",
     ]);
     expect(summary.customDetails?.orderNumber).toBe("0008-a");
+  });
+
+  it("builds admin fallback candy previews with branded and wedding display inputs", async () => {
+    process.env.SITE_URL = "https://roccandy.test";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [
+        {
+          order_number: "0010",
+          title: "Team logo",
+          quantity: 50,
+          packaging_option_id: "pack-1",
+          total_weight_kg: 1,
+          total_price: 100,
+          category_id: "branded",
+          design_type: "branded",
+          logo_url: "https://cdn.test/logo.png",
+          jacket_type: "two_colour_pinstripe",
+          jacket_color_one: "#ff0000",
+          jacket_color_two: "#ffffff",
+        },
+        {
+          order_number: "0011",
+          title: "Wedding",
+          quantity: 10,
+          packaging_option_id: "pack-2",
+          total_weight_kg: 1,
+          total_price: 80,
+          category_id: "weddings-initials",
+          design_type: "weddings-initials",
+          design_text: "A + B",
+          heart_color: "#ff0000",
+        },
+      ],
+      orderNumber: "0010",
+      requestedDate: "2026-05-20",
+      billing: {},
+      pickup: true,
+      paymentMethod: "Square invoice",
+      paymentAmount: 180,
+    });
+
+    const [brandedPreview, weddingPreview] = summary.customDetailsList.map((detail) => new URL(detail.imageUrl ?? ""));
+
+    expect(brandedPreview.pathname).toBe("/api/preview/candy-image");
+    expect(brandedPreview.searchParams.get("logoUrl")).toBe("https://cdn.test/logo.png");
+    expect(brandedPreview.searchParams.get("mode")).toBe("two_colour");
+    expect(brandedPreview.searchParams.get("showPinstripe")).toBe("1");
+    expect(weddingPreview.searchParams.get("showHeart")).toBe("1");
+    expect(weddingPreview.searchParams.get("isInitials")).toBe("1");
+    expect(weddingPreview.searchParams.get("lineOne")).toBe("A");
+    expect(weddingPreview.searchParams.get("lineTwo")).toBe("B");
+  });
+
+  it("does not prefer shell-only captured SVG previews for branded logo orders", async () => {
+    process.env.SITE_URL = "https://roccandy.test";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [
+        {
+          order_number: "0012",
+          title: "Team logo",
+          quantity: 50,
+          packaging_option_id: "pack-1",
+          total_weight_kg: 1,
+          total_price: 100,
+          category_id: "branded",
+          design_type: "branded",
+          logo_url: "https://cdn.test/logo.png",
+          jacket_color_one: "#ff0000",
+        },
+      ],
+      orderNumber: "0012",
+      requestedDate: "2026-05-20",
+      billing: {},
+      pickup: true,
+      paymentMethod: "Credit Card",
+      paymentAmount: 100,
+      customPreviews: [{ orderNumber: "0012", previewSvg: "<svg viewBox=\"0 0 10 10\"></svg>" }],
+    });
+
+    const brandedPreview = new URL(summary.customDetails?.imageUrl ?? "");
+
+    expect(brandedPreview.pathname).toBe("/api/preview/candy-image");
+    expect(brandedPreview.searchParams.get("logoUrl")).toBe("https://cdn.test/logo.png");
+    expect(summary.customDetails?.imageDataUrl).toBeNull();
   });
 });

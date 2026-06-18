@@ -6,6 +6,9 @@ export const runtime = "edge";
 const DEFAULT_COLOR = "#b7b7b7";
 const DEFAULT_TEXT = "#5f5f5f";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+const SHORT_CUSTOM_TEXT_MAX_LENGTH = 6;
+const LONG_CUSTOM_TEXT_MAX_LENGTH = 14;
+const LONG_CUSTOM_TEXT_MAX_WORD_LENGTH = 10;
 
 function normalizeHex(value: string | null, fallback: string) {
   if (!value) return fallback;
@@ -29,6 +32,27 @@ function splitWeddingNames(raw: string) {
   return { lineOne: text, lineTwo: "" };
 }
 
+function sanitizePreviewText(value: string, variant: string) {
+  const upper = value.trim().toUpperCase();
+  if (variant === "short") return upper.slice(0, SHORT_CUSTOM_TEXT_MAX_LENGTH);
+  if (variant !== "long") return upper.slice(0, 18);
+
+  let letters = 0;
+  return upper
+    .replace(/\s+/g, " ")
+    .trimStart()
+    .split(" ")
+    .slice(0, 3)
+    .map((word) => word.slice(0, LONG_CUSTOM_TEXT_MAX_WORD_LENGTH))
+    .join(" ")
+    .replace(/[^\s]/g, (char) => {
+      if (letters >= LONG_CUSTOM_TEXT_MAX_LENGTH) return "";
+      letters += 1;
+      return char;
+    })
+    .trimEnd();
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
@@ -37,10 +61,13 @@ export async function GET(request: Request) {
   const colorTwo = normalizeHex(searchParams.get("colorTwo"), colorOne);
   const textColor = normalizeHex(searchParams.get("textColor"), DEFAULT_TEXT);
   const heartColor = normalizeHex(searchParams.get("heartColor"), textColor);
-  const rawDesignText = (searchParams.get("designText") ?? "").trim().slice(0, 18);
+  const customTextVariant = (searchParams.get("customTextVariant") ?? "").toLowerCase();
+  const rawDesignText = sanitizePreviewText(searchParams.get("designText") ?? "", customTextVariant);
   const rawLineOne = (searchParams.get("lineOne") ?? "").trim().slice(0, 12);
   const rawLineTwo = (searchParams.get("lineTwo") ?? "").trim().slice(0, 12);
   const showHeart = searchParams.get("showHeart") === "1";
+  const showPinstripe = searchParams.get("showPinstripe") === "1";
+  const isInitials = searchParams.get("isInitials") === "1";
   const logoUrl = (searchParams.get("logoUrl") ?? "").trim();
 
   const weddingSplit = !rawLineOne && !rawLineTwo ? splitWeddingNames(rawDesignText) : { lineOne: rawLineOne, lineTwo: rawLineTwo };
@@ -133,68 +160,96 @@ export async function GET(request: Request) {
               height: 168,
               style: { borderRadius: "16px", objectFit: "contain" },
             })
-          : isWedding
-            ? [
-                lineOne
-                  ? createElement(
-                      "div",
-                      {
-                        style: {
-                          color: textColor,
-                          fontSize: "30px",
-                          fontWeight: 700,
-                          lineHeight: 1.05,
-                        },
-                      },
-                      lineOne
-                    )
-                  : null,
-                showHeart
-                  ? createElement(
-                      "div",
-                      {
-                        style: {
-                          color: heartColor,
-                          fontSize: "34px",
-                          fontWeight: 700,
-                          lineHeight: 1,
-                        },
-                      },
-                      "♥"
-                    )
-                  : null,
-                lineTwo
-                  ? createElement(
-                      "div",
-                      {
-                        style: {
-                          color: textColor,
-                          fontSize: "30px",
-                          fontWeight: 700,
-                          lineHeight: 1.05,
-                        },
-                      },
-                      lineTwo
-                    )
-                  : null,
-              ]
-            : createElement(
+          : isWedding && isInitials
+            ? createElement(
                 "div",
                 {
                   style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "14px",
                     color: textColor,
-                    fontSize: singleTextSize,
                     fontWeight: 700,
-                    letterSpacing: "0.02em",
-                    lineHeight: 1.05,
-                    maxWidth: "218px",
-                    textAlign: "center",
-                    whiteSpace: "nowrap",
+                    lineHeight: 1,
                   },
                 },
-                designText || (showHeart ? "♥" : "")
+                createElement("span", { style: { fontSize: "42px" } }, lineOne),
+                showHeart ? createElement("span", { style: { color: heartColor, fontSize: "34px" } }, "♥") : null,
+                createElement("span", { style: { fontSize: "42px" } }, lineTwo)
               )
-      )
+            : isWedding
+              ? [
+                  lineOne
+                    ? createElement(
+                        "div",
+                        {
+                          style: {
+                            color: textColor,
+                            fontSize: "30px",
+                            fontWeight: 700,
+                            lineHeight: 1.05,
+                          },
+                        },
+                        lineOne
+                      )
+                    : null,
+                  showHeart
+                    ? createElement(
+                        "div",
+                        {
+                          style: {
+                            color: heartColor,
+                            fontSize: "34px",
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          },
+                        },
+                        "♥"
+                      )
+                    : null,
+                  lineTwo
+                    ? createElement(
+                        "div",
+                        {
+                          style: {
+                            color: textColor,
+                            fontSize: "30px",
+                            fontWeight: 700,
+                            lineHeight: 1.05,
+                          },
+                        },
+                        lineTwo
+                      )
+                    : null,
+                ]
+              : createElement(
+                  "div",
+                  {
+                    style: {
+                      color: textColor,
+                      fontSize: singleTextSize,
+                      fontWeight: 700,
+                      letterSpacing: "0.02em",
+                      lineHeight: 1.05,
+                      maxWidth: "218px",
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                    },
+                  },
+                  designText || (showHeart ? "♥" : "")
+                )
+      ),
+      showPinstripe && mode !== "pinstripe"
+        ? createElement("div", {
+            style: {
+              position: "absolute",
+              inset: "14px",
+              borderRadius: "999px",
+              border: "14px dotted rgba(255,255,255,0.9)",
+            },
+          })
+        : null
     )
   );
 

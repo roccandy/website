@@ -9,7 +9,81 @@ export const ORDER_TYPES: { id: OrderTypeId; label: string }[] = [
 ];
 
 export const SHORT_CUSTOM_TEXT_MAX_LENGTH = 6;
-export const LONG_CUSTOM_TEXT_MAX_LENGTH = 15;
+export const LONG_CUSTOM_TEXT_MAX_LENGTH = 14;
+export const LONG_CUSTOM_TEXT_MAX_SPACES = 2;
+export const LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH = 10;
+export type CustomTextVariant = "short" | "long";
+
+export function countCustomTextLetters(value: string) {
+  return value.replace(/\s/g, "").length;
+}
+
+export function sanitizeCustomTextInput(value: string, variant: CustomTextVariant) {
+  const upper = (value || "").toUpperCase();
+  if (variant === "short") return upper.slice(0, SHORT_CUSTOM_TEXT_MAX_LENGTH);
+
+  const normalized = upper.replace(/\s+/g, " ").trimStart();
+  const spaceCount = (normalized.match(/ /g) ?? []).length;
+  const enforceThreeWordCap = spaceCount >= LONG_CUSTOM_TEXT_MAX_SPACES;
+  let letters = 0;
+  let spaces = 0;
+  let currentWordLetters = 0;
+  let next = "";
+
+  for (const char of normalized) {
+    if (char === " ") {
+      if (spaces >= LONG_CUSTOM_TEXT_MAX_SPACES || next.endsWith(" ")) continue;
+      spaces += 1;
+      currentWordLetters = 0;
+      next += char;
+      continue;
+    }
+    if (letters >= LONG_CUSTOM_TEXT_MAX_LENGTH) continue;
+    if (currentWordLetters >= LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH) continue;
+    if (enforceThreeWordCap && currentWordLetters >= SHORT_CUSTOM_TEXT_MAX_LENGTH) continue;
+    letters += 1;
+    currentWordLetters += 1;
+    next += char;
+  }
+
+  return next;
+}
+
+export function hasLongCustomTextSingleWordLimitIssue(value: string, variant: CustomTextVariant) {
+  if (variant !== "long") return false;
+  const normalized = (value || "").toUpperCase().replace(/\s+/g, " ").trimStart();
+  return normalized
+    .split(" ")
+    .filter(Boolean)
+    .some((word) => word.length > LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH);
+}
+
+export function hasLongCustomTextWordLimitIssue(value: string, variant: CustomTextVariant) {
+  if (variant !== "long") return false;
+  const normalized = (value || "").toUpperCase().replace(/\s+/g, " ").trimStart();
+  const spaceCount = (normalized.match(/ /g) ?? []).length;
+  if (spaceCount < LONG_CUSTOM_TEXT_MAX_SPACES) return false;
+  return normalized
+    .split(" ")
+    .filter(Boolean)
+    .some((word) => word.length > SHORT_CUSTOM_TEXT_MAX_LENGTH);
+}
+
+export function isCustomTextValid(value: string, variant: CustomTextVariant) {
+  const text = value.trim();
+  if (!text) return false;
+  if (variant === "short") return text.length <= SHORT_CUSTOM_TEXT_MAX_LENGTH;
+
+  const letters = countCustomTextLetters(text);
+  const spaces = (text.match(/\s/g) ?? []).length;
+  if (letters > LONG_CUSTOM_TEXT_MAX_LENGTH || spaces > LONG_CUSTOM_TEXT_MAX_SPACES) return false;
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length > 3) return false;
+  if (words.some((word) => word.length > LONG_CUSTOM_TEXT_MAX_SINGLE_WORD_LENGTH)) return false;
+  if (words.length === 3 && words.some((word) => word.length > SHORT_CUSTOM_TEXT_MAX_LENGTH)) return false;
+  return true;
+}
 
 export const ORDER_SUBTYPES: Record<OrderTypeId, { id: string; label: string }[]> = {
   weddings: [

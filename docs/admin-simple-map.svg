@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
+  <title id="title">Roc Candy admin simple infrastructure map</title>
+  <desc id="desc">A simple visual map showing customers and admins reaching Cloudflare, Vercel, the Next.js website and admin backend, Supabase, WooCommerce, payments, email, Google tools, and GitHub Actions.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.10" />
+    </filter>
+    <style>
+      .title { font: 700 30px Arial, Helvetica, sans-serif; fill: #111827; }
+      .subtitle { font: 400 15px Arial, Helvetica, sans-serif; fill: #475569; }
+      .box-title { font: 700 18px Arial, Helvetica, sans-serif; fill: #111827; }
+      .box-text { font: 400 13px Arial, Helvetica, sans-serif; fill: #475569; }
+      .small { font: 400 12px Arial, Helvetica, sans-serif; fill: #64748b; }
+      .label { font: 700 12px Arial, Helvetica, sans-serif; fill: #334155; }
+      .line { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .soft-line { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrow); stroke-dasharray: 7 6; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="820" fill="#f8fafc" />
+
+  <text x="600" y="48" text-anchor="middle" class="title">Roc Candy Admin Simple Map</text>
+  <text x="600" y="76" text-anchor="middle" class="subtitle">One Vercel app runs the public website, admin backend, and API routes. Supabase is the main source of truth.</text>
+
+  <!-- Top entry points -->
+  <rect x="80" y="115" width="220" height="86" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="190" y="145" text-anchor="middle" class="box-title">Customers</text>
+  <text x="190" y="169" text-anchor="middle" class="box-text">Browse, design, checkout</text>
+
+  <rect x="350" y="115" width="220" height="86" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="460" y="145" text-anchor="middle" class="box-title">Admin Users</text>
+  <text x="460" y="169" text-anchor="middle" class="box-text">Orders, products, content</text>
+
+  <rect x="800" y="115" width="260" height="86" rx="14" fill="#fff7ed" stroke="#fdba74" filter="url(#shadow)" />
+  <text x="930" y="145" text-anchor="middle" class="box-title">Google Ads / Search</text>
+  <text x="930" y="169" text-anchor="middle" class="box-text">Sends traffic to the site</text>
+
+  <!-- Cloudflare and Vercel -->
+  <rect x="245" y="255" width="300" height="86" rx="14" fill="#eff6ff" stroke="#93c5fd" filter="url(#shadow)" />
+  <text x="395" y="286" text-anchor="middle" class="box-title">Cloudflare DNS</text>
+  <text x="395" y="310" text-anchor="middle" class="box-text">roccandy.com.au and www</text>
+
+  <rect x="245" y="395" width="300" height="96" rx="14" fill="#f0fdf4" stroke="#86efac" filter="url(#shadow)" />
+  <text x="395" y="428" text-anchor="middle" class="box-title">Vercel</text>
+  <text x="395" y="452" text-anchor="middle" class="box-text">Hosts Next.js app</text>
+  <text x="395" y="474" text-anchor="middle" class="box-text">Pages, admin, APIs, previews</text>
+
+  <!-- Next.js app inner boxes -->
+  <rect x="110" y="565" width="250" height="110" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="235" y="598" text-anchor="middle" class="box-title">Public Website</text>
+  <text x="235" y="622" text-anchor="middle" class="box-text">Home, design, products,</text>
+  <text x="235" y="644" text-anchor="middle" class="box-text">checkout, blog, FAQs</text>
+
+  <rect x="420" y="565" width="250" height="110" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="545" y="598" text-anchor="middle" class="box-title">Admin Backend</text>
+  <text x="545" y="622" text-anchor="middle" class="box-text">Orders, schedule, pricing,</text>
+  <text x="545" y="644" text-anchor="middle" class="box-text">content, SEO, CRM</text>
+
+  <rect x="730" y="565" width="250" height="110" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="855" y="598" text-anchor="middle" class="box-title">API Routes</text>
+  <text x="855" y="622" text-anchor="middle" class="box-text">Payments, Woo webhooks,</text>
+  <text x="855" y="644" text-anchor="middle" class="box-text">quote, orders, keepalive</text>
+
+  <!-- Supabase -->
+  <rect x="380" y="720" width="440" height="70" rx="14" fill="#ecfdf5" stroke="#34d399" filter="url(#shadow)" />
+  <text x="600" y="748" text-anchor="middle" class="box-title">Supabase Postgres + Storage</text>
+  <text x="600" y="772" text-anchor="middle" class="box-text">Main data source: orders, products, pricing, content, redirects, admin users, images</text>
+
+  <!-- Side services -->
+  <rect x="820" y="255" width="250" height="86" rx="14" fill="#faf5ff" stroke="#c084fc" filter="url(#shadow)" />
+  <text x="945" y="286" text-anchor="middle" class="box-title">GTM / GA4</text>
+  <text x="945" y="310" text-anchor="middle" class="box-text">Tracks views, cart, checkout,</text>
+  <text x="945" y="328" text-anchor="middle" class="box-text">purchase conversions</text>
+
+  <rect x="820" y="395" width="250" height="96" rx="14" fill="#fef2f2" stroke="#fca5a5" filter="url(#shadow)" />
+  <text x="945" y="428" text-anchor="middle" class="box-title">Square / PayPal</text>
+  <text x="945" y="452" text-anchor="middle" class="box-text">Process payments</text>
+  <text x="945" y="474" text-anchor="middle" class="box-text">and refunds</text>
+
+  <rect x="35" y="395" width="170" height="96" rx="14" fill="#fefce8" stroke="#fde047" filter="url(#shadow)" />
+  <text x="120" y="428" text-anchor="middle" class="box-title">WooCommerce</text>
+  <text x="120" y="452" text-anchor="middle" class="box-text">Synced products</text>
+  <text x="120" y="474" text-anchor="middle" class="box-text">and mirrored orders</text>
+
+  <rect x="1010" y="565" width="150" height="110" rx="14" fill="#f1f5f9" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="1085" y="598" text-anchor="middle" class="box-title">SMTP Email</text>
+  <text x="1085" y="622" text-anchor="middle" class="box-text">Order alerts,</text>
+  <text x="1085" y="644" text-anchor="middle" class="box-text">confirmations,</text>
+  <text x="1085" y="666" text-anchor="middle" class="box-text">refund emails</text>
+
+  <rect x="25" y="565" width="60" height="110" rx="14" fill="#f1f5f9" stroke="#cbd5e1" filter="url(#shadow)" />
+  <text x="55" y="607" text-anchor="middle" class="label">GitHub</text>
+  <text x="55" y="628" text-anchor="middle" class="small">daily</text>
+  <text x="55" y="646" text-anchor="middle" class="small">ping</text>
+
+  <!-- Arrows -->
+  <path class="line" d="M 190 201 L 330 255" />
+  <path class="line" d="M 460 201 L 430 255" />
+  <path class="line" d="M 930 201 L 520 275" />
+  <path class="line" d="M 395 341 L 395 395" />
+  <path class="line" d="M 395 491 L 235 565" />
+  <path class="line" d="M 395 491 L 545 565" />
+  <path class="line" d="M 395 491 L 855 565" />
+
+  <path class="line" d="M 235 675 L 520 720" />
+  <path class="line" d="M 545 675 L 585 720" />
+  <path class="line" d="M 855 675 L 710 720" />
+
+  <path class="soft-line" d="M 235 595 C 520 520, 735 520, 945 341" />
+  <path class="line" d="M 855 565 C 855 505, 885 490, 910 491" />
+  <path class="line" d="M 855 565 C 1010 520, 1060 520, 1085 565" />
+  <path class="line" d="M 730 610 C 520 510, 260 490, 205 443" />
+  <path class="soft-line" d="M 85 620 L 110 620" />
+
+  <!-- Flow labels -->
+  <text x="710" y="517" text-anchor="middle" class="label">checkout + webhook APIs</text>
+  <text x="990" y="525" text-anchor="middle" class="label">emails</text>
+  <text x="338" y="535" text-anchor="middle" class="label">product/order sync</text>
+  <text x="712" y="372" text-anchor="middle" class="label">tracking events</text>
+
+  <!-- Footer note -->
+  <text x="600" y="808" text-anchor="middle" class="small">Simple mental model: Cloudflare points to Vercel. Vercel runs the site/admin/APIs. Supabase stores the data. Other services connect around it.</text>
+</svg>

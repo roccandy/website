@@ -3,11 +3,18 @@ import { createWooOrder, updateWooOrder } from "@/lib/woo";
 import { toPublicCheckoutError } from "@/lib/publicErrorMessages";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildWooOrderContext } from "@/lib/checkoutOrder";
+import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckoutOrderPayload;
+    if (isCheckoutTestPromoCode(body.promoCode)) {
+      return NextResponse.json(
+        { error: toPublicCheckoutError("Test checkout codes cannot use Woo checkout.") },
+        { status: 400 },
+      );
+    }
     const { billing, dueDate, pickup, paymentPreference, lineItems, orderPayloads } =
       await buildWooOrderContext(body);
 

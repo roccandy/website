@@ -24,6 +24,7 @@
 .DS_Store
 *.pem
 /archive/
+/.rollback/
 
 # debug
 npm-debug.log*

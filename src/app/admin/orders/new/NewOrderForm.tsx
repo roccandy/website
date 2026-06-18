@@ -22,7 +22,12 @@ import type {
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
-import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
+import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
+import {
+  MAX_ADMIN_BATCH_COUNT,
+  suggestedAdminBatchWeights,
+  type AdminDiscountType,
+} from "@/lib/adminLargeOrders";
 import { upsertOrder } from "../actions";
 import { formatFullDateLabel } from "../productionScheduleShared";
 import { paletteSections } from "@/app/admin/settings/palette";
@@ -48,6 +53,16 @@ const JACKET_OPTIONS = [
   { value: "two_colour_pinstripe", label: "Two colour + Pin stripe" },
   { value: "rainbow", label: "Rainbow" },
 ];
+
+type AdminQuoteResponse = {
+  total: number;
+  totalWeightKg: number;
+  subtotalBeforeDiscount?: number;
+  discountAmount?: number;
+  batchWeightsKg?: number[];
+  items?: Array<{ label: string; amount: number }>;
+  error?: string;
+};
 
 type PaletteOption = {
   id: string;
@@ -229,8 +244,8 @@ function PalettePicker({
     }
   };
   return (
-    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-3 text-xs font-semibold text-zinc-700">
+    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-3">
+      <summary className="flex min-h-8 cursor-pointer list-none items-center gap-3 text-xs font-semibold text-zinc-700">
         <span className="uppercase tracking-[0.2em] text-zinc-500">{label}</span>
         <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
           <span>{selected?.label ?? "Custom"}</span>
@@ -260,7 +275,7 @@ function PalettePicker({
                     key={option.id}
                     type="button"
                     onClick={() => handleSelect(option.hex)}
-                    className={`palette-swatch h-8 w-full rounded-full border ${
+                    className={`palette-swatch h-10 w-full rounded-full border ${
                       isActive ? "ring-2 ring-zinc-900 ring-offset-1" : ""
                     }`}
                     style={
@@ -284,7 +299,7 @@ function PalettePicker({
           <button
             type="button"
             data-neutral-button
-            className="mt flex h-9 w-full items-center justify-center rounded-full px-3 text-[11px] font-semibold hover:text-zinc-800"
+            className="mt flex h-11 w-full items-center justify-center rounded-full px-3 text-[11px] font-semibold hover:text-zinc-800"
             onClick={onCustom}
           >
             Custom colour
@@ -328,6 +343,7 @@ export function NewOrderForm({
   const [categoryId, setCategoryId] = useState("");
   const [packagingOptionId, setPackagingOptionId] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [customLabelsOptIn, setCustomLabelsOptIn] = useState(false);
   const [labelsCount, setLabelsCount] = useState("");
   const [jarLidColor, setJarLidColor] = useState("");
   const [jacket, setJacket] = useState("");
@@ -338,7 +354,12 @@ export function NewOrderForm({
   const [weightValue, setWeightValue] = useState("");
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [isPricing, setIsPricing] = useState(false);
-  const [premadeSelections, setPremadeSelections] = useState<Array<{ id: string; quantity: string }>>([]);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [batchWeights, setBatchWeights] = useState<string[]>([]);
+  const [discountType, setDiscountType] = useState<AdminDiscountType>("none");
+  const [discountValue, setDiscountValue] = useState("");
+  const [priceOverride, setPriceOverride] = useState("");
+  const [quoteItems, setQuoteItems] = useState<Array<{ label: string; amount: number }>>([]);
   const [weddingLineOne, setWeddingLineOne] = useState("");
   const [weddingLineTwo, setWeddingLineTwo] = useState("");
   const [customText, setCustomText] = useState("");
@@ -385,6 +406,45 @@ export function NewOrderForm({
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
+  const packagingTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return filteredPackagingOptions
+      .map((option) => option.type.trim())
+      .filter((type) => {
+        if (!type || seen.has(type)) return false;
+        seen.add(type);
+        return true;
+      });
+  }, [filteredPackagingOptions]);
+  const selectedPackagingType = selectedPackagingOption?.type.trim() ?? "";
+  const packagingOptionsForSelectedType = useMemo(
+    () => filteredPackagingOptions.filter((option) => option.type.trim() === selectedPackagingType),
+    [filteredPackagingOptions, selectedPackagingType],
+  );
+  const quantityNumber = Number(quantity);
+  const customOrderTotalWeightKg = useMemo(() => {
+    if (!selectedPackagingOption || !Number.isFinite(quantityNumber) || quantityNumber <= 0) return 0;
+    return (Number(selectedPackagingOption.candy_weight_g) * quantityNumber) / 1000;
+  }, [quantityNumber, selectedPackagingOption]);
+  const suggestedBatchCount = useMemo(() => {
+    if (!customOrderTotalWeightKg) return 0;
+    return Math.ceil(customOrderTotalWeightKg / Number(settings.max_total_kg));
+  }, [customOrderTotalWeightKg, settings.max_total_kg]);
+  const isOverBatchLimit = suggestedBatchCount > MAX_ADMIN_BATCH_COUNT;
+  const allocatedBatchKg = useMemo(
+    () => batchWeights.reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0),
+    [batchWeights],
+  );
+  const remainingBatchKg = customOrderTotalWeightKg - allocatedBatchKg;
+  const batchAllocationValid =
+    customOrderTotalWeightKg > 0 &&
+    batchWeights.length > 0 &&
+    batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
+    Math.abs(remainingBatchKg) <= 0.02 &&
+    batchWeights.every((value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 && parsed <= Number(settings.max_total_kg) + 0.02;
+    });
   const isJarOption = useMemo(
     () => (selectedPackagingOption?.type ?? "").toLowerCase().includes("jar"),
     [selectedPackagingOption],
@@ -393,19 +453,6 @@ export function NewOrderForm({
     () => (selectedPackagingOption?.lid_colors ?? []).filter(Boolean),
     [selectedPackagingOption],
   );
-  const hasBulkSelection = useMemo(() => {
-    const parsedQuantity = Number(quantity);
-    return (
-      !!selectedPackagingOption &&
-      selectedPackagingOption.type.trim().toLowerCase() === "bulk" &&
-      Number.isFinite(parsedQuantity) &&
-      parsedQuantity > 0
-    );
-  }, [quantity, selectedPackagingOption]);
-  const packageTypeLabel = useMemo(() => {
-    const raw = selectedPackagingOption?.type?.trim().toLowerCase();
-    return raw || "package";
-  }, [selectedPackagingOption?.type]);
   const premadeOptions = useMemo(
     () => premadeCandies.filter((item) => item.is_active),
     [premadeCandies]
@@ -420,32 +467,16 @@ export function NewOrderForm({
     return "";
   }, [adminPremadeFlavor, adminPremadeMode, selectedAdminPremadeCandy]);
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
-  const premadeSubtotal = useMemo(
-    () =>
-      premadeSelections.reduce((sum, selection) => {
-        const premade = premadeOptions.find((item) => item.id === selection.id);
-        const quantityValue = Number(selection.quantity);
-        if (!premade || !Number.isFinite(quantityValue) || quantityValue <= 0) return sum;
-        const unitPrice = Number(premade.price);
-        return Number.isFinite(unitPrice) ? sum + unitPrice * quantityValue : sum;
-      }, 0),
-    [premadeOptions, premadeSelections],
-  );
   const customPriceNumber = Number(priceValue);
-  const combinedPriceNumber =
-    (Number.isFinite(customPriceNumber) ? customPriceNumber : 0) + premadeSubtotal;
+  const customWeightLabel = customOrderTotalWeightKg > 0 ? `${customOrderTotalWeightKg.toFixed(2)}kg` : "0.00kg";
   const formatMoney = (value: number | null | undefined) =>
     Number.isFinite(value ?? NaN) ? `$${Number(value).toFixed(2)}` : "$0.00";
-  const addPremadeSelection = () => {
-    setPremadeSelections((prev) => [...prev, { id: "", quantity: "1" }]);
+  const applyEqualBatchSplit = () => {
+    const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
+    setBatchWeights(weights.map((weight) => weight.toFixed(2)));
   };
-  const updatePremadeSelection = (index: number, patch: Partial<{ id: string; quantity: string }>) => {
-    setPremadeSelections((prev) =>
-      prev.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item))
-    );
-  };
-  const removePremadeSelection = (index: number) => {
-    setPremadeSelections((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  const updateBatchWeight = (index: number, value: string) => {
+    setBatchWeights((prev) => prev.map((item, itemIndex) => (itemIndex === index ? value : item)));
   };
   const isWedding = categoryId.startsWith("weddings");
   const isWeddingInitials = categoryId === "weddings-initials";
@@ -507,6 +538,24 @@ export function NewOrderForm({
       paid_at: null,
       payment_provider: null,
       payment_transaction_id: null,
+      admin_batch_weights_kg: null,
+      admin_pricing_subtotal: null,
+      admin_discount_type: null,
+      admin_discount_value: null,
+      admin_price_override: null,
+      admin_price_locked_at: null,
+      square_customer_id: null,
+      square_order_id: null,
+      square_invoice_id: null,
+      square_invoice_title: null,
+      square_invoice_version: null,
+      square_invoice_status: null,
+      square_invoice_url: null,
+      square_invoice_due_date: null,
+      square_invoice_created_at: null,
+      square_invoice_sent_at: null,
+      square_invoice_error: null,
+      customer_note: null,
       refunded_at: null,
       refund_reason: null,
       refunded_amount: null,
@@ -683,20 +732,46 @@ export function NewOrderForm({
       return;
     }
     setLabelsCount("");
+    setCustomLabelsOptIn(false);
     setIngredientLabelsCount("");
+    setIngredientLabelsOptIn(false);
   }, [packagingOptionId]);
 
   useEffect(() => {
-    if (!ingredientLabelsOptIn || !hasBulkSelection) {
+    if (!customLabelsOptIn) {
+      setLabelsCount("");
+    }
+  }, [customLabelsOptIn]);
+
+  useEffect(() => {
+    if (!ingredientLabelsOptIn) {
       setIngredientLabelsCount("");
     }
-  }, [hasBulkSelection, ingredientLabelsOptIn]);
+  }, [ingredientLabelsOptIn]);
 
   useEffect(() => {
     if (isAdminPremadeOrder) {
       setPriceValue("");
       setPricingError(null);
       setIsPricing(false);
+      setBatchWeights([]);
+      setQuoteItems([]);
+      return;
+    }
+  }, [isAdminPremadeOrder]);
+
+  useEffect(() => {
+    if (isAdminPremadeOrder) return;
+    if (!customOrderTotalWeightKg || isOverBatchLimit) {
+      setBatchWeights([]);
+      return;
+    }
+    const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
+    setBatchWeights(weights.map((weight) => weight.toFixed(2)));
+  }, [customOrderTotalWeightKg, isAdminPremadeOrder, isOverBatchLimit, settings.max_total_kg]);
+
+  useEffect(() => {
+    if (isAdminPremadeOrder) {
       return;
     }
     const qtyNumber = Number(quantity);
@@ -704,38 +779,48 @@ export function NewOrderForm({
       setPriceValue("");
       setWeightValue("");
       setPricingError(null);
+      setQuoteItems([]);
       return;
     }
 
     const labelsNumber = Number(labelsCount);
-    const resolvedLabels = Number.isFinite(labelsNumber) && labelsNumber > 0 ? labelsNumber : 0;
+    const resolvedLabels =
+      customLabelsOptIn && Number.isFinite(labelsNumber) && labelsNumber > 0
+        ? Math.min(labelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+        : 0;
     const ingredientLabelsNumber = Number(ingredientLabelsCount);
     const resolvedIngredientLabels =
       ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
         ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
         : 0;
-    const extras: { jacket: "rainbow" | "two_colour" | "pinstripe" }[] = [];
-    if (jacket === "rainbow") extras.push({ jacket: "rainbow" });
-    if (jacket === "two_colour") extras.push({ jacket: "two_colour" });
-    if (jacket === "pinstripe") extras.push({ jacket: "pinstripe" });
-    if (jacket === "two_colour_pinstripe") {
-      extras.push({ jacket: "two_colour" }, { jacket: "pinstripe" });
-    }
-
     let active = true;
     setIsPricing(true);
     setPricingError(null);
 
-    fetch("/api/quote", {
+    if (!batchAllocationValid) {
+      setPriceValue("");
+      setWeightValue(customOrderTotalWeightKg > 0 ? (customOrderTotalWeightKg * 1000).toFixed(0) : "");
+      setPricingError(isOverBatchLimit ? `This order would need more than ${MAX_ADMIN_BATCH_COUNT} batches.` : "Batch weights must equal the order weight.");
+      setQuoteItems([]);
+      setIsPricing(false);
+      return;
+    }
+
+    fetch("/api/admin/orders/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         categoryId,
-        packaging: [{ optionId: packagingOptionId, quantity: qtyNumber }],
+        packagingOptionId,
+        quantity: qtyNumber,
         labelsCount: resolvedLabels,
         ingredientLabelsCount: resolvedIngredientLabels,
         dueDate: dueDate || undefined,
-        extras: extras.length ? extras : undefined,
+        batchWeightsKg: batchWeights,
+        jacket,
+        discountType,
+        discountValue: discountValue ? Number(discountValue) : null,
+        priceOverride: priceOverride ? Number(priceOverride) : null,
       }),
     })
       .then(async (res) => {
@@ -743,7 +828,7 @@ export function NewOrderForm({
           const data = (await res.json()) as { error?: string };
           throw new Error(data.error || "Unable to calculate price");
         }
-        return res.json();
+        return res.json() as Promise<AdminQuoteResponse>;
       })
       .then((data) => {
         if (!active) return;
@@ -751,12 +836,14 @@ export function NewOrderForm({
         const totalWeightKg = Number(data.totalWeightKg);
         setPriceValue(Number.isFinite(total) ? total.toFixed(2) : "");
         setWeightValue(Number.isFinite(totalWeightKg) ? (totalWeightKg * 1000).toFixed(0) : "");
+        setQuoteItems(data.items ?? []);
       })
       .catch((error: Error) => {
         if (!active) return;
         setPriceValue("");
         setWeightValue("");
         setPricingError(error.message);
+        setQuoteItems([]);
       })
       .finally(() => {
         if (!active) return;
@@ -766,10 +853,26 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [categoryId, packagingOptionId, quantity, labelsCount, ingredientLabelsCount, ingredientLabelsOptIn, jacket, dueDate, isAdminPremadeOrder, hasBulkSelection, settings.labels_max_bulk]);
+  }, [batchAllocationValid, batchWeights, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, isOverBatchLimit, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
   return (
-    <form ref={formRef} action={upsertOrder} className="space-y-6">
+    <form
+      ref={formRef}
+      action={upsertOrder}
+      className="space-y-6"
+      onSubmit={() => setIsSubmittingOrder(true)}
+    >
+      {isSubmittingOrder ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
+            <p className="mt-4 text-lg font-semibold text-zinc-900">Creating invoice draft</p>
+            <p className="mt-2 text-sm text-zinc-600">
+              Please wait while the order is saved and Square prepares the draft invoice.
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="sticky top-20 z-20">
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -778,7 +881,7 @@ export function NewOrderForm({
                 {isAdminPremadeOrder ? "Premade stock batch" : "Order total"}
               </p>
               <p className="mt-1 text-3xl font-semibold">
-                {isAdminPremadeOrder ? "N/A" : formatMoney(combinedPriceNumber)}
+                {isAdminPremadeOrder ? "N/A" : formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}
               </p>
             </div>
             {isAdminPremadeOrder ? (
@@ -793,23 +896,27 @@ export function NewOrderForm({
                 </div>
               </div>
             ) : (
-              <div className="grid flex-1 gap-3 sm:grid-cols-3">
+              <div className="grid flex-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Custom candy</p>
                   <p className="mt-1 text-sm font-semibold">{formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Pre-made add-ons</p>
-                  <p className="mt-1 text-sm font-semibold">{formatMoney(premadeSubtotal)}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Status</p>
-                  <p className="mt-1 text-sm text-zinc-100">{isPricing ? "Calculating price..." : pricingError || "Price updates automatically."}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Total weight</p>
+                  <p className="mt-1 text-sm font-semibold text-zinc-100">{customWeightLabel}</p>
                 </div>
               </div>
             )}
           </div>
           <input type="hidden" name="total_price" value={isAdminPremadeOrder ? "" : priceValue} />
+          {!isAdminPremadeOrder
+            ? batchWeights.map((weight, index) => (
+                <input key={`batch-weight-${index}`} type="hidden" name="batch_weight_kg" value={weight} />
+              ))
+            : null}
+          <input type="hidden" name="admin_discount_type" value={isAdminPremadeOrder ? "none" : discountType} />
+          <input type="hidden" name="admin_discount_value" value={isAdminPremadeOrder ? "" : discountValue} />
+          <input type="hidden" name="admin_price_override" value={isAdminPremadeOrder ? "" : priceOverride} />
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
         </div>
       </div>
@@ -817,42 +924,44 @@ export function NewOrderForm({
       <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <h3 className="admin-card-title text-zinc-900">Order details</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Order type
-            <select
-              name="category_id"
-              required
-              className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-            >
-              <option value="" disabled>
-                Select order type
-              </option>
-              <option value={ADMIN_PREMADE_CATEGORY_ID}>{ADMIN_PREMADE_ORDER_LABEL}</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            {isAdminPremadeOrder ? "Total weight (kg)" : "Total weight (g)"}
-            <input
-              type="number"
-              name={isAdminPremadeOrder ? "total_weight_kg" : "order_weight_g"}
-              min={isAdminPremadeOrder ? 0.01 : 1}
-              step={isAdminPremadeOrder ? "0.01" : "1"}
-              required
-              readOnly={!isAdminPremadeOrder}
-              value={weightValue}
-              onChange={(event) => setWeightValue(event.target.value)}
-              className={`mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 ${
-                isAdminPremadeOrder ? "bg-white" : "bg-zinc-50"
-              }`}
-            />
-          </label>
+          <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+            <p>Order type</p>
+            <input type="hidden" name="category_id" value={categoryId} />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {categories.map((category) => {
+                const isActive = categoryId === category.id;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setCategoryId(category.id)}
+                    className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold normal-case tracking-normal transition ${
+                      isActive
+                        ? "border-zinc-900 bg-zinc-900 text-white"
+                        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {isAdminPremadeOrder ? (
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Total weight (kg)
+              <input
+                type="number"
+                name="total_weight_kg"
+                min={0.01}
+                step="0.01"
+                required
+                value={weightValue}
+                onChange={(event) => setWeightValue(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
+          ) : null}
           {isAdminPremadeOrder ? (
             <>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -898,7 +1007,7 @@ export function NewOrderForm({
                     required={adminPremadeMode === "flavor"}
                     disabled={adminPremadeMode !== "flavor"}
                     onChange={(event) => setAdminPremadeFlavor(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                    className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
                   >
                     <option value="">
                       {adminPremadeMode === "flavor" ? "Select flavor" : "Select order type first"}
@@ -936,26 +1045,77 @@ export function NewOrderForm({
                   placeholder="Order title"
                 />
               </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Packaging option
-                <select
-                  name="packaging_option_id"
-                  required
-                  disabled={!categoryId}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
-                  value={packagingOptionId}
-                  onChange={(event) => setPackagingOptionId(event.target.value)}
-                >
-                  <option value="" disabled>
-                    {categoryId ? "Select packaging option" : "Select order type first"}
-                  </option>
-                  {filteredPackagingOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.type} - {option.size}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            </>
+          )}
+          <input type="hidden" name="status" value="unassigned" />
+        </div>
+      </div>
+
+      {!isAdminPremadeOrder ? (
+        <div
+          className={`rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm ${
+            !categoryId ? "pointer-events-none opacity-50" : ""
+          }`}
+        >
+          <h3 className="admin-card-title text-zinc-900">Packaging</h3>
+          <input type="hidden" name="packaging_option_id" value={packagingOptionId} />
+          <input type="hidden" name="order_weight_g" value={weightValue} />
+          <div className="mt-4 space-y-5">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging type</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {packagingTypes.length > 0 ? (
+                  packagingTypes.map((type) => {
+                    const isActive = selectedPackagingType === type;
+                    const firstOption = filteredPackagingOptions.find((option) => option.type.trim() === type);
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setPackagingOptionId(firstOption?.id ?? "")}
+                        className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                          isActive
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-zinc-500">Select an order type first.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Packaging size</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {packagingOptionsForSelectedType.length > 0 ? (
+                    packagingOptionsForSelectedType.map((option) => {
+                      const isActive = packagingOptionId === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setPackagingOptionId(option.id)}
+                          className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                            isActive
+                              ? "border-zinc-900 bg-zinc-900 text-white"
+                              : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                          }`}
+                        >
+                          {option.size}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-zinc-500">Choose a packaging type.</p>
+                  )}
+                </div>
+              </div>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Quantity
                 <input
@@ -965,78 +1125,336 @@ export function NewOrderForm({
                   required
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
                 {selectedPackagingOption?.max_packages ? (
-                  <div className="mt-2 text-[11px] text-zinc-500">
-                    Max {selectedPackagingOption.max_packages}
+                  <div className="mt-2 text-[11px] normal-case tracking-normal text-zinc-500">
+                    Website max {selectedPackagingOption.max_packages}; admin can exceed.
                   </div>
                 ) : null}
               </label>
-              {isJarOption ? (
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Lid colour
-                  <select
-                    name="jar_lid_color"
-                    value={jarLidColor}
-                    required={availableLidColors.length > 0}
-                    disabled={availableLidColors.length === 0}
-                    onChange={(event) => setJarLidColor(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
-                  >
-                    <option value="">
-                      {availableLidColors.length ? "Select lid colour" : "No lid options"}
-                    </option>
-                    {availableLidColors.map((lid) => (
-                      <option key={lid} value={lid}>
+            </div>
+
+            {isJarOption ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Lid colour</p>
+                <input type="hidden" name="jar_lid_color" value={jarLidColor} />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {availableLidColors.length > 0 ? (
+                    availableLidColors.map((lid) => (
+                      <button
+                        key={lid}
+                        type="button"
+                        onClick={() => setJarLidColor(lid)}
+                        className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                          jarLidColor === lid
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                        }`}
+                      >
                         {lid}
-                      </option>
-                    ))}
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-zinc-500">No lid options.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <input type="hidden" name="jar_lid_color" value="" />
+            )}
+
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Labels</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <label className="flex items-start gap-3 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={customLabelsOptIn}
+                      onChange={(event) => setCustomLabelsOptIn(event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                    />
+                    <span>
+                      <span className="block font-semibold text-zinc-900">Custom labels</span>
+                    </span>
+                  </label>
+                  {customLabelsOptIn ? (
+                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Quantity
+                      <input
+                        type="number"
+                        name="labels_count"
+                        min={0}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        value={labelsCount}
+                        onChange={(event) => {
+                          if (!event.target.value.trim()) {
+                            setLabelsCount("");
+                            return;
+                          }
+                          const parsed = Number(event.target.value);
+                          setLabelsCount(
+                            Number.isFinite(parsed)
+                              ? String(
+                                  Math.min(
+                                    Math.max(0, Math.floor(parsed)),
+                                    settings.labels_max_bulk,
+                                    BULK_LABEL_COUNT_MAX,
+                                  )
+                                )
+                              : ""
+                          );
+                        }}
+                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <label className="flex items-start gap-3 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={ingredientLabelsOptIn}
+                      onChange={(event) => setIngredientLabelsOptIn(event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                    />
+                    <span>
+                      <span className="block font-semibold text-zinc-900">Ingredient labels</span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">{`${formatMoney(ingredientLabelPrice)} each.`}</span>
+                    </span>
+                  </label>
+                  {ingredientLabelsOptIn ? (
+                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Quantity
+                      <input
+                        type="number"
+                        min={0}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        value={ingredientLabelsCount}
+                        onChange={(event) => {
+                          if (!event.target.value.trim()) {
+                            setIngredientLabelsCount("");
+                            return;
+                          }
+                          const parsed = Number(event.target.value);
+                          const next = Number.isFinite(parsed)
+                            ? String(
+                                Math.min(
+                                  Math.max(0, Math.floor(parsed)),
+                                  settings.labels_max_bulk,
+                                  BULK_LABEL_COUNT_MAX,
+                                )
+                              )
+                            : "";
+                          setIngredientLabelsCount(next);
+                        }}
+                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="mt-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <label htmlFor="label-artwork-upload">Label artwork</label>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    id="label-artwork-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
+                    className="sr-only"
+                  />
+                  <label
+                    htmlFor="label-artwork-upload"
+                    className="inline-flex min-h-11 cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+                  >
+                    {labelFileName ? "Change file" : "Choose file"}
+                  </label>
+                  {labelImageUrl ? (
+                    labelImageUrl.startsWith("data:image/") ? (
+                      <Image
+                        src={labelImageUrl}
+                        alt="Label preview"
+                        width={44}
+                        height={44}
+                        className="h-11 w-11 rounded border border-zinc-200 object-cover"
+                        unoptimized
+                      />
+                    ) : labelImageUrl.startsWith("data:application/pdf") ? (
+                      <span className="inline-flex h-11 min-w-11 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
+                        PDF
+                      </span>
+                    ) : null
+                  ) : null}
+                  {labelFileName ? (
+                    <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
+                      {labelFileName}
+                    </span>
+                  ) : null}
+                  {labelImageUrl ? (
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
+                      Ready
+                    </span>
+                  ) : null}
+                </div>
+                {labelImageError ? (
+                  <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
+                ) : null}
+                {isOptimisingLabelImage ? (
+                  <div className="mt-2">
+                    <ImageOptimizationStatus
+                      summary={null}
+                      pendingLabel="Optimising artwork..."
+                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                    />
+                  </div>
+                ) : labelImageSummary ? (
+                  <div className="mt-2">
+                    <ImageOptimizationStatus
+                      summary={labelImageSummary}
+                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Production batches</p>
+                  <p className="mt-1 text-sm font-semibold text-zinc-900">
+                    {customOrderTotalWeightKg > 0
+                      ? `${customOrderTotalWeightKg.toFixed(2)}kg total / ${Number(settings.max_total_kg).toFixed(2)}kg max batch`
+                      : "Select packaging and quantity"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={applyEqualBatchSplit}
+                  disabled={!customOrderTotalWeightKg || isOverBatchLimit}
+                  className="min-h-11 rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+                >
+                  Equal split
+                </button>
+              </div>
+              {isOverBatchLimit ? (
+                <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  This order would need {suggestedBatchCount} batches. Maximum allowed is {MAX_ADMIN_BATCH_COUNT}.
+                </p>
+              ) : null}
+              {batchWeights.length > 0 ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {batchWeights.map((weight, index) => (
+                    <label key={`visible-batch-${index}`} className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                      Batch {index + 1} kg
+                      <input
+                        type="number"
+                        min={0.01}
+                        max={Number(settings.max_total_kg)}
+                        step="0.01"
+                        value={weight}
+                        onChange={(event) => updateBatchWeight(index, event.target.value)}
+                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+              {customOrderTotalWeightKg > 0 ? (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      batchAllocationValid
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    Allocated: {allocatedBatchKg.toFixed(2)}kg
+                  </div>
+                  <div
+                    className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      batchAllocationValid
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    {batchAllocationValid
+                      ? "Correct amount"
+                      : remainingBatchKg > 0
+                        ? `Add: ${Math.abs(remainingBatchKg).toFixed(2)}kg`
+                        : `Remove: ${Math.abs(remainingBatchKg).toFixed(2)}kg`}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-xl border border-zinc-200 bg-white p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pricing adjustments</p>
+              {isPricing || pricingError ? (
+                <p
+                  className={`mt-3 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                    pricingError
+                      ? "border-amber-200 bg-amber-50 text-amber-800"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-600"
+                  }`}
+                >
+                  {isPricing ? "Calculating price..." : pricingError}
+                </p>
+              ) : null}
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Discount
+                  <select
+                    value={discountType}
+                    onChange={(event) => setDiscountType(event.target.value as AdminDiscountType)}
+                    className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900"
+                  >
+                    <option value="none">None</option>
+                    <option value="percent">Percent</option>
+                    <option value="fixed">Fixed $</option>
                   </select>
                 </label>
-              ) : (
-                <input type="hidden" name="jar_lid_color" value="" />
-              )}
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Custom Labels count
-                <input
-                  type="number"
-                  name="labels_count"
-                  min={0}
-                  max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                  value={labelsCount}
-                  onChange={(event) => {
-                    const parsed = Number(event.target.value);
-                    setLabelsCount(
-                      Number.isFinite(parsed)
-                        ? String(
-                            Math.min(
-                              Math.max(0, Math.floor(parsed)),
-                              settings.labels_max_bulk,
-                              BULK_LABEL_COUNT_MAX,
-                            )
-                          )
-                        : ""
-                    );
-                  }}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Date required
-                <input
-                  type="date"
-                  name="due_date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-            </>
-          )}
-          <input type="hidden" name="status" value="unassigned" />
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Discount value
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={discountValue}
+                    disabled={discountType === "none"}
+                    onChange={(event) => setDiscountValue(event.target.value)}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                  />
+                </label>
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Override total
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={priceOverride}
+                    onChange={(event) => setPriceOverride(event.target.value)}
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+              </div>
+              {quoteItems.length > 0 ? (
+                <div className="mt-4 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2">
+                  {quoteItems.map((item) => (
+                    <div key={item.label} className="flex justify-between gap-3 rounded border border-zinc-100 bg-zinc-50 px-2 py-1">
+                      <span>{item.label}</span>
+                      <span className="font-semibold text-zinc-900">{formatMoney(item.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <input type="hidden" name="design_type" value={isAdminPremadeOrder ? "premade" : categoryId} />
       <input type="hidden" name="design_text" value={isAdminPremadeOrder ? adminPremadeSelectionLabel : designTextValue} />
@@ -1136,21 +1554,29 @@ export function NewOrderForm({
                   />
                 </label>
               )}
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                Jacket type
-                <select
-                  name="jacket"
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  value={jacket}
-                  onChange={(event) => setJacket(event.target.value)}
-                >
-                  {JACKET_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                <p>Jacket type</p>
+                <input type="hidden" name="jacket" value={jacket} />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {JACKET_OPTIONS.map((option) => {
+                    const isActive = jacket === option.value;
+                    return (
+                      <button
+                        key={option.value || "single"}
+                        type="button"
+                        onClick={() => setJacket(option.value)}
+                        className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold normal-case tracking-normal transition ${
+                          isActive
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               {jacket !== "rainbow" && (
                 <div className="md:col-span-2">
                   <PalettePicker
@@ -1201,7 +1627,7 @@ export function NewOrderForm({
                   name="flavor"
                   value={flavor}
                   onChange={(event) => setFlavor(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900"
                 >
                   <option value="">Select flavor</option>
                   {flavors.map((item) => (
@@ -1250,172 +1676,7 @@ export function NewOrderForm({
                   ) : null}
                 </div>
               )}
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 md:col-span-2">
-                <div className="space-y-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    <label htmlFor="label-artwork-upload">Label artwork</label>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <input
-                        id="label-artwork-upload"
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
-                        onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
-                        className="sr-only"
-                      />
-                      <label
-                        htmlFor="label-artwork-upload"
-                        className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
-                      >
-                        {labelFileName ? "Change file" : "Choose file"}
-                      </label>
-                      {labelImageUrl ? (
-                        labelImageUrl.startsWith("data:image/") ? (
-                          <Image
-                            src={labelImageUrl}
-                            alt="Label preview"
-                            width={40}
-                            height={40}
-                            className="h-10 w-10 rounded border border-zinc-200 object-cover"
-                            unoptimized
-                          />
-                        ) : labelImageUrl.startsWith("data:application/pdf") ? (
-                          <span className="inline-flex h-10 min-w-10 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
-                            PDF
-                          </span>
-                        ) : null
-                      ) : null}
-                      {labelFileName ? (
-                        <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
-                          {labelFileName}
-                        </span>
-                      ) : null}
-                      {labelImageUrl ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
-                          Ready
-                        </span>
-                      ) : null}
-                    </div>
-                    {labelImageError ? (
-                      <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
-                    ) : null}
-                    {isOptimisingLabelImage ? (
-                      <div className="mt-2">
-                        <ImageOptimizationStatus
-                          summary={null}
-                          pendingLabel="Optimising artwork..."
-                          helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                        />
-                      </div>
-                    ) : labelImageSummary ? (
-                      <div className="mt-2">
-                        <ImageOptimizationStatus
-                          summary={labelImageSummary}
-                          helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                  <label className="flex items-start gap-3 text-sm text-zinc-700">
-                    <input
-                      type="checkbox"
-                      checked={ingredientLabelsOptIn}
-                      onChange={(event) => setIngredientLabelsOptIn(event.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                    />
-                    <span className="space-y-0.5">
-                      <span className="block text-sm font-semibold text-zinc-900">Ingredient labels</span>
-                      <span className="block text-xs text-zinc-500">
-                        {`Add ingredient labels to each ${packageTypeLabel}. ${formatMoney(ingredientLabelPrice)} each.`}
-                      </span>
-                    </span>
-                  </label>
-                  {ingredientLabelsOptIn && hasBulkSelection ? (
-                    <label className="block text-xs text-zinc-600">
-                      Ingredient Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
-                      <input
-                        type="number"
-                        min={0}
-                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                        value={ingredientLabelsCount}
-                        onChange={(event) => {
-                          const parsed = Number(event.target.value);
-                          setIngredientLabelsCount(
-                            Number.isFinite(parsed)
-                              ? String(
-                                  Math.min(
-                                    Math.max(0, Math.floor(parsed)),
-                                    settings.labels_max_bulk,
-                                    BULK_LABEL_COUNT_MAX,
-                                  )
-                                )
-                              : ""
-                          );
-                        }}
-                        className="mt-1 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-              </div>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="admin-card-title text-zinc-900">Pre-made add-ons</h3>
-              </div>
-              <button
-                type="button"
-                onClick={addPremadeSelection}
-                disabled={premadeOptions.length === 0}
-                className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Add pre-made
-              </button>
-            </div>
-            {premadeOptions.length > 0 && premadeSelections.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {premadeSelections.map((selection, index) => (
-                  <div key={`premade-${index}`} className="grid gap-3 md:grid-cols-[1.6fr,0.6fr,auto] md:items-end">
-                    <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Pre-made candy
-                      <select
-                        name="premade_id"
-                        value={selection.id}
-                        onChange={(event) => updatePremadeSelection(index, { id: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                      >
-                        <option value="">Select pre-made candy</option>
-                        {premadeOptions.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {formatPremadeLabel(item)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Qty
-                      <input
-                        type="number"
-                        name="premade_quantity"
-                        min={1}
-                        value={selection.quantity}
-                        onChange={(event) => updatePremadeSelection(index, { quantity: event.target.value })}
-                        className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removePremadeSelection(index)}
-                      className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 hover:border-zinc-300"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -1448,6 +1709,16 @@ export function NewOrderForm({
                   </label>
                 </div>
               </div>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Date required
+                <input
+                  type="date"
+                  name="due_date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 First name
                 <input
@@ -1538,13 +1809,26 @@ export function NewOrderForm({
           )}
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="admin-card-title text-zinc-900">Notes</h3>
-            <textarea
-              name="notes"
-              className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-              rows={4}
-              placeholder="Internal notes for production."
-            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="admin-card-title text-zinc-900">Production Notes</span>
+                <textarea
+                  name="notes"
+                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  rows={5}
+                  placeholder="Internal notes for production."
+                />
+              </label>
+              <label className="block">
+                <span className="admin-card-title text-zinc-900">Customer Note</span>
+                <textarea
+                  name="customer_note"
+                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  rows={5}
+                  placeholder="Visible on the customer invoice."
+                />
+              </label>
+            </div>
           </div>
         </>
       ) : null}
@@ -1798,9 +2082,10 @@ export function NewOrderForm({
           type="submit"
           name="submit_intent"
           value="save"
-          className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchAllocationValid || isOverBatchLimit || Boolean(pricingError)))}
+          className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
         >
-          {isAdminPremadeOrder ? "Add to Orders" : "Save order"}
+          {isSubmittingOrder ? "Creating invoice..." : isAdminPremadeOrder ? "Add to Orders" : "Create Invoice"}
         </button>
         <button
           ref={scheduleSubmitButtonRef}

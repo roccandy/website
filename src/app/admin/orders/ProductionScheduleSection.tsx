@@ -10,7 +10,8 @@ import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildAssignmentBySlotKey,
   buildSlotIdByKey,
-  canCompleteOrderForSlotDate,
+  batchWeightsForOrder,
+  canCompleteOrderForSlotDates,
   dateKey,
   formatDayMonthLabel,
   formatDate,
@@ -19,9 +20,10 @@ import {
   formatOrderDescription,
   formatWeekdayDayMonthLabel,
   formatWeekdayShortLabel,
-  getScheduleStatus,
+  getMultiAssignmentScheduleStatus,
   getPremadeSiblingMeta,
   isScheduleDateBlocked,
+  nextAssignableKgForOrder,
   productionCompletionActionLabel,
   statusCard,
   weightLabel,
@@ -51,7 +53,10 @@ export default function ProductionScheduleSection({
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "week">("calendar");
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
-  const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
+  const [assignmentModalTarget, setAssignmentModalTarget] = useState<{
+    orderId: string;
+    assignmentId?: string;
+  } | null>(null);
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
   const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
@@ -77,6 +82,26 @@ export default function ProductionScheduleSection({
         assignment,
         slot: slotMap.get(assignment.slot_id) ?? null,
       });
+    });
+    return map;
+  }, [assignments, slotMap]);
+  const assignmentsByOrderId = useMemo(() => {
+    const map = new Map<string, OrderSlot[]>();
+    assignments.forEach((assignment) => {
+      const list = map.get(assignment.order_id) ?? [];
+      list.push(assignment);
+      map.set(assignment.order_id, list);
+    });
+    return map;
+  }, [assignments]);
+  const assignedSlotDatesByOrderId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    assignments.forEach((assignment) => {
+      const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
+      if (!slotDate) return;
+      const list = map.get(assignment.order_id) ?? [];
+      list.push(slotDate);
+      map.set(assignment.order_id, list);
     });
     return map;
   }, [assignments, slotMap]);
@@ -115,12 +140,44 @@ export default function ProductionScheduleSection({
 
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
   const assignmentModalOrder = useMemo(
-    () => orders.find((order) => order.id === assignmentModalOrderId) ?? null,
-    [assignmentModalOrderId, orders],
+    () => orders.find((order) => order.id === assignmentModalTarget?.orderId) ?? null,
+    [assignmentModalTarget?.orderId, orders],
   );
   const assignmentModalAssignment = assignmentModalOrder
-    ? assignmentByOrderId.get(assignmentModalOrder.id) ?? null
+    ? assignmentModalTarget?.assignmentId
+      ? (() => {
+          const assignment = assignmentById.get(assignmentModalTarget.assignmentId);
+          if (!assignment) return null;
+          return { assignment, slot: slotMap.get(assignment.slot_id) ?? null };
+        })()
+      : assignmentByOrderId.get(assignmentModalOrder.id) ?? null
     : null;
+  const assignableSlotOrders = useMemo(
+    () =>
+      unassignedOrders
+        .map((order) => {
+          const orderAssignments = assignmentsByOrderId.get(order.id) ?? [];
+          const assignableKg = nextAssignableKgForOrder(order, orderAssignments);
+          if (!Number.isFinite(assignableKg) || assignableKg <= 0) return null;
+          return {
+            order,
+            assignableKg,
+            assignedCount: orderAssignments.length,
+            plannedBatchCount: batchWeightsForOrder(order).length,
+          };
+        })
+        .filter(
+          (
+            entry,
+          ): entry is {
+            order: OrderRow;
+            assignableKg: number;
+            assignedCount: number;
+            plannedBatchCount: number;
+          } => Boolean(entry),
+        ),
+    [assignmentsByOrderId, unassignedOrders],
+  );
 
   const movePrev = () => {
     if (viewMode === "calendar") {
@@ -143,7 +200,7 @@ export default function ProductionScheduleSection({
   };
 
   const closeSlotPicker = () => setSlotPicker(null);
-  const closeAssignmentModal = () => setAssignmentModalOrderId(null);
+  const closeAssignmentModal = () => setAssignmentModalTarget(null);
   const emitToast = (tone: "success" | "error", message: string) => {
     window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
   };
@@ -318,7 +375,9 @@ export default function ProductionScheduleSection({
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
-                        const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
+                        const canCompleteSlotOrder = order
+                          ? canCompleteOrderForSlotDates(order, assignedSlotDatesByOrderId.get(order.id) ?? [key])
+                          : false;
                         const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
                         const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
@@ -356,8 +415,9 @@ export default function ProductionScheduleSection({
                                 formData.set(
                                   "kg_assigned",
                                   String(
-                                    Number.isFinite(Number(draggedOrder.total_weight_kg)) && Number(draggedOrder.total_weight_kg) > 0
-                                      ? Number(draggedOrder.total_weight_kg)
+                                    Number.isFinite(Number(draggedAssignment.kg_assigned)) &&
+                                      Number(draggedAssignment.kg_assigned) > 0
+                                      ? Number(draggedAssignment.kg_assigned)
                                       : 0.01,
                                   ),
                                 );
@@ -378,7 +438,7 @@ export default function ProductionScheduleSection({
                                   setHoveredDropSlotKey(null);
                                 }}
                                 className={`rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
-                                  getScheduleStatus(order, key, todayKey),
+                                  getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
                                 )}`}
                               >
                                 {isCollapsedCompletedCalendarOrder ? (
@@ -431,7 +491,12 @@ export default function ProductionScheduleSection({
                                     )}
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="min-w-0 flex-1 space-y-0 text-[9px] text-zinc-700">
-                                        <p>{weightLabel(order.total_weight_kg)}</p>
+                                        <p>
+                                          {weightLabel(assignment.kg_assigned)}
+                                          {Number(assignment.kg_assigned) !== Number(order.total_weight_kg)
+                                            ? ` of ${weightLabel(order.total_weight_kg)}`
+                                            : ""}
+                                        </p>
                                         <p className="flex flex-wrap gap-x-1">
                                           <span className="whitespace-nowrap">{formatDate(order.due_date)}</span>
                                           {dueDateDistance ? (
@@ -470,7 +535,9 @@ export default function ProductionScheduleSection({
                                         )}
                                         <button
                                           type="button"
-                                          onClick={() => setAssignmentModalOrderId(order.id)}
+                                          onClick={() =>
+                                            setAssignmentModalTarget({ orderId: order.id, assignmentId: assignment.id })
+                                          }
                                           className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[8px] font-semibold text-blue-700 hover:border-blue-300"
                                         >
                                           Change
@@ -535,7 +602,9 @@ export default function ProductionScheduleSection({
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
-                        const canCompleteSlotOrder = order ? canCompleteOrderForSlotDate(order, key) : false;
+                        const canCompleteSlotOrder = order
+                          ? canCompleteOrderForSlotDates(order, assignedSlotDatesByOrderId.get(order.id) ?? [key])
+                          : false;
                         const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
                         return (
@@ -568,8 +637,9 @@ export default function ProductionScheduleSection({
                                 formData.set(
                                   "kg_assigned",
                                   String(
-                                    Number.isFinite(Number(draggedOrder.total_weight_kg)) && Number(draggedOrder.total_weight_kg) > 0
-                                      ? Number(draggedOrder.total_weight_kg)
+                                    Number.isFinite(Number(draggedAssignment.kg_assigned)) &&
+                                      Number(draggedAssignment.kg_assigned) > 0
+                                      ? Number(draggedAssignment.kg_assigned)
                                       : 0.01,
                                   ),
                                 );
@@ -589,7 +659,9 @@ export default function ProductionScheduleSection({
                                   setDraggingAssignmentId(null);
                                   setHoveredDropSlotKey(null);
                                 }}
-                                className={`mt-1 rounded-md border px-3 py-2 ${statusCard(getScheduleStatus(order, key, todayKey))}`}
+                                className={`mt-1 rounded-md border px-3 py-2 ${statusCard(
+                                  getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
+                                )}`}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0 flex-1">
@@ -597,7 +669,12 @@ export default function ProductionScheduleSection({
                                       <OrderTitleWithLogo order={order} title={title} />
                                     </p>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-zinc-700">
-                                      <span>{weightLabel(order.total_weight_kg)}</span>
+                                      <span>
+                                        {weightLabel(assignment.kg_assigned)}
+                                        {Number(assignment.kg_assigned) !== Number(order.total_weight_kg)
+                                          ? ` of ${weightLabel(order.total_weight_kg)}`
+                                          : ""}
+                                      </span>
                                       <span className="flex flex-wrap gap-x-1">
                                         <span className="whitespace-nowrap">Due {formatDate(order.due_date)}</span>
                                         {dueDateDistance ? (
@@ -638,7 +715,9 @@ export default function ProductionScheduleSection({
                                     )}
                                     <button
                                       type="button"
-                                      onClick={() => setAssignmentModalOrderId(order.id)}
+                                      onClick={() =>
+                                        setAssignmentModalTarget({ orderId: order.id, assignmentId: assignment.id })
+                                      }
                                       className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold text-blue-700 hover:border-blue-300"
                                     >
                                       Change
@@ -696,17 +775,16 @@ export default function ProductionScheduleSection({
                   This day is in the past. Only assign here if you are backfilling production history.
                 </p>
               ) : null}
-              {unassignedOrders.length === 0 ? (
+              {assignableSlotOrders.length === 0 ? (
                 <p className="text-xs text-zinc-500">No unassigned orders.</p>
               ) : (
-                unassignedOrders.map((order) => {
+                assignableSlotOrders.map(({ order, assignableKg, assignedCount, plannedBatchCount }) => {
                   const selectedSlotKey = `${slotPicker.date}:${slotPicker.slotIndex}`;
                   const selectedSlotId = slotIdByKey.get(selectedSlotKey) ?? "";
-                  const orderWeightKg = Number(order.total_weight_kg);
-                  const assignableKg =
-                    Number.isFinite(orderWeightKg) && orderWeightKg > 0
-                      ? orderWeightKg
-                      : 0.01;
+                  const batchLabel =
+                    plannedBatchCount > 1
+                      ? `Batch ${assignedCount + 1} of ${plannedBatchCount}`
+                      : "Batch";
 
                   return (
                     <div key={order.id}>
@@ -738,6 +816,12 @@ export default function ProductionScheduleSection({
                           logoClassName="h-4 w-4"
                           imageClassName="h-5 w-5"
                         />
+                        <span className="mt-1 block text-[11px] font-medium text-zinc-500">
+                          {batchLabel} · {weightLabel(assignableKg)}
+                          {Number(assignableKg) !== Number(order.total_weight_kg)
+                            ? ` of ${weightLabel(order.total_weight_kg)}`
+                            : ""}
+                        </span>
                       </button>
                     </div>
                   );

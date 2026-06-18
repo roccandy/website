@@ -1,7 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getOrders, getOrderSlots, getProductionDayNotes, getProductionSlots, type OrderRow } from "@/lib/data";
+import {
+  getOrders,
+  getOrderSlots,
+  getProductionDayNotes,
+  getProductionSlots,
+  type OrderRow,
+  type OrderSlot,
+  type ProductionSlot,
+} from "@/lib/data";
 import OrderTitleWithLogo from "@/app/admin/orders/OrderTitleWithLogo";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
@@ -23,6 +31,12 @@ type WeekWindow = {
   start: string;
   end: string;
   days: string[];
+};
+
+type ProductionEntry = {
+  assignment: OrderSlot;
+  slot: ProductionSlot;
+  order: OrderRow;
 };
 
 function addDays(date: Date, days: number) {
@@ -58,20 +72,17 @@ function buildWeekWindows(today = new Date()): WeekWindow[] {
   ];
 }
 
-function scheduleDateForOrder(order: OrderRow, assignedProductionDateByOrderId: Map<string, string>) {
-  return assignedProductionDateByOrderId.get(order.id) ?? "";
-}
-
-function isInWindow(order: OrderRow, window: Pick<WeekWindow, "start" | "end">, assignedProductionDateByOrderId: Map<string, string>) {
-  const scheduleDate = scheduleDateForOrder(order, assignedProductionDateByOrderId);
+function isEntryInWindow(entry: ProductionEntry, window: Pick<WeekWindow, "start" | "end">) {
+  const scheduleDate = entry.slot.slot_date;
   return scheduleDate >= window.start && scheduleDate <= window.end;
 }
 
-function sortProductionOrders(a: OrderRow, b: OrderRow, assignedProductionDateByOrderId: Map<string, string>) {
-  const aDate = scheduleDateForOrder(a, assignedProductionDateByOrderId) || "9999-12-31";
-  const bDate = scheduleDateForOrder(b, assignedProductionDateByOrderId) || "9999-12-31";
+function sortProductionEntries(a: ProductionEntry, b: ProductionEntry) {
+  const aDate = a.slot.slot_date || "9999-12-31";
+  const bDate = b.slot.slot_date || "9999-12-31";
   if (aDate !== bDate) return aDate.localeCompare(bDate);
-  return (a.order_number ?? a.id).localeCompare(b.order_number ?? b.id);
+  if (a.slot.slot_index !== b.slot.slot_index) return a.slot.slot_index - b.slot.slot_index;
+  return (a.order.order_number ?? a.order.id).localeCompare(b.order.order_number ?? b.order.id);
 }
 
 function orderDisplayName(order: OrderRow) {
@@ -130,6 +141,11 @@ function previewPropsForOrder(order: OrderRow) {
     textColor: order.text_color || "#b7b7b7",
     heartColor: order.heart_color || order.text_color || "#b7b7b7",
     isInitials: order.category_id === "weddings-initials",
+    customTextVariant: (order.category_id === "custom-1-6"
+      ? "short"
+      : order.category_id === "custom-7-14"
+        ? "long"
+        : undefined) as "short" | "long" | undefined,
   };
 }
 
@@ -155,25 +171,24 @@ export default async function ProductionOrdersPage() {
   ]);
 
   const slotById = new Map(slots.map((slot) => [slot.id, slot]));
-  const assignedProductionDateByOrderId = new Map<string, string>();
-  for (const assignment of assignments) {
-    if (assignedProductionDateByOrderId.has(assignment.order_id)) continue;
-    const slot = slotById.get(assignment.slot_id);
-    if (slot?.slot_date) {
-      assignedProductionDateByOrderId.set(assignment.order_id, slot.slot_date);
-    }
-  }
+  const orderById = new Map(orders.map((order) => [order.id, order]));
+  const productionEntries = assignments
+    .map((assignment) => {
+      const slot = slotById.get(assignment.slot_id);
+      const order = orderById.get(assignment.order_id);
+      if (!slot || !order || order.refunded_at) return null;
+      return { assignment, slot, order };
+    })
+    .filter((entry): entry is ProductionEntry => Boolean(entry))
+    .sort(sortProductionEntries);
 
   const noteByDate = new Map(dayNotes.map((note) => [note.note_date, note.note]));
-  const visibleOrders = orders
-    .filter((order) => !order.refunded_at && assignedProductionDateByOrderId.has(order.id))
-    .sort((a, b) => sortProductionOrders(a, b, assignedProductionDateByOrderId));
   const weekWindows = buildWeekWindows();
   const ordersByWeek = weekWindows.map((window) => ({
     ...window,
     days: window.days.map((day) => ({
       date: day,
-      orders: visibleOrders.filter((order) => isInWindow(order, { start: day, end: day }, assignedProductionDateByOrderId)),
+      entries: productionEntries.filter((entry) => isEntryInWindow(entry, { start: day, end: day })),
     })),
   }));
   const todayKey = dateKey(new Date());
@@ -222,16 +237,19 @@ export default async function ProductionOrdersPage() {
                   </p>
                 ) : null}
 
-                {day.orders.length ? (
+                {day.entries.length ? (
                   <div className="pb-1 sm:overflow-x-auto">
                     <div className="space-y-1.5 sm:min-w-[920px]">
-                      {day.orders.map((order, index) => {
+                      {day.entries.map((entry, index) => {
+                        const { assignment, order } = entry;
                         const orderName = `${index + 1}. ${orderDisplayName(order)}`;
                         const isBranded = isBrandedOrder(order);
                         const previewProps = previewPropsForOrder(order);
+                        const batchWeightLabel = weightLabel(assignment.kg_assigned) || "-";
+                        const totalWeightLabel = weightLabel(order.total_weight_kg);
                         return (
                           <div
-                            key={order.id}
+                            key={assignment.id}
                             className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-x-2 gap-y-2 rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm shadow-sm sm:grid-cols-[88px_minmax(0,1fr)_minmax(0,1fr)_104px_150px] sm:px-3 sm:py-1.5"
                           >
                             <div className="flex h-14 w-16 items-center justify-center sm:w-20 sm:pr-4">
@@ -260,7 +278,12 @@ export default async function ProductionOrdersPage() {
                               )}
                             </div>
                             <p className="whitespace-nowrap text-lg font-bold text-zinc-900">
-                              {weightLabel(order.total_weight_kg) || "-"}
+                              {batchWeightLabel}
+                              {Number(assignment.kg_assigned) !== Number(order.total_weight_kg) && totalWeightLabel ? (
+                                <span className="block text-[10px] font-semibold text-zinc-500">
+                                  of {totalWeightLabel}
+                                </span>
+                              ) : null}
                             </p>
                             <Link
                               href={printHref(order)}

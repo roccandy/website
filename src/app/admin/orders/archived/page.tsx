@@ -78,7 +78,11 @@ const formatDate = (iso: string | null) => {
 
 const resolvePremadeStatus = (status: string | null | undefined) => (status === "shipped" ? "shipped" : "pending");
 const formatStatusLabel = (status: string) =>
-  status === "pending completion" ? "pending" : status.replace(/_/g, " ");
+  status === "pending completion"
+    ? "made"
+    : status === "partially complete"
+      ? "partially made"
+      : status.replace(/_/g, " ");
 const formatCompletionLabel = (pickup: boolean) => (pickup ? "Collected" : "Delivered");
 const isResettableCompletedOrder = (order: OrderRow) => order.status === "archived" || order.status === "shipped";
 const toMoneyCents = (value: number) => Math.round(value * 100);
@@ -105,7 +109,9 @@ const getOrderSuffix = (orderNumber: string | null | undefined) => {
 
 const scheduleStatusBadge = (status: string) => {
   if (status === "archived") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (status === "pending completion") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "pending completion" || status === "made") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "partially made") return "border-orange-200 bg-orange-50 text-orange-700";
+  if (status === "partially scheduled") return "border-orange-300 bg-orange-100 text-orange-900";
   if (status === "scheduled") return "border-blue-200 bg-blue-50 text-blue-700";
   if (status === "unassigned") return "border-zinc-300 bg-zinc-100 text-zinc-700";
   return "border-red-200 bg-red-50 text-red-700";
@@ -121,7 +127,9 @@ const resolveScheduleGroupStatus = (statuses: string[]) => {
   if (statuses.length === 0) return "pending";
   if (statuses.every((status) => status === "archived")) return "archived";
   if (statuses.includes("unassigned")) return "unassigned";
-  if (statuses.includes("pending completion")) return "pending completion";
+  if (statuses.includes("made") || statuses.includes("pending completion")) return "made";
+  if (statuses.includes("partially made")) return "partially made";
+  if (statuses.includes("partially scheduled")) return "partially scheduled";
   if (statuses.includes("scheduled")) return "scheduled";
   return statuses[0] ?? "pending";
 };
@@ -243,7 +251,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
     }
     const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
     if (slotDate && slotDate < todayKey) {
-      scheduleStatusById.set(order.id, "pending completion");
+      scheduleStatusById.set(order.id, "made");
       return;
     }
     scheduleStatusById.set(order.id, "scheduled");
@@ -747,7 +755,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                             const assignedSlotDate = assignmentByOrderId.get(order.id)
                               ? slotMap.get(assignmentByOrderId.get(order.id)!.slot_id)?.slot_date ?? null
                               : null;
-                            const canComplete = getScheduleStatus(order, assignedSlotDate, todayKey) === "pending completion" && !order.refunded_at;
+                            const canComplete = getScheduleStatus(order, assignedSlotDate, todayKey) === "made" && !order.refunded_at;
                             const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
 
                             return (

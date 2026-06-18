@@ -15,7 +15,14 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
-import { archiveOrderInline, markOrderAsPaid, upsertOrder, upsertOrderInline } from "./actions";
+import {
+  archiveOrderInline,
+  deleteOrder,
+  markOrderAsPaid,
+  retryAdminSquareInvoiceDraft,
+  upsertOrder,
+  upsertOrderInline,
+} from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import {
@@ -39,7 +46,8 @@ import {
   type ColorFormat,
 } from "./orderColorUtils";
 import {
-  canCompleteOrderForSlotDate,
+  canCompleteOrderForSlotDates,
+  dateKey,
   formatDate,
   formatDateInput,
   formatDueDateDistance,
@@ -47,8 +55,9 @@ import {
   formatOrderDescription,
   formatQuantity,
   formatScheduleStatusLabel,
-  getScheduleStatus,
+  getMultiAssignmentScheduleStatus,
   getPremadeSiblingMeta,
+  nextAssignableKgForOrder,
   productionCompletionActionLabel,
   splitCustomerName,
   statusBadge,
@@ -149,6 +158,7 @@ export function OrdersTable({
   const [editKey, setEditKey] = useState(0);
   const designTextInputRef = useRef<HTMLInputElement | null>(null);
   const selected = useMemo(() => orders.find((o) => o.id === selectedId) ?? null, [orders, selectedId]);
+  const todayKey = useMemo(() => dateKey(new Date()), []);
   const showJacketColorTwo = jacketMode === "two_colour" || jacketMode === "two_colour_pinstripe";
   const colorOptions = useMemo(() => buildPaletteOptions(palette), [palette]);
   const packagingById = useMemo(() => new Map(packagingOptions.map((option) => [option.id, option])), [packagingOptions]);
@@ -388,17 +398,6 @@ export function OrdersTable({
   );
   const maxPackages = selectedPackagingOption?.max_packages ?? null;
   useEffect(() => {
-    if (!selectedPackagingOption?.max_packages) return;
-    const parsed = Number(quantityInput);
-    if (!Number.isFinite(parsed)) return;
-    const max = Number(selectedPackagingOption.max_packages);
-    if (!Number.isFinite(max)) return;
-    if (parsed <= max) return;
-    queueMicrotask(() => {
-      setQuantityInput(String(max));
-    });
-  }, [quantityInput, selectedPackagingOption?.max_packages]);
-  useEffect(() => {
     queueMicrotask(() => {
       if (!isJarOption || availableLidColors.length === 0) {
         if (jarLidColorValue) setJarLidColorValue("");
@@ -439,8 +438,23 @@ export function OrdersTable({
     });
     return map;
   }, [assignments]);
+  const assignedSlotDatesByOrderId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    assignments.forEach((assignment) => {
+      const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
+      if (!slotDate) return;
+      const list = map.get(assignment.order_id) ?? [];
+      list.push(slotDate);
+      map.set(assignment.order_id, list);
+    });
+    return map;
+  }, [assignments, slotMap]);
   const unassignedOrders = useMemo(
-    () => listOrders.filter((order) => (assignmentsByOrderId.get(order.id) ?? []).length === 0),
+    () =>
+      listOrders.filter((order) => {
+        const orderAssignments = assignmentsByOrderId.get(order.id) ?? [];
+        return nextAssignableKgForOrder(order, orderAssignments) > 0;
+      }),
     [assignmentsByOrderId, listOrders]
   );
   const visibleListOrders = useMemo(
@@ -518,12 +532,23 @@ export function OrdersTable({
             <tbody className="divide-y divide-zinc-100">
               {visibleListOrders.map((order) => {
                 const printTarget = order.id ?? order.order_number;
-                const assignedSlotDate = assignmentByOrderId.get(order.id)?.slot?.slot_date ?? null;
-                const scheduleStatus = getScheduleStatus(order, assignedSlotDate);
-                const canCompleteFromSchedule = canCompleteOrderForSlotDate(order, assignedSlotDate);
+                const assignedSlotDates = assignedSlotDatesByOrderId.get(order.id) ?? [];
+                const scheduleStatus = getMultiAssignmentScheduleStatus(
+                  order,
+                  assignedSlotDates,
+                );
+                const canCompleteFromSchedule = canCompleteOrderForSlotDates(
+                  order,
+                  assignedSlotDates,
+                );
                 const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
                 const isAdminPremade = isAdminPremadeOrder(order);
                 const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
+                const hasUnsentSquareInvoice = Boolean(order.square_invoice_id && !order.square_invoice_sent_at);
+                const isPaymentOverdue =
+                  isAdminManagedCustomUnpaid &&
+                  !hasUnsentSquareInvoice &&
+                  Boolean(order.due_date && order.due_date < todayKey);
                 const dueDateDistance = formatDueDateDistance(order.due_date);
                 return (
                   <Fragment key={order.id}>
@@ -555,7 +580,15 @@ export function OrdersTable({
                           >
                             {formatScheduleStatusLabel(scheduleStatus)}
                           </button>
-                          {isAdminManagedCustomUnpaid ? (
+                          {hasUnsentSquareInvoice ? (
+                            <a
+                              href={`/admin/orders/${order.id}/invoice`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                            >
+                              Invoice
+                            </a>
+                          ) : isAdminManagedCustomUnpaid ? (
                             <form
                               action={markOrderAsPaid}
                               className="inline-flex"
@@ -575,6 +608,19 @@ export function OrdersTable({
                                 Unpaid
                               </button>
                             </form>
+                          ) : null}
+                          {isPaymentOverdue ? (
+                            <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                              Payment overdue
+                            </span>
+                          ) : null}
+                          {order.square_invoice_error ? (
+                            <span
+                              className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
+                              title={order.square_invoice_error}
+                            >
+                              Invoice warning
+                            </span>
                           ) : null}
                           {isAdminPremade ? (
                             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
@@ -669,6 +715,7 @@ export function OrdersTable({
                                   onSubmit={(event) => {
                                     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
                                     if (submitter?.dataset.submitIntent === "mark-paid") return;
+                                    if (submitter?.dataset.submitIntent === "delete-order") return;
                                     event.preventDefault();
                                     saveOrderInline(event.currentTarget);
                                   }}
@@ -679,6 +726,26 @@ export function OrdersTable({
                                   <input type="hidden" name="toast_success" value="Order Updated" />
                                   <input type="hidden" name="toast_error" value="Failed to update order." />
                                   {isBranded ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="submit"
+                                      formAction={deleteOrder}
+                                      formNoValidate
+                                      data-submit-intent="delete-order"
+                                      onClick={(event) => {
+                                        if (
+                                          !window.confirm(
+                                            "Delete this order? This will remove it from Roc Candy admin and remove its production assignments. This cannot be undone.",
+                                          )
+                                        ) {
+                                          event.preventDefault();
+                                        }
+                                      }}
+                                      className="inline-flex items-center rounded-lg border border-rose-600 bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:border-rose-700 hover:bg-rose-700"
+                                    >
+                                      Delete order
+                                    </button>
+                                  </div>
                                   <fieldset disabled={!isEditing} className="space-y-3">
                                   <div className="grid gap-4 md:grid-cols-3">
                                     <div className="space-y-2">
@@ -1200,7 +1267,7 @@ export function OrdersTable({
                                           )}
                                           {isEditing && Number.isFinite(maxPackages ?? NaN) && Number(maxPackages) > 0 ? (
                                             <p className="mt-0.5 text-[10px] font-semibold text-zinc-500">
-                                              Max {Number(maxPackages)}
+                                              Website max {Number(maxPackages)}
                                             </p>
                                           ) : null}
                                         </label>
@@ -1239,6 +1306,38 @@ export function OrdersTable({
                                             Payment method
                                           </p>
                                           <p className={detailValueClass}>{order.payment_method ?? "-"}</p>
+                                        </div>
+                                        <div>
+                                          <p className={detailMetaClass}>Square invoice</p>
+                                          <p className={detailValueClass}>
+                                            {order.square_invoice_id
+                                              ? `${order.square_invoice_status ?? "draft"} · ${order.square_invoice_id}`
+                                              : "No draft"}
+                                          </p>
+                                          {order.square_invoice_error ? (
+                                            <p className="mt-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold normal-case text-rose-700">
+                                              {order.square_invoice_error}
+                                            </p>
+                                          ) : null}
+                                          {order.square_invoice_id && !order.square_invoice_sent_at ? (
+                                            <a
+                                              href={`/admin/orders/${order.id}/invoice`}
+                                              className="mt-2 inline-flex rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                            >
+                                              Review / send invoice
+                                            </a>
+                                          ) : null}
+                                          {!order.square_invoice_id ? (
+                                            <form action={retryAdminSquareInvoiceDraft} className="mt-2">
+                                              <input type="hidden" name="order_id" value={order.id} />
+                                              <button
+                                                type="submit"
+                                                className="inline-flex rounded border border-zinc-900 bg-zinc-900 px-2 py-1 text-[11px] font-semibold text-white hover:bg-zinc-800"
+                                              >
+                                                Retry draft invoice
+                                              </button>
+                                            </form>
+                                          ) : null}
                                         </div>
                                         {pricing ? (
                                           <div className="space-y-0.5 text-[11px] text-zinc-600">
@@ -1317,7 +1416,7 @@ export function OrdersTable({
                                         onClick={() => setAssignmentModalOrderId(order.id)}
                                         className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
                                       >
-                                        {assignedSlotDate ? "Change assignment" : "Assign"}
+                                        {assignedSlotDates.length > 0 ? "Change assignment" : "Assign"}
                                       </button>
                                       {printTarget ? (
                                         <a

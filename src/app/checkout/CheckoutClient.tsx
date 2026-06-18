@@ -15,6 +15,7 @@ import type { PricingBreakdown } from "@/lib/pricing";
 import { trackBeginCheckout, trackPurchaseOnce, type AnalyticsItem } from "@/lib/analyticsEvents";
 import { toPublicPaymentError, toPublicPricingError } from "@/lib/publicErrorMessages";
 import { buildDesignerEditPath } from "@/lib/designUrls";
+import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { storeCheckoutSuccessSummary } from "./success/successSummary";
 
 type PremadeSuggestion = {
@@ -793,6 +794,13 @@ function CartItemRow({
             textColor={item.textColor || undefined}
             heartColor={item.heartColor || undefined}
             isInitials={isWeddingInitials}
+            customTextVariant={
+              item.categoryId === "custom-1-6"
+                ? "short"
+                : item.categoryId === "custom-7-14"
+                  ? "long"
+                  : undefined
+            }
             dimensions={{ width: 240, height: 180 }}
           />
         </div>
@@ -1137,6 +1145,7 @@ export function CheckoutClient({
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
   const trackedBeginCheckoutRef = useRef(false);
 
   const resolveCustomMaxPackages = useCallback((item: CustomCartItem) => {
@@ -1275,10 +1284,13 @@ export function CheckoutClient({
       }
     }
 
-    const total = baseSubtotal + urgencyTotal;
+    const originalTotal = baseSubtotal + urgencyTotal;
+    const promoApplied = count > 0 && originalTotal > 0 && isCheckoutTestPromoCode(promoCode);
+    const total = promoApplied ? CHECKOUT_TEST_PROMO_TOTAL : originalTotal;
+    const promoDiscount = promoApplied ? Math.max(0, originalTotal - CHECKOUT_TEST_PROMO_TOTAL) : 0;
 
-    return { total, count, itemLines, urgencyTotal, hasPending };
-  }, [items, pricingOverrides]);
+    return { total, originalTotal, count, itemLines, urgencyTotal, hasPending, promoApplied, promoDiscount };
+  }, [items, pricingOverrides, promoCode]);
 
   const analyticsItems = useMemo(() => buildAnalyticsItems(items, pricingOverrides), [items, pricingOverrides]);
 
@@ -1333,6 +1345,7 @@ export function CheckoutClient({
     dueDate: dueDate || undefined,
     pickup,
     paymentPreference: null,
+    promoCode: promoCode.trim() || null,
     customer: {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -1443,6 +1456,13 @@ export function CheckoutClient({
       };
     });
 
+    const successItems = cartPricing.promoApplied
+      ? summaryItems.map((item, index) => ({
+          ...item,
+          lineTotal: index === 0 ? CHECKOUT_TEST_PROMO_TOTAL : 0,
+        }))
+      : summaryItems;
+
     storeCheckoutSuccessSummary({
       orderNumber: orderNumber ?? null,
       wooOrderId: wooOrderId ?? null,
@@ -1457,9 +1477,9 @@ export function CheckoutClient({
         phone: phone.trim(),
         organizationName: organizationName.trim() || null,
       },
-      items: summaryItems,
-      subtotal: cartPricing.total - cartPricing.urgencyTotal,
-      urgencyTotal: cartPricing.urgencyTotal,
+      items: successItems,
+      subtotal: cartPricing.promoApplied ? cartPricing.total : cartPricing.total - cartPricing.urgencyTotal,
+      urgencyTotal: cartPricing.promoApplied ? 0 : cartPricing.urgencyTotal,
       total: cartPricing.total,
       adminEmailWarning: warning ?? null,
     });
@@ -1841,6 +1861,20 @@ export function CheckoutClient({
               <span>Total</span>
               <span>{pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}</span>
             </div>
+            <label className="block pt-2 text-[11px] normal-case tracking-[0.08em] text-zinc-400">
+              Code
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  value={promoCode}
+                  onChange={(event) => setPromoCode(event.target.value)}
+                  autoComplete="off"
+                  className="w-full rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-700 outline-none focus:border-zinc-300"
+                />
+                {cartPricing.promoApplied ? (
+                  <span className="whitespace-nowrap text-[11px] font-semibold text-emerald-600">Applied</span>
+                ) : null}
+              </div>
+            </label>
           </div>
           <button
             type="button"
@@ -1868,6 +1902,12 @@ export function CheckoutClient({
                 <div className="flex items-center justify-between gap-3">
                   <span>Urgency surcharge</span>
                   <span className="text-zinc-900">{formatMoney(cartPricing.urgencyTotal)}</span>
+                </div>
+              ) : null}
+              {cartPricing.promoApplied ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span>Code adjustment</span>
+                  <span className="text-zinc-900">-{formatMoney(cartPricing.promoDiscount)}</span>
                 </div>
               ) : null}
               {cartPricing.hasPending ? (

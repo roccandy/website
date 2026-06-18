@@ -2,6 +2,7 @@ import { buildWooOrderContext } from "@/lib/checkoutOrder";
 import { getOrdersRecipients, isEmailConfigured, sendAdminOrderSummaryEmail, sendCustomerOrderSummaryEmail } from "@/lib/email";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
+import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { createWooOrder } from "@/lib/woo";
 
@@ -16,7 +17,7 @@ type FinalizePaidCheckoutInput = {
 };
 
 export type FinalizePaidCheckoutResult = {
-  wooOrderId: number;
+  wooOrderId: number | null;
   orderNumber: string;
   adminEmailWarning: string | null;
 };
@@ -34,34 +35,37 @@ export async function finalizePaidCheckoutOrder({
   const { billing, dueDate, pickup, lineItems, orderPayloads, orderNumbers, totalAmount } =
     await buildWooOrderContext(order);
   const customerEmail = order.customer?.email?.trim() || null;
+  const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
 
-  const wooOrder = await createWooOrder({
-    status: "processing",
-    set_paid: true,
-    payment_method: paymentMethod,
-    payment_method_title: paymentMethodTitle,
-    transaction_id: transactionId,
-    billing,
-    shipping: pickup ? billing : billing,
-    customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
-    line_items: lineItems,
-    meta_data: [
-      { key: "rc_source", value: "roccandy-next" },
-      { key: "rc_due_date", value: dueDate ?? "" },
-      { key: "rc_pickup", value: pickup ? "true" : "false" },
-      { key: "rc_payment_provider", value: paymentProvider },
-    ],
-  });
+  const wooOrder = isTestOrder
+    ? null
+    : await createWooOrder({
+        status: "processing",
+        set_paid: true,
+        payment_method: paymentMethod,
+        payment_method_title: paymentMethodTitle,
+        transaction_id: transactionId,
+        billing,
+        shipping: pickup ? billing : billing,
+        customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
+        line_items: lineItems,
+        meta_data: [
+          { key: "rc_source", value: "roccandy-next" },
+          { key: "rc_due_date", value: dueDate ?? "" },
+          { key: "rc_pickup", value: pickup ? "true" : "false" },
+          { key: "rc_payment_provider", value: paymentProvider },
+        ],
+      });
 
   const paidAt = new Date().toISOString();
   const enrichedPayloads = orderPayloads.map((payload) => ({
     ...payload,
-    woo_order_id: String(wooOrder.id),
-    woo_order_status: wooOrder.status ?? null,
-    woo_order_key: wooOrder.order_key ?? null,
+    woo_order_id: wooOrder ? String(wooOrder.id) : null,
+    woo_order_status: wooOrder?.status ?? null,
+    woo_order_key: wooOrder?.order_key ?? null,
     woo_payment_url: null,
     payment_method: paymentMethodTitle,
-    status: "pending",
+    status: isTestOrder ? "test" : "pending",
     paid_at: paidAt,
     payment_provider: paymentProvider,
     payment_transaction_id: transactionId,
@@ -123,7 +127,7 @@ export async function finalizePaidCheckoutOrder({
   }
 
   return {
-    wooOrderId: wooOrder.id,
+    wooOrderId: wooOrder?.id ?? null,
     orderNumber: orderNumbers.baseOrderNumber,
     adminEmailWarning,
   };

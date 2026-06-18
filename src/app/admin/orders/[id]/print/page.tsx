@@ -8,7 +8,7 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
-import { formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
+import { batchWeightsForOrder, formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
 import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 import { PrintButton } from "./PrintButton";
 
@@ -177,7 +177,21 @@ const renderColorDisplay = (display: ColorDisplay | null) => {
   );
 };
 
+const formatPrintKg = (weight: number) => {
+  const rounded = Math.round(weight * 100) / 100;
+  return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+};
 
+const groupBatchWeights = (weights: number[]) =>
+  weights.reduce<Array<{ weight: number; count: number }>>((groups, weight) => {
+    const existing = groups.find((group) => Math.abs(group.weight - weight) < 0.005);
+    if (existing) {
+      existing.count += 1;
+      return groups;
+    }
+    groups.push({ weight, count: 1 });
+    return groups;
+  }, []);
 
 export default async function PrintOrderPage({ params, searchParams }: Params) {
   const session = await getServerSession(authOptions);
@@ -282,6 +296,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   })();
   const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
   const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
+  const batchWeights = batchWeightsForOrder(order);
+  const batchWeightGroups = groupBatchWeights(batchWeights);
   const ingredientLabelsToPrint = (() => {
     const storedCount = Number(order.ingredient_labels_count);
     if (Number.isFinite(storedCount) && storedCount > 0) {
@@ -346,6 +362,13 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 textColor={textColorHex}
                 heartColor={heartColorHex}
                 isInitials={isWeddingInitials}
+                customTextVariant={
+                  order.category_id === "custom-1-6"
+                    ? "short"
+                    : order.category_id === "custom-7-14"
+                      ? "long"
+                      : undefined
+                }
               />
             </div>
           </div>
@@ -476,7 +499,17 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <p className={INLINE_ROW_CLASS}>
                 <span className={INLINE_LABEL_CLASS}>Order weight:</span>
                 <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
-                  {order.total_weight_kg} kg
+                  {batchWeightGroups.length > 1 || batchWeights.length > 1 ? (
+                    <span className="block">
+                      {batchWeightGroups.map((group) => (
+                        <span key={group.weight} className="block whitespace-nowrap">
+                          {group.count} x {formatPrintKg(group.weight)}kg
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`
+                  )}
                 </span>
               </p>
               <p className={SPEC_ROW_CLASS}>
@@ -529,6 +562,14 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
                 <span className={SPEC_VALUE_CLASS}>{ingredientLabelsToPrint}</span>
               </p>
+              {order.notes ? (
+                <div className="rounded border border-zinc-200 bg-zinc-50 p-3 print:p-2">
+                  <p className={SPEC_LABEL_CLASS}>Production Notes</p>
+                  <p className="mt-1 whitespace-pre-wrap text-[15px] font-semibold leading-snug text-zinc-900 print:text-[12px]">
+                    {order.notes}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

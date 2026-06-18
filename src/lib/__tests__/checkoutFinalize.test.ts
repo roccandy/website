@@ -160,4 +160,40 @@ describe("finalizePaidCheckoutOrder", () => {
     expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
     expect(sendAdminOrderSummaryEmail).toHaveBeenCalledTimes(1);
   });
+
+  it("stores test promo orders without creating a Woo order", async () => {
+    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+
+    await expect(
+      finalizePaidCheckoutOrder({
+        order: {
+          ...baseOrder,
+          promoCode: "FH*#HK@NXsh83D=-S",
+        },
+        paymentProvider: "square",
+        paymentMethod: "square",
+        paymentMethodTitle: "Credit Card",
+        transactionId: "txn_test",
+      }),
+    ).resolves.toEqual({
+      wooOrderId: null,
+      orderNumber: "000123",
+      adminEmailWarning: null,
+    });
+
+    expect(createWooOrder).not.toHaveBeenCalled();
+    expect(insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        woo_order_id: null,
+        woo_order_status: null,
+        woo_order_key: null,
+        woo_payment_url: null,
+        payment_provider: "square",
+        payment_transaction_id: "txn_test",
+        status: "test",
+      }),
+    ]);
+    expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
+    expect(sendAdminOrderSummaryEmail).toHaveBeenCalledTimes(1);
+  });
 });

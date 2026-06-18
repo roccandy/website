@@ -3,6 +3,7 @@ import { buildCustomPricingInput, calculatePricing } from "@/lib/pricing";
 import { buildSplitOrderNumber, generateOrderNumber } from "@/lib/orderNumbers";
 import { getQuoteBlocks, getSettings, type QuoteBlock } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
+import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 
 const DEFAULT_COUNTRY = "AU";
 
@@ -202,6 +203,15 @@ async function buildCustomItemLine(
   };
 }
 
+function applyCheckoutPromoOverride(lineItems: WooLineItem[], orderPayloads: OrderInsertPayload[]) {
+  lineItems.forEach((item, index) => {
+    item.total = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL.toFixed(2) : "0.00";
+  });
+  orderPayloads.forEach((payload, index) => {
+    payload.total_price = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL : 0;
+  });
+}
+
 export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<BuildContextResult> {
   assertBasePayload(body);
 
@@ -336,6 +346,10 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
       status: "pending_payment",
       made: false,
     });
+  }
+
+  if (isCheckoutTestPromoCode(body.promoCode)) {
+    applyCheckoutPromoOverride(lineItems, orderPayloads);
   }
 
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);

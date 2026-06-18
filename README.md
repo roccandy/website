@@ -35,5 +35,7 @@ Run these before major merges or launch changes:
 
 - [docs/launch-steps.md](/Users/joeconlin/dev/roccandy/docs/launch-steps.md)
 - [docs/architecture-notes.md](/Users/joeconlin/dev/roccandy/docs/architecture-notes.md)
+- [docs/infrastructure-map.md](/Users/joeconlin/dev/roccandy/docs/infrastructure-map.md)
+- [docs/admin-simple-map.md](/Users/joeconlin/dev/roccandy/docs/admin-simple-map.md)
 
 Treat [docs/launch-steps.md](/Users/joeconlin/dev/roccandy/docs/launch-steps.md) as the main go-live document.

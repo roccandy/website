@@ -1,0 +1,6 @@
+.rollback/
+.env*
+.git/
+.next/
+node_modules/
+archive/

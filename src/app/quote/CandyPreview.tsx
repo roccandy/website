@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useMemo } from "react";
-import Image from "next/image";
 
 type Props = {
   designText?: string;
@@ -16,6 +15,7 @@ type Props = {
   textColor?: string;
   heartColor?: string;
   isInitials?: boolean;
+  customTextVariant?: "short" | "long";
   dimensions?: { width: number; height: number };
   zoom?: number;
 };
@@ -39,6 +39,7 @@ export function CandyPreview({
   textColor,
   heartColor,
   isInitials,
+  customTextVariant,
   dimensions,
   zoom = 1,
 }: Props) {
@@ -272,6 +273,7 @@ export function CandyPreview({
           lineTwo={lineTwo}
           designText={designText}
           showHeart={showHeart}
+          customTextVariant={customTextVariant}
           textColor={textColorValue}
           heartColor={heartColorValue}
           isInitials={isInitials}
@@ -291,8 +293,78 @@ type OverlayProps = {
   textColor: string;
   heartColor: string;
   isInitials?: boolean;
+  customTextVariant?: "short" | "long";
   zoom?: number;
 };
+
+type CustomTextLayout =
+  | { kind: "straight"; text: string }
+  | { kind: "singleArc"; text: string }
+  | { kind: "stacked"; words: string[] }
+  | { kind: "twoArc"; top: string; bottom: string };
+
+const nonSpaceLength = (value: string) => value.replace(/\s/g, "").length;
+
+function getCustomTextLayout(text: string, variant?: "short" | "long"): CustomTextLayout | null {
+  const trimmed = text.trim().replace(/\s+/g, " ");
+  if (!trimmed) return null;
+  if (variant === "short") return { kind: "straight", text: trimmed };
+  if (variant !== "long") return null;
+
+  const words = trimmed.split(" ").filter(Boolean);
+  const letters = nonSpaceLength(trimmed);
+
+  if (words.length === 1) {
+    return letters <= 6 ? { kind: "straight", text: trimmed } : { kind: "singleArc", text: trimmed };
+  }
+
+  if (words.length === 2) {
+    const eachWordFitsStraight = words.every((word) => nonSpaceLength(word) <= 6);
+    if (letters <= 11 && eachWordFitsStraight) return { kind: "stacked", words };
+    return { kind: "twoArc", top: words[0] ?? "", bottom: words[1] ?? "" };
+  }
+
+  if (words.length === 3 && words.every((word) => nonSpaceLength(word) <= 6)) {
+    return { kind: "stacked", words };
+  }
+
+  return { kind: "singleArc", text: trimmed };
+}
+
+const CUSTOM_ARC_LETTER_SPACING_EM = 0.1;
+const CUSTOM_ARC_MAX_WIDTH_RATIO = 0.86;
+const CUSTOM_SINGLE_ARC_MAX_WIDTH_RATIO = 0.84;
+const CUSTOM_ARC_MIN_FONT_SIZE = 88;
+const CUSTOM_ARC_MIN_LETTER_SPACING_EM = 0.045;
+
+function estimateArcTextWidth(text: string, fontSize: number, letterSpacingEm: number) {
+  const glyphWidth = Array.from(text.toUpperCase()).reduce((total, char) => {
+    if (char === " ") return total + 0.34;
+    if ("MW".includes(char)) return total + 0.95;
+    if ("@#%&".includes(char)) return total + 0.86;
+    if ("OQCG".includes(char)) return total + 0.74;
+    if ("ABDHKNPRUSVXYZ".includes(char)) return total + 0.66;
+    if ("0123456789".includes(char)) return total + 0.56;
+    if ("ILTJ".includes(char)) return total + 0.38;
+    return total + 0.5;
+  }, 0);
+  const letterCount = Array.from(text).filter((char) => char !== " ").length;
+  const spacingWidth = Math.max(0, letterCount - 1) * letterSpacingEm * fontSize;
+  return glyphWidth * fontSize + spacingWidth;
+}
+
+function getCustomArcTextStyle(text: string, baseFontSize: number, arcRadius: number, maxWidthRatio = CUSTOM_ARC_MAX_WIDTH_RATIO) {
+  const maxWidth = Math.PI * arcRadius * maxWidthRatio;
+  const estimatedWidth = estimateArcTextWidth(text, baseFontSize, CUSTOM_ARC_LETTER_SPACING_EM);
+  const scale = estimatedWidth > maxWidth ? maxWidth / estimatedWidth : 1;
+  const fontSize = Math.max(CUSTOM_ARC_MIN_FONT_SIZE, Math.floor(baseFontSize * scale));
+  const letterSpacingEm = Math.max(CUSTOM_ARC_MIN_LETTER_SPACING_EM, CUSTOM_ARC_LETTER_SPACING_EM * scale);
+
+  return {
+    fontSize,
+    letterSpacing: `${letterSpacingEm.toFixed(3)}em`,
+  };
+}
 
 function OverlayText({
   logoUrl,
@@ -303,6 +375,7 @@ function OverlayText({
   textColor,
   heartColor,
   isInitials,
+  customTextVariant,
   zoom = 1,
 }: OverlayProps) {
   // Match the inner circle center in the SVG paths.
@@ -312,15 +385,19 @@ function OverlayText({
   const singleArcRadius = 380;
   const singleArcYOffset = 36;
   const fontFamily = PREVIEW_FONT_FAMILY;
-  const cappedDesign = (designText || lineOne || "").slice(0, 15);
+  const cappedDesign = (designText || lineOne || "").trim();
+  const customTextLayout = getCustomTextLayout(cappedDesign, customTextVariant);
   const arcFontSizeBase = 122; // maps to ~24px at rendered size
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
-  const singleArcFontSize = cappedDesign.length > 12 ? 102 : 110;
-  const singleArcLetterSpacing = cappedDesign.length > 10 ? "0.07em" : "0.05em";
-  const straightFontSize = 122;
+  const singleArcFontSize = cappedDesign.length > 12 ? 106 : 114;
+  const singleArcLetterSpacing = cappedDesign.length > 10 ? "0.08em" : "0.06em";
+  const straightFontSize = customTextLayout ? 132 : 122;
   const initialsFontSize = 180; // maps to ~35px at rendered size
   const heartScale = 9.49;
-  const logoSize = 620;
+  const frontCircleCx = 549.755 * 0.979136 + 6.78919;
+  const frontCircleCy = 656.823 * 0.979136 + 16.7037;
+  const frontCircleRadius = 444.797 * 0.979136;
+  const logoSize = frontCircleRadius * Math.SQRT2 * 0.96;
   const logoOffset = logoSize / 2;
   const hasLineOne = Boolean(lineOne);
   const hasLineTwo = Boolean(lineTwo);
@@ -329,14 +406,23 @@ function OverlayText({
   const initialsHeuristic = hasTwoLines && (lineOne?.length || 0) <= 3 && (lineTwo?.length || 0) <= 3;
   const initialsMode = Boolean(isInitials ?? initialsHeuristic);
   const straightMode =
-    !initialsMode && !logoUrl && !hasTwoLines && cappedDesign.length <= 6 && !hasAnyWeddingNames;
-  const arcMode = !initialsMode && !logoUrl && (!straightMode || hasTwoLines || hasAnyWeddingNames);
+    !customTextLayout && !initialsMode && !logoUrl && !hasTwoLines && cappedDesign.length <= 6 && !hasAnyWeddingNames;
+  const arcMode = !customTextLayout && !initialsMode && !logoUrl && (!straightMode || hasTwoLines || hasAnyWeddingNames);
   const heartFill = heartColor;
   const heartTransform = (yOffset = 0) => `translate(${cx} ${cy + yOffset}) scale(${heartScale}) translate(-12 -12)`;
   const initialsYOffset = 0;
   const straightYOffset = 0;
   const arcLetterSpacing = hasAnyWeddingNames ? "0.08em" : hasTwoLines ? "0.08em" : "0.02em";
   const arcFontSize = hasAnyWeddingNames ? weddingArcFontSize : arcFontSizeBase;
+  const customArcFontSize = arcFontSize + 10;
+  const singleCustomArcStyle =
+    customTextLayout?.kind === "singleArc"
+      ? getCustomArcTextStyle(customTextLayout.text, customArcFontSize, arcRadius, CUSTOM_SINGLE_ARC_MAX_WIDTH_RATIO)
+      : null;
+  const topCustomArcStyle =
+    customTextLayout?.kind === "twoArc" ? getCustomArcTextStyle(customTextLayout.top, customArcFontSize, arcRadius) : null;
+  const bottomCustomArcStyle =
+    customTextLayout?.kind === "twoArc" ? getCustomArcTextStyle(customTextLayout.bottom, customArcFontSize, arcRadius) : null;
   const lowerArcYOffset = 24;
   const hasAnyText =
     Boolean((lineOne || "").trim().length) || Boolean((lineTwo || "").trim().length) || Boolean((designText || "").trim().length);
@@ -368,26 +454,22 @@ function OverlayText({
 
   if (logoUrl) {
     return (
-      <div
-        className="pointer-events-none absolute overflow-hidden rounded-[10%]"
-        style={{
-          left: `${((cx - logoOffset) / CANVAS_WIDTH) * 100}%`,
-          top: `${((cy - logoOffset) / CANVAS_HEIGHT) * 100}%`,
-          width: `${(logoSize / CANVAS_WIDTH) * 100}%`,
-          height: `${(logoSize / CANVAS_HEIGHT) * 100}%`,
-          ...overlayZoomStyle,
-        }}
+      <svg
+        className="pointer-events-none absolute inset-0"
+        viewBox={SVG_VIEW_BOX}
+        xmlns="http://www.w3.org/2000/svg"
+        style={overlayZoomStyle}
       >
-        <Image
+        <image
           key={logoUrl}
-          src={logoUrl}
-          alt=""
-          fill
-          sizes="220px"
-          unoptimized
-          className="object-contain"
+          href={logoUrl}
+          x={frontCircleCx - logoOffset}
+          y={frontCircleCy - logoOffset}
+          width={logoSize}
+          height={logoSize}
+          preserveAspectRatio="xMidYMid meet"
         />
-      </div>
+      </svg>
     );
   }
 
@@ -402,11 +484,80 @@ function OverlayText({
         <path id="upperArc" d={`M ${cx - arcRadius} ${cy} A ${arcRadius} ${arcRadius} 0 0 1 ${cx + arcRadius} ${cy}`} />
         <path id="lowerArc" d={`M ${cx - arcRadius} ${cy + lowerArcYOffset} A ${arcRadius} ${arcRadius} 0 0 0 ${cx + arcRadius} ${cy + lowerArcYOffset}`} />
         <path id="singleArc" d={`M ${cx - singleArcRadius} ${cy + singleArcYOffset} A ${singleArcRadius} ${singleArcRadius} 0 0 1 ${cx + singleArcRadius} ${cy + singleArcYOffset}`} />
-        <clipPath id="logoClip">
-          <rect x={cx - logoOffset} y={cy - logoOffset} width={logoSize} height={logoSize} rx={logoSize * 0.1} ry={logoSize * 0.1} />
-        </clipPath>
       </defs>
-      {initialsMode ? (
+      {customTextLayout?.kind === "stacked" ? (
+        <>
+          {customTextLayout.words.map((word, index) => {
+            const offsets =
+              customTextLayout.words.length === 3
+                ? [-160, 0, 160]
+                : [-105, 105];
+            const fontSize = customTextLayout.words.length === 3 ? 122 : 132;
+            return (
+              <text
+                key={`${word}-${index}`}
+                x={cx}
+                y={cy + (offsets[index] ?? 0)}
+                fontSize={fontSize}
+                fontWeight="700"
+                fill={textColor}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                letterSpacing="0.035em"
+              >
+                {word.toUpperCase()}
+              </text>
+            );
+          })}
+        </>
+      ) : customTextLayout?.kind === "twoArc" ? (
+        <>
+          <text
+            fontSize={topCustomArcStyle?.fontSize ?? customArcFontSize}
+            fontWeight="700"
+            fill={textColor}
+            letterSpacing={topCustomArcStyle?.letterSpacing ?? `${CUSTOM_ARC_LETTER_SPACING_EM}em`}
+          >
+            <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+              {customTextLayout.top.toUpperCase()}
+            </textPath>
+          </text>
+          <text
+            fontSize={bottomCustomArcStyle?.fontSize ?? customArcFontSize}
+            fontWeight="700"
+            fill={textColor}
+            letterSpacing={bottomCustomArcStyle?.letterSpacing ?? `${CUSTOM_ARC_LETTER_SPACING_EM}em`}
+          >
+            <textPath href="#lowerArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+              {customTextLayout.bottom.toUpperCase()}
+            </textPath>
+          </text>
+        </>
+      ) : customTextLayout?.kind === "singleArc" ? (
+        <text
+          fontSize={singleCustomArcStyle?.fontSize ?? customArcFontSize}
+          fontWeight="700"
+          fill={textColor}
+          letterSpacing={singleCustomArcStyle?.letterSpacing ?? `${CUSTOM_ARC_LETTER_SPACING_EM}em`}
+        >
+          <textPath href="#upperArc" startOffset="50%" textAnchor="middle" dominantBaseline="middle">
+            {customTextLayout.text.toUpperCase()}
+          </textPath>
+        </text>
+      ) : customTextLayout?.kind === "straight" ? (
+        <text
+          x={cx}
+          y={cy + straightYOffset}
+          fontSize={straightFontSize}
+          fontWeight="700"
+          fill={textColor}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          letterSpacing="0.03em"
+        >
+          {customTextLayout.text.toUpperCase()}
+        </text>
+      ) : initialsMode ? (
         <>
           <text
             x={cx - 230}

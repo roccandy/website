@@ -4,12 +4,30 @@ import { logAdminActivity, type AdminActivityInput } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
-import { getOrdersRecipients, sendCustomerRefundEmail, sendOrderEmail } from "@/lib/email";
+import {
+  getOrdersRecipients,
+  sendCustomerOrderSummaryEmail,
+  sendCustomerRefundEmail,
+  sendOrderEmail,
+} from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/data";
+import { buildPricingContext } from "@/lib/pricing";
+import {
+  calculateAdminLargeOrderPricingWithContext,
+  normalizeAdminBatchWeights,
+  type AdminDiscountType,
+} from "@/lib/adminLargeOrders";
+import {
+  createAdminSquareInvoiceDraft,
+  createPendingAdminWooOrder,
+  defaultAdminSquareInvoiceTitle,
+  updateAndPublishAdminSquareInvoice,
+} from "@/lib/adminOrderIntegrations";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
+import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import {
   ADMIN_PREMADE_ORDER_MARKER,
   isAdminPremadeCategoryId,
@@ -107,6 +125,30 @@ const describeOrderTarget = (input: {
   return orderNumber ? `#${orderNumber} ${label}`.trim() : label;
 };
 
+async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>) {
+  const customerEmail = typeof order.customer_email === "string" ? order.customer_email.trim() : "";
+  if (!customerEmail) return;
+  const pickup = Boolean(order.pickup);
+  const billing = {
+    address_1: typeof order.address_line1 === "string" ? order.address_line1 : "",
+    address_2: typeof order.address_line2 === "string" ? order.address_line2 : "",
+    city: typeof order.suburb === "string" ? order.suburb : "",
+    state: typeof order.state === "string" ? order.state : "",
+    postcode: typeof order.postcode === "string" ? order.postcode : "",
+  };
+  const paymentAmount = Number(order.total_price);
+  const summary = await buildAdminOrderSummaryEmailPayload({
+    orderPayloads: [order],
+    orderNumber: typeof order.order_number === "string" ? order.order_number : null,
+    requestedDate: typeof order.due_date === "string" ? order.due_date : null,
+    billing,
+    pickup,
+    paymentMethod: "Square invoice",
+    paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
+  });
+  await sendCustomerOrderSummaryEmail([customerEmail], summary);
+}
+
 async function resolveFirstAvailableSlotIndex(
   slotDate: string,
   client: typeof supabaseAdminClient,
@@ -185,9 +227,18 @@ async function upsertOrderShared(formData: FormData) {
         ? Number(total_weight_kg_input)
         : NaN;
   const total_price = formData.get("total_price") ? Number(formData.get("total_price")) : null;
+  const submittedBatchWeights = normalizeAdminBatchWeights(formData.getAll("batch_weight_kg").map((value) => value.toString()));
+  const admin_discount_type = (formData.get("admin_discount_type")?.toString() || "none") as AdminDiscountType;
+  const admin_discount_value_raw = Number(formData.get("admin_discount_value") || 0);
+  const admin_discount_value =
+    Number.isFinite(admin_discount_value_raw) && admin_discount_value_raw > 0 ? admin_discount_value_raw : null;
+  const admin_price_override_raw = Number(formData.get("admin_price_override") || NaN);
+  const admin_price_override =
+    Number.isFinite(admin_price_override_raw) && admin_price_override_raw >= 0 ? admin_price_override_raw : null;
   const status = formData.get("status")?.toString() || null;
   const payment_method = formData.get("payment_method")?.toString() || null;
   const notes = formData.get("notes")?.toString() || null;
+  const customer_note = formData.get("customer_note")?.toString() || null;
   const hasIngredientLabelsControl = formData.has("ingredient_labels_opt_in");
   const ingredientLabelsOptIn = formData.get("ingredient_labels_opt_in")?.toString() === "on";
   const ingredientLabelsCountRaw = formData.get("ingredient_labels_count");
@@ -271,8 +322,43 @@ async function upsertOrderShared(formData: FormData) {
       throw new Error("Order weight is required.");
     }
 
-    const settings = await getSettings();
-    if (resolvedWeightKg > settings.max_total_kg) {
+    const pricingContext = isAdminPremade ? null : await buildPricingContext();
+    const settings = pricingContext?.settings ?? (await getSettings());
+    const isPriceLocked = Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id);
+    const existingBatchWeights = normalizeAdminBatchWeights(
+      Array.isArray(existing?.admin_batch_weights_kg) ? existing.admin_batch_weights_kg : [],
+    );
+    const batchWeightsForPricing =
+      submittedBatchWeights.length > 0
+        ? submittedBatchWeights
+        : existingBatchWeights.length > 0
+          ? existingBatchWeights
+          : resolvedWeightKg <= Number(settings.max_total_kg)
+            ? [resolvedWeightKg]
+            : [];
+    const adminPricing =
+      !isAdminPremade && pricingContext && !isPriceLocked
+        ? calculateAdminLargeOrderPricingWithContext(
+            {
+              categoryId: resolvedCategoryId ?? "",
+              packagingOptionId: packaging_option_id ?? existing?.packaging_option_id ?? "",
+              quantity: quantity ?? existing?.quantity ?? 0,
+              labelsCount: labels_count ?? existing?.labels_count ?? null,
+              ingredientLabelsCount: ingredientLabelsOptIn
+                ? ingredientLabelsCount
+                : existing?.ingredient_labels_count ?? null,
+              dueDate: resolvedDueDate,
+              jacket: jacket ?? existing?.jacket ?? null,
+              batchWeightsKg: batchWeightsForPricing,
+              discountType: admin_discount_type,
+              discountValue: admin_discount_value,
+              priceOverride: admin_price_override,
+            },
+            pricingContext,
+          )
+        : null;
+
+    if (isAdminPremade && resolvedWeightKg > Number(settings.max_total_kg)) {
       throw new Error(`Max total kg per settings is ${settings.max_total_kg}.`);
     }
 
@@ -332,7 +418,16 @@ async function upsertOrderShared(formData: FormData) {
       label_image_url: isAdminPremade ? null : label_image_url ?? existing?.label_image_url ?? null,
       due_date: resolvedDueDate,
       total_weight_kg: resolvedWeightKg,
-      total_price: isAdminPremade ? null : total_price ?? existing?.total_price ?? null,
+      total_price: isAdminPremade
+        ? null
+        : isPriceLocked
+          ? existing?.total_price ?? null
+          : adminPricing?.total ?? total_price ?? existing?.total_price ?? null,
+      admin_batch_weights_kg: isAdminPremade ? [] : adminPricing?.batchWeightsKg ?? existingBatchWeights,
+      admin_pricing_subtotal: isAdminPremade ? null : adminPricing?.subtotalBeforeDiscount ?? existing?.admin_pricing_subtotal ?? null,
+      admin_discount_type: isAdminPremade ? null : adminPricing?.discountType ?? existing?.admin_discount_type ?? null,
+      admin_discount_value: isAdminPremade ? null : admin_discount_value ?? existing?.admin_discount_value ?? null,
+      admin_price_override: isAdminPremade ? null : adminPricing?.priceOverride ?? existing?.admin_price_override ?? null,
       status: isAdminPremade ? "unassigned" : status ?? existing?.status ?? "pending",
       payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
       pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,
@@ -346,6 +441,19 @@ async function upsertOrderShared(formData: FormData) {
       suburb: isAdminPremade ? null : suburb ?? existing?.suburb ?? null,
       postcode: isAdminPremade ? null : postcode ?? existing?.postcode ?? null,
       notes: isAdminPremade ? ADMIN_PREMADE_ORDER_MARKER : resolvedNotes,
+      customer_note: isAdminPremade ? null : customer_note ?? existing?.customer_note ?? null,
+      square_invoice_title: isAdminPremade
+        ? null
+        : existing?.square_invoice_title ??
+          (existing
+            ? defaultAdminSquareInvoiceTitle({
+                id: existing.id,
+                order_number: existing.order_number,
+                title: title ?? syncedTitleFromDesignText ?? existing.title ?? null,
+                organization_name: organization_name ?? existing.organization_name ?? null,
+                customer_name: resolvedCustomerName,
+              })
+            : null),
       text_color: resolvedTextColor,
       heart_color: resolvedHeartColor,
       created_at: created_at ?? undefined,
@@ -393,7 +501,19 @@ async function upsertOrderShared(formData: FormData) {
       let insertError: { code?: string | null; message?: string | null } | null = null;
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const candidate = { ...basePayload, order_number: orderNumbers.customOrderNumber };
+        const candidate = {
+          ...basePayload,
+          order_number: orderNumbers.customOrderNumber,
+          square_invoice_title:
+            basePayload.square_invoice_title ??
+            defaultAdminSquareInvoiceTitle({
+              id: "pending",
+              order_number: orderNumbers.customOrderNumber,
+              title: basePayload.title,
+              organization_name: basePayload.organization_name,
+              customer_name: basePayload.customer_name,
+            }),
+        };
         const { data, error } = await client.from("orders").insert(candidate).select("id").single();
         if (!error) {
           payload = candidate;
@@ -433,6 +553,75 @@ async function upsertOrderShared(formData: FormData) {
           });
         } catch (error) {
           console.error("Order email failed:", error);
+        }
+      }
+      if (!isAdminPremade && !hasPremadeSelections) {
+        const integrationOrder = {
+          id: createdOrderId,
+          ...payload,
+          admin_batch_weights_kg: payload.admin_batch_weights_kg ?? null,
+          square_customer_id: null,
+          square_invoice_id: null,
+          square_invoice_version: null,
+        } as Parameters<typeof createPendingAdminWooOrder>[0];
+        const integrationPatch: Record<string, unknown> = {};
+        const integrationWarnings: string[] = [];
+
+        try {
+          const wooOrder = await createPendingAdminWooOrder(integrationOrder);
+          integrationPatch.woo_order_id = String(wooOrder.id);
+          integrationPatch.woo_order_status = wooOrder.status ?? null;
+          integrationPatch.woo_order_key = wooOrder.orderKey ?? null;
+          integrationPatch.woo_payment_url = wooOrder.paymentUrl ?? null;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Woo order creation failed.";
+          console.error("Admin Woo mirror failed:", error);
+          integrationWarnings.push(`Woo mirror failed: ${message}`);
+        }
+
+        try {
+          const invoiceDraft = await createAdminSquareInvoiceDraft(integrationOrder);
+          integrationPatch.square_customer_id = invoiceDraft.customerId;
+          integrationPatch.square_order_id = invoiceDraft.squareOrderId;
+          integrationPatch.square_invoice_id = invoiceDraft.invoiceId;
+          integrationPatch.square_invoice_version = invoiceDraft.invoiceVersion;
+          integrationPatch.square_invoice_status = invoiceDraft.invoiceStatus;
+          integrationPatch.square_invoice_url = invoiceDraft.invoiceUrl;
+          integrationPatch.square_invoice_due_date = invoiceDraft.invoiceDueDate;
+          integrationPatch.square_invoice_created_at = invoiceDraft.invoiceCreatedAt;
+          integrationPatch.square_invoice_error = null;
+          integrationPatch.admin_price_locked_at = new Date().toISOString();
+          integrationPatch.payment_method = "Square invoice";
+          integrationPatch.payment_provider = "square_invoice";
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Square invoice draft creation failed.";
+          console.error("Admin Square invoice draft failed:", error);
+          integrationWarnings.push(`Square invoice draft failed: ${message}`);
+        }
+
+        if (integrationWarnings.length > 0) {
+          integrationPatch.square_invoice_error = integrationWarnings.join("\n");
+        }
+
+        if (Object.keys(integrationPatch).length > 0) {
+          const { error: integrationUpdateError } = await client
+            .from("orders")
+            .update(integrationPatch)
+            .eq("id", createdOrderId);
+          if (integrationUpdateError) {
+            console.error("Admin payment integration update failed:", integrationUpdateError);
+          }
+        }
+
+        const params = new URLSearchParams({ selected: createdOrderId });
+        if (integrationWarnings.length > 0) {
+          params.set("toast", "error");
+          params.set("message", `Order created, but ${integrationWarnings.join(" ")}`);
+        } else if (integrationPatch.square_invoice_id) {
+          postSaveRedirect = `/admin/orders/${createdOrderId}/invoice`;
+        }
+        if (!postSaveRedirect) {
+          postSaveRedirect = `${ORDERS_PATH}?${params.toString()}`;
         }
       }
       if (hasPremadeSelections && premadeOrderNumber) {
@@ -611,6 +800,188 @@ export async function upsertOrderInline(formData: FormData) {
   return upsertOrderShared(formData);
 }
 
+export async function retryAdminSquareInvoiceDraft(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const orderId = formData.get("order_id")?.toString() || null;
+  if (!orderId) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
+  }
+
+  const client = supabaseAdminClient;
+  const { data: order, error: fetchError } = await client.from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (fetchError) {
+    redirect(toastRedirect(ORDERS_PATH, "error", fetchError.message));
+  }
+  if (!order) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
+  }
+  if (order.square_invoice_id) {
+    redirect(`/admin/orders/${orderId}/invoice`);
+  }
+
+  try {
+    const invoiceDraft = await createAdminSquareInvoiceDraft(
+      order as Parameters<typeof createAdminSquareInvoiceDraft>[0],
+      { idempotencySuffix: `retry-${Date.now()}` },
+    );
+    const { error: updateError } = await client
+      .from("orders")
+      .update({
+        square_customer_id: invoiceDraft.customerId,
+        square_order_id: invoiceDraft.squareOrderId,
+        square_invoice_id: invoiceDraft.invoiceId,
+        square_invoice_version: invoiceDraft.invoiceVersion,
+        square_invoice_status: invoiceDraft.invoiceStatus,
+        square_invoice_url: invoiceDraft.invoiceUrl,
+        square_invoice_due_date: invoiceDraft.invoiceDueDate,
+        square_invoice_created_at: invoiceDraft.invoiceCreatedAt,
+        square_invoice_error: null,
+        admin_price_locked_at: order.admin_price_locked_at ?? new Date().toISOString(),
+        payment_method: "Square invoice",
+        payment_provider: "square_invoice",
+      })
+      .eq("id", orderId);
+    if (updateError) throw new Error(updateError.message);
+
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      }),
+      summary: `Created Square invoice draft for ${describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      })}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Square invoice"],
+      metadata: {
+        invoiceId: invoiceDraft.invoiceId,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Square invoice draft creation failed.";
+    await client.from("orders").update({ square_invoice_error: `Square invoice draft failed: ${message}` }).eq("id", orderId);
+    const params = new URLSearchParams({ selected: orderId, toast: "error", message });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  }
+
+  revalidatePath(ORDERS_PATH);
+  revalidatePath(`/admin/orders/${orderId}/invoice`);
+  redirect(`/admin/orders/${orderId}/invoice`);
+}
+
+export async function sendAdminSquareInvoice(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const orderId = formData.get("order_id")?.toString() || null;
+  const invoiceTitle = formData.get("square_invoice_title")?.toString().trim() || null;
+  const customerNote = formData.get("customer_note")?.toString() || null;
+  const firstName = formData.get("first_name")?.toString().trim() || null;
+  const lastName = formData.get("last_name")?.toString().trim() || null;
+  const customerName = [firstName, lastName].filter(Boolean).join(" ") || formData.get("customer_name")?.toString().trim() || null;
+  const customerEmail = formData.get("customer_email")?.toString().trim() || null;
+  const phone = formData.get("phone")?.toString().trim() || null;
+
+  if (!orderId) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
+  }
+
+  const client = supabaseAdminClient;
+  const { data: existing, error: existingError } = await client.from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (existingError) {
+    redirect(toastRedirect(ORDERS_PATH, "error", existingError.message));
+  }
+  if (!existing) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
+  }
+  if (!existing.square_invoice_id) {
+    const params = new URLSearchParams({ selected: orderId, toast: "error", message: "Square invoice draft is missing." });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  }
+  if (existing.square_invoice_sent_at || existing.square_invoice_status === "UNPAID" || existing.square_invoice_status === "PAID") {
+    const params = new URLSearchParams({ selected: orderId, toast: "error", message: "This Square invoice has already been sent." });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  }
+
+  const localPatch = {
+    square_invoice_title: invoiceTitle ?? existing.square_invoice_title ?? defaultAdminSquareInvoiceTitle(existing),
+    customer_note: customerNote,
+    customer_name: customerName ?? existing.customer_name,
+    first_name: firstName ?? existing.first_name,
+    last_name: lastName ?? existing.last_name,
+    customer_email: customerEmail ?? existing.customer_email,
+    phone: phone ?? existing.phone,
+    square_invoice_error: null,
+  };
+
+  const integrationOrder = {
+    ...existing,
+    ...localPatch,
+  } as Parameters<typeof updateAndPublishAdminSquareInvoice>[0];
+
+  try {
+    const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder);
+    const { error: updateError } = await client
+      .from("orders")
+      .update({
+        ...localPatch,
+        square_invoice_id: sentInvoice.invoiceId,
+        square_invoice_version: sentInvoice.invoiceVersion,
+        square_invoice_status: sentInvoice.invoiceStatus,
+        square_invoice_url: sentInvoice.invoiceUrl,
+        square_invoice_sent_at: sentInvoice.invoiceSentAt,
+        square_invoice_error: null,
+      })
+      .eq("id", orderId);
+    if (updateError) throw new Error(updateError.message);
+
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: describeOrderTarget({
+        orderNumber: existing.order_number,
+        title: existing.title,
+        customerName: localPatch.customer_name,
+      }),
+      summary: `Sent Square invoice for ${describeOrderTarget({
+        orderNumber: existing.order_number,
+        title: existing.title,
+        customerName: localPatch.customer_name,
+      })}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Square invoice"],
+      metadata: {
+        invoiceId: sentInvoice.invoiceId,
+        invoiceStatus: sentInvoice.invoiceStatus,
+      },
+    });
+    try {
+      await sendAdminCreatedCustomerOrderEmail({
+        ...existing,
+        ...localPatch,
+        payment_method: "Square invoice",
+      });
+    } catch (error) {
+      console.error("Admin-created customer order email failed:", error);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to send Square invoice.";
+    await client.from("orders").update({ ...localPatch, square_invoice_error: message }).eq("id", orderId);
+    redirect(toastRedirect(`/admin/orders/${orderId}/invoice`, "error", message));
+  }
+
+  revalidatePath(ORDERS_PATH);
+  revalidatePath(`/admin/orders/${orderId}/invoice`);
+  redirect(`${ORDERS_PATH}?selected=${encodeURIComponent(orderId)}&toast=success&message=${encodeURIComponent("Square invoice sent.")}`);
+}
+
 export async function markOrderAsPaid(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("id")?.toString() || formData.get("order_id")?.toString() || null;
@@ -632,7 +1003,9 @@ export async function markOrderAsPaid(formData: FormData) {
     const client = supabaseAdminClient;
     const { data: existing, error: existingError } = await client
       .from("orders")
-      .select("id,order_number,title,customer_name,design_type,woo_order_id,woo_payment_url,paid_at,payment_method")
+      .select(
+        "id,order_number,title,customer_name,design_type,woo_order_id,woo_payment_url,paid_at,payment_method,payment_provider,square_invoice_id,status",
+      )
       .eq("id", orderId)
       .maybeSingle();
     if (existingError) throw new Error(existingError.message);
@@ -1029,7 +1402,7 @@ export async function assignOrderToSlot(formData: FormData) {
     const existingOrderAssignment =
       assignmentId
         ? orderAssignments.find((assignment) => assignment.id === assignmentId) ?? null
-        : orderAssignments[0] ?? null;
+        : null;
     const previousForAssignment = existingOrderAssignment?.kg_assigned ?? 0;
 
     const orderUsed =
@@ -1050,14 +1423,6 @@ export async function assignOrderToSlot(formData: FormData) {
           .from("order_slots")
           .update({ order_id, slot_id: resolvedSlotId, kg_assigned: assignedKg })
           .eq("id", assignmentId);
-        if (error) throw new Error(error.message);
-        return;
-      }
-      if (existingOrderAssignment) {
-        const { error } = await client
-          .from("order_slots")
-          .update({ slot_id: resolvedSlotId, kg_assigned: assignedKg })
-          .eq("id", existingOrderAssignment.id);
         if (error) throw new Error(error.message);
         return;
       }
@@ -1173,6 +1538,63 @@ export async function deleteAssignment(formData: FormData) {
     return { ok: true, tone: "success" as const, message: "Order unassigned." };
   }
   redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
+}
+
+export async function deleteOrder(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const orderId = formData.get("order_id")?.toString() || formData.get("id")?.toString() || null;
+  if (!orderId) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
+  }
+
+  const client = supabaseAdminClient;
+  const { data: order, error: fetchError } = await client
+    .from("orders")
+    .select("id,order_number,title,customer_name")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (fetchError) {
+    redirect(toastRedirect(ORDERS_PATH, "error", fetchError.message));
+  }
+  if (!order) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
+  }
+
+  try {
+    const { error: assignmentError } = await client.from("order_slots").delete().eq("order_id", orderId);
+    if (assignmentError) throw new Error(assignmentError.message);
+
+    const { error: deleteError } = await client.from("orders").delete().eq("id", orderId);
+    if (deleteError) throw new Error(deleteError.message);
+
+    await logAdminActivity({
+      area: "operations",
+      action: "deleted",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      }),
+      summary: `Deleted ${describeOrderTarget({
+        orderNumber: order.order_number,
+        title: order.title,
+        customerName: order.customer_name,
+      })}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Order"],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete order.";
+    redirect(toastRedirect(ORDERS_PATH, "error", message));
+  }
+
+  revalidatePath(ORDERS_PATH);
+  revalidatePath("/admin");
+  revalidatePath("/admin/production");
+  revalidatePath("/admin/orders/archived");
+  redirect(toastRedirect(ORDERS_PATH, "success", "Order deleted."));
 }
 
 async function completeOrder(formData: FormData, inlineResponse: boolean) {

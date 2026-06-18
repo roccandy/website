@@ -33,6 +33,8 @@ export async function GET(request: Request) {
   const lineOne = (searchParams.get("lineOne") ?? "").trim().slice(0, 12).toUpperCase();
   const lineTwo = (searchParams.get("lineTwo") ?? "").trim().slice(0, 12).toUpperCase();
   const showHeart = searchParams.get("showHeart") === "1";
+  const showPinstripe = searchParams.get("showPinstripe") === "1";
+  const isInitials = searchParams.get("isInitials") === "1";
   const logoUrl = (searchParams.get("logoUrl") ?? "").trim();
 
   const fill =
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
         ? "url(#split)"
         : colorOne;
   const pinstripe =
-    mode === "pinstripe"
+    mode === "pinstripe" || showPinstripe
       ? `<circle cx="300" cy="200" r="160" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="18" stroke-dasharray="2 16" />`
       : "";
 
@@ -51,7 +53,13 @@ export async function GET(request: Request) {
     : "";
 
   const weddingTextNode =
-    lineOne || lineTwo
+    isInitials && (lineOne || lineTwo)
+      ? `
+      ${lineOne ? `<text x="228" y="214" text-anchor="middle" font-size="42" font-weight="700" fill="${textColor}">${escapeXml(lineOne)}</text>` : ""}
+      ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">♥</text>` : ""}
+      ${lineTwo ? `<text x="372" y="214" text-anchor="middle" font-size="42" font-weight="700" fill="${textColor}">${escapeXml(lineTwo)}</text>` : ""}
+    `
+      : lineOne || lineTwo
       ? `
       ${lineOne ? `<text x="300" y="178" text-anchor="middle" font-size="30" font-weight="700" fill="${textColor}">${escapeXml(lineOne)}</text>` : ""}
       ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">♥</text>` : ""}
