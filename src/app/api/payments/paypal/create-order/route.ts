@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildWooOrderContext } from "@/lib/checkoutOrder";
+import { buildCheckoutOrderContext } from "@/lib/checkoutOrder";
 import { createPayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
 import { toPublicPaymentError } from "@/lib/publicErrorMessages";
@@ -24,12 +24,12 @@ export async function POST(request: Request) {
     if (!body?.order) {
       return NextResponse.json({ error: toPublicPaymentError("Order payload is required.") }, { status: 400 });
     }
-    const { totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
+    const { totalAmount, orderNumbers } = await buildCheckoutOrderContext(body.order);
     const created = await createPayPalOrder(totalAmount, "AUD", {
       customId: orderNumbers.baseOrderNumber,
       description: `Roc Candy order ${orderNumbers.baseOrderNumber}`,
     });
-    return NextResponse.json({ orderId: created.id });
+    return NextResponse.json({ orderId: created.id, orderNumber: orderNumbers.baseOrderNumber });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create PayPal order.";
     await logPaymentFailure({

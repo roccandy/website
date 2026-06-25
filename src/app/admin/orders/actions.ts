@@ -21,7 +21,6 @@ import {
 } from "@/lib/adminLargeOrders";
 import {
   createAdminSquareInvoiceDraft,
-  createPendingAdminWooOrder,
   defaultAdminSquareInvoiceTitle,
   updateAndPublishAdminSquareInvoice,
 } from "@/lib/adminOrderIntegrations";
@@ -563,21 +562,9 @@ async function upsertOrderShared(formData: FormData) {
           square_customer_id: null,
           square_invoice_id: null,
           square_invoice_version: null,
-        } as Parameters<typeof createPendingAdminWooOrder>[0];
+        } as Parameters<typeof createAdminSquareInvoiceDraft>[0];
         const integrationPatch: Record<string, unknown> = {};
         const integrationWarnings: string[] = [];
-
-        try {
-          const wooOrder = await createPendingAdminWooOrder(integrationOrder);
-          integrationPatch.woo_order_id = String(wooOrder.id);
-          integrationPatch.woo_order_status = wooOrder.status ?? null;
-          integrationPatch.woo_order_key = wooOrder.orderKey ?? null;
-          integrationPatch.woo_payment_url = wooOrder.paymentUrl ?? null;
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "Woo order creation failed.";
-          console.error("Admin Woo mirror failed:", error);
-          integrationWarnings.push(`Woo mirror failed: ${message}`);
-        }
 
         try {
           const invoiceDraft = await createAdminSquareInvoiceDraft(integrationOrder);

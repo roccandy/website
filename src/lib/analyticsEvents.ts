@@ -21,6 +21,8 @@ type EcommercePayload = {
   currency?: string;
   value?: number;
   transaction_id?: string;
+  tax?: number;
+  shipping?: number;
   items?: AnalyticsItem[];
 };
 
@@ -31,32 +33,41 @@ function roundMoney(value: number | undefined) {
   return Math.round((value ?? 0) * 100) / 100;
 }
 
+function stripUndefined<T extends Record<string, unknown>>(value: T) {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>;
+}
+
 function normalizeEcommercePayload(payload: EcommercePayload) {
-  return {
+  return stripUndefined({
     ...payload,
     value: roundMoney(payload.value),
+    tax: roundMoney(payload.tax),
+    shipping: roundMoney(payload.shipping),
     items: payload.items?.map((item) => ({
-      ...item,
-      price: roundMoney(item.price),
-      quantity: item.quantity ?? 1,
+      ...stripUndefined({
+        ...item,
+        price: roundMoney(item.price),
+        quantity: item.quantity ?? 1,
+      }),
     })),
-  };
+  });
 }
 
 function dispatchEvent(name: string, payload: EcommercePayload) {
   if (typeof window === "undefined") return;
   const normalized = normalizeEcommercePayload(payload);
 
-  if (typeof window.gtag === "function") {
-    window.gtag("event", name, normalized);
-    return;
-  }
-
   if (Array.isArray(window.dataLayer)) {
+    window.dataLayer.push({ ecommerce: null });
     window.dataLayer.push({
       event: name,
       ecommerce: normalized,
     });
+    return;
+  }
+
+  if (typeof window.gtag === "function") {
+    window.gtag("event", name, normalized);
   }
 }
 
@@ -93,6 +104,8 @@ export function trackPurchaseOnce(payload: {
   transactionId: string;
   currency?: string;
   value?: number;
+  tax?: number;
+  shipping?: number;
   items: AnalyticsItem[];
 }) {
   const tracked = readTrackedPurchases();
@@ -102,6 +115,8 @@ export function trackPurchaseOnce(payload: {
     transaction_id: payload.transactionId,
     currency: payload.currency,
     value: payload.value,
+    tax: payload.tax,
+    shipping: payload.shipping,
     items: payload.items,
   });
 

@@ -13,7 +13,6 @@ export type CheckoutSuccessSummaryItem = {
 
 export type CheckoutSuccessSummary = {
   orderNumber?: string | null;
-  wooOrderId?: string | number | null;
   orderDateIso: string;
   paymentMethod: string;
   requestedDate?: string | null;

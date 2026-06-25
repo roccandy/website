@@ -51,8 +51,6 @@ export function CheckoutSuccessClient() {
         </p>
         {summary.orderNumber ? (
           <p className="mt-4 text-sm font-semibold text-zinc-900">Order number: #{summary.orderNumber}</p>
-        ) : summary.wooOrderId ? (
-          <p className="mt-4 text-sm font-semibold text-zinc-900">Reference: #{summary.wooOrderId}</p>
         ) : null}
         {summary.adminEmailWarning ? (
           <p className="mt-3 text-sm text-rose-600">{summary.adminEmailWarning}</p>

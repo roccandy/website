@@ -12,7 +12,6 @@ let premadeRows: Array<{
   name: string;
   price: number;
   weight_g: number;
-  woo_product_id: string | null;
   description: string;
 }> = [];
 
@@ -61,11 +60,10 @@ const buildOrder = (input: Partial<CheckoutOrderPayload>): CheckoutOrderPayload 
   ...input,
 });
 
-describe("buildWooOrderContext", () => {
+describe("buildCheckoutOrderContext", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    process.env.WOO_CUSTOM_PRODUCT_ID = "999";
     premadeRows = [];
 
     buildCustomPricingInput.mockReturnValue({ categoryId: "custom-1-6" });
@@ -96,9 +94,9 @@ describe("buildWooOrderContext", () => {
   });
 
   it("splits multiple custom orders under the same base order number", async () => {
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         customItems: [customItem("ONE"), customItem("TWO")],
       })
@@ -116,13 +114,12 @@ describe("buildWooOrderContext", () => {
         name: "Premade Candy",
         price: 12,
         weight_g: 100,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         customItems: [customItem("ONE")],
         premadeItems: [{ premadeId: "premade-1", quantity: 2 }],
@@ -139,16 +136,15 @@ describe("buildWooOrderContext", () => {
         name: "Premade Candy",
         price: 12,
         weight_g: 200,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
     calculatePricing.mockResolvedValue({ total: 100, totalWeightKg: 8.1 });
     getSettings.mockResolvedValue({ max_total_kg: 8.2 });
 
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         customItems: [customItem("ONE")],
         premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
@@ -166,15 +162,14 @@ describe("buildWooOrderContext", () => {
         name: "Premade Candy",
         price: 12,
         weight_g: 9000,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
     getSettings.mockResolvedValue({ max_total_kg: 8.2 });
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
     await expect(
-      buildWooOrderContext(
+      buildCheckoutOrderContext(
         buildOrder({
           customItems: [],
           premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
@@ -190,14 +185,13 @@ describe("buildWooOrderContext", () => {
         name: "Premade Candy",
         price: 12,
         weight_g: 200,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
     await expect(
-      buildWooOrderContext(
+      buildCheckoutOrderContext(
         buildOrder({
           customItems: [],
           premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
@@ -214,13 +208,12 @@ describe("buildWooOrderContext", () => {
         name: "Premade Candy",
         price: 12,
         weight_g: 100,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         customItems: [customItem("ONE"), customItem("TWO")],
         premadeItems: [{ premadeId: "premade-1", quantity: 2 }],
@@ -234,20 +227,19 @@ describe("buildWooOrderContext", () => {
     ]);
   });
 
-  it("applies the checkout test promo across Woo lines and stored order payloads", async () => {
+  it("applies the checkout test promo across checkout lines and stored order payloads", async () => {
     premadeRows = [
       {
         id: "premade-1",
         name: "Premade Candy",
         price: 12,
         weight_g: 100,
-        woo_product_id: "123",
         description: "Premade",
       },
     ];
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         promoCode: "FH*#HK@NXsh83D=-S",
         customItems: [customItem("ONE")],
@@ -261,9 +253,9 @@ describe("buildWooOrderContext", () => {
   });
 
   it("ignores non-matching checkout promo codes", async () => {
-    const { buildWooOrderContext } = await import("@/lib/checkoutOrder");
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    const context = await buildWooOrderContext(
+    const context = await buildCheckoutOrderContext(
       buildOrder({
         promoCode: "FH*#HK@NXsh83D=-X",
         customItems: [customItem("ONE")],

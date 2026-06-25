@@ -9,6 +9,7 @@ import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 type PayPalCaptureRequest = {
   orderId: string;
   order: CheckoutOrderPayload;
+  orderNumber?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       paymentMethod: "paypal",
       paymentMethodTitle: "PayPal",
       transactionId,
+      baseOrderNumber: body.orderNumber ?? null,
     });
 
     return NextResponse.json({ ok: true, ...result });

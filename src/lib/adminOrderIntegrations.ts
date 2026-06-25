@@ -1,5 +1,4 @@
 import { getPackagingOptions, type OrderRow, type PackagingOption } from "@/lib/data";
-import { createWooOrder, updateWooOrder } from "@/lib/woo";
 
 type AdminIntegrationOrder = Pick<
   OrderRow,
@@ -62,13 +61,6 @@ type SquareInvoice = {
   public_url?: string;
   created_at?: string;
   updated_at?: string;
-};
-
-export type AdminWooOrderResult = {
-  id: number;
-  status: string;
-  orderKey?: string;
-  paymentUrl?: string;
 };
 
 export type AdminSquareInvoiceDraftResult = {
@@ -141,16 +133,6 @@ export function defaultAdminSquareInvoiceTitle(order: Pick<AdminIntegrationOrder
   return `Personalised ${orderTitle(order as AdminIntegrationOrder)} candy ${orderReference(order as AdminIntegrationOrder)}`.trim();
 }
 
-function buildBatchSummary(order: AdminIntegrationOrder) {
-  const weights = Array.isArray(order.admin_batch_weights_kg)
-    ? order.admin_batch_weights_kg
-        .map((weight) => Number(weight))
-        .filter((weight) => Number.isFinite(weight) && weight > 0)
-    : [];
-  if (weights.length <= 1) return "";
-  return `Batches: ${weights.map((weight) => `${weight.toFixed(2)}kg`).join(", ")}`;
-}
-
 function formatQuantityForInvoice(quantity: number | null | undefined) {
   const value = Number(quantity);
   if (!Number.isFinite(value) || value <= 0) return "";
@@ -217,63 +199,6 @@ async function invoiceDescription(order: AdminIntegrationOrder) {
   ]
     .filter((line, index, lines) => line || (index > 0 && lines[index - 1]))
     .join("\n");
-}
-
-function getWooCustomProductId() {
-  const productId = Number(process.env.WOO_CUSTOM_PRODUCT_ID?.trim());
-  if (!Number.isFinite(productId) || productId <= 0) {
-    throw new Error("Woo custom product ID is not configured.");
-  }
-  return productId;
-}
-
-export async function createPendingAdminWooOrder(order: AdminIntegrationOrder): Promise<AdminWooOrderResult> {
-  const customProductId = getWooCustomProductId();
-  const total = Number(order.total_price);
-  if (!Number.isFinite(total) || total <= 0) {
-    throw new Error("Order total is required before creating a Woo order.");
-  }
-  const billing = buildBilling(order);
-  const batchSummary = buildBatchSummary(order);
-  const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
-  const wooOrder = await createWooOrder({
-    status: "pending",
-    set_paid: false,
-    payment_method: "square_invoice",
-    payment_method_title: "Square invoice",
-    billing,
-    shipping: billing,
-    customer_note: [order.due_date ? `Requested date: ${order.due_date}` : "", order.customer_note ?? ""]
-      .filter(Boolean)
-      .join("\n"),
-    line_items: [
-      {
-        product_id: customProductId,
-        name: invoiceTitle,
-        quantity: 1,
-        total: total.toFixed(2),
-        meta_data: [
-          { key: "rc_supabase_order_id", value: order.id },
-          { key: "rc_total_weight_kg", value: String(order.total_weight_kg) },
-          ...(batchSummary ? [{ key: "rc_admin_batches", value: batchSummary }] : []),
-        ],
-      },
-    ],
-    meta_data: [
-      { key: "rc_source", value: "roccandy-admin" },
-      { key: "rc_supabase_order_id", value: order.id },
-      { key: "rc_order_number", value: order.order_number ?? "" },
-      { key: "rc_due_date", value: order.due_date ?? "" },
-      { key: "rc_payment_provider", value: "square_invoice" },
-    ],
-  });
-
-  return {
-    id: wooOrder.id,
-    status: wooOrder.status,
-    orderKey: wooOrder.order_key,
-    paymentUrl: wooOrder.payment_url,
-  };
 }
 
 function getSquareConfig(): SquareConfig {
@@ -627,18 +552,4 @@ export async function updateAndPublishAdminSquareInvoice(order: AdminIntegration
     invoiceUrl: published.public_url ?? null,
     invoiceSentAt: published.updated_at ?? new Date().toISOString(),
   };
-}
-
-export async function markWooOrderPaidFromSquareInvoice(input: {
-  wooOrderId: string | null;
-  invoiceId: string;
-}) {
-  if (!input.wooOrderId) return;
-  await updateWooOrder(input.wooOrderId, {
-    status: "processing",
-    set_paid: true,
-    payment_method: "square_invoice",
-    payment_method_title: "Square invoice",
-    transaction_id: input.invoiceId,
-  });
 }

@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AddPremadeForm } from "./AddPremadeForm";
 import { PremadeList } from "./PremadeList";
-import { PremadeSyncControls } from "./PremadeSyncControls";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -44,7 +43,6 @@ export default async function PremadeAdminPage() {
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="admin-card-title text-zinc-900">Current items</h3>
-            <PremadeSyncControls totalCount={sorted.length} />
           </div>
           {sorted.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-500">No pre-made candy yet.</p>

@@ -19,12 +19,11 @@ type PremadeRow = {
   name: string;
   price: number;
   weight_g: number;
-  woo_product_id: string | null;
   description: string;
 };
 
-type WooLineItem = {
-  product_id: number;
+type CheckoutLineItem = {
+  item_id: string;
   name?: string;
   quantity: number;
   total?: string;
@@ -32,7 +31,7 @@ type WooLineItem = {
 
 type OrderInsertPayload = Record<string, unknown>;
 
-type BuildContextResult = {
+export type CheckoutOrderContext = {
   billing: {
     first_name: string;
     last_name: string;
@@ -48,10 +47,12 @@ type BuildContextResult = {
   dueDate: string | null;
   pickup: boolean;
   paymentPreference: string | null;
-  lineItems: WooLineItem[];
+  lineItems: CheckoutLineItem[];
   orderPayloads: OrderInsertPayload[];
   orderNumbers: OrderNumberBundle;
   totalAmount: number;
+  taxAmount: number;
+  shippingAmount: number;
 };
 
 const isDateBlocked = (dateKey: string, blocks: QuoteBlock[]) =>
@@ -93,7 +94,7 @@ async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
   const premadeIds = premadeItems.map((item) => item.premadeId);
   const { data, error } = await supabaseAdminClient
     .from("premade_candies")
-    .select("id,name,price,weight_g,woo_product_id,description")
+    .select("id,name,price,weight_g,description")
     .in("id", premadeIds);
   if (error) {
     throw new Error(error.message);
@@ -104,7 +105,6 @@ async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
       name: row.name,
       price: Number(row.price),
       weight_g: Number(row.weight_g),
-      woo_product_id: row.woo_product_id ?? null,
       description: row.description ?? "",
     })
   );
@@ -166,8 +166,7 @@ function assertBasePayload(body: CheckoutOrderPayload) {
 
 async function buildCustomItemLine(
   item: CustomCartItemPayload,
-  dueDate: string | null,
-  customProductId: number
+  dueDate: string | null
 ) {
   const pricingInput = buildCustomPricingInput({
     categoryId: item.categoryId,
@@ -193,7 +192,7 @@ async function buildCustomItemLine(
 
   return {
     lineItem: {
-      product_id: customProductId,
+      item_id: item.categoryId || item.designType || item.id || "custom-candy",
       name: item.title?.trim() ? `Custom order: ${item.title.trim()}` : "Custom order",
       quantity: 1,
       total: totalPrice.toFixed(2),
@@ -203,7 +202,7 @@ async function buildCustomItemLine(
   };
 }
 
-function applyCheckoutPromoOverride(lineItems: WooLineItem[], orderPayloads: OrderInsertPayload[]) {
+function applyCheckoutPromoOverride(lineItems: CheckoutLineItem[], orderPayloads: OrderInsertPayload[]) {
   lineItems.forEach((item, index) => {
     item.total = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL.toFixed(2) : "0.00";
   });
@@ -212,19 +211,25 @@ function applyCheckoutPromoOverride(lineItems: WooLineItem[], orderPayloads: Ord
   });
 }
 
-export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<BuildContextResult> {
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+export function calculateIncludedGst(totalAmount: number) {
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) return 0;
+  return roundMoney(totalAmount / 11);
+}
+
+export async function buildCheckoutOrderContext(
+  body: CheckoutOrderPayload,
+  options: { baseOrderNumber?: string | null } = {},
+): Promise<CheckoutOrderContext> {
   assertBasePayload(body);
 
   const customItems = body.customItems ?? [];
   const premadeItems = body.premadeItems ?? [];
   const hasCustom = customItems.length > 0;
   const hasPremade = premadeItems.length > 0;
-
-  const customProductIdRaw = process.env.WOO_CUSTOM_PRODUCT_ID?.trim();
-  const customProductId = customProductIdRaw ? Number(customProductIdRaw) : null;
-  if (hasCustom && (!customProductId || !Number.isFinite(customProductId))) {
-    throw new Error("Woo custom product ID is not configured.");
-  }
 
   const premadeById = await loadPremadeItems(premadeItems);
   const dueDate = body.dueDate?.trim() ?? null;
@@ -241,17 +246,16 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
   const customer = body.customer;
   const organizationName = customer.organizationName?.trim() || null;
   const billing = buildBilling(customer, pickup);
-  const lineItems: WooLineItem[] = [];
+  const lineItems: CheckoutLineItem[] = [];
   const orderPayloads: OrderInsertPayload[] = [];
 
-  const baseOrderNumber = await generateOrderNumber();
+  const baseOrderNumber = options.baseOrderNumber?.trim() || (await generateOrderNumber());
   const orderNumbers = buildOrderNumbers(customItems.length, hasPremade, baseOrderNumber);
 
   for (const [index, item] of customItems.entries()) {
     const { lineItem, totalPrice, totalWeightKg } = await buildCustomItemLine(
       item,
-      dueDate,
-      customProductId!
+      dueDate
     );
     assertWeightWithinLimit(totalWeightKg, maxTotalKg);
     lineItems.push(lineItem);
@@ -305,16 +309,14 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     if (!premade) {
       throw new Error("Premade item not found.");
     }
-    if (!premade.woo_product_id) {
-      throw new Error(`Premade item ${premade.name} is not synced to Woo.`);
-    }
 
     const weightKg = (premade.weight_g * item.quantity) / 1000;
     const totalPrice = premade.price * item.quantity;
     assertWeightWithinLimit(weightKg, maxTotalKg);
 
     lineItems.push({
-      product_id: Number(premade.woo_product_id),
+      item_id: premade.id,
+      name: premade.name,
       quantity: item.quantity,
       total: totalPrice.toFixed(2),
     });
@@ -354,6 +356,8 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
 
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
   const totalAmount = baseTotal;
+  const shippingAmount = 0;
+  const taxAmount = calculateIncludedGst(totalAmount);
 
   return {
     billing,
@@ -364,5 +368,7 @@ export async function buildWooOrderContext(body: CheckoutOrderPayload): Promise<
     orderPayloads,
     orderNumbers,
     totalAmount,
+    taxAmount,
+    shippingAmount,
   };
 }

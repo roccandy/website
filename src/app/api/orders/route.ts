@@ -180,9 +180,7 @@ export async function POST(req: Request) {
       throw new Error(message);
     }
 
-    const skipEmail =
-      typeof body.paymentMethod === "string" && body.paymentMethod.toLowerCase().includes("woo");
-    const ordersRecipients = skipEmail ? [] : getOrdersRecipients();
+    const ordersRecipients = getOrdersRecipients();
     if (ordersRecipients.length > 0) {
       try {
         await sendOrderEmail(ordersRecipients, {

@@ -107,7 +107,6 @@ export function toPublicCheckoutError(message?: string | null) {
   if (
     includesAny(normalized, [
       "premade item not found",
-      "not synced to woo",
       "one or more items in your cart are no longer available",
     ])
   ) {
@@ -134,11 +133,6 @@ export function toPublicCheckoutError(message?: string | null) {
 
   if (
     includesAny(normalized, [
-      "woo custom product id is not configured",
-      "woo sync is not configured",
-      "woo payment url missing",
-      "unable to create woo order",
-      "unable to create paid woo order",
       "order payload is required",
       "payment details are required",
     ])
@@ -187,18 +181,6 @@ export function toPublicPaymentError(message?: string | null) {
   ) {
     return "Your payment was received, but we couldn't save the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.";
   }
-
-  if (
-    includesAny(normalized, [
-      "unable to create woo order",
-      "unable to create paid woo order",
-      "could not create woo order",
-      "could not create paid woo order",
-    ])
-  ) {
-    return "We couldn't finish creating the order after payment was taken. Please try again or contact us with your order number.";
-  }
-
   if (
     includesAny(normalized, [
       "cvv",

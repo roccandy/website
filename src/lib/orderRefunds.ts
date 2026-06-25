@@ -1,6 +1,5 @@
 import type { OrderRow } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { updateWooOrder } from "@/lib/woo";
 
 type ServerClient = typeof supabaseAdminClient;
 
@@ -31,8 +30,7 @@ async function updateRefundRecord(
   refundedAt: string,
   refundReason: string | null,
   refundedAmount: number,
-  orderStatus: string,
-  wooOrderStatus: string
+  orderStatus: string
 ) {
   const refundUpdateWithReason = await client
     .from("orders")
@@ -41,7 +39,6 @@ async function updateRefundRecord(
       refunded_at: refundedAt,
       refund_reason: refundReason,
       refunded_amount: refundedAmount,
-      woo_order_status: wooOrderStatus,
     })
     .eq("id", orderId);
 
@@ -57,7 +54,6 @@ async function updateRefundRecord(
     .update({
       status: orderStatus,
       refunded_at: refundedAt,
-      woo_order_status: wooOrderStatus,
     })
     .eq("id", orderId);
 
@@ -97,7 +93,7 @@ export async function persistOrderRefund({
 
   const { data: relatedOrders, error: relatedOrdersError } = await client
     .from("orders")
-    .select("id,woo_order_id,refunded_at,status,total_price,refunded_amount")
+    .select("id,refunded_at,status,total_price,refunded_amount")
     .eq("payment_provider", provider)
     .eq("payment_transaction_id", transactionId);
 
@@ -115,7 +111,6 @@ export async function persistOrderRefund({
   const isPartialRefund = nextRefundedCents < orderTotalCents(order);
   const fullyRefundedPayment = !isPartialRefund && remainingRelatedOrders.length === 0;
   const orderStatus = isPartialRefund ? "partially-refunded" : "refunded";
-  const wooOrderStatus = fullyRefundedPayment ? "refunded" : "partially-refunded";
 
   await updateRefundRecord(
     client,
@@ -123,8 +118,7 @@ export async function persistOrderRefund({
     refundedAt,
     refundReason,
     fromMoneyCents(nextRefundedCents),
-    orderStatus,
-    wooOrderStatus
+    orderStatus
   );
 
   if (!fullyRefundedPayment) {
@@ -135,23 +129,11 @@ export async function persistOrderRefund({
   if (relatedOrderIds.length > 1) {
     const { error: updateRelatedStatusError } = await client
       .from("orders")
-      .update({ woo_order_status: "refunded" })
+      .update({ status: "refunded" })
       .in("id", relatedOrderIds);
     if (updateRelatedStatusError) {
       throw new Error(updateRelatedStatusError.message);
     }
-  }
-
-  const wooOrderIds = Array.from(
-    new Set(
-      normalizedRelatedOrders
-        .map((relatedOrder) => relatedOrder.woo_order_id)
-        .filter((wooOrderId): wooOrderId is string => Boolean(wooOrderId))
-    )
-  );
-
-  for (const wooOrderId of wooOrderIds) {
-    await updateWooOrder(wooOrderId, { status: "refunded" });
   }
 
   return { sharedPayment, fullyRefundedPayment };
@@ -184,7 +166,7 @@ export async function persistOrderRefunds({
 
   const { data: relatedOrders, error: relatedOrdersError } = await client
     .from("orders")
-    .select("id,woo_order_id,refunded_at,status,total_price,refunded_amount")
+    .select("id,refunded_at,status,total_price,refunded_amount")
     .eq("payment_provider", provider)
     .eq("payment_transaction_id", transactionId);
 
@@ -208,7 +190,6 @@ export async function persistOrderRefunds({
   });
   const selectedFullyRefunded = allocations.every(({ order, nextRefundedCents }) => nextRefundedCents >= orderTotalCents(order));
   const fullyRefundedPayment = selectedFullyRefunded && remainingRelatedOrders.length === 0;
-  const wooOrderStatus = fullyRefundedPayment ? "refunded" : "partially-refunded";
 
   for (const { order, nextRefundedCents } of allocations) {
     const orderStatus = nextRefundedCents >= orderTotalCents(order) ? "refunded" : "partially-refunded";
@@ -218,8 +199,7 @@ export async function persistOrderRefunds({
       refundedAt,
       refundReason,
       fromMoneyCents(nextRefundedCents),
-      orderStatus,
-      wooOrderStatus
+      orderStatus
     );
   }
 
@@ -231,23 +211,11 @@ export async function persistOrderRefunds({
   if (relatedOrderIds.length > 1) {
     const { error: updateRelatedStatusError } = await client
       .from("orders")
-      .update({ woo_order_status: "refunded" })
+      .update({ status: "refunded" })
       .in("id", relatedOrderIds);
     if (updateRelatedStatusError) {
       throw new Error(updateRelatedStatusError.message);
     }
-  }
-
-  const wooOrderIds = Array.from(
-    new Set(
-      normalizedRelatedOrders
-        .map((relatedOrder) => relatedOrder.woo_order_id)
-        .filter((wooOrderId): wooOrderId is string => Boolean(wooOrderId)),
-    ),
-  );
-
-  for (const wooOrderId of wooOrderIds) {
-    await updateWooOrder(wooOrderId, { status: "refunded" });
   }
 
   return { sharedPayment, fullyRefundedPayment };

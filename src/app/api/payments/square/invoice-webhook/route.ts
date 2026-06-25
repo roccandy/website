@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { markWooOrderPaidFromSquareInvoice } from "@/lib/adminOrderIntegrations";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
 
 type SquareInvoiceWebhookPayload = {
@@ -96,7 +95,7 @@ export async function POST(request: Request) {
   const client = supabaseAdminClient;
   const { data: order, error: fetchError } = await client
     .from("orders")
-    .select("id,order_number,title,design_type,quantity,due_date,customer_name,customer_email,total_weight_kg,total_price,notes,woo_order_id,paid_at")
+    .select("id,order_number,title,design_type,quantity,due_date,customer_name,customer_email,total_weight_kg,total_price,notes,paid_at")
     .eq("square_invoice_id", invoice.id)
     .maybeSingle();
 
@@ -135,14 +134,6 @@ export async function POST(request: Request) {
   }
 
   if (eventType === "invoice.payment_made") {
-    try {
-      await markWooOrderPaidFromSquareInvoice({
-        wooOrderId: order.woo_order_id ?? null,
-        invoiceId: invoice.id,
-      });
-    } catch (error) {
-      console.error("Square invoice Woo paid sync failed:", error);
-    }
     if (!order.paid_at) {
       const recipients = getOrdersRecipients();
       if (recipients.length > 0) {

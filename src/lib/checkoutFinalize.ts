@@ -1,12 +1,12 @@
-import { buildWooOrderContext } from "@/lib/checkoutOrder";
+import { buildCheckoutOrderContext, type CheckoutOrderContext } from "@/lib/checkoutOrder";
 import { getOrdersRecipients, isEmailConfigured, sendAdminOrderSummaryEmail, sendCustomerOrderSummaryEmail } from "@/lib/email";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
-import { createWooOrder } from "@/lib/woo";
 
 const EMAIL_WAIT_MS = 4000;
+const ORDER_INSERT_ATTEMPTS = 3;
 
 type FinalizePaidCheckoutInput = {
   order: CheckoutOrderPayload;
@@ -14,86 +14,119 @@ type FinalizePaidCheckoutInput = {
   paymentMethod: string;
   paymentMethodTitle: string;
   transactionId: string;
+  checkoutContext?: CheckoutOrderContext;
+  baseOrderNumber?: string | null;
 };
 
 export type FinalizePaidCheckoutResult = {
-  wooOrderId: number | null;
   orderNumber: string;
+  trackingTransactionId: string;
+  orderTotal: number;
+  tax: number;
+  shipping: number;
   adminEmailWarning: string | null;
 };
 
 const INTERNAL_ORDER_SAVE_WARNING =
   "Your payment was received, but we had trouble finalising the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.";
 
-export async function finalizePaidCheckoutOrder({
-  order,
+function isOrderNumberConflict(error: unknown) {
+  const message =
+    typeof error === "object" && error && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+  return message.toLowerCase().includes("order_number") && /duplicate|unique/i.test(message);
+}
+
+function buildTrackingTransactionId(orderNumber: string, transactionId: string) {
+  const normalizedOrderNumber = orderNumber.trim();
+  const normalizedTransactionId = transactionId.trim();
+  return normalizedTransactionId
+    ? `${normalizedOrderNumber}-${normalizedTransactionId}`
+    : normalizedOrderNumber;
+}
+
+function buildPaidOrderPayloads({
+  context,
   paymentProvider,
-  paymentMethod,
   paymentMethodTitle,
   transactionId,
-}: FinalizePaidCheckoutInput): Promise<FinalizePaidCheckoutResult> {
-  const { billing, dueDate, pickup, lineItems, orderPayloads, orderNumbers, totalAmount } =
-    await buildWooOrderContext(order);
-  const customerEmail = order.customer?.email?.trim() || null;
-  const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
-
-  const wooOrder = isTestOrder
-    ? null
-    : await createWooOrder({
-        status: "processing",
-        set_paid: true,
-        payment_method: paymentMethod,
-        payment_method_title: paymentMethodTitle,
-        transaction_id: transactionId,
-        billing,
-        shipping: pickup ? billing : billing,
-        customer_note: dueDate ? `Requested date: ${dueDate}` : undefined,
-        line_items: lineItems,
-        meta_data: [
-          { key: "rc_source", value: "roccandy-next" },
-          { key: "rc_due_date", value: dueDate ?? "" },
-          { key: "rc_pickup", value: pickup ? "true" : "false" },
-          { key: "rc_payment_provider", value: paymentProvider },
-        ],
-      });
-
-  const paidAt = new Date().toISOString();
-  const enrichedPayloads = orderPayloads.map((payload) => ({
+  isTestOrder,
+  paidAt,
+}: {
+  context: CheckoutOrderContext;
+  paymentProvider: string;
+  paymentMethodTitle: string;
+  transactionId: string;
+  isTestOrder: boolean;
+  paidAt: string;
+}) {
+  return context.orderPayloads.map((payload) => ({
     ...payload,
-    woo_order_id: wooOrder ? String(wooOrder.id) : null,
-    woo_order_status: wooOrder?.status ?? null,
-    woo_order_key: wooOrder?.order_key ?? null,
-    woo_payment_url: null,
     payment_method: paymentMethodTitle,
     status: isTestOrder ? "test" : "pending",
     paid_at: paidAt,
     payment_provider: paymentProvider,
     payment_transaction_id: transactionId,
   }));
+}
+
+export async function finalizePaidCheckoutOrder({
+  order,
+  paymentProvider,
+  paymentMethodTitle,
+  transactionId,
+  checkoutContext,
+  baseOrderNumber,
+}: FinalizePaidCheckoutInput): Promise<FinalizePaidCheckoutResult> {
+  let context =
+    checkoutContext ??
+    (await buildCheckoutOrderContext(order, {
+      baseOrderNumber,
+    }));
+  const customerEmail = order.customer?.email?.trim() || null;
+  const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
+  const paidAt = new Date().toISOString();
 
   let adminEmailWarning: string | null = null;
-  const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
-  if (insertError) {
+  for (let attempt = 1; attempt <= ORDER_INSERT_ATTEMPTS; attempt += 1) {
+    const enrichedPayloads = buildPaidOrderPayloads({
+      context,
+      paymentProvider,
+      paymentMethodTitle,
+      transactionId,
+      isTestOrder,
+      paidAt,
+    });
+    const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
+    if (!insertError) {
+      break;
+    }
+    if (attempt < ORDER_INSERT_ATTEMPTS && isOrderNumberConflict(insertError)) {
+      context = await buildCheckoutOrderContext(order);
+      continue;
+    }
     console.error("Supabase order insert failed:", insertError);
     adminEmailWarning = INTERNAL_ORDER_SAVE_WARNING;
+    break;
   }
 
   const recipients = getOrdersRecipients();
   const emailTasks: Array<Promise<unknown>> = [];
   const firstCustomItem = order.customItems?.[0];
   const customPreviews = (order.customItems ?? []).map((item, index) => ({
-    orderNumber: orderNumbers.customOrderNumbers?.[index] ?? null,
+    orderNumber: context.orderNumbers.customOrderNumbers?.[index] ?? null,
     previewSvg: item.previewSvg ?? null,
     previewPngDataUrl: item.previewPngDataUrl ?? null,
   }));
   const summaryEmailPayloadPromise = buildAdminOrderSummaryEmailPayload({
-    orderPayloads,
-    orderNumber: orderNumbers.baseOrderNumber,
-    requestedDate: dueDate ?? null,
-    billing,
-    pickup,
+    orderPayloads: context.orderPayloads,
+    orderNumber: context.orderNumbers.baseOrderNumber,
+    requestedDate: context.dueDate ?? null,
+    billing: context.billing,
+    pickup: context.pickup,
     paymentMethod: paymentMethodTitle,
-    paymentAmount: totalAmount,
+    paymentAmount: context.totalAmount,
     customPreviewSvg: firstCustomItem?.previewSvg ?? null,
     customPreviewPngDataUrl: firstCustomItem?.previewPngDataUrl ?? null,
     customPreviews,
@@ -127,8 +160,11 @@ export async function finalizePaidCheckoutOrder({
   }
 
   return {
-    wooOrderId: wooOrder?.id ?? null,
-    orderNumber: orderNumbers.baseOrderNumber,
+    orderNumber: context.orderNumbers.baseOrderNumber,
+    trackingTransactionId: buildTrackingTransactionId(context.orderNumbers.baseOrderNumber, transactionId),
+    orderTotal: context.totalAmount,
+    tax: context.taxAmount,
+    shipping: context.shippingAmount,
     adminEmailWarning,
   };
 }

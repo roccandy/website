@@ -138,6 +138,15 @@ type PaymentProcessingState = {
   message: string;
 };
 
+type PaymentSuccessResult = {
+  adminEmailWarning?: string | null;
+  orderNumber?: string | null;
+  trackingTransactionId?: string | null;
+  orderTotal?: number | null;
+  tax?: number | null;
+  shipping?: number | null;
+};
+
 function formatMoney(value: number) {
   return `$${value.toFixed(2)}`;
 }
@@ -211,7 +220,7 @@ function SquarePayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
+  onSuccess: (result: PaymentSuccessResult) => void;
   onError: (stage: string, message: string) => void;
   onProcessingChange: (state: PaymentProcessingState) => void;
 }) {
@@ -265,13 +274,19 @@ function SquarePayment({
       }
       const payload = (await response.json().catch(() => ({}))) as {
         adminEmailWarning?: string | null;
-        wooOrderId?: string | number | null;
         orderNumber?: string | null;
+        trackingTransactionId?: string | null;
+        orderTotal?: number | null;
+        tax?: number | null;
+        shipping?: number | null;
       };
       onSuccess({
         adminEmailWarning: payload.adminEmailWarning ?? null,
-        wooOrderId: payload.wooOrderId ?? null,
         orderNumber: payload.orderNumber ?? null,
+        trackingTransactionId: payload.trackingTransactionId ?? null,
+        orderTotal: payload.orderTotal ?? null,
+        tax: payload.tax ?? null,
+        shipping: payload.shipping ?? null,
       });
     } catch (error) {
       onError("charge", error instanceof Error ? error.message : "Payment failed.");
@@ -355,7 +370,7 @@ function PayPalPayment({
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
-  onSuccess: (result: { adminEmailWarning?: string | null; wooOrderId?: string | number | null; orderNumber?: string | null }) => void;
+  onSuccess: (result: PaymentSuccessResult) => void;
   onError: (stage: string, message: string) => void;
   onProcessingChange: (state: PaymentProcessingState) => void;
 }) {
@@ -363,6 +378,7 @@ function PayPalPayment({
   const renderedRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
   const canPayRef = useRef(canPay);
+  const reservedOrderNumbersRef = useRef(new Map<string, string>());
   const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -417,11 +433,18 @@ function PayPalPayment({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ order: payloadRef.current() }),
                 });
-                const data = (await response.json().catch(() => ({}))) as { orderId?: string; error?: string };
+                const data = (await response.json().catch(() => ({}))) as {
+                  orderId?: string;
+                  orderNumber?: string | null;
+                  error?: string;
+                };
                 if (!response.ok || !data.orderId) {
                   const message = data.error || "Unable to start PayPal.";
                   setSetupError(toPublicPaymentError(message));
                   throw new Error(message);
+                }
+                if (data.orderNumber) {
+                  reservedOrderNumbersRef.current.set(data.orderId, data.orderNumber);
                 }
                 return data.orderId;
               } catch (error) {
@@ -443,22 +466,32 @@ function PayPalPayment({
                 const response = await fetch("/api/payments/paypal/capture-order", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ orderId: data.orderID, order: payloadRef.current() }),
+                  body: JSON.stringify({
+                    orderId: data.orderID,
+                    orderNumber: reservedOrderNumbersRef.current.get(data.orderID) ?? null,
+                    order: payloadRef.current(),
+                  }),
                 });
                 const payload = (await response.json().catch(() => ({}))) as {
                   ok?: boolean;
                   error?: string;
                   adminEmailWarning?: string | null;
-                  wooOrderId?: string | number | null;
                   orderNumber?: string | null;
+                  trackingTransactionId?: string | null;
+                  orderTotal?: number | null;
+                  tax?: number | null;
+                  shipping?: number | null;
                 };
                 if (!response.ok || !payload.ok) {
                   throw new Error(payload.error || "PayPal capture failed.");
                 }
                 onSuccess({
                   adminEmailWarning: payload.adminEmailWarning ?? null,
-                  wooOrderId: payload.wooOrderId ?? null,
                   orderNumber: payload.orderNumber ?? null,
+                  trackingTransactionId: payload.trackingTransactionId ?? null,
+                  orderTotal: payload.orderTotal ?? null,
+                  tax: payload.tax ?? null,
+                  shipping: payload.shipping ?? null,
                 });
               } finally {
                 onProcessingChange({ active: false, title: "", message: "" });
@@ -1399,11 +1432,9 @@ export function CheckoutClient({
 
   const buildSuccessSummary = ({
     adminEmailWarning: warning,
-    wooOrderId,
     orderNumber,
   }: {
     adminEmailWarning?: string | null;
-    wooOrderId?: string | number | null;
     orderNumber?: string | null;
   }) => {
     const summaryItems = items.map((item) => {
@@ -1465,7 +1496,6 @@ export function CheckoutClient({
 
     storeCheckoutSuccessSummary({
       orderNumber: orderNumber ?? null,
-      wooOrderId: wooOrderId ?? null,
       orderDateIso: new Date().toISOString(),
       paymentMethod: paymentMethodLabel,
       requestedDate: dueDate || null,
@@ -1487,24 +1517,24 @@ export function CheckoutClient({
 
   const handlePaymentSuccess = ({
     adminEmailWarning: warning,
-    wooOrderId,
     orderNumber,
-  }: {
-    adminEmailWarning?: string | null;
-    wooOrderId?: string | number | null;
-    orderNumber?: string | null;
-  }) => {
-    if (wooOrderId) {
+    trackingTransactionId,
+    orderTotal,
+    tax,
+    shipping,
+  }: PaymentSuccessResult) => {
+    if (trackingTransactionId || orderNumber) {
       trackPurchaseOnce({
-        transactionId: String(wooOrderId),
+        transactionId: String(trackingTransactionId || orderNumber),
         currency: "AUD",
-        value: cartPricing.total,
+        value: orderTotal ?? cartPricing.total,
+        tax: tax ?? Math.round(((orderTotal ?? cartPricing.total) / 11) * 100) / 100,
+        shipping: shipping ?? 0,
         items: analyticsItems,
       });
     }
     buildSuccessSummary({
       adminEmailWarning: warning,
-      wooOrderId,
       orderNumber,
     });
     setPaymentSuccess(true);

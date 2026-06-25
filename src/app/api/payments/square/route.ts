@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { buildWooOrderContext } from "@/lib/checkoutOrder";
+import { buildCheckoutOrderContext } from "@/lib/checkoutOrder";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
 import { logPaymentFailure } from "@/lib/paymentFailures";
 import { toPublicPaymentError } from "@/lib/publicErrorMessages";
@@ -47,7 +47,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: toPublicPaymentError("Square is not configured.") }, { status: 500 });
     }
 
-    const { totalAmount, orderNumbers } = await buildWooOrderContext(body.order);
+    const checkoutContext = await buildCheckoutOrderContext(body.order);
+    const { totalAmount, orderNumbers } = checkoutContext;
     const customerEmail = body.order.customer?.email?.trim() || null;
     const amountCents = Math.round(totalAmount * 100);
     if (!Number.isFinite(amountCents) || amountCents <= 0) {
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
       paymentMethod: "square",
       paymentMethodTitle,
       transactionId: paymentData.payment.id,
+      checkoutContext,
     });
 
     return NextResponse.json({ ok: true, ...result });

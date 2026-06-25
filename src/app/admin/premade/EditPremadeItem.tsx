@@ -10,22 +10,10 @@ import {
   DEFAULT_PREMADE_BRAND,
   DEFAULT_PRODUCT_CONDITION,
 } from "@/lib/premadeDefaults";
-import { deletePremadeCandy, syncPremadeToWoo, updatePremadeCandy, uploadPremadeImageAction } from "./actions";
+import { deletePremadeCandy, updatePremadeCandy, uploadPremadeImageAction } from "./actions";
 
 const MAX_IMAGE_SIZE_MB = 2;
 const MAX_IMAGE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
-
-function formatWooSyncTimestamp(value?: string | null) {
-  if (!value) return "Never";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Unknown";
-  const year = parsed.getUTCFullYear();
-  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(parsed.getUTCDate()).padStart(2, "0");
-  const hour = String(parsed.getUTCHours()).padStart(2, "0");
-  const minute = String(parsed.getUTCMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hour}:${minute} UTC`;
-}
 
 function resolveDefaultText(value: string | null | undefined, fallback: string) {
   const trimmed = value?.trim();
@@ -52,10 +40,6 @@ type PremadeItem = {
   product_condition: string | null;
   sale_price: number | null;
   availability: string | null;
-  woo_product_id: string | null;
-  woo_sync_status: string | null;
-  woo_last_sync_at: string | null;
-  woo_sync_error: string | null;
 };
 
 type Props = {
@@ -102,8 +86,6 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [showProductFields, setShowProductFields] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -295,22 +277,6 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
     }
   };
 
-  const handleWooSync = async () => {
-    setSyncing(true);
-    setSyncMessage(null);
-    try {
-      const { error: syncError } = await syncPremadeToWoo(item.id);
-      if (syncError) {
-        setSyncMessage({ type: "error", text: syncError });
-        return;
-      }
-      setSyncMessage({ type: "success", text: "Woo sync complete." });
-      router.refresh();
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleDelete = async () => {
     setDeleteError(null);
     setDeleting(true);
@@ -330,24 +296,6 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
   const flavorSummary = (item.flavors ?? []).length ? (item.flavors ?? []).join(", ") : "-";
   const weightLabel = initialWeightUnit === "kg" ? `${initialWeightValue}kg` : `${initialWeightValue}g`;
   const isActive = item.is_active;
-  const syncStatus = item.woo_sync_status ?? (item.woo_product_id ? "synced" : "not_synced");
-  const syncStatusLabel =
-    syncStatus === "synced"
-      ? "Woo synced"
-      : syncStatus === "syncing"
-        ? "Syncing"
-        : syncStatus === "error"
-          ? "Woo error"
-          : "Not synced";
-  const syncStatusClass =
-    syncStatus === "synced"
-      ? "bg-emerald-50 text-emerald-700"
-      : syncStatus === "syncing"
-        ? "bg-amber-50 text-amber-700"
-        : syncStatus === "error"
-          ? "bg-red-50 text-red-600"
-          : "bg-zinc-100 text-zinc-600";
-  const lastSyncLabel = formatWooSyncTimestamp(item.woo_last_sync_at);
 
   if (!isEditing) {
     return (
@@ -443,37 +391,6 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
             <div className="text-xs text-zinc-600">
               <span className="font-semibold text-zinc-500">Flavors:</span> {flavorSummary}
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <span className="font-semibold">Woo:</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${syncStatusClass}`}>
-                {syncStatusLabel}
-              </span>
-              <span>Last sync {lastSyncLabel}</span>
-              {item.woo_sync_error ? (
-                <span
-                  className="text-red-600"
-                  title={item.woo_sync_error}
-                >
-                  {item.woo_sync_error.length > 120
-                    ? `${item.woo_sync_error.slice(0, 120)}…`
-                    : item.woo_sync_error}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                data-neutral-button
-                onClick={handleWooSync}
-                disabled={syncing}
-                className="rounded-md px-2 py-1 text-[11px] font-semibold"
-              >
-                {syncing ? "Syncing..." : "Sync to Woo"}
-              </button>
-              {syncMessage ? (
-                <span className={syncMessage.type === "error" ? "text-red-600" : "text-emerald-600"}>
-                  {syncMessage.text}
-                </span>
-              ) : null}
-            </div>
             <div className="flex flex-wrap items-start gap-2 text-xs text-zinc-500">
               <span className="min-w-0 flex-1">{item.description ? item.description : "No description."}</span>
               {item.short_name?.trim() ? (
@@ -486,7 +403,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
               <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-2 text-xs text-red-800">
                 <p className="font-semibold">Delete this item permanently?</p>
                 <p className="mt-1 text-[11px] text-red-700">
-                  This removes it from admin, the storefront, and Woo product sync.
+                  This removes it from admin and the storefront.
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button
