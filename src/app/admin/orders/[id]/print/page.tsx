@@ -8,7 +8,11 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
-import { batchWeightsForOrder, formatPackagingOptionLabel } from "@/app/admin/orders/productionScheduleShared";
+import {
+  batchWeightsForOrder,
+  formatPackagingOptionLabel,
+  logoDownloadNameForOrder,
+} from "@/app/admin/orders/productionScheduleShared";
 import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 import { PrintButton } from "./PrintButton";
 
@@ -267,6 +271,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     const ext = getFileExtensionFromUrl(labelImageUrl);
     return `Order#${orderNumberPart} Custom Label ${titlePart}.${ext}`;
   })();
+  const logoDownloadName = logoDownloadNameForOrder(order);
 
   const designText = order.design_text ? normalizeHeart(order.design_text) : "";
   const hasHeart = designText.includes("\u2665");
@@ -480,7 +485,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               {order.logo_url && (
                 <a
                   href={order.logo_url}
-                  download
+                  download={logoDownloadName}
                   className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                 >
                   Download logo

@@ -14,6 +14,7 @@ import OrderTitleWithLogo from "@/app/admin/orders/OrderTitleWithLogo";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
   dateKey,
+  logoDownloadNameForOrder,
   weightLabel,
 } from "@/app/admin/orders/productionScheduleShared";
 import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
@@ -247,6 +248,7 @@ export default async function ProductionOrdersPage() {
                         const previewProps = previewPropsForOrder(order);
                         const batchWeightLabel = weightLabel(assignment.kg_assigned) || "-";
                         const totalWeightLabel = weightLabel(order.total_weight_kg);
+                        const logoDownloadName = logoDownloadNameForOrder(order);
                         return (
                           <div
                             key={assignment.id}
@@ -272,7 +274,7 @@ export default async function ProductionOrdersPage() {
                                   />
                                   <a
                                     href={order.logo_url}
-                                    download
+                                    download={logoDownloadName}
                                     className="inline-flex shrink-0 items-center justify-center rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
                                   >
                                     Download logo

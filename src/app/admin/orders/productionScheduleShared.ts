@@ -164,6 +164,52 @@ export const buildProductionWorkweekMonthCells = (month: Date, settings: Setting
       return isScheduleDateBlocked(day, settings).blocked ? null : day;
     });
 
+const SAFE_DOWNLOAD_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg"] as const;
+
+export const sanitizeDownloadFilenamePart = (value: string) =>
+  value
+    .trim()
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+
+export const getDownloadFileExtensionFromUrl = (value: string, fallback = "png") => {
+  const dataUrlMatch = value.match(/^data:([^;,]+)[;,]/i);
+  if (dataUrlMatch?.[1]) {
+    const mime = dataUrlMatch[1].toLowerCase();
+    if (mime === "image/jpeg") return "jpg";
+    if (mime === "image/png") return "png";
+    if (mime === "image/gif") return "gif";
+    if (mime === "image/webp") return "webp";
+    if (mime === "image/svg+xml") return "svg";
+    return fallback;
+  }
+
+  try {
+    const url = new URL(value, "https://example.local");
+    const ext = url.pathname.split(".").pop()?.toLowerCase() ?? "";
+    return SAFE_DOWNLOAD_EXTENSIONS.includes(ext as (typeof SAFE_DOWNLOAD_EXTENSIONS)[number]) ? ext : fallback;
+  } catch {
+    const ext = value.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+    return SAFE_DOWNLOAD_EXTENSIONS.includes(ext as (typeof SAFE_DOWNLOAD_EXTENSIONS)[number]) ? ext : fallback;
+  }
+};
+
+export const logoDownloadNameForOrder = (
+  order: Pick<OrderRow, "organization_name" | "title" | "customer_name" | "order_number" | "logo_url">,
+) => {
+  const filename =
+    sanitizeDownloadFilenamePart(
+      order.organization_name?.trim() ||
+        order.title?.trim() ||
+        order.customer_name?.trim() ||
+        order.order_number?.trim() ||
+        "logo",
+    ) || "logo";
+  const ext = getDownloadFileExtensionFromUrl(order.logo_url ?? "");
+  return `${filename}.${ext}`;
+};
+
 export const getScheduleStatus = (
   order: OrderRow,
   assignedSlotDate: string | null | undefined,

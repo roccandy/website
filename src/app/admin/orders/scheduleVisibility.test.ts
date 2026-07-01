@@ -11,6 +11,7 @@ import {
   formatBatchBreakdown,
   formatScheduleStatusLabel,
   getMultiAssignmentScheduleStatus,
+  logoDownloadNameForOrder,
   productionCompletionActionLabel,
   statusBadge,
 } from "./productionScheduleShared";
@@ -193,5 +194,26 @@ describe("production calendar month cells", () => {
     );
 
     expect(cellKeys(cells).slice(0, 5)).toEqual([null, null, null, "2026-07-02", "2026-07-03"]);
+  });
+});
+
+describe("logo download filenames", () => {
+  it("uses the organisation name and preserves the logo extension", () => {
+    const order = makeOrder({
+      organization_name: "ACME Events",
+      title: "Fallback title",
+      logo_url: "https://cdn.test/uploads/logo-file.svg?token=abc",
+    });
+
+    expect(logoDownloadNameForOrder(order)).toBe("ACME Events.svg");
+  });
+
+  it("sanitizes unsafe filename characters", () => {
+    const order = makeOrder({
+      organization_name: "A/C:M*E?",
+      logo_url: "https://cdn.test/logo.png",
+    });
+
+    expect(logoDownloadNameForOrder(order)).toBe("ACME.png");
   });
 });
