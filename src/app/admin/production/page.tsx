@@ -260,7 +260,7 @@ export default async function ProductionOrdersPage() {
                             </h3>
                             <div className="col-span-2 min-w-0 sm:col-span-1 sm:px-2">
                               {isBranded && order.logo_url ? (
-                                <div className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
                                   <span className="shrink-0 text-sm font-semibold leading-snug text-zinc-950">Logo:</span>
                                   <Image
                                     src={order.logo_url}
@@ -270,6 +270,13 @@ export default async function ProductionOrdersPage() {
                                     unoptimized
                                     className="h-8 w-8 shrink-0 object-contain"
                                   />
+                                  <a
+                                    href={order.logo_url}
+                                    download
+                                    className="inline-flex shrink-0 items-center justify-center rounded border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
+                                  >
+                                    Download logo
+                                  </a>
                                 </div>
                               ) : (
                                 <p className="truncate whitespace-nowrap text-sm font-semibold leading-snug text-zinc-950">

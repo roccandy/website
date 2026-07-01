@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { OrderRow } from "@/lib/data";
+import type { OrderRow, SettingsRow } from "@/lib/data";
 import {
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
 } from "./scheduleVisibility";
 import {
+  buildMondayFirstMonthCells,
+  buildProductionWorkweekMonthCells,
+  dateKey,
   formatBatchBreakdown,
   formatScheduleStatusLabel,
   getMultiAssignmentScheduleStatus,
@@ -13,6 +16,19 @@ import {
 } from "./productionScheduleShared";
 
 const makeOrder = (input: Partial<OrderRow>) => input as OrderRow;
+const makeSettings = (input: Partial<SettingsRow> = {}) =>
+  ({
+    no_production_mon: false,
+    no_production_tue: false,
+    no_production_wed: false,
+    no_production_thu: false,
+    no_production_fri: false,
+    no_production_sat: true,
+    no_production_sun: true,
+    ...input,
+  }) as SettingsRow;
+
+const cellKeys = (cells: Array<Date | null>) => cells.map((cell) => (cell ? dateKey(cell) : null));
 
 describe("admin custom order payment helpers", () => {
   it("treats backend custom orders as unpaid when they have no Woo payment metadata", () => {
@@ -144,5 +160,38 @@ describe("batch breakdown labels", () => {
     });
 
     expect(formatBatchBreakdown(order)).toBe("3 x 8kg + 1 x 6kg");
+  });
+});
+
+describe("production calendar month cells", () => {
+  it("builds Monday-first month cells with leading blanks", () => {
+    const cells = buildMondayFirstMonthCells(new Date(2026, 6, 1));
+
+    expect(cells).toHaveLength(35);
+    expect(cellKeys(cells).slice(0, 5)).toEqual([null, null, "2026-07-01", "2026-07-02", "2026-07-03"]);
+  });
+
+  it("keeps the production workweek calendar aligned Monday to Friday", () => {
+    const cells = buildProductionWorkweekMonthCells(new Date(2026, 6, 1), makeSettings());
+
+    expect(cells).toHaveLength(25);
+    expect(cellKeys(cells).slice(0, 7)).toEqual([
+      null,
+      null,
+      "2026-07-01",
+      "2026-07-02",
+      "2026-07-03",
+      "2026-07-06",
+      "2026-07-07",
+    ]);
+  });
+
+  it("preserves weekday positions for blocked production days", () => {
+    const cells = buildProductionWorkweekMonthCells(
+      new Date(2026, 6, 1),
+      makeSettings({ no_production_wed: true }),
+    );
+
+    expect(cellKeys(cells).slice(0, 5)).toEqual([null, null, null, "2026-07-02", "2026-07-03"]);
   });
 });

@@ -9,6 +9,7 @@ import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildAssignmentBySlotKey,
+  buildProductionWorkweekMonthCells,
   buildSlotIdByKey,
   batchWeightsForOrder,
   canCompleteOrderForSlotDates,
@@ -40,6 +41,8 @@ type Props = {
 
 const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
   order.status === "archived" || order.status === "shipped";
+
+const WORKWEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
 export default function ProductionScheduleSection({
   orders,
@@ -106,23 +109,11 @@ export default function ProductionScheduleSection({
     return map;
   }, [assignments, slotMap]);
 
-  const calendarDays = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-    const start = new Date(year, month, 1);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const startOffset = (start.getDay() + 6) % 7;
-    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-    return Array.from({ length: totalCells }, (_, idx) => new Date(year, month, idx - startOffset + 1));
-  }, [calendarMonth]);
-  const visibleCalendarDays = useMemo(
-    () =>
-      calendarDays.filter((day) => {
-        if (day.getMonth() !== calendarMonth.getMonth()) return false;
-        return !isScheduleDateBlocked(day, settings).blocked;
-      }),
-    [calendarDays, calendarMonth, settings],
+  const calendarCells = useMemo(
+    () => buildProductionWorkweekMonthCells(calendarMonth, settings),
+    [calendarMonth, settings],
   );
+  const hasVisibleCalendarDays = calendarCells.some(Boolean);
 
   const weekDays = useMemo(() => {
     const anchor = new Date(calendarMonth);
@@ -341,20 +332,40 @@ export default function ProductionScheduleSection({
           </div>
         </div>
         {viewMode === "calendar" ? (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            {visibleCalendarDays.length === 0 ? (
-              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 sm:col-span-2 lg:col-span-5">
-                No production days are visible for this month.
-              </div>
-            ) : (
-              visibleCalendarDays.map((day) => {
-                const key = dateKey(day);
-                const isToday = dateKey(new Date()) === key;
-                return (
-                  <div
-                    key={key}
-                    className={`rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
-                  >
+          <>
+            <div className="mt-3 hidden grid-cols-5 gap-2 lg:grid">
+              {WORKWEEK_LABELS.map((label) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              {!hasVisibleCalendarDays ? (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 sm:col-span-2 lg:col-span-5">
+                  No production days are visible for this month.
+                </div>
+              ) : (
+                calendarCells.map((day, cellIndex) => {
+                  if (!day) {
+                    return (
+                      <div
+                        key={`empty-${cellIndex}`}
+                        aria-hidden="true"
+                        className="hidden min-h-[10rem] rounded-lg border border-transparent lg:block"
+                      />
+                    );
+                  }
+                  const key = dateKey(day);
+                  const isToday = dateKey(new Date()) === key;
+                  return (
+                    <div
+                      key={key}
+                      className={`rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
+                    >
                     <div className="flex items-center gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -568,11 +579,12 @@ export default function ProductionScheduleSection({
                       })}
                     </div>
                     {renderDayNoteForm(key, true)}
-                  </div>
-                );
-              })
-            )}
-          </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
         ) : (
           <div className="mt-3 space-y-3">
             {visibleWeekDays.length === 0 ? (

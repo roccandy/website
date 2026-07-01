@@ -141,6 +141,29 @@ export const formatWeekdayDayMonthLabel = (date: Date) =>
 export const formatFullDateLabel = (date: Date) =>
   `${date.getDate()} ${MONTH_LONG_LABELS[date.getMonth()]} ${date.getFullYear()}`;
 
+export const buildMondayFirstMonthCells = (month: Date) => {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const start = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const startOffset = (start.getDay() + 6) % 7;
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) return null;
+    return new Date(year, monthIndex, dayNumber);
+  });
+};
+
+export const buildProductionWorkweekMonthCells = (month: Date, settings: SettingsRow) =>
+  buildMondayFirstMonthCells(month)
+    .filter((_, index) => index % 7 < 5)
+    .map((day) => {
+      if (!day) return null;
+      return isScheduleDateBlocked(day, settings).blocked ? null : day;
+    });
+
 export const getScheduleStatus = (
   order: OrderRow,
   assignedSlotDate: string | null | undefined,

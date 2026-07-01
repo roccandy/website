@@ -8,6 +8,7 @@ import SplitOrderDecisionModal from "./SplitOrderDecisionModal";
 import {
   canCompleteOrderForSlotDates,
   batchWeightsForOrder,
+  buildMondayFirstMonthCells,
   dateKey,
   formatDayMonthLabel,
   formatMonthLabel,
@@ -78,21 +79,6 @@ function SlotAvailabilityBar({
   );
 }
 
-function buildMonthCells(month: Date) {
-  const year = month.getFullYear();
-  const monthIndex = month.getMonth();
-  const start = new Date(year, monthIndex, 1);
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const startOffset = (start.getDay() + 6) % 7;
-  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-
-  return Array.from({ length: totalCells }, (_, index) => {
-    const dayNumber = index - startOffset + 1;
-    if (dayNumber < 1 || dayNumber > daysInMonth) return null;
-    return new Date(year, monthIndex, dayNumber);
-  });
-}
-
 export default function AssignmentCalendarModal({
   order,
   allOrders,
@@ -117,7 +103,7 @@ export default function AssignmentCalendarModal({
   const todayKey = dateKey(new Date());
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
 
-  const monthCells = useMemo(() => buildMonthCells(calendarMonth), [calendarMonth]);
+  const monthCells = useMemo(() => buildMondayFirstMonthCells(calendarMonth), [calendarMonth]);
   const orderAssignments = useMemo(
     () => assignments.filter((entry) => entry.order_id === order.id),
     [assignments, order.id],
