@@ -48,8 +48,9 @@ const toastRedirect = (base: string, tone: "success" | "error", message: string)
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
 const normalizeWeddingDesignText = (value: string | null) =>
   value
-    ?.replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, " ♥ ")
+    ?.replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, " ❤️ ")
     .replace(/\ufe0f/g, "")
+    .replace(/\u2764/g, "❤️")
     .replace(/\s+/g, " ")
     .trim() || null;
 const isInvalidIntegerInputError = (message: string) =>

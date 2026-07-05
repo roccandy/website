@@ -130,7 +130,7 @@ export function inferOrderTypeFromCategory(value?: string | null): OrderTypeId |
 export function splitWeddingDesign(value?: string | null) {
   const safe = (value || "").trim();
   if (!safe) return { lineOne: "", lineTwo: "" };
-  const heartSplit = safe.split(/\s*\u2764\uFE0F?\s*/);
+  const heartSplit = safe.split(/\s*(?:\u2665|\u2764\uFE0F?)\s*/);
   if (heartSplit.length >= 2) {
     return { lineOne: heartSplit[0].trim(), lineTwo: heartSplit.slice(1).join(" ").trim() };
   }

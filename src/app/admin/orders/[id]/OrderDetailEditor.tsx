@@ -13,7 +13,14 @@ import {
 import { formatDateInput, formatMoney, formatOrderDescription, splitCustomerName } from "../productionScheduleShared";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { upsertOrder } from "../actions";
-import { splitWeddingDesign } from "@/app/quote/quoteBuilderShared";
+import {
+  batchWeightsMatchTotal,
+  calculatePackagingWeightKg,
+  composeWeddingDesign,
+  formatKgInput,
+  resolveOrderQuantity,
+  splitWeddingOrderDesign,
+} from "./orderDetailCalculations";
 
 const BULK_LABEL_COUNT_MAX = 1000;
 
@@ -132,16 +139,6 @@ function formatInputNumber(value: number | null | undefined, decimals = 2) {
   return parsed.toFixed(decimals).replace(/\.?0+$/, "");
 }
 
-function roundKg(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function formatKgInput(value: number | null | undefined) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return "";
-  return roundKg(parsed).toFixed(2).replace(/\.?0+$/, "");
-}
-
 function normalizeDiscountType(value: string | null | undefined): AdminDiscountType {
   if (value === "percent" || value === "fixed") return value;
   return "none";
@@ -163,7 +160,7 @@ function normalizedBatchKey(values: string[]) {
 
 function inputClass(changed: boolean) {
   return [
-    "mt-1 min-h-10 w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 outline-none transition",
+    "mt-1 h-10 w-full rounded-lg border px-3 py-2 text-sm text-zinc-900 outline-none transition",
     changed
       ? "border-amber-300 bg-amber-50/60 focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
       : "border-zinc-200 bg-white focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100",
@@ -185,13 +182,6 @@ function isImageLikeUrl(value: string) {
     normalized.startsWith("data:image/") ||
     /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/.test(normalized)
   );
-}
-
-function composeWeddingDesign(lineOne: string, lineTwo: string, initials: boolean) {
-  const left = initials ? lineOne.trim().toUpperCase() : lineOne.trim();
-  const right = initials ? lineTwo.trim().toUpperCase() : lineTwo.trim();
-  if (!left && !right) return "";
-  return `${left} ♥ ${right}`.trim();
 }
 
 function Field({
@@ -232,6 +222,25 @@ function Section({
       <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
       <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
+  );
+}
+
+function ReadOnlyField({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 ${className}`}>
+      <span className="flex min-h-5 items-center gap-2">{label}</span>
+      <div className="mt-1 min-h-10 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-900">
+        {children || "-"}
+      </div>
+    </div>
   );
 }
 
@@ -291,18 +300,9 @@ function AssetPreview({ label, url }: { label: string; url: string }) {
 function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[]): DetailState {
   const splitName = splitCustomerName(order.customer_name);
   const packagingOption = packagingOptions.find((option) => option.id === order.packaging_option_id) ?? null;
-  const storedQuantity = Number(order.quantity);
-  const derivedQuantity =
-    packagingOption && Number(packagingOption.candy_weight_g) > 0 && Number(order.total_weight_kg) > 0
-      ? roundKg((Number(order.total_weight_kg) * 1000) / Number(packagingOption.candy_weight_g))
-      : NaN;
-  const quantity =
-    Number.isFinite(derivedQuantity) &&
-    derivedQuantity > 0 &&
-    (!Number.isFinite(storedQuantity) || Math.abs(storedQuantity - derivedQuantity) > 0.01)
-      ? derivedQuantity
-      : storedQuantity;
-  const wedding = splitWeddingDesign(order.design_text);
+  const quantity = resolveOrderQuantity(order);
+  const calculatedWeight = calculatePackagingWeightKg(packagingOption, quantity);
+  const wedding = splitWeddingOrderDesign(order.design_text);
   const batchWeights =
     Array.isArray(order.admin_batch_weights_kg) && order.admin_batch_weights_kg.length > 0
       ? order.admin_batch_weights_kg
@@ -318,7 +318,7 @@ function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[])
     orderDescription: order.order_description ?? "",
     categoryId: order.category_id ?? "",
     packagingOptionId: order.packaging_option_id ?? "",
-    quantity: Number.isFinite(quantity) && quantity > 0 ? formatInputNumber(quantity, Number.isInteger(quantity) ? 0 : 2) : "",
+    quantity: quantity ? formatInputNumber(quantity, Number.isInteger(quantity) ? 0 : 2) : "",
     dueDate: formatDateInput(order.due_date),
     status: order.status ?? "pending",
     pickup: Boolean(order.pickup),
@@ -347,7 +347,7 @@ function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[])
     ingredientLabelsCount: order.ingredient_labels_count
       ? formatInputNumber(order.ingredient_labels_count, 0)
       : "",
-    totalWeightKg: formatKgInput(order.total_weight_kg),
+    totalWeightKg: formatKgInput(calculatedWeight ?? order.total_weight_kg),
     batchWeights,
     totalPrice: order.total_price !== null ? Number(order.total_price).toFixed(2) : "",
     discountType: normalizeDiscountType(order.admin_discount_type),
@@ -399,6 +399,9 @@ export function OrderDetailEditor({
   const weddingDesignText = composeWeddingDesign(draft.weddingLineOne, draft.weddingLineTwo, isWeddingInitials);
   const effectiveDesignText = isWedding ? weddingDesignText : draft.designText;
   const effectiveTitle = isWedding ? weddingDesignText || draft.title : draft.title;
+  const calculatedTotalWeightKg = calculatePackagingWeightKg(selectedPackagingOption, draft.quantity);
+  const effectiveTotalWeightKg = calculatedTotalWeightKg ?? null;
+  const effectiveTotalWeightLabel = effectiveTotalWeightKg !== null ? formatKgInput(effectiveTotalWeightKg) : "";
   const packagingOptionsForCategory = useMemo(() => {
     const filtered = draft.categoryId
       ? packagingOptions.filter((option) => option.allowed_categories?.includes(draft.categoryId))
@@ -426,62 +429,54 @@ export function OrderDetailEditor({
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
   }, 0);
-  const totalWeightNumber = Number(draft.totalWeightKg);
-  const roundedBatchTotalKg = roundKg(batchTotalKg);
-  const roundedTotalWeightKg = roundKg(totalWeightNumber);
   const batchAllocationValid =
     draft.batchWeights.length > 0 &&
     draft.batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
-    Number.isFinite(totalWeightNumber) &&
-    totalWeightNumber > 0 &&
-    Math.abs(roundedBatchTotalKg - roundedTotalWeightKg) <= 0.02;
+    batchWeightsMatchTotal(draft.batchWeights, effectiveTotalWeightKg);
 
-  const changed = useMemo(
-    () => ({
-      title: normalizedText(draft.title) !== normalizedText(original.title),
-      orderDescription: normalizedText(draft.orderDescription) !== normalizedText(original.orderDescription),
-      categoryId: draft.categoryId !== original.categoryId,
-      packagingOptionId: draft.packagingOptionId !== original.packagingOptionId,
-      quantity: normalizedNumberKey(draft.quantity, 0) !== normalizedNumberKey(original.quantity, 0),
-      dueDate: draft.dueDate !== original.dueDate,
-      status: draft.status !== original.status,
-      pickup: draft.pickup !== original.pickup,
-      firstName: normalizedText(draft.firstName) !== normalizedText(original.firstName),
-      lastName: normalizedText(draft.lastName) !== normalizedText(original.lastName),
-      customerEmail: normalizedText(draft.customerEmail) !== normalizedText(original.customerEmail),
-      phone: normalizedText(draft.phone) !== normalizedText(original.phone),
-      organizationName: normalizedText(draft.organizationName) !== normalizedText(original.organizationName),
-      addressLine1: normalizedText(draft.addressLine1) !== normalizedText(original.addressLine1),
-      addressLine2: normalizedText(draft.addressLine2) !== normalizedText(original.addressLine2),
-      suburb: normalizedText(draft.suburb) !== normalizedText(original.suburb),
-      state: draft.state !== original.state,
-      postcode: normalizedText(draft.postcode) !== normalizedText(original.postcode),
-      designType: normalizedText(draft.designType) !== normalizedText(original.designType),
-      designText: normalizedText(effectiveDesignText) !== normalizedText(original.designText),
-      weddingLineOne: normalizedText(draft.weddingLineOne) !== normalizedText(original.weddingLineOne),
-      weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
-      flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),
-      jacket: draft.jacket !== original.jacket,
-      jarLidColor: normalizedText(draft.jarLidColor) !== normalizedText(original.jarLidColor),
-      logoUrl: normalizedText(draft.logoUrl) !== normalizedText(original.logoUrl),
-      labelImageUrl: normalizedText(draft.labelImageUrl) !== normalizedText(original.labelImageUrl),
-      labelsEnabled: draft.labelsEnabled !== original.labelsEnabled,
-      labelsCount: normalizedNumberKey(draft.labelsCount, 0) !== normalizedNumberKey(original.labelsCount, 0),
-      ingredientLabelsEnabled: draft.ingredientLabelsEnabled !== original.ingredientLabelsEnabled,
-      ingredientLabelsCount:
-        normalizedNumberKey(draft.ingredientLabelsCount, 0) !== normalizedNumberKey(original.ingredientLabelsCount, 0),
-      totalWeightKg: normalizedNumberKey(draft.totalWeightKg) !== normalizedNumberKey(original.totalWeightKg),
-      batchWeights: normalizedBatchKey(draft.batchWeights) !== normalizedBatchKey(original.batchWeights),
-      totalPrice: normalizedNumberKey(draft.totalPrice) !== normalizedNumberKey(original.totalPrice),
-      discountType: draft.discountType !== original.discountType,
-      discountValue: normalizedNumberKey(draft.discountValue) !== normalizedNumberKey(original.discountValue),
-      priceOverride: normalizedNumberKey(draft.priceOverride) !== normalizedNumberKey(original.priceOverride),
-      paymentMethod: normalizedText(draft.paymentMethod) !== normalizedText(original.paymentMethod),
-      notes: normalizedText(draft.notes) !== normalizedText(original.notes),
-      customerNote: normalizedText(draft.customerNote) !== normalizedText(original.customerNote),
-    }),
-    [draft, effectiveDesignText, original],
-  );
+  const changed = {
+    title: normalizedText(draft.title) !== normalizedText(original.title),
+    orderDescription: normalizedText(draft.orderDescription) !== normalizedText(original.orderDescription),
+    categoryId: draft.categoryId !== original.categoryId,
+    packagingOptionId: draft.packagingOptionId !== original.packagingOptionId,
+    quantity: normalizedNumberKey(draft.quantity, 0) !== normalizedNumberKey(original.quantity, 0),
+    dueDate: draft.dueDate !== original.dueDate,
+    status: draft.status !== original.status,
+    pickup: draft.pickup !== original.pickup,
+    firstName: normalizedText(draft.firstName) !== normalizedText(original.firstName),
+    lastName: normalizedText(draft.lastName) !== normalizedText(original.lastName),
+    customerEmail: normalizedText(draft.customerEmail) !== normalizedText(original.customerEmail),
+    phone: normalizedText(draft.phone) !== normalizedText(original.phone),
+    organizationName: normalizedText(draft.organizationName) !== normalizedText(original.organizationName),
+    addressLine1: normalizedText(draft.addressLine1) !== normalizedText(original.addressLine1),
+    addressLine2: normalizedText(draft.addressLine2) !== normalizedText(original.addressLine2),
+    suburb: normalizedText(draft.suburb) !== normalizedText(original.suburb),
+    state: draft.state !== original.state,
+    postcode: normalizedText(draft.postcode) !== normalizedText(original.postcode),
+    designType: normalizedText(draft.designType) !== normalizedText(original.designType),
+    designText: normalizedText(effectiveDesignText) !== normalizedText(original.designText),
+    weddingLineOne: normalizedText(draft.weddingLineOne) !== normalizedText(original.weddingLineOne),
+    weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
+    flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),
+    jacket: draft.jacket !== original.jacket,
+    jarLidColor: normalizedText(draft.jarLidColor) !== normalizedText(original.jarLidColor),
+    logoUrl: normalizedText(draft.logoUrl) !== normalizedText(original.logoUrl),
+    labelImageUrl: normalizedText(draft.labelImageUrl) !== normalizedText(original.labelImageUrl),
+    labelsEnabled: draft.labelsEnabled !== original.labelsEnabled,
+    labelsCount: normalizedNumberKey(draft.labelsCount, 0) !== normalizedNumberKey(original.labelsCount, 0),
+    ingredientLabelsEnabled: draft.ingredientLabelsEnabled !== original.ingredientLabelsEnabled,
+    ingredientLabelsCount:
+      normalizedNumberKey(draft.ingredientLabelsCount, 0) !== normalizedNumberKey(original.ingredientLabelsCount, 0),
+    totalWeightKg: normalizedNumberKey(effectiveTotalWeightLabel) !== normalizedNumberKey(original.totalWeightKg),
+    batchWeights: normalizedBatchKey(draft.batchWeights) !== normalizedBatchKey(original.batchWeights),
+    totalPrice: normalizedNumberKey(draft.totalPrice) !== normalizedNumberKey(original.totalPrice),
+    discountType: draft.discountType !== original.discountType,
+    discountValue: normalizedNumberKey(draft.discountValue) !== normalizedNumberKey(original.discountValue),
+    priceOverride: normalizedNumberKey(draft.priceOverride) !== normalizedNumberKey(original.priceOverride),
+    paymentMethod: normalizedText(draft.paymentMethod) !== normalizedText(original.paymentMethod),
+    notes: normalizedText(draft.notes) !== normalizedText(original.notes),
+    customerNote: normalizedText(draft.customerNote) !== normalizedText(original.customerNote),
+  };
 
   const dirtyCount = Object.values(changed).filter(Boolean).length;
   const priceAffectingChanged =
@@ -500,7 +495,7 @@ export function OrderDetailEditor({
     changed.discountValue ||
     changed.priceOverride;
 
-  const quoteRequest = useMemo<QuoteRequest>(() => {
+  const quoteRequest: QuoteRequest = (() => {
     if (!priceAffectingChanged) {
       return { status: "idle" };
     }
@@ -539,33 +534,18 @@ export function OrderDetailEditor({
       key: JSON.stringify(body),
       body,
     };
-  }, [
-    batchAllocationValid,
-    draft.batchWeights,
-    draft.categoryId,
-    draft.discountType,
-    draft.discountValue,
-    draft.dueDate,
-    draft.ingredientLabelsCount,
-    draft.ingredientLabelsEnabled,
-    draft.jacket,
-    draft.labelsCount,
-    draft.labelsEnabled,
-    draft.packagingOptionId,
-    draft.priceOverride,
-    draft.quantity,
-    priceAffectingChanged,
-  ]);
+  })();
+  const quoteRequestKey = quoteRequest.status === "ready" ? quoteRequest.key : "";
 
   useEffect(() => {
-    if (quoteRequest.status !== "ready") return;
+    if (!quoteRequestKey) return;
     const controller = new AbortController();
 
     fetch("/api/admin/orders/quote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,
-      body: JSON.stringify(quoteRequest.body),
+      body: quoteRequestKey,
     })
       .then(async (response) => {
         const data = (await response.json()) as AdminQuoteResponse;
@@ -575,15 +555,15 @@ export function OrderDetailEditor({
         return data;
       })
       .then((data) => {
-        setQuoteState({ key: quoteRequest.key, quote: data, error: null });
+        setQuoteState({ key: quoteRequestKey, quote: data, error: null });
       })
       .catch((error: Error) => {
         if (controller.signal.aborted) return;
-        setQuoteState({ key: quoteRequest.key, quote: null, error: error.message });
+        setQuoteState({ key: quoteRequestKey, quote: null, error: error.message });
       });
 
     return () => controller.abort();
-  }, [quoteRequest]);
+  }, [quoteRequestKey]);
 
   const quote = quoteRequest.status === "ready" && quoteState.key === quoteRequest.key ? quoteState.quote : null;
   const quoteError =
@@ -599,38 +579,15 @@ export function OrderDetailEditor({
   };
 
   const setPackagingOption = (optionId: string) => {
-    const nextOption = packagingById.get(optionId);
-    setDraft((current) => {
-      const quantity = Number(current.quantity);
-      const nextWeight =
-        nextOption && Number.isFinite(quantity) && quantity > 0
-          ? formatKgInput((Number(nextOption.candy_weight_g) * quantity) / 1000)
-          : current.totalWeightKg;
-      return {
-        ...current,
-        packagingOptionId: optionId,
-        totalWeightKg: nextWeight,
-      };
-    });
+    setField("packagingOptionId", optionId);
   };
 
   const setQuantity = (value: string) => {
-    setDraft((current) => {
-      const quantity = Number(value);
-      const nextWeight =
-        selectedPackagingOption && Number.isFinite(quantity) && quantity > 0
-          ? formatKgInput((Number(selectedPackagingOption.candy_weight_g) * quantity) / 1000)
-          : current.totalWeightKg;
-      return {
-        ...current,
-        quantity: value,
-        totalWeightKg: nextWeight,
-      };
-    });
+    setField("quantity", value);
   };
 
   const applyEqualBatchSplit = () => {
-    const total = Number(draft.totalWeightKg);
+    const total = Number(effectiveTotalWeightKg);
     if (!Number.isFinite(total) || total <= 0) return;
     const weights = suggestedAdminBatchWeights(total, Number(settings.max_total_kg));
     if (weights.length === 0) return;
@@ -672,7 +629,7 @@ export function OrderDetailEditor({
     changedLine("Order type", categoryLabel(original.categoryId, categories), categoryLabel(draft.categoryId, categories)),
     changedLine("Packaging", optionLabel(originalPackagingOption), optionLabel(selectedPackagingOption)),
     changedLine("Quantity", original.quantity, draft.quantity),
-    changedLine("Weight", `${original.totalWeightKg || "-"}kg`, `${draft.totalWeightKg || "-"}kg`),
+    changedLine("Weight", `${original.totalWeightKg || "-"}kg`, `${effectiveTotalWeightLabel || "-"}kg`),
     changedLine("Batches", original.batchWeights.join(" + "), draft.batchWeights.join(" + ")),
     changedLine("Due date", original.dueDate, draft.dueDate),
     changedLine("Jacket", original.jacket || "Single colour", draft.jacket || "Single colour"),
@@ -704,7 +661,7 @@ export function OrderDetailEditor({
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Weight</p>
-                <p className="font-semibold">{draft.totalWeightKg ? `${draft.totalWeightKg}kg` : "-"}</p>
+                <p className="font-semibold">{effectiveTotalWeightLabel ? `${effectiveTotalWeightLabel}kg` : "-"}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Packaging</p>
@@ -733,7 +690,6 @@ export function OrderDetailEditor({
           <DetailItem label="Order type">{categoryLabel(draft.categoryId, categories)}</DetailItem>
           <DetailItem label="Pickup">{draft.pickup ? "Pickup" : "Delivery"}</DetailItem>
           <DetailItem label="Payment">{shownPaymentMethod}</DetailItem>
-          <DetailItem label="Description" className="xl:col-span-3">{draft.orderDescription || "-"}</DetailItem>
         </Section>
 
         <Section title="Customer">
@@ -751,7 +707,7 @@ export function OrderDetailEditor({
         <Section title="Packaging And Production">
           <DetailItem label="Packaging">{optionLabel(selectedPackagingOption)}</DetailItem>
           <DetailItem label="Quantity">{draft.quantity || "-"}</DetailItem>
-          <DetailItem label="Weight">{draft.totalWeightKg ? `${draft.totalWeightKg}kg` : "-"}</DetailItem>
+          <DetailItem label="Weight">{effectiveTotalWeightLabel ? `${effectiveTotalWeightLabel}kg` : "-"}</DetailItem>
           <DetailItem label="Batches" className="xl:col-span-3">
             {draft.batchWeights.length > 0 ? draft.batchWeights.map((weight) => `${weight}kg`).join(" + ") : "-"}
           </DetailItem>
@@ -843,6 +799,8 @@ export function OrderDetailEditor({
       <input type="hidden" name="labels_opt_in" value={draft.labelsEnabled ? "on" : "off"} />
       <input type="hidden" name="ingredient_labels_opt_in" value={draft.ingredientLabelsEnabled ? "on" : "off"} />
       <input type="hidden" name="total_price" value={effectiveTotalPrice} />
+      <input type="hidden" name="total_weight_kg" value={effectiveTotalWeightLabel} />
+      <input type="hidden" name="order_description" value={draft.orderDescription} />
       {isWedding ? (
         <>
           <input type="hidden" name="title" value={effectiveTitle} />
@@ -921,10 +879,7 @@ export function OrderDetailEditor({
 
       <Section title="Order">
         {isWedding ? (
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Title</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">{effectiveTitle || "-"}</p>
-          </div>
+          <ReadOnlyField label="Title">{effectiveTitle || "-"}</ReadOnlyField>
         ) : (
           <Field label="Title" changed={changed.title}>
             <input
@@ -990,11 +945,10 @@ export function OrderDetailEditor({
             ) : null}
           </select>
         </Field>
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Payment method</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-900">{draft.paymentMethod || order.payment_provider || "-"}</p>
+        <ReadOnlyField label="Payment method">
+          {draft.paymentMethod || order.payment_provider || "-"}
           <input type="hidden" name="payment_method" value={draft.paymentMethod} />
-        </div>
+        </ReadOnlyField>
         <Field label="Pickup / delivery" changed={changed.pickup}>
           <select
             value={draft.pickup ? "pickup" : "delivery"}
@@ -1004,14 +958,6 @@ export function OrderDetailEditor({
             <option value="delivery">Delivery</option>
             <option value="pickup">Pickup</option>
           </select>
-        </Field>
-        <Field label="Description" changed={changed.orderDescription} className="xl:col-span-3">
-          <textarea
-            name="order_description"
-            value={draft.orderDescription}
-            onChange={(event) => setField("orderDescription", event.target.value)}
-            className={textareaClass(changed.orderDescription)}
-          />
         </Field>
       </Section>
 
@@ -1132,17 +1078,7 @@ export function OrderDetailEditor({
             className={inputClass(changed.quantity)}
           />
         </Field>
-        <Field label="Weight kg" changed={changed.totalWeightKg}>
-          <input
-            type="number"
-            name="total_weight_kg"
-            min={0.01}
-            step="0.01"
-            value={draft.totalWeightKg}
-            onChange={(event) => setField("totalWeightKg", event.target.value)}
-            className={inputClass(changed.totalWeightKg)}
-          />
-        </Field>
+        <ReadOnlyField label="Weight kg">{effectiveTotalWeightLabel ? `${effectiveTotalWeightLabel}kg` : "-"}</ReadOnlyField>
         <Field label="Jar lid colour" changed={changed.jarLidColor}>
           <input
             name="jar_lid_color"
@@ -1163,7 +1099,7 @@ export function OrderDetailEditor({
                 ) : null}
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                {formatInputNumber(batchTotalKg)}kg allocated of {draft.totalWeightKg || "0"}kg
+                {formatKgInput(batchTotalKg)}kg allocated of {effectiveTotalWeightLabel || "0"}kg
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -1275,10 +1211,7 @@ export function OrderDetailEditor({
                 className={inputClass(changed.weddingLineTwo)}
               />
             </Field>
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Design text</p>
-              <p className="mt-1 text-sm font-semibold text-zinc-900">{effectiveDesignText || "-"}</p>
-            </div>
+            <ReadOnlyField label="Design text">{effectiveDesignText || "-"}</ReadOnlyField>
           </>
         ) : (
           <Field label="Design text" changed={changed.designText} className="xl:col-span-3">
@@ -1377,10 +1310,7 @@ export function OrderDetailEditor({
       </Section>
 
       <Section title="Pricing">
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Saved total</p>
-          <p className="mt-2 text-sm font-semibold text-zinc-900">{formatMoney(order.total_price)}</p>
-        </div>
+        <ReadOnlyField label="Saved total">{formatMoney(order.total_price)}</ReadOnlyField>
         <Field label="Discount type" changed={changed.discountType}>
           <select
             name="admin_discount_type"
@@ -1416,27 +1346,29 @@ export function OrderDetailEditor({
             className={inputClass(changed.priceOverride)}
           />
         </Field>
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm xl:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Calculated draft</p>
-          <p className="mt-1 text-lg font-semibold text-zinc-900">
-            {priceAffectingChanged
-              ? isQuoteLoading
-                ? "Calculating"
-                : quote
-                  ? formatMoney(quote.total)
-                  : "-"
-              : formatMoney(order.total_price)}
-          </p>
-          {quote?.items?.length ? (
-            <div className="mt-3 grid gap-1 text-xs text-zinc-600 sm:grid-cols-2">
-              {quote.items.map((item) => (
-                <div key={item.label} className="flex justify-between gap-3">
-                  <span>{item.label}</span>
-                  <span className="font-semibold text-zinc-900">{formatMoney(item.amount)}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
+        <div className="block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 xl:col-span-2">
+          <span className="flex min-h-5 items-center gap-2">Calculated draft</span>
+          <div className="mt-1 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-sm normal-case tracking-normal">
+            <p className="text-lg font-semibold text-zinc-900">
+              {priceAffectingChanged
+                ? isQuoteLoading
+                  ? "Calculating"
+                  : quote
+                    ? formatMoney(quote.total)
+                    : "-"
+                : formatMoney(order.total_price)}
+            </p>
+            {quote?.items?.length ? (
+              <div className="mt-3 grid gap-1 text-xs text-zinc-600 sm:grid-cols-2">
+                {quote.items.map((item) => (
+                  <div key={item.label} className="flex justify-between gap-3">
+                    <span>{item.label}</span>
+                    <span className="font-semibold text-zinc-900">{formatMoney(item.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </Section>
 

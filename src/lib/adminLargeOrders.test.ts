@@ -73,4 +73,31 @@ describe("admin large order batching", () => {
     expect(pricing.packagingPrice).toBe(20);
     expect(pricing.total).toBe(480);
   });
+
+  it("rounds calculated packaging weight to 2 decimals before validating batch splits", () => {
+    const context = {
+      ...pricingContext,
+      packagingOptions: [
+        ...pricingContext.packagingOptions,
+        {
+          id: "small-jar",
+          allowed_categories: ["custom-1-6"],
+          candy_weight_g: 73.666,
+          unit_price: 1,
+        },
+      ],
+    } as PricingContext;
+    const pricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "small-jar",
+        quantity: 30,
+        batchWeightsKg: [2, 0.21],
+      },
+      context,
+    );
+
+    expect(pricing.totalWeightKg).toBe(2.21);
+    expect(pricing.batchWeightsKg).toEqual([2, 0.21]);
+  });
 });
