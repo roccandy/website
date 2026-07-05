@@ -60,6 +60,20 @@ describe("admin custom order payment helpers", () => {
     expect(isAdminManagedCustomOrderUnpaid(order)).toBe(false);
   });
 
+  it("does not treat website orders with payment providers as admin-managed custom orders", () => {
+    const order = makeOrder({
+      design_type: "custom-1-6",
+      woo_order_id: null,
+      woo_payment_url: null,
+      payment_provider: "square",
+      paid_at: "2026-04-27T08:00:00.000Z",
+      status: "pending",
+    });
+
+    expect(isAdminManagedCustomOrder(order)).toBe(false);
+    expect(isAdminManagedCustomOrderUnpaid(order)).toBe(false);
+  });
+
   it("stops treating backend custom orders as unpaid once they are marked paid", () => {
     const order = makeOrder({
       design_type: "custom-1-6",

@@ -857,6 +857,7 @@ async function upsertOrderShared(formData: FormData) {
   revalidatePath("/admin/orders/[id]/print", "page");
   if (id) {
     revalidatePath(`/admin/orders/${id}/print`);
+    revalidatePath(`/admin/orders/${id}`);
   }
   if (existing?.order_number) {
     revalidatePath(`/admin/orders/${encodeURIComponent(existing.order_number)}/print`);
@@ -868,8 +869,8 @@ async function upsertOrderShared(formData: FormData) {
     return { ok: true, tone: inlineTone, message: inlineMessage };
   }
   const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
-  if (redirectTo && toastSuccess) {
-    const params = new URLSearchParams({ toast: "success", message: toastSuccess });
+  if (redirectTo && inlineMessage) {
+    const params = new URLSearchParams({ toast: inlineTone, message: inlineMessage });
     redirect(`${destination}?${params.toString()}`);
   }
   redirect(destination);

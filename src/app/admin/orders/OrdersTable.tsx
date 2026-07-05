@@ -1,12 +1,9 @@
-﻿"use client";
+"use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import type {
-  ColorPaletteRow,
   Category,
-  Flavor,
   OrderRow,
   OrderSlot,
   PackagingOption,
@@ -14,42 +11,16 @@ import type {
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
-import type { PricingBreakdown } from "@/lib/pricing";
-import { suggestedAdminBatchWeights } from "@/lib/adminLargeOrders";
-import {
-  archiveOrderInline,
-  deleteOrder,
-  markOrderAsPaid,
-  retryAdminSquareInvoiceDraft,
-  upsertOrder,
-  upsertOrderInline,
-} from "./actions";
+import { archiveOrderInline, markOrderAsPaid } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
-import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
-import {
-  analyzeImageOptimization,
-  optimizeBrowserImageToDataUrl,
-  type ImageOptimizationSummary,
-} from "@/lib/clientImageOptimization";
-import OrderColorField, { type OrderColorFieldProps } from "./OrderColorField";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
-  buildColorOptions,
-  buildPaletteOptions,
-  formatColorInput,
-  formatSizeLabel,
-  isCustomPaletteValue,
-  normalizeHex,
-  selectValueForColor,
-  type ColorFormat,
-} from "./orderColorUtils";
-import {
   canCompleteOrderForSlotDates,
+  formatBatchBreakdown,
   formatDate,
-  formatDateInput,
   formatDueDateDistance,
   formatMoney,
   formatOrderDescription,
@@ -57,6 +28,7 @@ import {
   formatScheduleStatusLabel,
   getMultiAssignmentScheduleStatus,
   getPremadeSiblingMeta,
+  logoDownloadNameForOrder,
   nextAssignableKgForOrder,
   productionCompletionActionLabel,
   splitCustomerName,
@@ -76,47 +48,47 @@ type Props = {
   settings: SettingsRow;
   packagingOptions: PackagingOption[];
   categories: Category[];
-  pricingBreakdowns: Record<string, PricingBreakdown | null>;
-  flavors: Flavor[];
-  palette: ColorPaletteRow[];
   dayNotes: ProductionDayNote[];
   initialSelectedId?: string | null;
 };
 
-const JACKET_OPTIONS = [
-  { value: "", label: "Single colour" },
-  { value: "two_colour", label: "Two colour" },
-  { value: "pinstripe", label: "Pin stripe" },
-  { value: "two_colour_pinstripe", label: "Two colour + Pin stripe" },
-  { value: "rainbow", label: "Rainbow" },
-];
-const WEDDING_HEART = "❤️";
-const normalizeWeddingHeartText = (value: string | null | undefined) =>
-  (value ?? "")
-    .replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, ` ${WEDDING_HEART} `)
-    .replace(/\ufe0f/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-const toMoneyCents = (value: number) => Math.round(value * 100);
-const remainingRefundCentsForOrder = (order: OrderRow) => {
-  const stored = Number(order.refunded_amount);
-  const refundedCents =
-    Number.isFinite(stored) && stored > 0
-      ? toMoneyCents(stored)
-      : order.refunded_at && order.status !== "partially-refunded"
-        ? toMoneyCents(Number(order.total_price ?? 0))
-        : 0;
-  return Math.max(0, toMoneyCents(Number(order.total_price ?? 0)) - refundedCents);
+const JACKET_LABELS = new Map([
+  ["", "Single colour"],
+  ["two_colour", "Two colour"],
+  ["pinstripe", "Pin stripe"],
+  ["two_colour_pinstripe", "Two colour + pin stripe"],
+  ["rainbow", "Rainbow"],
+]);
+
+function PackagingDescription({ value }: { value: string }) {
+  const match = value.match(/^(\d+(?:\.\d+)?)\s+x\s+(.+)$/);
+  if (!match) return <>{value || "-"}</>;
+  return (
+    <>
+      <strong className="font-semibold text-zinc-900">{match[1]}</strong>
+      {` x ${match[2]}`}
+    </>
+  );
+}
+
+function DetailField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">{label}</p>
+      <div className="mt-1 break-words text-xs font-semibold text-zinc-900">{children || "-"}</div>
+    </div>
+  );
+}
+
+const customerDisplayName = (order: OrderRow) => {
+  const nameFallback = splitCustomerName(order.customer_name);
+  const first = order.first_name?.trim() || nameFallback.first;
+  const last = order.last_name?.trim() || nameFallback.last;
+  return [first, last].filter(Boolean).join(" ") || order.customer_name || "-";
 };
-const isPartiallyRefundedOrder = (order: OrderRow) =>
-  Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
-const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
-const numericInputChanged = (nextValue: string, currentValue: number | null | undefined) => {
-  const next = Number(nextValue);
-  const current = Number(currentValue);
-  if (!Number.isFinite(next) && !Number.isFinite(current)) return false;
-  return next !== current;
-};
+
+const designDisplay = (order: OrderRow) =>
+  order.design_text?.trim() || order.title?.trim() || order.order_description?.trim() || "-";
 
 export function OrdersTable({
   orders,
@@ -125,298 +97,25 @@ export function OrdersTable({
   settings,
   packagingOptions,
   categories,
-  pricingBreakdowns,
-  flavors,
-  palette,
   dayNotes,
   initialSelectedId = null,
 }: Props) {
-  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
-  const [pickupMode, setPickupMode] = useState<"on" | "off">("off");
-  const [jacketMode, setJacketMode] = useState<string>("");
-  const [textColorValue, setTextColorValue] = useState("");
-  const [heartColorValue, setHeartColorValue] = useState("");
-  const [jacketColorOneValue, setJacketColorOneValue] = useState("");
-  const [jacketColorTwoValue, setJacketColorTwoValue] = useState("");
-  const [jarLidColorValue, setJarLidColorValue] = useState("");
-  const [orderCategoryId, setOrderCategoryId] = useState("");
-  const [packagingType, setPackagingType] = useState("");
-  const [packagingSize, setPackagingSize] = useState("");
-  const [quantityInput, setQuantityInput] = useState("");
-  const [designTextInput, setDesignTextInput] = useState("");
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
-  const [textColorCustom, setTextColorCustom] = useState(false);
-  const [heartColorCustom, setHeartColorCustom] = useState(false);
-  const [jacketColorOneCustom, setJacketColorOneCustom] = useState(false);
-  const [jacketColorTwoCustom, setJacketColorTwoCustom] = useState(false);
-  const [textColorFormat, setTextColorFormat] = useState<ColorFormat>("hex");
-  const [heartColorFormat, setHeartColorFormat] = useState<ColorFormat>("hex");
-  const [jacketColorOneFormat, setJacketColorOneFormat] = useState<ColorFormat>("hex");
-  const [jacketColorTwoFormat, setJacketColorTwoFormat] = useState<ColorFormat>("hex");
-  const [textColorInput, setTextColorInput] = useState("");
-  const [heartColorInput, setHeartColorInput] = useState("");
-  const [jacketColorOneInput, setJacketColorOneInput] = useState("");
-  const [jacketColorTwoInput, setJacketColorTwoInput] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [logoError, setLogoError] = useState<string | null>(null);
-  const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
-  const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSavingOrder, startOrderSaveTransition] = useTransition();
-  const [editKey, setEditKey] = useState(0);
-  const designTextInputRef = useRef<HTMLInputElement | null>(null);
-  const selected = useMemo(() => orders.find((o) => o.id === selectedId) ?? null, [orders, selectedId]);
-  const showJacketColorTwo = jacketMode === "two_colour" || jacketMode === "two_colour_pinstripe";
-  const colorOptions = useMemo(() => buildPaletteOptions(palette), [palette]);
-  const packagingById = useMemo(() => new Map(packagingOptions.map((option) => [option.id, option])), [packagingOptions]);
-  const paletteHexSet = useMemo(() => new Set(colorOptions.map((option) => option.value)), [colorOptions]);
 
-  const syncEditableState = useCallback((order: OrderRow | null) => {
-    if (!order) return;
-    setPickupMode(order.pickup ? "on" : "off");
-    setJacketMode(order.jacket ?? "");
-    const nextTextColor = order.text_color ? normalizeHex(order.text_color) : "";
-    const nextHeartColor = order.heart_color ? normalizeHex(order.heart_color) : "";
-    const nextJacketColorOne = order.jacket_color_one ? normalizeHex(order.jacket_color_one) : "";
-    const nextJacketColorTwo = order.jacket_color_two ? normalizeHex(order.jacket_color_two) : "";
-    const nextJarLidColor = order.jar_lid_color ? normalizeHex(order.jar_lid_color) : "";
-    const nextCategoryId = isAdminPremadeOrder(order) ? ADMIN_PREMADE_CATEGORY_ID : order.category_id ?? "";
-    const nextPackagingOption = order.packaging_option_id ? packagingById.get(order.packaging_option_id) ?? null : null;
-    setOrderCategoryId(nextCategoryId);
-    setPackagingType(nextPackagingOption?.type ?? "");
-    setPackagingSize(nextPackagingOption?.size ?? "");
-    setQuantityInput(order.quantity ? String(order.quantity) : "");
-    setDesignTextInput(
-      nextCategoryId.startsWith("weddings")
-        ? normalizeWeddingHeartText(order.design_text)
-        : (order.design_text ?? ""),
-    );
-    setTextColorValue(nextTextColor);
-    setHeartColorValue(nextHeartColor);
-    setJacketColorOneValue(nextJacketColorOne);
-    setJacketColorTwoValue(nextJacketColorTwo);
-    setJarLidColorValue(nextJarLidColor);
-    setTextColorCustom(isCustomPaletteValue(nextTextColor, paletteHexSet));
-    setHeartColorCustom(isCustomPaletteValue(nextHeartColor, paletteHexSet));
-    setJacketColorOneCustom(isCustomPaletteValue(nextJacketColorOne, paletteHexSet));
-    setJacketColorTwoCustom(isCustomPaletteValue(nextJacketColorTwo, paletteHexSet));
-    setTextColorFormat("hex");
-    setHeartColorFormat("hex");
-    setJacketColorOneFormat("hex");
-    setJacketColorTwoFormat("hex");
-    setTextColorInput(formatColorInput(nextTextColor, "hex"));
-    setHeartColorInput(formatColorInput(nextHeartColor, "hex"));
-    setJacketColorOneInput(formatColorInput(nextJacketColorOne, "hex"));
-    setJacketColorTwoInput(formatColorInput(nextJacketColorTwo, "hex"));
-    setLogoUrl(order.logo_url ?? "");
-    setLogoError(null);
-    setLogoSummary(null);
-    setIsOptimisingLogo(false);
-  }, [packagingById, paletteHexSet]);
-
-  const handleLogoUpload = async (file?: File | null) => {
-    if (!file) {
-      setLogoError(null);
-      setLogoSummary(null);
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setLogoError("File is too large. Max 2MB.");
-      setLogoSummary(null);
-      return;
-    }
-    try {
-      setIsOptimisingLogo(true);
-      const summary = await analyzeImageOptimization(file, {
-        maxWidth: 1600,
-        maxHeight: 1600,
-        quality: 0.82,
-      });
-      const result = await optimizeBrowserImageToDataUrl(file, {
-        maxWidth: 1600,
-        maxHeight: 1600,
-        quality: 0.82,
-      });
-      setLogoUrl(result);
-      setLogoSummary(summary);
-      setLogoError(null);
-    } catch {
-      setLogoSummary(null);
-      setLogoError("Unable to read the file.");
-    } finally {
-      setIsOptimisingLogo(false);
-    }
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      if (!selected) {
-        setIsEditing(false);
-        return;
-      }
-      syncEditableState(selected);
-      setIsEditing(false);
-      setEditKey((prev) => prev + 1);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [selected, syncEditableState]);
-
-  useEffect(() => {
-    if (!showJacketColorTwo) {
-      queueMicrotask(() => {
-        setJacketColorTwoValue("");
-        setJacketColorTwoInput("");
-        setJacketColorTwoFormat("hex");
-        setJacketColorTwoCustom(false);
-      });
-    }
-  }, [showJacketColorTwo]);
-  useEffect(() => {
-    if (!selectedId) return;
-    const frame = window.requestAnimationFrame(() => {
-      const detail = document.getElementById(`order-detail-${selectedId}`);
-      if (!detail) return;
-      const rect = detail.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const margin = 16;
-
-      if (rect.height + margin * 2 >= viewportHeight) {
-        window.scrollTo({
-          top: window.scrollY + rect.top - margin,
-          behavior: "smooth",
-        });
-        return;
-      }
-
-      if (rect.bottom > viewportHeight - margin || rect.top < margin) {
-        window.scrollBy({
-          top: rect.bottom - viewportHeight + margin,
-          behavior: "smooth",
-        });
-      }
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [selectedId]);
-  const categoryOptions = useMemo(
-    () => [...categories].sort((a, b) => a.name.localeCompare(b.name)),
-    [categories]
+  const packagingById = useMemo(
+    () => new Map(packagingOptions.map((option) => [option.id, option])),
+    [packagingOptions],
   );
   const categoryLabelById = useMemo(
-    () => new Map([...categories.map((category) => [category.id, category.name] as const), [ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL] as const]),
-    [categories]
+    () =>
+      new Map([
+        ...categories.map((category) => [category.id, category.name] as const),
+        [ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL] as const,
+      ]),
+    [categories],
   );
-  const jacketLabelByValue = useMemo(
-    () => new Map(JACKET_OPTIONS.map((option) => [option.value, option.label])),
-    []
-  );
-  const orderCategoryOptions = useMemo(() => {
-    if (!orderCategoryId) return categoryOptions;
-    if (categoryOptions.some((option) => option.id === orderCategoryId)) return categoryOptions;
-    if (orderCategoryId === ADMIN_PREMADE_CATEGORY_ID) {
-      return [{ id: ADMIN_PREMADE_CATEGORY_ID, name: ADMIN_PREMADE_ORDER_LABEL }, ...categoryOptions];
-    }
-    return [{ id: orderCategoryId, name: orderCategoryId }, ...categoryOptions];
-  }, [categoryOptions, orderCategoryId]);
-  const filteredPackagingOptions = useMemo(() => {
-    if (!orderCategoryId) return [];
-    return packagingOptions.filter((option) => option.allowed_categories?.includes(orderCategoryId));
-  }, [orderCategoryId, packagingOptions]);
-  const packagingTypes = useMemo(() => {
-    const unique = new Set<string>();
-    filteredPackagingOptions.forEach((option) => {
-      if (option.type) unique.add(option.type);
-    });
-    return Array.from(unique);
-  }, [filteredPackagingOptions]);
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (!orderCategoryId) {
-        if (packagingType) setPackagingType("");
-        if (packagingSize) setPackagingSize("");
-        return;
-      }
-      if (packagingTypes.length === 0) {
-        if (packagingType) setPackagingType("");
-        if (packagingSize) setPackagingSize("");
-        return;
-      }
-      if (!packagingType || !packagingTypes.includes(packagingType)) {
-        setPackagingType(packagingTypes[0]);
-        setPackagingSize("");
-      }
-    });
-  }, [orderCategoryId, packagingTypes, packagingType, packagingSize]);
-  const sizesForType = useMemo(() => {
-    if (!packagingType) return [];
-    const extractLeadingNumber = (value: string) => {
-      const match = value.trim().match(/^(\d+)/);
-      return match ? Number(match[1]) : null;
-    };
-    return filteredPackagingOptions
-      .filter((option) => option.type === packagingType)
-      .map((opt, index) => ({ opt, index }))
-      .sort((a, b) => {
-        const aNum = extractLeadingNumber(a.opt.size);
-        const bNum = extractLeadingNumber(b.opt.size);
-        if (aNum !== null && bNum !== null) {
-          return aNum - bNum;
-        }
-        if (aNum !== null) return -1;
-        if (bNum !== null) return 1;
-        return a.index - b.index;
-      })
-      .map(({ opt }) => opt);
-  }, [filteredPackagingOptions, packagingType]);
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (!packagingType) {
-        if (packagingSize) setPackagingSize("");
-        return;
-      }
-      if (sizesForType.length === 0) {
-        if (packagingSize) setPackagingSize("");
-        return;
-      }
-      if (!packagingSize || !sizesForType.some((option) => option.size === packagingSize)) {
-        setPackagingSize(sizesForType[0].size);
-      }
-    });
-  }, [packagingType, packagingSize, sizesForType]);
-  const selectedPackagingOptionId = useMemo(() => {
-    const found = sizesForType.find((option) => option.size === packagingSize);
-    return found?.id ?? "";
-  }, [sizesForType, packagingSize]);
-  const selectedPackagingOption = useMemo(() => {
-    if (!selectedPackagingOptionId) return null;
-    return packagingOptions.find((option) => option.id === selectedPackagingOptionId) ?? null;
-  }, [packagingOptions, selectedPackagingOptionId]);
-  const isJarOption = useMemo(
-    () => (selectedPackagingOption?.type ?? "").toLowerCase().includes("jar"),
-    [selectedPackagingOption]
-  );
-  const availableLidColors = useMemo(
-    () => (selectedPackagingOption?.lid_colors ?? []).filter(Boolean),
-    [selectedPackagingOption]
-  );
-  const maxPackages = selectedPackagingOption?.max_packages ?? null;
-  useEffect(() => {
-    queueMicrotask(() => {
-      if (!isJarOption || availableLidColors.length === 0) {
-        if (jarLidColorValue) setJarLidColorValue("");
-        return;
-      }
-      if (!availableLidColors.includes(jarLidColorValue)) {
-        setJarLidColorValue(availableLidColors[0]);
-      }
-    });
-  }, [availableLidColors, isJarOption, jarLidColorValue]);
   const listOrders = useMemo(() => {
     const visible = orders.filter(isVisibleOnProductionSchedule);
     return [...visible].sort((a, b) => {
@@ -426,7 +125,7 @@ export function OrdersTable({
       return (a.order_number ?? a.id ?? "").localeCompare(b.order_number ?? b.id ?? "");
     });
   }, [orders]);
-  const slotMap = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
+  const slotMap = useMemo(() => new Map(slots.map((slot) => [slot.id, slot])), [slots]);
   const assignmentByOrderId = useMemo(() => {
     const map = new Map<string, { assignment: OrderSlot; slot: ProductionSlot | null }>();
     assignments.forEach((assignment) => {
@@ -464,7 +163,7 @@ export function OrdersTable({
         const orderAssignments = assignmentsByOrderId.get(order.id) ?? [];
         return nextAssignableKgForOrder(order, orderAssignments) > 0;
       }),
-    [assignmentsByOrderId, listOrders]
+    [assignmentsByOrderId, listOrders],
   );
   const visibleListOrders = useMemo(
     () =>
@@ -480,1046 +179,299 @@ export function OrdersTable({
   const assignmentModalAssignment = assignmentModalOrder
     ? assignmentByOrderId.get(assignmentModalOrder.id) ?? null
     : null;
-  const renderColorField = (props: Omit<OrderColorFieldProps, "isEditing">) => (
-    <OrderColorField {...props} isEditing={isEditing} />
-  );
-  const insertWeddingHeart = useCallback(() => {
-    const input = designTextInputRef.current;
-    const heart = WEDDING_HEART;
-    if (!input) {
-      setDesignTextInput((current) => `${current}${current ? " " : ""}${heart}`);
-      return;
-    }
 
-    const start = input.selectionStart ?? input.value.length;
-    const end = input.selectionEnd ?? input.value.length;
-    const nextValue = `${designTextInput.slice(0, start)}${heart}${designTextInput.slice(end)}`;
-    setDesignTextInput(nextValue);
+  useEffect(() => {
+    if (!selectedId) return;
+    const frame = window.requestAnimationFrame(() => {
+      const detail = document.getElementById(`order-detail-${selectedId}`);
+      if (!detail) return;
+      const rect = detail.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const margin = 16;
 
-    queueMicrotask(() => {
-      input.focus();
-      input.setSelectionRange(start + heart.length, start + heart.length);
-    });
-  }, [designTextInput]);
-  const emitToast = (tone: "success" | "error", message: string) => {
-    window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
-  };
-  const saveOrderInline = (form: HTMLFormElement, options: { sendUpdatedInvoice?: boolean } = {}) => {
-    const formData = new FormData(form);
-    formData.set("response_mode", "inline");
-    if (options.sendUpdatedInvoice) {
-      formData.set("send_updated_invoice", "on");
-    }
-    startOrderSaveTransition(async () => {
-      try {
-        const result = await upsertOrderInline(formData);
-        if (result?.message) {
-          emitToast(result.tone, result.message);
-        }
-        if (result?.ok) {
-          setIsEditing(false);
-          router.refresh();
-        }
-      } catch (error) {
-        emitToast("error", error instanceof Error ? error.message : "Failed to update order.");
+      if (rect.height + margin * 2 >= viewportHeight) {
+        window.scrollTo({
+          top: window.scrollY + rect.top - margin,
+          behavior: "smooth",
+        });
+        return;
+      }
+
+      if (rect.bottom > viewportHeight - margin || rect.top < margin) {
+        window.scrollBy({
+          top: rect.bottom - viewportHeight + margin,
+          behavior: "smooth",
+        });
       }
     });
-  };
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedId]);
 
   return (
     <div className="space-y-4">
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full text-sm">
-            <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
-              <tr>
-                <th className="px-3 py-3 text-left">Order #</th>
-                <th className="px-3 py-3 text-left">Title</th>
-                <th className="px-3 py-3 text-left">Date required</th>
-                <th className="px-3 py-3 text-left">Order description</th>
-                <th className="px-3 py-3 text-left">Order weight</th>
-                <th className="px-3 py-3 text-left">Pickup</th>
-                <th className="px-3 py-3 text-left">State</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {visibleListOrders.map((order) => {
-                const printTarget = order.id ?? order.order_number;
-                const assignedSlotDates = assignedSlotDatesByOrderId.get(order.id) ?? [];
-                const scheduleStatus = getMultiAssignmentScheduleStatus(
-                  order,
-                  assignedSlotDates,
-                );
-                const canCompleteFromSchedule = canCompleteOrderForSlotDates(
-                  order,
-                  assignedSlotDates,
-                );
-                const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
-                const isAdminPremade = isAdminPremadeOrder(order);
-                const isAdminManagedCustom = isAdminManagedCustomOrder(order);
-                const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
-                const hasUnsentSquareInvoice = Boolean(
-                  isAdminManagedCustom && order.square_invoice_id && !order.square_invoice_sent_at,
-                );
-                const dueDateDistance = formatDueDateDistance(order.due_date);
-                return (
-                  <Fragment key={order.id}>
-                    <tr
-                      id={`order-${order.id}`}
-                      className={`cursor-pointer bg-white hover:bg-zinc-50 ${
-                        selectedId === order.id ? "bg-zinc-50" : ""
-                      }`}
-                      onClick={() => setSelectedId((prev) => (prev === order.id ? null : order.id))}
-                    >
-                      <td className="px-3 py-2 font-semibold text-zinc-900">
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {order.order_number
-                              ? `#${order.order_number}`
-                              : order.id
-                                ? `#${order.id.slice(0, 8)}`
-                                : "-"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setAssignmentModalOrderId(order.id);
-                            }}
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition hover:opacity-85 ${statusBadge(
-                              scheduleStatus
-                            )}`}
+      <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <table className="min-w-full text-sm">
+          <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+            <tr>
+              <th className="px-3 py-3 text-left">Order #</th>
+              <th className="px-3 py-3 text-left">Title</th>
+              <th className="px-3 py-3 text-left">Date required</th>
+              <th className="px-3 py-3 text-left">Packaging</th>
+              <th className="px-3 py-3 text-left">Weight</th>
+              <th className="px-3 py-3 text-left">Pickup</th>
+              <th className="px-3 py-3 text-left">State</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100">
+            {visibleListOrders.map((order) => {
+              const printTarget = order.id ?? order.order_number;
+              const assignedSlotDates = assignedSlotDatesByOrderId.get(order.id) ?? [];
+              const scheduleStatus = getMultiAssignmentScheduleStatus(order, assignedSlotDates);
+              const canCompleteFromSchedule = canCompleteOrderForSlotDates(order, assignedSlotDates);
+              const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
+              const isAdminPremade = isAdminPremadeOrder(order);
+              const isAdminManagedCustom = isAdminManagedCustomOrder(order);
+              const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
+              const hasUnsentSquareInvoice = Boolean(
+                isAdminManagedCustom && order.square_invoice_id && !order.square_invoice_sent_at,
+              );
+              const packagingOption = packagingById.get(order.packaging_option_id ?? "") ?? null;
+              const packagingDescription = formatOrderDescription(order, packagingOption);
+              const dueDateDistance = formatDueDateDistance(order.due_date);
+              const categoryLabel = isAdminPremade
+                ? ADMIN_PREMADE_ORDER_LABEL
+                : order.category_id
+                  ? categoryLabelById.get(order.category_id) ?? order.category_id
+                  : "-";
+
+              return (
+                <Fragment key={order.id}>
+                  <tr
+                    id={`order-${order.id}`}
+                    className={`cursor-pointer bg-white hover:bg-zinc-50 ${
+                      selectedId === order.id ? "bg-zinc-50" : ""
+                    }`}
+                    onClick={() => setSelectedId((prev) => (prev === order.id ? null : order.id))}
+                  >
+                    <td className="px-3 py-2 font-semibold text-zinc-900">
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {order.order_number
+                            ? `#${order.order_number}`
+                            : order.id
+                              ? `#${order.id.slice(0, 8)}`
+                              : "-"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setAssignmentModalOrderId(order.id);
+                          }}
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition hover:opacity-85 ${statusBadge(
+                            scheduleStatus,
+                          )}`}
+                        >
+                          {formatScheduleStatusLabel(scheduleStatus)}
+                        </button>
+                        {hasUnsentSquareInvoice ? (
+                          <Link
+                            href={`/admin/orders/${order.id}/invoice`}
+                            onClick={(event) => event.stopPropagation()}
+                            className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
                           >
-                            {formatScheduleStatusLabel(scheduleStatus)}
-                          </button>
-                          {hasUnsentSquareInvoice ? (
-                            <a
-                              href={`/admin/orders/${order.id}/invoice`}
+                            Invoice
+                          </Link>
+                        ) : isAdminManagedCustomUnpaid ? (
+                          <form
+                            action={markOrderAsPaid}
+                            className="inline-flex"
+                            onSubmit={(event) => {
+                              event.stopPropagation();
+                              if (!window.confirm("Mark order as paid?")) {
+                                event.preventDefault();
+                              }
+                            }}
+                          >
+                            <input type="hidden" name="id" value={order.id} />
+                            <button
+                              type="submit"
                               onClick={(event) => event.stopPropagation()}
-                              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                              className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                             >
-                              Invoice
-                            </a>
-                          ) : isAdminManagedCustomUnpaid ? (
-                            <form
-                              action={markOrderAsPaid}
-                              className="inline-flex"
-                              onSubmit={(event) => {
-                                event.stopPropagation();
-                                if (!window.confirm("Mark order as paid?")) {
-                                  event.preventDefault();
-                                }
-                              }}
-                            >
-                              <input type="hidden" name="id" value={order.id} />
-                              <button
-                                type="submit"
-                                onClick={(event) => event.stopPropagation()}
-                                className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                              Unpaid
+                            </button>
+                          </form>
+                        ) : null}
+                        {isAdminManagedCustom && order.square_invoice_error ? (
+                          <span
+                            className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
+                            title={order.square_invoice_error}
+                          >
+                            Invoice warning
+                          </span>
+                        ) : null}
+                        {isAdminPremade ? (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                            Premade stock
+                          </span>
+                        ) : premadeSiblingMeta ? (
+                          <Link
+                            href={premadeSiblingMeta.href}
+                            onClick={(event) => event.stopPropagation()}
+                            className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-700 transition hover:border-fuchsia-300"
+                          >
+                            Pre-made
+                          </Link>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-zinc-800">
+                      <OrderTitleWithLogo order={order} title={order.title ?? "Untitled"} />
+                    </td>
+                    <td className="px-3 py-2 text-zinc-700">
+                      {formatDate(order.due_date)}
+                      {dueDateDistance ? <span className="ml-2 text-zinc-400">{dueDateDistance}</span> : null}
+                    </td>
+                    <td className="px-3 py-2 text-zinc-700">
+                      <PackagingDescription value={packagingDescription} />
+                    </td>
+                    <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
+                    <td className="px-3 py-2 text-zinc-700">{order.pickup ? "Pickup" : "Delivery"}</td>
+                    <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>
+                  </tr>
+                  {selectedId === order.id ? (
+                    <tr className="bg-white">
+                      <td colSpan={7} className="px-3 pb-4">
+                        <div
+                          id={`order-detail-${order.id}`}
+                          className="mt-2 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-xs text-zinc-700"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Order summary</p>
+                              <h3 className="mt-1 text-sm font-semibold text-zinc-900">
+                                {order.order_number ? `#${order.order_number}` : order.id.slice(0, 8)} ·{" "}
+                                {order.title || categoryLabel}
+                              </h3>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
                               >
-                                Unpaid
-                              </button>
-                            </form>
-                          ) : null}
-                          {isAdminManagedCustom && order.square_invoice_error ? (
-                            <span
-                              className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
-                              title={order.square_invoice_error}
-                            >
-                              Invoice warning
-                            </span>
-                          ) : null}
-                          {isAdminPremade ? (
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                              Premade stock
-                            </span>
-                          ) : premadeSiblingMeta ? (
-                            <a
-                              href={premadeSiblingMeta.href}
-                              onClick={(event) => event.stopPropagation()}
-                              className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2 py-0.5 text-[10px] font-semibold text-fuchsia-700 transition hover:border-fuchsia-300"
-                            >
-                              Pre-made
-                            </a>
-                          ) : null}
-                          {order.refunded_at ? (
-                            <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
-                              {refundBadgeLabel(order)}
-                            </span>
+                                View details
+                              </Link>
+                              {printTarget ? (
+                                <Link
+                                  href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                >
+                                  Print order
+                                </Link>
+                              ) : null}
+                              {order.logo_url ? (
+                                <a
+                                  href={order.logo_url}
+                                  download={logoDownloadNameForOrder(order)}
+                                  className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                                >
+                                  Download logo
+                                </a>
+                              ) : null}
+                              {canCompleteFromSchedule ? (
+                                <SplitAwareActionForm
+                                  action={archiveOrderInline}
+                                  hiddenFields={[{ name: "order_id", value: order.id }]}
+                                  buttonLabel={productionCompletionActionLabel(order)}
+                                  buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
+                                  confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                  companionMeta={premadeSiblingMeta}
+                                />
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-4">
+                            <DetailField label="Total price">{formatMoney(order.total_price)}</DetailField>
+                            <DetailField label="Weight">
+                              {weightLabel(order.total_weight_kg) || "-"}
+                              {formatBatchBreakdown(order) ? (
+                                <span className="mt-0.5 block text-[11px] font-medium text-zinc-500">
+                                  {formatBatchBreakdown(order)}
+                                </span>
+                              ) : null}
+                            </DetailField>
+                            <DetailField label="Packaging">
+                              <PackagingDescription value={packagingDescription} />
+                              {formatQuantity(order.quantity) ? (
+                                <span className="mt-0.5 block text-[11px] font-medium text-zinc-500">
+                                  Qty {formatQuantity(order.quantity)}
+                                </span>
+                              ) : null}
+                            </DetailField>
+                            <DetailField label="Payment">
+                              {order.payment_method || order.payment_provider || "-"}
+                              {isAdminManagedCustom && order.square_invoice_status ? (
+                                <span className="mt-0.5 block text-[11px] font-medium text-zinc-500">
+                                  Square invoice {order.square_invoice_status}
+                                </span>
+                              ) : null}
+                            </DetailField>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <DetailField label="Customer">{customerDisplayName(order)}</DetailField>
+                            <DetailField label="Email">{order.customer_email || "-"}</DetailField>
+                            <DetailField label="Phone">{order.phone || "-"}</DetailField>
+                            <DetailField label="Organisation">{order.organization_name || "-"}</DetailField>
+                            <DetailField label="Delivery">
+                              {order.pickup ? "Pickup" : [order.address_line1, order.suburb, order.state, order.postcode].filter(Boolean).join(", ") || "Delivery"}
+                            </DetailField>
+                            <DetailField label="Required">{formatDate(order.due_date) || "-"}</DetailField>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <DetailField label="Order type">{categoryLabel}</DetailField>
+                            <DetailField label="Design / text">{designDisplay(order)}</DetailField>
+                            <DetailField label="Flavour">{order.flavor || "-"}</DetailField>
+                            <DetailField label="Jacket">{JACKET_LABELS.get(order.jacket ?? "") ?? order.jacket ?? "-"}</DetailField>
+                            <DetailField label="Custom labels">
+                              {order.labels_count ? `Yes - ${order.labels_count}` : "No"}
+                            </DetailField>
+                            <DetailField label="Ingredient labels">
+                              {order.ingredient_labels_count ? `Yes - ${order.ingredient_labels_count}` : "No"}
+                            </DetailField>
+                          </div>
+
+                          {order.notes || order.customer_note ? (
+                            <div className="mt-4 grid gap-3 md:grid-cols-2">
+                              {order.notes ? (
+                                <DetailField label="Production notes">
+                                  <span className="whitespace-pre-wrap normal-case">{order.notes}</span>
+                                </DetailField>
+                              ) : null}
+                              {order.customer_note ? (
+                                <DetailField label="Customer note">
+                                  <span className="whitespace-pre-wrap normal-case">{order.customer_note}</span>
+                                </DetailField>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-zinc-800">
-                        <OrderTitleWithLogo order={order} title={order.title ?? "Untitled"} />
-                      </td>
-                      <td className="px-3 py-2 text-zinc-700">
-                        {formatDate(order.due_date)}
-                        {dueDateDistance ? <span className="ml-2 text-zinc-400">{dueDateDistance}</span> : null}
-                      </td>
-                      <td className="px-3 py-2 text-zinc-700">
-                        {formatOrderDescription(order, packagingById.get(order.packaging_option_id ?? "") ?? null)}
-                      </td>
-                      <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
-                      <td className="px-3 py-2 text-zinc-700">{order.pickup ? "Pickup" : "Delivery"}</td>
-                      <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>
                     </tr>
-                    {selectedId === order.id && (
-                      <tr className="bg-white">
-                        <td colSpan={7} className="px-3 pb-4">
-                          <div
-                            id={`order-detail-${order.id}`}
-                            className="mt-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-700"
-                          >
-                            {(() => {
-                              const nameFallback = splitCustomerName(order.customer_name);
-                              const firstNameValue = (order.first_name ?? nameFallback.first).trim();
-                              const lastNameValue = (order.last_name ?? nameFallback.last).trim();
-                              const isDelivery = pickupMode === "off";
-                              const pricing = pricingBreakdowns[order.id] ?? null;
-                              const totalPrice = formatMoney(order.total_price ?? pricing?.total ?? null);
-                              const weightG = Number.isFinite(Number(order.total_weight_kg ?? NaN))
-                                ? Math.round(Number(order.total_weight_kg) * 1000)
-                                : "";
-                              const quantityNumber = Number(quantityInput);
-                              const computedWeightG =
-                                selectedPackagingOption && Number.isFinite(quantityNumber) && quantityNumber > 0
-                                  ? Math.round(Number(selectedPackagingOption.candy_weight_g) * quantityNumber)
-                                  : weightG;
-                              const computedWeightKg = Number(computedWeightG) / 1000;
-                              const inlineBatchWeights =
-                                Number.isFinite(computedWeightKg) && computedWeightKg > 0
-                                  ? suggestedAdminBatchWeights(computedWeightKg, Number(settings.max_total_kg))
-                                  : [];
-                              const activeCategoryId =
-                                orderCategoryId || (isAdminPremadeOrder(order) ? ADMIN_PREMADE_CATEGORY_ID : order.category_id || "");
-                              const isWedding = activeCategoryId.startsWith("weddings");
-                              const isBranded = activeCategoryId === "branded";
-                              const textColorOptions = buildColorOptions(colorOptions, textColorValue);
-                              const heartColorOptions = buildColorOptions(colorOptions, heartColorValue);
-                              const jacketColorOneOptions = buildColorOptions(colorOptions, jacketColorOneValue);
-                              const jacketColorTwoOptions = buildColorOptions(colorOptions, jacketColorTwoValue);
-                              const textColorSelectValue = textColorCustom ? "custom" : selectValueForColor(textColorValue);
-                              const heartColorSelectValue = heartColorCustom ? "custom" : selectValueForColor(heartColorValue);
-                              const jacketColorOneSelectValue = jacketColorOneCustom
-                                ? "custom"
-                                : selectValueForColor(jacketColorOneValue);
-                              const jacketColorTwoSelectValue = jacketColorTwoCustom
-                                ? "custom"
-                                : selectValueForColor(jacketColorTwoValue);
-                              const flavorOptions =
-                                order.flavor && !flavors.some((item) => item.name === order.flavor)
-                                  ? [order.flavor, ...flavors.map((item) => item.name)]
-                                  : flavors.map((item) => item.name);
-                              const detailSectionLabelClass = isEditing
-                                ? "text-[10px] uppercase tracking-[0.16em] text-zinc-500"
-                                : "text-xs text-zinc-500 capitalize";
-                              const detailLabelClass = isEditing
-                                ? "block text-[10px] uppercase tracking-[0.14em] text-zinc-400"
-                                : "block text-xs text-zinc-500 capitalize";
-                              const detailMetaClass = isEditing
-                                ? "text-[10px] uppercase tracking-[0.14em] text-zinc-400"
-                                : "text-xs text-zinc-500 capitalize";
-                              const detailValueClass = "mt-0.5 text-xs font-semibold text-zinc-900 capitalize";
-                              const detailBodyValueClass = "text-xs font-semibold text-zinc-900 capitalize";
-                              const compactFieldClass =
-                                "mt-0.5 w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900";
-                              const originalCategoryId = isAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : order.category_id ?? "";
-                              const priceAffectingInvoiceFieldsChanged =
-                                (orderCategoryId || "") !== originalCategoryId ||
-                                selectedPackagingOptionId !== (order.packaging_option_id ?? "") ||
-                                numericInputChanged(quantityInput, order.quantity) ||
-                                (jacketMode || "") !== (order.jacket ?? "");
-                              const shouldPromptForUpdatedInvoice =
-                                isEditing &&
-                                isAdminManagedCustom &&
-                                Boolean(order.square_invoice_id) &&
-                                !order.paid_at &&
-                                order.square_invoice_status?.toUpperCase() !== "PAID" &&
-                                priceAffectingInvoiceFieldsChanged;
-
-                              return (
-                                <form
-                                  key={`${order.id}-${editKey}`}
-                                  action={upsertOrder}
-                                  className="space-y-3"
-                                  onSubmit={(event) => {
-                                    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
-                                    if (submitter?.dataset.submitIntent === "mark-paid") return;
-                                    if (submitter?.dataset.submitIntent === "delete-order") return;
-                                    event.preventDefault();
-                                    if (shouldPromptForUpdatedInvoice) {
-                                      const confirmed = window.confirm(
-                                        "Send customer updated invoice? This will cancel the current Square invoice and email the customer a replacement with the latest total.",
-                                      );
-                                      if (!confirmed) return;
-                                    }
-                                    saveOrderInline(event.currentTarget, {
-                                      sendUpdatedInvoice: shouldPromptForUpdatedInvoice,
-                                    });
-                                  }}
-                                >
-                                  <input type="hidden" name="id" value={order.id} />
-                                  <input type="hidden" name="status" value={order.status ?? "pending"} />
-                                  <input type="hidden" name="redirect_to" value="/admin/orders" />
-                                  <input type="hidden" name="toast_success" value="Order Updated" />
-                                  <input type="hidden" name="toast_error" value="Failed to update order." />
-                                  {isBranded ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
-                                  <div className="flex justify-end">
-                                    <button
-                                      type="submit"
-                                      formAction={deleteOrder}
-                                      formNoValidate
-                                      data-submit-intent="delete-order"
-                                      onClick={(event) => {
-                                        if (
-                                          !window.confirm(
-                                            "Delete this order? This will remove it from Roc Candy admin and remove its production assignments. This cannot be undone.",
-                                          )
-                                        ) {
-                                          event.preventDefault();
-                                        }
-                                      }}
-                                      className="inline-flex items-center rounded-lg border border-rose-600 bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:border-rose-700 hover:bg-rose-700"
-                                    >
-                                      Delete order
-                                    </button>
-                                  </div>
-                                  <fieldset disabled={!isEditing} className="space-y-3">
-                                  <div className="grid gap-4 md:grid-cols-3">
-                                    <div className="space-y-2">
-                                      <p className={detailSectionLabelClass}>Customer details</p>
-                                      <div className="space-y-1.5">
-                                        <label className={detailLabelClass}>
-                                          Delivery / Pickup
-                                          {isEditing ? (
-                                            <select
-                                              name="pickup"
-                                              value={pickupMode}
-                                              onChange={(event) =>
-                                                setPickupMode(event.target.value === "on" ? "on" : "off")
-                                              }
-                                              className={compactFieldClass}
-                                            >
-                                              <option value="off">Delivery</option>
-                                              <option value="on">Pickup</option>
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>
-                                              {pickupMode === "on" ? "Pickup" : "Delivery"}
-                                            </p>
-                                          )}
-                                        </label>
-                                        <div className="grid gap-1.5 md:grid-cols-2">
-                                          <label className={detailLabelClass}>
-                                            First name
-                                            {isEditing ? (
-                                              <input
-                                                name="first_name"
-                                                defaultValue={firstNameValue}
-                                                className={compactFieldClass}
-                                              />
-                                            ) : (
-                                              <p className={detailValueClass}>{firstNameValue || "-"}</p>
-                                            )}
-                                          </label>
-                                          <label className={detailLabelClass}>
-                                            Last name
-                                            {isEditing ? (
-                                              <input
-                                                name="last_name"
-                                                defaultValue={lastNameValue}
-                                                className={compactFieldClass}
-                                              />
-                                            ) : (
-                                              <p className={detailValueClass}>{lastNameValue || "-"}</p>
-                                            )}
-                                          </label>
-                                        </div>
-                                        <label className={detailLabelClass}>
-                                          Email
-                                          {isEditing ? (
-                                            <input
-                                              type="email"
-                                              name="customer_email"
-                                              defaultValue={order.customer_email ?? ""}
-                                              className={compactFieldClass}
-                                            />
-                                          ) : (
-                                            <p className={detailValueClass}>{order.customer_email ?? "-"}</p>
-                                          )}
-                                        </label>
-                                        <label className={detailLabelClass}>
-                                          Phone
-                                          {isEditing ? (
-                                            <input
-                                              type="tel"
-                                              name="phone"
-                                              defaultValue={order.phone ?? ""}
-                                              className={compactFieldClass}
-                                            />
-                                          ) : (
-                                            <p className={detailValueClass}>{order.phone ?? "-"}</p>
-                                          )}
-                                        </label>
-                                        <div>
-                                          <p className={detailMetaClass}>Address</p>
-                                          {isDelivery ? (
-                                            isEditing ? (
-                                              <div className="mt-0.5 space-y-1.5">
-                                                <input
-                                                  name="address_line1"
-                                                  defaultValue={order.address_line1 ?? ""}
-                                                  className={compactFieldClass}
-                                                  placeholder="Address line 1"
-                                                />
-                                                <input
-                                                  name="address_line2"
-                                                  defaultValue={order.address_line2 ?? ""}
-                                                  className={compactFieldClass}
-                                                  placeholder="Address line 2"
-                                                />
-                                                <div className="grid gap-1.5 md:grid-cols-3">
-                                                  <input
-                                                    name="suburb"
-                                                    defaultValue={order.suburb ?? ""}
-                                                    className={compactFieldClass}
-                                                    placeholder="Suburb"
-                                                  />
-                                                  <input
-                                                    name="state"
-                                                    defaultValue={order.state ?? ""}
-                                                    className={compactFieldClass}
-                                                    placeholder="State"
-                                                  />
-                                                  <input
-                                                    name="postcode"
-                                                    defaultValue={order.postcode ?? ""}
-                                                    className={compactFieldClass}
-                                                    placeholder="Postcode"
-                                                  />
-                                                </div>
-                                              </div>
-                                            ) : (
-                                              <div className={`mt-0.5 space-y-0.5 ${detailBodyValueClass}`}>
-                                                <p>{order.address_line1?.trim() || "-"}</p>
-                                                {order.address_line2?.trim() ? <p>{order.address_line2.trim()}</p> : null}
-                                                <p>
-                                                  {[order.suburb, order.state, order.postcode].filter(Boolean).join(" ") ||
-                                                    "-"}
-                                                </p>
-                                              </div>
-                                            )
-                                          ) : (
-                                            <>
-                                              <p className={detailValueClass}>Pickup</p>
-                                              <input type="hidden" name="address_line1" value="" />
-                                              <input type="hidden" name="address_line2" value="" />
-                                              <input type="hidden" name="suburb" value="" />
-                                              <input type="hidden" name="state" value="" />
-                                              <input type="hidden" name="postcode" value="" />
-                                            </>
-                                          )}
-                                        </div>
-                                        {isBranded ? (
-                                          <div>
-                                            <p className={detailMetaClass}>Uploaded logo</p>
-                                            {isEditing ? (
-                                              <div className="mt-0.5 space-y-2">
-                                                {logoUrl ? (
-                                                  <a
-                                                    href={logoUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="block w-fit rounded-md border border-zinc-200 bg-white p-1.5 hover:border-zinc-300"
-                                                  >
-                                                    <Image
-                                                      src={logoUrl}
-                                                      alt="Uploaded logo"
-                                                      width={144}
-                                                      height={96}
-                                                      unoptimized
-                                                      className="max-h-24 max-w-36 object-contain"
-                                                    />
-                                                  </a>
-                                                ) : (
-                                                  <p className="text-xs font-semibold text-zinc-900">-</p>
-                                                )}
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                  <input
-                                                    id={`logo-upload-${order.id}`}
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
-                                                    className="sr-only"
-                                                  />
-                                                  <label
-                                                    htmlFor={`logo-upload-${order.id}`}
-                                                    className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                                  >
-                                                    Choose logo
-                                                  </label>
-                                                  {logoUrl ? (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => {
-                                                        setLogoUrl("");
-                                                        setLogoError(null);
-                                                        setLogoSummary(null);
-                                                      }}
-                                                      className="inline-flex items-center rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-semibold text-red-700 hover:border-red-300"
-                                                    >
-                                                      Remove logo
-                                                    </button>
-                                                  ) : null}
-                                                </div>
-                                                {logoError ? (
-                                                  <p className="text-xs font-semibold text-red-600">{logoError}</p>
-                                                ) : null}
-                                                {isOptimisingLogo ? (
-                                                  <ImageOptimizationStatus
-                                                    summary={null}
-                                                    pendingLabel="Optimising image..."
-                                                    helperText="This artwork is compressed before it is attached to the order."
-                                                  />
-                                                ) : logoSummary ? (
-                                                  <ImageOptimizationStatus
-                                                    summary={logoSummary}
-                                                    helperText="This artwork is compressed before it is attached to the order."
-                                                  />
-                                                ) : null}
-                                              </div>
-                                            ) : logoUrl ? (
-                                              <a
-                                                href={logoUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="mt-0.5 block w-fit rounded-md border border-zinc-200 bg-white p-1.5 hover:border-zinc-300"
-                                              >
-                                                <Image
-                                                  src={logoUrl}
-                                                  alt="Uploaded logo"
-                                                  width={144}
-                                                  height={96}
-                                                  unoptimized
-                                                  className="max-h-24 max-w-36 object-contain"
-                                                />
-                                              </a>
-                                            ) : (
-                                              <p className={detailValueClass}>-</p>
-                                            )}
-                                          </div>
-                                        ) : null}
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <p className={detailSectionLabelClass}>Order details</p>
-                                      <div className="space-y-1.5">
-                                        <div>
-                                          <p className={detailMetaClass}>Order #</p>
-                                          <p className={detailValueClass}>
-                                            {order.order_number
-                                              ? `#${order.order_number}`
-                                              : order.id
-                                                ? `#${order.id.slice(0, 8)}`
-                                                : "-"}
-                                          </p>
-                                        </div>
-                                        <label className={detailLabelClass}>
-                                          Date required
-                                          {isEditing ? (
-                                            <input
-                                              type="date"
-                                              name="due_date"
-                                              defaultValue={formatDateInput(order.due_date)}
-                                              className={compactFieldClass}
-                                            />
-                                          ) : (
-                                            <p className={detailValueClass}>{formatDate(order.due_date) || "-"}</p>
-                                          )}
-                                        </label>
-                                        <div>
-                                          <p className={detailMetaClass}>
-                                            Date ordered
-                                          </p>
-                                          <p className={detailValueClass}>
-                                            {formatDate(order.created_at) || "-"}
-                                          </p>
-                                        </div>
-                                        <label className={detailLabelClass}>
-                                          Order weight (g)
-                                          {isEditing ? (
-                                            <input
-                                              type="number"
-                                              name="order_weight_g"
-                                              min={1}
-                                              required
-                                              value={computedWeightG}
-                                              readOnly
-                                              className={compactFieldClass}
-                                            />
-                                          ) : (
-                                            <p className={detailValueClass}>{weightG ? `${weightG}` : "-"}</p>
-                                          )}
-                                        </label>
-                                        <label className={detailLabelClass}>
-                                          Flavour
-                                          {isEditing ? (
-                                            <select
-                                              name="flavor"
-                                              defaultValue={order.flavor ?? ""}
-                                              className={compactFieldClass}
-                                            >
-                                              <option value="">Select flavour</option>
-                                              {flavorOptions.map((name) => (
-                                                <option key={name} value={name}>
-                                                  {name}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>{order.flavor ?? "-"}</p>
-                                          )}
-                                        </label>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <p className={detailMetaClass}>
-                                          Colours & info
-                                        </p>
-                                        <label className={detailLabelClass}>
-                                          Text / design
-                                          {isEditing ? (
-                                            <div className="mt-0.5 flex items-center gap-1.5">
-                                              <input
-                                                ref={designTextInputRef}
-                                                name="design_text"
-                                                value={designTextInput}
-                                                onChange={(event) => setDesignTextInput(event.target.value)}
-                                                className={compactFieldClass}
-                                              />
-                                              {isWedding ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={insertWeddingHeart}
-                                                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:border-rose-300"
-                                                  aria-label="Insert heart"
-                                                  title="Insert heart"
-                                                >
-                                                  {WEDDING_HEART}
-                                                </button>
-                                              ) : null}
-                                            </div>
-                                          ) : (
-                                            <p className={detailValueClass}>{order.design_text ?? "-"}</p>
-                                          )}
-                                        </label>
-                                        <label className={detailLabelClass}>
-                                          Jacket
-                                          {isEditing ? (
-                                            <select
-                                              name="jacket"
-                                              value={jacketMode}
-                                              onChange={(event) => setJacketMode(event.target.value)}
-                                              className={compactFieldClass}
-                                            >
-                                              {JACKET_OPTIONS.map((option) => (
-                                                <option key={option.value || "none"} value={option.value}>
-                                                  {option.label}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>
-                                              {jacketLabelByValue.get(jacketMode) ?? jacketMode ?? "-"}
-                                            </p>
-                                          )}
-                                        </label>
-                                        <div className="grid gap-1.5 md:grid-cols-2">
-                                          {renderColorField({
-                                            label: "Jacket colour 1",
-                                            name: "jacket_color_one",
-                                            value: jacketColorOneValue,
-                                            selectValue: jacketColorOneSelectValue,
-                                            options: jacketColorOneOptions,
-                                            inputValue: jacketColorOneInput,
-                                            format: jacketColorOneFormat,
-                                            isCustom: jacketColorOneCustom,
-                                            setValue: setJacketColorOneValue,
-                                            setInputValue: setJacketColorOneInput,
-                                            setFormat: setJacketColorOneFormat,
-                                            setIsCustom: setJacketColorOneCustom,
-                                          })}
-                                          {showJacketColorTwo && (
-                                            renderColorField({
-                                              label: "Jacket colour 2",
-                                              name: "jacket_color_two",
-                                              value: jacketColorTwoValue,
-                                              selectValue: jacketColorTwoSelectValue,
-                                              options: jacketColorTwoOptions,
-                                              inputValue: jacketColorTwoInput,
-                                              format: jacketColorTwoFormat,
-                                              isCustom: jacketColorTwoCustom,
-                                              setValue: setJacketColorTwoValue,
-                                              setInputValue: setJacketColorTwoInput,
-                                              setFormat: setJacketColorTwoFormat,
-                                              setIsCustom: setJacketColorTwoCustom,
-                                            })
-                                          )}
-                                        </div>
-                                        {!showJacketColorTwo && (
-                                          <input type="hidden" name="jacket_color_two" value="" />
-                                        )}
-                                        {!isBranded && (
-                                          renderColorField({
-                                            label: "Text colour",
-                                            name: "text_color",
-                                            value: textColorValue,
-                                            selectValue: textColorSelectValue,
-                                            options: textColorOptions,
-                                            inputValue: textColorInput,
-                                            format: textColorFormat,
-                                            isCustom: textColorCustom,
-                                            setValue: setTextColorValue,
-                                            setInputValue: setTextColorInput,
-                                            setFormat: setTextColorFormat,
-                                            setIsCustom: setTextColorCustom,
-                                          })
-                                        )}
-                                        {isWedding && (
-                                          renderColorField({
-                                            label: "Heart colour",
-                                            name: "heart_color",
-                                            value: heartColorValue,
-                                            selectValue: heartColorSelectValue,
-                                            options: heartColorOptions,
-                                            inputValue: heartColorInput,
-                                            format: heartColorFormat,
-                                            isCustom: heartColorCustom,
-                                            setValue: setHeartColorValue,
-                                            setInputValue: setHeartColorInput,
-                                            setFormat: setHeartColorFormat,
-                                            setIsCustom: setHeartColorCustom,
-                                          })
-                                        )}
-                                        <input type="hidden" name="order_description" value={order.order_description ?? ""} />
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <p className={detailSectionLabelClass}>Packaging info</p>
-                                      <div className="space-y-1.5">
-                                        <label className={detailLabelClass}>
-                                          Order type
-                                          {isEditing ? (
-                                            <select
-                                              name="category_id"
-                                              value={orderCategoryId}
-                                              onChange={(event) => setOrderCategoryId(event.target.value)}
-                                              className={compactFieldClass}
-                                            >
-                                              <option value="">Select order type</option>
-                                              {orderCategoryOptions.map((category) => (
-                                                <option key={category.id} value={category.id}>
-                                                  {category.name}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>
-                                              {orderCategoryId
-                                                ? categoryLabelById.get(orderCategoryId) ?? orderCategoryId
-                                                : "-"}
-                                            </p>
-                                          )}
-                                        </label>
-                                        <label className={detailLabelClass}>
-                                          Packaging type
-                                          {isEditing ? (
-                                            <select
-                                              value={packagingType}
-                                              onChange={(event) => setPackagingType(event.target.value)}
-                                              disabled={!orderCategoryId || packagingTypes.length === 0}
-                                              className={compactFieldClass}
-                                            >
-                                              <option value="">
-                                                {!orderCategoryId
-                                                  ? "Select order type first"
-                                                  : packagingTypes.length
-                                                    ? "Select packaging type"
-                                                    : "No packaging types"}
-                                              </option>
-                                              {packagingTypes.map((type) => (
-                                                <option key={type} value={type}>
-                                                  {type}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>{packagingType || "-"}</p>
-                                          )}
-                                        </label>
-                                        <label className={detailLabelClass}>
-                                          Packaging size
-                                          {isEditing ? (
-                                            <select
-                                              value={packagingSize}
-                                              onChange={(event) => setPackagingSize(event.target.value)}
-                                              disabled={!packagingType || sizesForType.length === 0}
-                                              className={compactFieldClass}
-                                            >
-                                              <option value="">
-                                                {!packagingType
-                                                  ? "Select packaging type first"
-                                                  : sizesForType.length
-                                                    ? "Select size"
-                                                    : "No sizes"}
-                                              </option>
-                                              {sizesForType.map((option) => (
-                                                <option key={option.id} value={option.size}>
-                                                  {formatSizeLabel(option.type, option.size)}
-                                                </option>
-                                              ))}
-                                            </select>
-                                          ) : (
-                                            <p className={detailValueClass}>
-                                              {packagingSize ? formatSizeLabel(packagingType, packagingSize) : "-"}
-                                            </p>
-                                          )}
-                                        </label>
-                                        <input type="hidden" name="packaging_option_id" value={selectedPackagingOptionId} />
-                                        {isEditing
-                                          ? inlineBatchWeights.map((weight, index) => (
-                                              <input
-                                                key={`inline-batch-weight-${order.id}-${index}`}
-                                                type="hidden"
-                                                name="batch_weight_kg"
-                                                value={weight.toFixed(2)}
-                                              />
-                                            ))
-                                          : null}
-                                        <label className={detailLabelClass}>
-                                          Quantity
-                                          {isEditing ? (
-                                            <input
-                                              type="number"
-                                              name="quantity"
-                                              min={1}
-                                              value={quantityInput}
-                                              onChange={(event) => setQuantityInput(event.target.value)}
-                                              className={compactFieldClass}
-                                            />
-                                          ) : (
-                                            <p className={detailValueClass}>
-                                              {formatQuantity(Number(quantityInput) || order.quantity) || "-"}
-                                            </p>
-                                          )}
-                                          {isEditing && Number.isFinite(maxPackages ?? NaN) && Number(maxPackages) > 0 ? (
-                                            <p className="mt-0.5 text-[10px] font-semibold text-zinc-500">
-                                              Website max {Number(maxPackages)}
-                                            </p>
-                                          ) : null}
-                                        </label>
-                                        {isJarOption ? (
-                                          <label className={detailLabelClass}>
-                                            Lid colour
-                                            {isEditing ? (
-                                              <select
-                                                name="jar_lid_color"
-                                                value={jarLidColorValue}
-                                                onChange={(event) => setJarLidColorValue(event.target.value)}
-                                                disabled={availableLidColors.length === 0}
-                                                className={compactFieldClass}
-                                              >
-                                                <option value="">
-                                                  {availableLidColors.length ? "Select lid colour" : "No lid options"}
-                                                </option>
-                                                {availableLidColors.map((lid) => (
-                                                  <option key={lid} value={lid}>
-                                                    {lid}
-                                                  </option>
-                                                ))}
-                                              </select>
-                                            ) : (
-                                              <p className={detailValueClass}>{jarLidColorValue || "-"}</p>
-                                            )}
-                                          </label>
-                                        ) : (
-                                          <input type="hidden" name="jar_lid_color" value="" />
-                                        )}
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <p className={detailSectionLabelClass}>Pricing details</p>
-                                        <div>
-                                          <p className={detailMetaClass}>
-                                            Payment method
-                                          </p>
-                                          <p className={detailValueClass}>{order.payment_method ?? "-"}</p>
-                                        </div>
-                                        {isAdminManagedCustom ? (
-                                          <div>
-                                            <p className={detailMetaClass}>Square invoice</p>
-                                            <p className={detailValueClass}>
-                                              {order.square_invoice_id
-                                                ? `${order.square_invoice_status ?? "draft"} · ${order.square_invoice_id}`
-                                                : "No draft"}
-                                            </p>
-                                            {order.square_invoice_error ? (
-                                              <p className="mt-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold normal-case text-rose-700">
-                                                {order.square_invoice_error}
-                                              </p>
-                                            ) : null}
-                                            {order.square_invoice_id && !order.square_invoice_sent_at ? (
-                                              <a
-                                                href={`/admin/orders/${order.id}/invoice`}
-                                                className="mt-2 inline-flex rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
-                                              >
-                                                Review / send invoice
-                                              </a>
-                                            ) : null}
-                                            {!order.square_invoice_id ? (
-                                              <form action={retryAdminSquareInvoiceDraft} className="mt-2">
-                                                <input type="hidden" name="order_id" value={order.id} />
-                                                <button
-                                                  type="submit"
-                                                  className="inline-flex rounded border border-zinc-900 bg-zinc-900 px-2 py-1 text-[11px] font-semibold text-white hover:bg-zinc-800"
-                                                >
-                                                  Retry draft invoice
-                                                </button>
-                                              </form>
-                                            ) : null}
-                                          </div>
-                                        ) : null}
-                                        {pricing ? (
-                                          <div className="space-y-0.5 text-[11px] text-zinc-600">
-                                            {pricing.items.map((item) => (
-                                              <div key={item.label} className="flex items-center justify-between">
-                                                <span>{item.label}</span>
-                                                <span>{formatMoney(item.amount)}</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        ) : (
-                                          <p className="text-xs text-zinc-500">Pricing breakdown unavailable.</p>
-                                        )}
-                                        <div className="flex items-center justify-between text-sm font-semibold text-zinc-900">
-                                          <span>Total</span>
-                                          <span>{totalPrice}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {order.notes && (
-                                    <div>
-                                      <p className={detailSectionLabelClass}>Notes</p>
-                                      <p className={detailBodyValueClass}>{order.notes}</p>
-                                    </div>
-                                  )}
-                                  </fieldset>
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      {isEditing ? (
-                                        <>
-                                          <button
-                                            type="submit"
-                                            disabled={isOptimisingLogo || Boolean(logoError) || isSavingOrder}
-                                            className="inline-flex min-w-[112px] items-center justify-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                          >
-                                            {isSavingOrder ? (
-                                              <>
-                                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                                                Saving
-                                              </>
-                                            ) : isOptimisingLogo ? (
-                                              "Optimising logo..."
-                                            ) : (
-                                              "Save changes"
-                                            )}
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              syncEditableState(order);
-                                              setIsEditing(false);
-                                              setEditKey((prev) => prev + 1);
-                                            }}
-                                            className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            syncEditableState(order);
-                                            setIsEditing(true);
-                                            setEditKey((prev) => prev + 1);
-                                          }}
-                                          className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-                                        >
-                                          Edit
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => setAssignmentModalOrderId(order.id)}
-                                        className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
-                                      >
-                                        {assignedSlotDates.length > 0 ? "Change assignment" : "Assign"}
-                                      </button>
-                                      {printTarget ? (
-                                        <a
-                                          href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                                        >
-                                          Print order
-                                        </a>
-                                      ) : (
-                                        <span className="text-xs text-zinc-500">Print unavailable</span>
-                                      )}
-                                      {canCompleteFromSchedule ? (
-                                        <SplitAwareActionForm
-                                          action={archiveOrderInline}
-                                          hiddenFields={[{ name: "order_id", value: order.id }]}
-                                          buttonLabel={productionCompletionActionLabel(order)}
-                                          buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                          confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
-                                          companionMeta={premadeSiblingMeta}
-                                        />
-                                      ) : null}
-                                    </div>
-                                    {isAdminManagedCustomUnpaid ? (
-                                      <button
-                                        type="submit"
-                                        formNoValidate
-                                        formAction={markOrderAsPaid}
-                                        data-submit-intent="mark-paid"
-                                        onClick={(event) => {
-                                          if (!window.confirm("Mark order as paid?")) {
-                                            event.preventDefault();
-                                          }
-                                        }}
-                                        className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                      >
-                                        Mark as Paid
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                </form>
-                              );
-                            })()}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                  ) : null}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+
       {listOrders.length > 15 ? (
         <div className="flex justify-center">
           <button

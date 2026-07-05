@@ -14,6 +14,7 @@ export function isAdminManagedCustomOrder(order: AdminManagedCustomOrderSource |
   const source = order as Partial<AdminManagedCustomOrderPaymentSource>;
   if (order.design_type === "premade") return false;
   if (source.payment_provider === "square_invoice" || source.square_invoice_id) return true;
+  if (source.payment_provider) return false;
   if (source.status === "pending_payment") return false;
   if (!order.woo_order_id && !order.woo_payment_url) return true;
   return source.status === "pending" || source.status === "unassigned";

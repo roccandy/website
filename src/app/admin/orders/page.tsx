@@ -1,7 +1,5 @@
 import {
   getCategories,
-  getColorPalette,
-  getFlavors,
   getOrders,
   getOrderSlots,
   getProductionDayNotes,
@@ -13,7 +11,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
-import { buildCustomPricingInput, buildPricingContext, calculatePricingWithContext } from "@/lib/pricing";
+import { buildPricingContext } from "@/lib/pricing";
 import { isProductionActivity, listRecentAdminActivity } from "@/lib/adminActivity";
 
 export const metadata = {
@@ -32,44 +30,16 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
 
-  const [orders, slots, assignments, dayNotes, pricingContext, flavors, palette, categories, activityLog] = await Promise.all([
+  const [orders, slots, assignments, dayNotes, pricingContext, categories, activityLog] = await Promise.all([
     getOrders(),
     getProductionSlots(),
     getOrderSlots(),
     getProductionDayNotes(),
     buildPricingContext(),
-    getFlavors(),
-    getColorPalette(),
     getCategories(),
     listRecentAdminActivity(200),
   ]);
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
-  const pricingByOrderId: Record<string, ReturnType<typeof calculatePricingWithContext> | null> = {};
-  orders.forEach((order) => {
-    if (order.design_type === "premade") {
-      pricingByOrderId[order.id] = null;
-      return;
-    }
-    const pricingInput = buildCustomPricingInput({
-      categoryId: order.category_id,
-      packagingOptionId: order.packaging_option_id,
-      quantity: order.quantity,
-      labelsCount: order.labels_count ?? undefined,
-      ingredientLabelsCount: order.ingredient_labels_count ?? undefined,
-      notes: order.notes,
-      dueDate: order.due_date ?? undefined,
-      jacket: order.jacket,
-    });
-    if (!pricingInput) {
-      pricingByOrderId[order.id] = null;
-      return;
-    }
-    try {
-      pricingByOrderId[order.id] = calculatePricingWithContext(pricingInput, pricingContext);
-    } catch {
-      pricingByOrderId[order.id] = null;
-    }
-  });
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -100,9 +70,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         settings={pricingContext.settings}
         packagingOptions={pricingContext.packagingOptions}
         categories={categories}
-        pricingBreakdowns={pricingByOrderId}
-        flavors={flavors}
-        palette={palette}
         dayNotes={dayNotes}
         initialSelectedId={selectedOrderId}
       />

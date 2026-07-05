@@ -22,16 +22,22 @@ import type {
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
-import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
+import {
+  ADMIN_PREMADE_CATEGORY_ID,
+  ADMIN_PREMADE_ORDER_MARKER,
+  isAdminPremadeOrder as isAdminPremadeOrderRow,
+} from "@/lib/adminPremadeOrder";
 import {
   MAX_ADMIN_BATCH_COUNT,
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
 import { upsertOrder } from "../actions";
-import { formatFullDateLabel } from "../productionScheduleShared";
+import { formatFullDateLabel, formatOrderDescription } from "../productionScheduleShared";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
+import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
+import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 const BULK_LABEL_COUNT_MAX = 1000;
 
 const STATES = [
@@ -221,6 +227,56 @@ function formatPremadeLabel(item: PremadeCandy) {
   return parts.join(" - ");
 }
 
+const formatInputNumber = (value: number | null | undefined, decimals = 2) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "";
+  const fixed = parsed.toFixed(decimals);
+  return fixed.replace(/\.?0+$/, "");
+};
+
+const formatMoneyValue = (value: number | null | undefined) =>
+  Number.isFinite(value ?? NaN) ? `$${Number(value).toFixed(2)}` : "$0.00";
+
+const normalizeDiscountType = (value: string | null | undefined): AdminDiscountType => {
+  if (value === "percent" || value === "fixed") return value;
+  return "none";
+};
+
+const dateInputValue = (value: string | null | undefined) => {
+  if (!value) return "";
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : value.slice(0, 10);
+};
+
+const splitWeddingDesign = (value: string | null | undefined) => {
+  const normalized = (value ?? "")
+    .replace(/[\u2665\u2764]\ufe0f?/g, "\u2665")
+    .replace(/\ufe0f/g, "")
+    .trim();
+  const [left = "", right = ""] = normalized.split("\u2665");
+  return {
+    left: left.trim(),
+    right: right.trim(),
+  };
+};
+
+const batchWeightsInputValues = (order: OrderRow | null | undefined) =>
+  Array.isArray(order?.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg
+        .map((weight) => Number(weight))
+        .filter((weight) => Number.isFinite(weight) && weight > 0)
+        .map((weight) => weight.toFixed(2))
+    : [];
+
+const batchWeightsLabel = (weights: Array<number | string | null | undefined>) => {
+  const values = weights
+    .map((weight) => Number(weight))
+    .filter((weight) => Number.isFinite(weight) && weight > 0)
+    .map((weight) => `${formatInputNumber(weight)}kg`);
+  return values.length > 0 ? values.join(" + ") : "-";
+};
+
+const valuesChanged = (next: string, current: string) => next.trim() !== current.trim();
+
 function PalettePicker({
   label,
   value,
@@ -320,6 +376,9 @@ type Props = {
   orders: OrderRow[];
   slots: ProductionSlot[];
   assignments: OrderSlot[];
+  mode?: "create" | "edit";
+  initialOrder?: OrderRow | null;
+  cancelHref?: string;
 };
 
 export function NewOrderForm({
@@ -332,57 +391,83 @@ export function NewOrderForm({
   orders,
   slots,
   assignments,
+  mode = "create",
+  initialOrder = null,
+  cancelHref = "/admin/orders",
 }: Props) {
+  const isEditMode = mode === "edit" && Boolean(initialOrder);
+  const initialIsAdminPremade = initialOrder ? isAdminPremadeOrderRow(initialOrder) : false;
+  const initialCategoryId = initialIsAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : initialOrder?.category_id ?? "";
+  const initialWeddingDesign = splitWeddingDesign(initialOrder?.design_text);
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
-  const previousPackagingOptionIdRef = useRef<string | null>(null);
+  const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const previousPackagingOptionIdRef = useRef<string | null>(initialOrder?.packaging_option_id ?? null);
+  const preserveInitialBatchWeightsRef = useRef(batchWeightsInputValues(initialOrder).length > 0);
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
-  const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">("delivery");
-  const [categoryId, setCategoryId] = useState("");
-  const [packagingOptionId, setPackagingOptionId] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [customLabelsOptIn, setCustomLabelsOptIn] = useState(false);
-  const [labelsCount, setLabelsCount] = useState("");
-  const [jarLidColor, setJarLidColor] = useState("");
-  const [jacket, setJacket] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">(initialOrder?.pickup ? "pickup" : "delivery");
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [packagingOptionId, setPackagingOptionId] = useState(initialOrder?.packaging_option_id ?? "");
+  const [quantity, setQuantity] = useState(initialOrder?.quantity ? formatInputNumber(initialOrder.quantity, 0) : "");
+  const [customLabelsOptIn, setCustomLabelsOptIn] = useState(Boolean(Number(initialOrder?.labels_count) > 0));
+  const [labelsCount, setLabelsCount] = useState(initialOrder?.labels_count ? formatInputNumber(initialOrder.labels_count, 0) : "");
+  const [jarLidColor, setJarLidColor] = useState(initialOrder?.jar_lid_color ?? "");
+  const [jacket, setJacket] = useState(initialOrder?.jacket ?? "");
+  const [dueDate, setDueDate] = useState(dateInputValue(initialOrder?.due_date));
   const [productionSlotDate, setProductionSlotDate] = useState("");
   const [productionSlotPickerOpen, setProductionSlotPickerOpen] = useState(false);
-  const [priceValue, setPriceValue] = useState("");
-  const [weightValue, setWeightValue] = useState("");
+  const [priceValue, setPriceValue] = useState(initialOrder?.total_price ? Number(initialOrder.total_price).toFixed(2) : "");
+  const [weightValue, setWeightValue] = useState(
+    initialOrder
+      ? initialIsAdminPremade
+        ? formatInputNumber(initialOrder.total_weight_kg)
+        : formatInputNumber(Number(initialOrder.total_weight_kg) * 1000, 0)
+      : "",
+  );
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [isPricing, setIsPricing] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [batchWeights, setBatchWeights] = useState<string[]>([]);
-  const [discountType, setDiscountType] = useState<AdminDiscountType>("none");
-  const [discountValue, setDiscountValue] = useState("");
-  const [priceOverride, setPriceOverride] = useState("");
+  const [batchWeights, setBatchWeights] = useState<string[]>(() => batchWeightsInputValues(initialOrder));
+  const [discountType, setDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialOrder?.admin_discount_type));
+  const [discountValue, setDiscountValue] = useState(initialOrder?.admin_discount_value ? formatInputNumber(initialOrder.admin_discount_value) : "");
+  const [priceOverride, setPriceOverride] = useState(initialOrder?.admin_price_override ? formatInputNumber(initialOrder.admin_price_override) : "");
   const [quoteItems, setQuoteItems] = useState<Array<{ label: string; amount: number }>>([]);
-  const [weddingLineOne, setWeddingLineOne] = useState("");
-  const [weddingLineTwo, setWeddingLineTwo] = useState("");
-  const [customText, setCustomText] = useState("");
-  const [brandName, setBrandName] = useState("");
-  const [designText, setDesignText] = useState("");
-  const [jacketColorOne, setJacketColorOne] = useState(defaultJacketColor);
-  const [jacketColorTwo, setJacketColorTwo] = useState(defaultJacketColor);
-  const [textColor, setTextColor] = useState(defaultTextColor);
-  const [heartColor, setHeartColor] = useState(defaultTextColor);
-  const [flavor, setFlavor] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [weddingLineOne, setWeddingLineOne] = useState(initialWeddingDesign.left);
+  const [weddingLineTwo, setWeddingLineTwo] = useState(initialWeddingDesign.right);
+  const [customText, setCustomText] = useState(initialOrder?.category_id?.startsWith("custom-") ? initialOrder.design_text ?? "" : "");
+  const [brandName, setBrandName] = useState(initialOrder?.category_id === "branded" ? initialOrder.design_text ?? "" : "");
+  const [designText, setDesignText] = useState(
+    initialOrder && !initialOrder.category_id?.startsWith("weddings") && !initialOrder.category_id?.startsWith("custom-") && initialOrder.category_id !== "branded"
+      ? initialOrder.design_text ?? ""
+      : "",
+  );
+  const [jacketColorOne, setJacketColorOne] = useState(initialOrder?.jacket_color_one ?? defaultJacketColor);
+  const [jacketColorTwo, setJacketColorTwo] = useState(initialOrder?.jacket_color_two ?? defaultJacketColor);
+  const [textColor, setTextColor] = useState(initialOrder?.text_color ?? defaultTextColor);
+  const [heartColor, setHeartColor] = useState(initialOrder?.heart_color ?? defaultTextColor);
+  const [flavor, setFlavor] = useState(initialOrder?.flavor ?? "");
+  const [logoUrl, setLogoUrl] = useState(initialOrder?.logo_url ?? "");
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
-  const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(false);
-  const [ingredientLabelsCount, setIngredientLabelsCount] = useState("");
-  const [labelFileName, setLabelFileName] = useState("");
-  const [labelImageUrl, setLabelImageUrl] = useState("");
+  const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(
+    Boolean(Number(initialOrder?.ingredient_labels_count) > 0) ||
+      Boolean(initialOrder && hasIngredientLabelsRequested({ notes: initialOrder.notes })),
+  );
+  const [ingredientLabelsCount, setIngredientLabelsCount] = useState(
+    initialOrder?.ingredient_labels_count ? formatInputNumber(initialOrder.ingredient_labels_count, 0) : "",
+  );
+  const [labelFileName, setLabelFileName] = useState(initialOrder?.label_image_url ? "Existing artwork" : "");
+  const [labelImageUrl, setLabelImageUrl] = useState(initialOrder?.label_image_url ?? "");
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
-  const [adminPremadeMode, setAdminPremadeMode] = useState<"" | "flavor" | "premade">("");
-  const [adminPremadeFlavor, setAdminPremadeFlavor] = useState("");
+  const [adminPremadeMode, setAdminPremadeMode] = useState<"" | "flavor" | "premade">(
+    initialIsAdminPremade ? "flavor" : "",
+  );
+  const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? initialOrder?.design_text ?? "" : "");
   const [adminPremadeCandyId, setAdminPremadeCandyId] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
@@ -406,6 +491,10 @@ export function NewOrderForm({
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
+  const initialPackagingOption = useMemo(() => {
+    if (!initialOrder?.packaging_option_id) return null;
+    return packagingOptions.find((option) => option.id === initialOrder.packaging_option_id) || null;
+  }, [initialOrder, packagingOptions]);
   const packagingTypes = useMemo(() => {
     const seen = new Set<string>();
     return filteredPackagingOptions
@@ -469,8 +558,17 @@ export function NewOrderForm({
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const customPriceNumber = Number(priceValue);
   const customWeightLabel = customOrderTotalWeightKg > 0 ? `${customOrderTotalWeightKg.toFixed(2)}kg` : "0.00kg";
-  const formatMoney = (value: number | null | undefined) =>
-    Number.isFinite(value ?? NaN) ? `$${Number(value).toFixed(2)}` : "$0.00";
+  const formatMoney = formatMoneyValue;
+  const labelsNumber = Number(labelsCount);
+  const resolvedLabelsCount =
+    customLabelsOptIn && Number.isFinite(labelsNumber) && labelsNumber > 0
+      ? Math.min(labelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+      : 0;
+  const ingredientLabelsNumber = Number(ingredientLabelsCount);
+  const resolvedIngredientLabelsCount =
+    ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
+      ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+      : 0;
   const applyEqualBatchSplit = () => {
     const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
     setBatchWeights(weights.map((weight) => weight.toFixed(2)));
@@ -588,6 +686,57 @@ export function NewOrderForm({
     if (jacket === "pinstripe") return "pinstripe";
     return "";
   }, [jacket]);
+  const buildUpdatedInvoiceChangeLines = () => {
+    if (!initialOrder || !isEditMode) return [];
+    const currentQuantity = Number.isFinite(quantityNumber) && quantityNumber > 0 ? quantityNumber : null;
+    const currentPrice = Number(priceValue);
+    const currentOrderForPackaging = {
+      ...initialOrder,
+      quantity: currentQuantity,
+      packaging_option_id: selectedPackagingOption?.id ?? null,
+    } as OrderRow;
+    const currentBatchWeights = batchWeights
+      .map((weight) => Number(weight))
+      .filter((weight) => Number.isFinite(weight) && weight > 0);
+    const originalBatchWeights = Array.isArray(initialOrder.admin_batch_weights_kg)
+      ? initialOrder.admin_batch_weights_kg.filter((weight) => Number.isFinite(Number(weight)) && Number(weight) > 0)
+      : [];
+    const lines: string[] = [];
+    const addChange = (label: string, from: string, to: string) => {
+      if (valuesChanged(from, to)) lines.push(`${label}: ${from || "-"} -> ${to || "-"}`);
+    };
+
+    addChange(
+      "Packaging",
+      formatOrderDescription(initialOrder, initialPackagingOption),
+      formatOrderDescription(currentOrderForPackaging, selectedPackagingOption),
+    );
+    addChange("Quantity", formatInputNumber(initialOrder.quantity, 0), currentQuantity ? formatInputNumber(currentQuantity, 0) : "");
+    addChange("Total", formatMoney(initialOrder.total_price), Number.isFinite(currentPrice) ? formatMoney(currentPrice) : "");
+    addChange("Due date", dateInputValue(initialOrder.due_date), dueDate);
+    addChange("Jacket", initialOrder.jacket ?? "", jacket);
+    addChange("Custom labels", formatInputNumber(initialOrder.labels_count, 0), resolvedLabelsCount ? formatInputNumber(resolvedLabelsCount, 0) : "");
+    addChange(
+      "Ingredient labels",
+      formatInputNumber(initialOrder.ingredient_labels_count, 0),
+      resolvedIngredientLabelsCount ? formatInputNumber(resolvedIngredientLabelsCount, 0) : "",
+    );
+    addChange("Batch weights", batchWeightsLabel(originalBatchWeights), batchWeightsLabel(currentBatchWeights));
+    addChange("Discount", normalizeDiscountType(initialOrder.admin_discount_type), discountType);
+    addChange("Discount value", formatInputNumber(initialOrder.admin_discount_value), discountValue);
+    addChange("Price override", formatInputNumber(initialOrder.admin_price_override), priceOverride);
+
+    return lines;
+  };
+  const shouldOfferUpdatedInvoice =
+    Boolean(
+      initialOrder &&
+        isEditMode &&
+        isAdminManagedCustomOrder(initialOrder) &&
+        initialOrder.square_invoice_id &&
+        !initialOrder.paid_at &&
+        initialOrder.square_invoice_status?.toUpperCase() !== "PAID",
+    );
   const handleLogoUpload = async (file?: File | null) => {
     if (!file) {
       setLogoUrl("");
@@ -766,6 +915,10 @@ export function NewOrderForm({
       setBatchWeights([]);
       return;
     }
+    if (preserveInitialBatchWeightsRef.current) {
+      preserveInitialBatchWeightsRef.current = false;
+      return;
+    }
     const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
     setBatchWeights(weights.map((weight) => weight.toFixed(2)));
   }, [customOrderTotalWeightKg, isAdminPremadeOrder, isOverBatchLimit, settings.max_total_kg]);
@@ -860,15 +1013,45 @@ export function NewOrderForm({
       ref={formRef}
       action={upsertOrder}
       className="space-y-6"
-      onSubmit={() => setIsSubmittingOrder(true)}
+      onSubmit={(event) => {
+        if (sendUpdatedInvoiceInputRef.current) {
+          sendUpdatedInvoiceInputRef.current.value = "";
+        }
+        if (shouldOfferUpdatedInvoice) {
+          const changeLines = buildUpdatedInvoiceChangeLines();
+          if (changeLines.length > 0) {
+            const confirmed = window.confirm(
+              [
+                "Customer will get a new invoice with these changes:",
+                "",
+                ...changeLines,
+                "",
+                "Save these updates and send the replacement invoice?",
+              ].join("\n"),
+            );
+            if (!confirmed) {
+              event.preventDefault();
+              return;
+            }
+            if (sendUpdatedInvoiceInputRef.current) {
+              sendUpdatedInvoiceInputRef.current.value = "on";
+            }
+          }
+        }
+        setIsSubmittingOrder(true);
+      }}
     >
       {isSubmittingOrder ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 px-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-xl">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
-            <p className="mt-4 text-lg font-semibold text-zinc-900">Creating invoice draft</p>
+            <p className="mt-4 text-lg font-semibold text-zinc-900">
+              {isEditMode ? "Saving order" : "Creating invoice draft"}
+            </p>
             <p className="mt-2 text-sm text-zinc-600">
-              Please wait while the order is saved and Square prepares the draft invoice.
+              {isEditMode
+                ? "Please wait while the order details and invoice records are updated."
+                : "Please wait while the order is saved and Square prepares the draft invoice."}
             </p>
           </div>
         </div>
@@ -918,6 +1101,15 @@ export function NewOrderForm({
           <input type="hidden" name="admin_discount_value" value={isAdminPremadeOrder ? "" : discountValue} />
           <input type="hidden" name="admin_price_override" value={isAdminPremadeOrder ? "" : priceOverride} />
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
+          <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
+          {isEditMode && initialOrder ? (
+            <>
+              <input type="hidden" name="id" value={initialOrder.id} />
+              <input type="hidden" name="redirect_to" value={`/admin/orders/${initialOrder.id}`} />
+              <input type="hidden" name="toast_success" value="Order updated." />
+              <input type="hidden" name="toast_error" value="Failed to update order." />
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -1041,13 +1233,14 @@ export function NewOrderForm({
                 <input
                   name="title"
                   required
+                  defaultValue={initialOrder?.title ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   placeholder="Order title"
                 />
               </label>
             </>
           )}
-          <input type="hidden" name="status" value="unassigned" />
+          <input type="hidden" name="status" value={isEditMode && initialOrder ? initialOrder.status : "unassigned"} />
         </div>
       </div>
 
@@ -1723,6 +1916,7 @@ export function NewOrderForm({
                 First name
                 <input
                   name="first_name"
+                  defaultValue={initialOrder?.first_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1730,6 +1924,7 @@ export function NewOrderForm({
                 Last name
                 <input
                   name="last_name"
+                  defaultValue={initialOrder?.last_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1738,6 +1933,7 @@ export function NewOrderForm({
                 <input
                   type="email"
                   name="customer_email"
+                  defaultValue={initialOrder?.customer_email ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1745,6 +1941,7 @@ export function NewOrderForm({
                 Phone number
                 <input
                   name="phone"
+                  defaultValue={initialOrder?.phone ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1752,6 +1949,7 @@ export function NewOrderForm({
                 Organization name
                 <input
                   name="organization_name"
+                  defaultValue={initialOrder?.organization_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1766,6 +1964,7 @@ export function NewOrderForm({
                   Address line 1
                   <input
                     name="address_line1"
+                    defaultValue={initialOrder?.address_line1 ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1773,6 +1972,7 @@ export function NewOrderForm({
                   Address line 2
                   <input
                     name="address_line2"
+                    defaultValue={initialOrder?.address_line2 ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1780,6 +1980,7 @@ export function NewOrderForm({
                   Suburb
                   <input
                     name="suburb"
+                    defaultValue={initialOrder?.suburb ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1787,6 +1988,7 @@ export function NewOrderForm({
                   Postcode
                   <input
                     name="postcode"
+                    defaultValue={initialOrder?.postcode ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1795,7 +1997,7 @@ export function NewOrderForm({
                   <select
                     name="state"
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                    defaultValue=""
+                    defaultValue={initialOrder?.state ?? ""}
                   >
                     {STATES.map((state) => (
                       <option key={state.value} value={state.value}>
@@ -1814,6 +2016,7 @@ export function NewOrderForm({
                 <span className="admin-card-title text-zinc-900">Production Notes</span>
                 <textarea
                   name="notes"
+                  defaultValue={initialOrder?.notes ?? ""}
                   className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   rows={5}
                   placeholder="Internal notes for production."
@@ -1823,6 +2026,7 @@ export function NewOrderForm({
                 <span className="admin-card-title text-zinc-900">Customer Note</span>
                 <textarea
                   name="customer_note"
+                  defaultValue={initialOrder?.customer_note ?? ""}
                   className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   rows={5}
                   placeholder="Visible on the customer invoice."
@@ -2061,12 +2265,12 @@ export function NewOrderForm({
 
       <div className="flex items-center justify-end gap-3">
         <Link
-          href="/admin/orders"
+          href={cancelHref}
           className="rounded border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
         >
           Cancel
         </Link>
-        {isAdminPremadeOrder ? (
+        {isAdminPremadeOrder && !isEditMode ? (
           <button
             type="button"
             onClick={() => {
@@ -2085,7 +2289,15 @@ export function NewOrderForm({
           disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchAllocationValid || isOverBatchLimit || Boolean(pricingError)))}
           className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
         >
-          {isSubmittingOrder ? "Creating invoice..." : isAdminPremadeOrder ? "Add to Orders" : "Create Invoice"}
+          {isSubmittingOrder
+            ? isEditMode
+              ? "Saving..."
+              : "Creating invoice..."
+            : isEditMode
+              ? "Save order"
+              : isAdminPremadeOrder
+                ? "Add to Orders"
+                : "Create Invoice"}
         </button>
         <button
           ref={scheduleSubmitButtonRef}
