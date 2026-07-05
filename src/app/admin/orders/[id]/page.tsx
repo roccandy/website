@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
   getCategories,
+  getColorPalette,
   getFlavors,
   getPackagingOptions,
   getSettings,
@@ -59,11 +60,12 @@ export default async function AdminOrderDetailPage({
   const order = await loadOrder(rawId);
   if (!order) redirect("/admin/orders");
 
-  const [categories, packagingOptions, flavors, settings] = await Promise.all([
+  const [categories, packagingOptions, flavors, settings, palette] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getFlavors(),
     getSettings(),
+    getColorPalette(),
   ]);
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
@@ -137,6 +139,7 @@ export default async function AdminOrderDetailPage({
         packagingOptions={packagingOptions}
         flavors={flavors}
         settings={settings}
+        palette={palette}
       />
     </section>
   );

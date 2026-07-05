@@ -52,9 +52,17 @@ describe("admin large order batching", () => {
       validateAdminBatchWeights({
         weights,
         totalWeightKg: weights.length,
-        maxBatchKg: 8.2,
       }),
     ).toThrow(`at most ${MAX_ADMIN_BATCH_COUNT}`);
+  });
+
+  it("allows an admin batch over the configured max when the total allocation matches", () => {
+    expect(() =>
+      validateAdminBatchWeights({
+        weights: [9],
+        totalWeightKg: 9,
+      }),
+    ).not.toThrow();
   });
 
   it("prices large orders as the sum of selected batch prices", () => {
@@ -95,6 +103,29 @@ describe("admin large order batching", () => {
     expect(pricing.batchBasePrices.map((item) => item.amount)).toEqual([190, 100]);
     expect(pricing.basePrice).toBe(290);
     expect(pricing.total).toBe(300);
+  });
+
+  it("prices an admin batch above the configured max using the final tier", () => {
+    const context = {
+      ...pricingContext,
+      settings: {
+        ...pricingContext.settings,
+        max_total_kg: 8.5,
+      },
+    } as PricingContext;
+    const pricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "bulk-bag",
+        quantity: 9,
+        batchWeightsKg: [9],
+      },
+      context,
+    );
+
+    expect(pricing.batchBasePrices).toEqual([{ weightKg: 9, amount: 200 }]);
+    expect(pricing.basePrice).toBe(200);
+    expect(pricing.total).toBe(209);
   });
 
   it("rounds calculated packaging weight to 2 decimals before validating batch splits", () => {

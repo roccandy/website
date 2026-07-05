@@ -408,7 +408,10 @@ async function upsertOrderShared(formData: FormData) {
       submittedBatchWeights.length > 0
         ? submittedBatchWeights
         : shouldRegenerateBatchWeights
-          ? suggestedAdminBatchWeights(resolvedWeightKg, Number(settings.max_total_kg))
+          ? (() => {
+              const suggested = suggestedAdminBatchWeights(resolvedWeightKg, Number(settings.max_total_kg));
+              return suggested.length > 0 ? suggested : [resolvedWeightKg];
+            })()
           : existingBatchWeights;
     const shouldCalculateAdminPricing =
       !isAdminPremade && pricingContext && (!existing || shouldReplaceSquareInvoice || (!isPriceLocked && priceAffectingFieldsChanged));

@@ -52,7 +52,8 @@ function findTierForWeight(tiers: WeightTier[], weightKg: number, configuredMaxK
   return sortedTiers.find((tier) => {
     const minKg = Number(tier.min_kg);
     const maxKg = effectiveTierMaxKg(sortedTiers, tier, configuredMaxKg);
-    return weightKg >= minKg && weightKg <= maxKg;
+    const isFinalTier = sortedTiers[sortedTiers.length - 1] === tier;
+    return weightKg >= minKg && (weightKg <= maxKg || isFinalTier);
   });
 }
 
@@ -70,7 +71,10 @@ function basePriceForBatch(tiers: WeightTier[], weightKg: number, configuredMaxK
   const priorFlat = sortedTiers
     .filter((tier) => !tier.per_kg && Number(tier.max_kg) <= Number(matchedTier.min_kg))
     .sort((a, b) => Number(b.max_kg) - Number(a.max_kg))[0];
-  const matchedMaxKg = effectiveTierMaxKg(sortedTiers, matchedTier, configuredMaxKg);
+  const isFinalTier = sortedTiers[sortedTiers.length - 1] === matchedTier;
+  const matchedMaxKg = isFinalTier
+    ? Math.max(effectiveTierMaxKg(sortedTiers, matchedTier, configuredMaxKg), weightKg)
+    : effectiveTierMaxKg(sortedTiers, matchedTier, configuredMaxKg);
   const spanKg = Math.min(weightKg, matchedMaxKg) - Number(matchedTier.min_kg);
   return (priorFlat ? Number(priorFlat.price) : 0) + Number(matchedTier.price) * Math.max(0, spanKg);
 }
@@ -122,11 +126,9 @@ export function suggestedAdminBatchWeights(totalWeightKg: number, maxBatchKg: nu
 export function validateAdminBatchWeights({
   weights,
   totalWeightKg,
-  maxBatchKg,
 }: {
   weights: number[];
   totalWeightKg: number;
-  maxBatchKg: number;
 }) {
   if (weights.length === 0) {
     throw new Error("At least one production batch is required.");
@@ -137,10 +139,6 @@ export function validateAdminBatchWeights({
   const invalid = weights.find((weight) => !Number.isFinite(weight) || weight <= 0);
   if (invalid !== undefined) {
     throw new Error("Every production batch must be greater than zero.");
-  }
-  const overweight = weights.find((weight) => weight > maxBatchKg + KG_TOLERANCE);
-  if (overweight !== undefined) {
-    throw new Error(`Each production batch must be ${formatKg(maxBatchKg)} or less.`);
   }
   const allocated = weights.reduce((sum, weight) => sum + weight, 0);
   if (Math.abs(allocated - totalWeightKg) > KG_TOLERANCE) {
@@ -177,11 +175,14 @@ export function calculateAdminLargeOrderPricingWithContext(
 
   const maxBatchKg = Number(context.settings.max_total_kg);
   const submittedBatchWeights = normalizeAdminBatchWeights(input.batchWeightsKg ?? []);
+  const suggestedBatchWeights = suggestedAdminBatchWeights(totalWeightKg, maxBatchKg);
   const batchWeightsKg =
     submittedBatchWeights.length > 0
       ? submittedBatchWeights
-      : suggestedAdminBatchWeights(totalWeightKg, maxBatchKg);
-  validateAdminBatchWeights({ weights: batchWeightsKg, totalWeightKg, maxBatchKg });
+      : suggestedBatchWeights.length > 0
+        ? suggestedBatchWeights
+        : [totalWeightKg];
+  validateAdminBatchWeights({ weights: batchWeightsKg, totalWeightKg });
 
   const categoryTiers = sortTiersByRange(context.tiers.filter((tier) => tier.category_id === category.id));
   const batchBasePrices = batchWeightsKg.map((weightKg) => ({

@@ -4,16 +4,26 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Edit3, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { CandyPreview } from "@/app/quote/CandyPreview";
+import OrderColorField from "../OrderColorField";
 import {
   fileToDataUrl,
   optimizeBrowserImageToDataUrl,
 } from "@/lib/clientImageOptimization";
-import type { Category, Flavor, OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
+import type { Category, ColorPaletteRow, Flavor, OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
   MAX_ADMIN_BATCH_COUNT,
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
+import {
+  buildColorOptions,
+  buildPaletteOptions,
+  formatColorInput,
+  isCustomPaletteValue,
+  selectValueForColor,
+  type ColorFormat,
+} from "../orderColorUtils";
 import { formatDateInput, formatMoney, formatOrderDescription, splitCustomerName } from "../productionScheduleShared";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { upsertOrder } from "../actions";
@@ -111,6 +121,10 @@ type DetailState = {
   weddingLineTwo: string;
   flavor: string;
   jacket: string;
+  jacketColorOne: string;
+  jacketColorTwo: string;
+  textColor: string;
+  heartColor: string;
   jarLidColor: string;
   logoUrl: string;
   labelImageUrl: string;
@@ -134,6 +148,7 @@ type Props = {
   categories: Category[];
   packagingOptions: PackagingOption[];
   flavors: Flavor[];
+  palette: ColorPaletteRow[];
   settings: SettingsRow;
   cancelHref: string;
 };
@@ -369,7 +384,15 @@ function AssetUploadField({
   );
 }
 
-function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[]): DetailState {
+function getPaletteHex(palette: ColorPaletteRow[], category: string, shade: string, fallback: string) {
+  return palette.find((row) => row.category === category && row.shade === shade)?.hex ?? fallback;
+}
+
+function buildInitialState(
+  order: OrderRow,
+  packagingOptions: PackagingOption[],
+  defaults: { jacketColor: string; textColor: string },
+): DetailState {
   const splitName = splitCustomerName(order.customer_name);
   const packagingOption = packagingOptions.find((option) => option.id === order.packaging_option_id) ?? null;
   const quantity = resolveOrderQuantity(order);
@@ -410,6 +433,10 @@ function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[])
     weddingLineTwo: wedding.lineTwo,
     flavor: order.flavor ?? "",
     jacket: order.jacket ?? "",
+    jacketColorOne: order.jacket_color_one ?? defaults.jacketColor,
+    jacketColorTwo: order.jacket_color_two ?? defaults.jacketColor,
+    textColor: order.text_color ?? defaults.textColor,
+    heartColor: order.heart_color ?? defaults.textColor,
     jarLidColor: order.jar_lid_color ?? "",
     logoUrl: order.logo_url ?? "",
     labelImageUrl: order.label_image_url ?? "",
@@ -450,14 +477,42 @@ export function OrderDetailEditor({
   categories,
   packagingOptions,
   flavors,
+  palette,
   settings,
   cancelHref,
 }: Props) {
-  const original = useMemo(() => buildInitialState(order, packagingOptions), [order, packagingOptions]);
+  const paletteOptions = useMemo(() => buildPaletteOptions(palette), [palette]);
+  const paletteValueSet = useMemo(() => new Set(paletteOptions.map((option) => option.value)), [paletteOptions]);
+  const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
+  const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
+  const original = useMemo(
+    () =>
+      buildInitialState(order, packagingOptions, {
+        jacketColor: defaultJacketColor,
+        textColor: defaultTextColor,
+      }),
+    [defaultJacketColor, defaultTextColor, order, packagingOptions],
+  );
   const [draft, setDraft] = useState<DetailState>(original);
   const [quoteState, setQuoteState] = useState<QuoteState>({ key: "", quote: null, error: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [jacketColorOneInput, setJacketColorOneInput] = useState(formatColorInput(original.jacketColorOne, "hex"));
+  const [jacketColorTwoInput, setJacketColorTwoInput] = useState(formatColorInput(original.jacketColorTwo, "hex"));
+  const [textColorInput, setTextColorInput] = useState(formatColorInput(original.textColor, "hex"));
+  const [heartColorInput, setHeartColorInput] = useState(formatColorInput(original.heartColor, "hex"));
+  const [jacketColorOneFormat, setJacketColorOneFormat] = useState<ColorFormat>("hex");
+  const [jacketColorTwoFormat, setJacketColorTwoFormat] = useState<ColorFormat>("hex");
+  const [textColorFormat, setTextColorFormat] = useState<ColorFormat>("hex");
+  const [heartColorFormat, setHeartColorFormat] = useState<ColorFormat>("hex");
+  const [jacketColorOneCustom, setJacketColorOneCustom] = useState(() =>
+    isCustomPaletteValue(original.jacketColorOne, paletteValueSet),
+  );
+  const [jacketColorTwoCustom, setJacketColorTwoCustom] = useState(() =>
+    isCustomPaletteValue(original.jacketColorTwo, paletteValueSet),
+  );
+  const [textColorCustom, setTextColorCustom] = useState(() => isCustomPaletteValue(original.textColor, paletteValueSet));
+  const [heartColorCustom, setHeartColorCustom] = useState(() => isCustomPaletteValue(original.heartColor, paletteValueSet));
   const [logoError, setLogoError] = useState<string | null>(null);
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -480,6 +535,28 @@ export function OrderDetailEditor({
       : "";
   const isWedding = draft.categoryId.startsWith("weddings");
   const isWeddingInitials = draft.categoryId === "weddings-initials";
+  const isBranded = draft.categoryId === "branded" || draft.designType === "branded";
+  const showJacketColorOne = draft.jacket !== "rainbow";
+  const showJacketColorTwo = draft.jacket === "two_colour" || draft.jacket === "two_colour_pinstripe";
+  const previewJacketMode =
+    draft.jacket === "rainbow"
+      ? "rainbow"
+      : draft.jacket === "two_colour" || draft.jacket === "two_colour_pinstripe"
+        ? "two_colour"
+        : draft.jacket === "pinstripe"
+          ? "pinstripe"
+          : "";
+  const previewShowPinstripe = draft.jacket === "pinstripe" || draft.jacket === "two_colour_pinstripe";
+  const customTextVariant =
+    draft.categoryId === "custom-1-6" ? "short" : draft.categoryId === "custom-7-14" ? "long" : undefined;
+  const jacketTypeValue =
+    draft.jacket === "rainbow"
+      ? "rainbow"
+      : draft.jacket === "two_colour" || draft.jacket === "two_colour_pinstripe"
+        ? "two_colour"
+        : draft.jacket === "pinstripe"
+          ? "pinstripe"
+          : "";
   const weddingDesignText = composeWeddingDesign(draft.weddingLineOne, draft.weddingLineTwo, isWeddingInitials);
   const effectiveDesignText = isWedding ? weddingDesignText : draft.designText;
   const effectiveTitle = isWedding ? weddingDesignText || draft.title : draft.title;
@@ -517,6 +594,15 @@ export function OrderDetailEditor({
     draft.batchWeights.length > 0 &&
     draft.batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
     batchWeightsMatchTotal(draft.batchWeights, effectiveTotalWeightKg);
+  const maxBatchKg = Number(settings.max_total_kg);
+  const overweightBatchNumbers = draft.batchWeights
+    .map((weight, index) => ({ weight: Number(weight), index }))
+    .filter(({ weight }) => Number.isFinite(weight) && Number.isFinite(maxBatchKg) && weight > maxBatchKg + 0.02)
+    .map(({ index }) => index + 1);
+  const batchOverMaxWarning =
+    overweightBatchNumbers.length > 0 && Number.isFinite(maxBatchKg)
+      ? `Warning: batch ${overweightBatchNumbers.join(", ")} is over the normal ${formatKgInput(maxBatchKg)}kg max. This is allowed for admin, but may exceed normal production slot capacity.`
+      : null;
 
   const changed = {
     title: normalizedText(draft.title) !== normalizedText(original.title),
@@ -543,6 +629,10 @@ export function OrderDetailEditor({
     weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
     flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),
     jacket: draft.jacket !== original.jacket,
+    jacketColorOne: normalizedText(draft.jacketColorOne) !== normalizedText(original.jacketColorOne),
+    jacketColorTwo: normalizedText(draft.jacketColorTwo) !== normalizedText(original.jacketColorTwo),
+    textColor: normalizedText(draft.textColor) !== normalizedText(original.textColor),
+    heartColor: normalizedText(draft.heartColor) !== normalizedText(original.heartColor),
     jarLidColor: normalizedText(effectiveJarLidColor) !== normalizedText(original.jarLidColor),
     logoUrl: normalizedText(draft.logoUrl) !== normalizedText(original.logoUrl),
     labelImageUrl: normalizedText(draft.labelImageUrl) !== normalizedText(original.labelImageUrl),
@@ -846,24 +936,113 @@ export function OrderDetailEditor({
         </Section>
 
         <Section title="Design And Labels">
+          <div className="md:col-span-2 xl:col-span-3">
+            <div className="flex min-h-[14rem] items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-4">
+              <CandyPreview
+                designText={!isBranded && !isWedding ? effectiveDesignText || draft.title || "Candy" : undefined}
+                lineOne={isWedding ? draft.weddingLineOne : undefined}
+                lineTwo={isWedding ? draft.weddingLineTwo : undefined}
+                showHeart={isWedding}
+                mode={previewJacketMode}
+                showPinstripe={previewShowPinstripe}
+                colorOne={draft.jacketColorOne || defaultJacketColor}
+                colorTwo={draft.jacketColorTwo || draft.jacketColorOne || defaultJacketColor}
+                logoUrl={isBranded ? draft.logoUrl : undefined}
+                textColor={draft.textColor || defaultTextColor}
+                heartColor={draft.heartColor || draft.textColor || defaultTextColor}
+                isInitials={isWeddingInitials}
+                customTextVariant={customTextVariant}
+                dimensions={{ width: 360, height: 268 }}
+                zoom={1.18}
+              />
+            </div>
+          </div>
           <DetailItem label="Flavour">{draft.flavor || "-"}</DetailItem>
           <DetailItem label="Jacket">
             {JACKET_OPTIONS.find((option) => option.value === draft.jacket)?.label ?? (draft.jacket || "Single colour")}
           </DetailItem>
+          {showJacketColorOne ? (
+            <OrderColorField
+              label={showJacketColorTwo ? "Jacket colour 1" : "Jacket colour"}
+              name="jacket_color_one"
+              value={draft.jacketColorOne}
+              selectValue={selectValueForColor(draft.jacketColorOne)}
+              options={buildColorOptions(paletteOptions, draft.jacketColorOne)}
+              inputValue={jacketColorOneInput}
+              format={jacketColorOneFormat}
+              isCustom={jacketColorOneCustom}
+              isEditing={false}
+              setValue={(value) => setField("jacketColorOne", value)}
+              setInputValue={setJacketColorOneInput}
+              setFormat={setJacketColorOneFormat}
+              setIsCustom={setJacketColorOneCustom}
+            />
+          ) : null}
+          {showJacketColorTwo ? (
+            <OrderColorField
+              label="Jacket colour 2"
+              name="jacket_color_two"
+              value={draft.jacketColorTwo}
+              selectValue={selectValueForColor(draft.jacketColorTwo)}
+              options={buildColorOptions(paletteOptions, draft.jacketColorTwo)}
+              inputValue={jacketColorTwoInput}
+              format={jacketColorTwoFormat}
+              isCustom={jacketColorTwoCustom}
+              isEditing={false}
+              setValue={(value) => setField("jacketColorTwo", value)}
+              setInputValue={setJacketColorTwoInput}
+              setFormat={setJacketColorTwoFormat}
+              setIsCustom={setJacketColorTwoCustom}
+            />
+          ) : null}
+          {!isBranded ? (
+            <OrderColorField
+              label="Text colour"
+              name="text_color"
+              value={draft.textColor}
+              selectValue={selectValueForColor(draft.textColor)}
+              options={buildColorOptions(paletteOptions, draft.textColor)}
+              inputValue={textColorInput}
+              format={textColorFormat}
+              isCustom={textColorCustom}
+              isEditing={false}
+              setValue={(value) => setField("textColor", value)}
+              setInputValue={setTextColorInput}
+              setFormat={setTextColorFormat}
+              setIsCustom={setTextColorCustom}
+            />
+          ) : null}
+          {isWedding ? (
+            <OrderColorField
+              label="Heart colour"
+              name="heart_color"
+              value={draft.heartColor}
+              selectValue={selectValueForColor(draft.heartColor)}
+              options={buildColorOptions(paletteOptions, draft.heartColor)}
+              inputValue={heartColorInput}
+              format={heartColorFormat}
+              isCustom={heartColorCustom}
+              isEditing={false}
+              setValue={(value) => setField("heartColor", value)}
+              setInputValue={setHeartColorInput}
+              setFormat={setHeartColorFormat}
+              setIsCustom={setHeartColorCustom}
+            />
+          ) : null}
           {isWedding ? (
             <>
               <DetailItem label={`First ${isWeddingInitials ? "initial" : "name"}`}>{draft.weddingLineOne || "-"}</DetailItem>
               <DetailItem label={`Second ${isWeddingInitials ? "initial" : "name"}`}>{draft.weddingLineTwo || "-"}</DetailItem>
               <DetailItem label="Design text">{effectiveDesignText || "-"}</DetailItem>
             </>
-          ) : (
+          ) : !isBranded ? (
             <DetailItem label="Design text" className="xl:col-span-3">{draft.designText || "-"}</DetailItem>
-          )}
+          ) : null}
           <DetailItem label="Custom labels">{draft.labelsEnabled ? `Yes - ${draft.labelsCount || "0"}` : "No"}</DetailItem>
           <DetailItem label="Ingredient labels">
             {draft.ingredientLabelsEnabled ? `Yes - ${draft.ingredientLabelsCount || "0"}` : "No"}
           </DetailItem>
-          <AssetPreview label="Logo" url={draft.logoUrl} />
+          {isBranded ? <AssetPreview label="Logo" url={draft.logoUrl} /> : null}
           <AssetPreview label="Custom Label" url={draft.labelImageUrl} />
         </Section>
 
@@ -932,8 +1111,9 @@ export function OrderDetailEditor({
       <input type="hidden" name="total_weight_kg" value={effectiveTotalWeightLabel} />
       <input type="hidden" name="order_description" value={draft.orderDescription} />
       <input type="hidden" name="design_type" value={draft.designType} />
+      <input type="hidden" name="jacket_type" value={jacketTypeValue} />
       <input type="hidden" name="jar_lid_color" value={effectiveJarLidColor} />
-      <input type="hidden" name="logo_url" value={draft.logoUrl} />
+      {isBranded ? <input type="hidden" name="logo_url" value={draft.logoUrl} /> : null}
       <input type="hidden" name="label_image_url" value={draft.labelImageUrl} />
       {isWedding ? (
         <>
@@ -941,6 +1121,8 @@ export function OrderDetailEditor({
           <input type="hidden" name="design_text" value={effectiveDesignText} />
         </>
       ) : null}
+      {showJacketColorOne ? null : <input type="hidden" name="jacket_color_one" value={draft.jacketColorOne} />}
+      {showJacketColorTwo ? null : <input type="hidden" name="jacket_color_two" value={draft.jacketColorTwo} />}
       {draft.batchWeights.map((weight, index) => (
         <input key={`batch-weight-hidden-${index}`} type="hidden" name="batch_weight_kg" value={weight} />
       ))}
@@ -1291,10 +1473,36 @@ export function OrderDetailEditor({
               Batch weights need to equal the order weight before price-affecting changes can be saved.
             </p>
           ) : null}
+          {batchOverMaxWarning ? (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              {batchOverMaxWarning}
+            </p>
+          ) : null}
         </div>
       </Section>
 
       <Section title="Design And Labels">
+        <div className="md:col-span-2 xl:col-span-3">
+          <div className="flex min-h-[14rem] items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-4">
+            <CandyPreview
+              designText={!isBranded && !isWedding ? effectiveDesignText || draft.title || "Candy" : undefined}
+              lineOne={isWedding ? draft.weddingLineOne : undefined}
+              lineTwo={isWedding ? draft.weddingLineTwo : undefined}
+              showHeart={isWedding}
+              mode={previewJacketMode}
+              showPinstripe={previewShowPinstripe}
+              colorOne={draft.jacketColorOne || defaultJacketColor}
+              colorTwo={draft.jacketColorTwo || draft.jacketColorOne || defaultJacketColor}
+              logoUrl={isBranded ? draft.logoUrl : undefined}
+              textColor={draft.textColor || defaultTextColor}
+              heartColor={draft.heartColor || draft.textColor || defaultTextColor}
+              isInitials={isWeddingInitials}
+              customTextVariant={customTextVariant}
+              dimensions={{ width: 360, height: 268 }}
+              zoom={1.18}
+            />
+          </div>
+        </div>
         <Field label="Flavour" changed={changed.flavor}>
           <select
             name="flavor"
@@ -1330,6 +1538,74 @@ export function OrderDetailEditor({
             ) : null}
           </select>
         </Field>
+        {showJacketColorOne ? (
+          <OrderColorField
+            label={showJacketColorTwo ? "Jacket colour 1" : "Jacket colour"}
+            name="jacket_color_one"
+            value={draft.jacketColorOne}
+            selectValue={selectValueForColor(draft.jacketColorOne)}
+            options={buildColorOptions(paletteOptions, draft.jacketColorOne)}
+            inputValue={jacketColorOneInput}
+            format={jacketColorOneFormat}
+            isCustom={jacketColorOneCustom}
+            isEditing
+            setValue={(value) => setField("jacketColorOne", value)}
+            setInputValue={setJacketColorOneInput}
+            setFormat={setJacketColorOneFormat}
+            setIsCustom={setJacketColorOneCustom}
+          />
+        ) : null}
+        {showJacketColorTwo ? (
+          <OrderColorField
+            label="Jacket colour 2"
+            name="jacket_color_two"
+            value={draft.jacketColorTwo}
+            selectValue={selectValueForColor(draft.jacketColorTwo)}
+            options={buildColorOptions(paletteOptions, draft.jacketColorTwo)}
+            inputValue={jacketColorTwoInput}
+            format={jacketColorTwoFormat}
+            isCustom={jacketColorTwoCustom}
+            isEditing
+            setValue={(value) => setField("jacketColorTwo", value)}
+            setInputValue={setJacketColorTwoInput}
+            setFormat={setJacketColorTwoFormat}
+            setIsCustom={setJacketColorTwoCustom}
+          />
+        ) : null}
+        {!isBranded ? (
+          <OrderColorField
+            label="Text colour"
+            name="text_color"
+            value={draft.textColor}
+            selectValue={selectValueForColor(draft.textColor)}
+            options={buildColorOptions(paletteOptions, draft.textColor)}
+            inputValue={textColorInput}
+            format={textColorFormat}
+            isCustom={textColorCustom}
+            isEditing
+            setValue={(value) => setField("textColor", value)}
+            setInputValue={setTextColorInput}
+            setFormat={setTextColorFormat}
+            setIsCustom={setTextColorCustom}
+          />
+        ) : null}
+        {isWedding ? (
+          <OrderColorField
+            label="Heart colour"
+            name="heart_color"
+            value={draft.heartColor}
+            selectValue={selectValueForColor(draft.heartColor)}
+            options={buildColorOptions(paletteOptions, draft.heartColor)}
+            inputValue={heartColorInput}
+            format={heartColorFormat}
+            isCustom={heartColorCustom}
+            isEditing
+            setValue={(value) => setField("heartColor", value)}
+            setInputValue={setHeartColorInput}
+            setFormat={setHeartColorFormat}
+            setIsCustom={setHeartColorCustom}
+          />
+        ) : null}
         {isWedding ? (
           <>
             <Field label={`First ${isWeddingInitials ? "initial" : "name"}`} changed={changed.weddingLineOne}>
@@ -1350,7 +1626,7 @@ export function OrderDetailEditor({
             </Field>
             <ReadOnlyField label="Design text">{effectiveDesignText || "-"}</ReadOnlyField>
           </>
-        ) : (
+        ) : !isBranded ? (
           <Field label="Design text" changed={changed.designText} className="xl:col-span-3">
             <textarea
               name="design_text"
@@ -1359,7 +1635,7 @@ export function OrderDetailEditor({
               className={textareaClass(changed.designText)}
             />
           </Field>
-        )}
+        ) : null}
         <Field label="Custom labels" changed={changed.labelsEnabled || changed.labelsCount}>
           <div className="mt-1 grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
             <select
@@ -1404,16 +1680,18 @@ export function OrderDetailEditor({
             />
           </div>
         </Field>
-        <AssetUploadField
-          label="Logo"
-          value={draft.logoUrl}
-          changed={changed.logoUrl}
-          inputId="order-detail-logo-upload"
-          accept="image/*"
-          pending={isUploadingLogo}
-          error={logoError}
-          onUpload={handleLogoUpload}
-        />
+        {isBranded ? (
+          <AssetUploadField
+            label="Logo"
+            value={draft.logoUrl}
+            changed={changed.logoUrl}
+            inputId="order-detail-logo-upload"
+            accept="image/*"
+            pending={isUploadingLogo}
+            error={logoError}
+            onUpload={handleLogoUpload}
+          />
+        ) : null}
         <AssetUploadField
           label="Custom Label"
           value={draft.labelImageUrl}

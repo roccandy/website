@@ -520,6 +520,7 @@ export function NewOrderForm({
     return Math.ceil(customOrderTotalWeightKg / Number(settings.max_total_kg));
   }, [customOrderTotalWeightKg, settings.max_total_kg]);
   const isOverBatchLimit = suggestedBatchCount > MAX_ADMIN_BATCH_COUNT;
+  const maxBatchKg = Number(settings.max_total_kg);
   const allocatedBatchKg = useMemo(
     () => batchWeights.reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0),
     [batchWeights],
@@ -532,8 +533,16 @@ export function NewOrderForm({
     Math.abs(remainingBatchKg) <= 0.02 &&
     batchWeights.every((value) => {
       const parsed = Number(value);
-      return Number.isFinite(parsed) && parsed > 0 && parsed <= Number(settings.max_total_kg) + 0.02;
+      return Number.isFinite(parsed) && parsed > 0;
     });
+  const overweightBatchNumbers = batchWeights
+    .map((weight, index) => ({ weight: Number(weight), index }))
+    .filter(({ weight }) => Number.isFinite(weight) && Number.isFinite(maxBatchKg) && weight > maxBatchKg + 0.02)
+    .map(({ index }) => index + 1);
+  const batchOverMaxWarning =
+    overweightBatchNumbers.length > 0 && Number.isFinite(maxBatchKg)
+      ? `Warning: batch ${overweightBatchNumbers.join(", ")} is over the normal ${maxBatchKg.toFixed(2)}kg max. This is allowed for admin, but may exceed normal production slot capacity.`
+      : null;
   const isJarOption = useMemo(
     () => (selectedPackagingOption?.type ?? "").toLowerCase().includes("jar"),
     [selectedPackagingOption],
@@ -571,7 +580,7 @@ export function NewOrderForm({
       : 0;
   const applyEqualBatchSplit = () => {
     const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
-    setBatchWeights(weights.map((weight) => weight.toFixed(2)));
+    setBatchWeights((weights.length > 0 ? weights : [customOrderTotalWeightKg]).map((weight) => weight.toFixed(2)));
   };
   const updateBatchWeight = (index: number, value: string) => {
     setBatchWeights((prev) => prev.map((item, itemIndex) => (itemIndex === index ? value : item)));
@@ -911,7 +920,7 @@ export function NewOrderForm({
 
   useEffect(() => {
     if (isAdminPremadeOrder) return;
-    if (!customOrderTotalWeightKg || isOverBatchLimit) {
+    if (!customOrderTotalWeightKg) {
       setBatchWeights([]);
       return;
     }
@@ -920,8 +929,8 @@ export function NewOrderForm({
       return;
     }
     const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
-    setBatchWeights(weights.map((weight) => weight.toFixed(2)));
-  }, [customOrderTotalWeightKg, isAdminPremadeOrder, isOverBatchLimit, settings.max_total_kg]);
+    setBatchWeights((weights.length > 0 ? weights : [customOrderTotalWeightKg]).map((weight) => weight.toFixed(2)));
+  }, [customOrderTotalWeightKg, isAdminPremadeOrder, settings.max_total_kg]);
 
   useEffect(() => {
     if (isAdminPremadeOrder) {
@@ -953,7 +962,7 @@ export function NewOrderForm({
     if (!batchAllocationValid) {
       setPriceValue("");
       setWeightValue(customOrderTotalWeightKg > 0 ? (customOrderTotalWeightKg * 1000).toFixed(0) : "");
-      setPricingError(isOverBatchLimit ? `This order would need more than ${MAX_ADMIN_BATCH_COUNT} batches.` : "Batch weights must equal the order weight.");
+      setPricingError("Batch weights must equal the order weight.");
       setQuoteItems([]);
       setIsPricing(false);
       return;
@@ -1006,7 +1015,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [batchAllocationValid, batchWeights, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, isOverBatchLimit, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
+  }, [batchAllocationValid, batchWeights, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
   return (
     <form
@@ -1527,15 +1536,20 @@ export function NewOrderForm({
                 <button
                   type="button"
                   onClick={applyEqualBatchSplit}
-                  disabled={!customOrderTotalWeightKg || isOverBatchLimit}
+                  disabled={!customOrderTotalWeightKg}
                   className="min-h-11 rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
                 >
                   Equal split
                 </button>
               </div>
               {isOverBatchLimit ? (
-                <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
-                  This order would need {suggestedBatchCount} batches. Maximum allowed is {MAX_ADMIN_BATCH_COUNT}.
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Equal split would need {suggestedBatchCount} batches. Admin can use fewer batches, but any batch over {maxBatchKg.toFixed(2)}kg exceeds normal slot capacity.
+                </p>
+              ) : null}
+              {batchOverMaxWarning ? (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  {batchOverMaxWarning}
                 </p>
               ) : null}
               {batchWeights.length > 0 ? (
@@ -1546,7 +1560,6 @@ export function NewOrderForm({
                       <input
                         type="number"
                         min={0.01}
-                        max={Number(settings.max_total_kg)}
                         step="0.01"
                         value={weight}
                         onChange={(event) => updateBatchWeight(index, event.target.value)}
@@ -2286,7 +2299,7 @@ export function NewOrderForm({
           type="submit"
           name="submit_intent"
           value="save"
-          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchAllocationValid || isOverBatchLimit || Boolean(pricingError)))}
+          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchAllocationValid || Boolean(pricingError)))}
           className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
         >
           {isSubmittingOrder
