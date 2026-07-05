@@ -55,6 +55,10 @@ const normalizeWeddingDesignText = (value: string | null) =>
 const isInvalidIntegerInputError = (message: string) =>
   message.toLowerCase().includes("invalid input syntax for type integer");
 const isInlineResponse = (formData: FormData) => formData.get("response_mode")?.toString() === "inline";
+const normalizeAdminDiscountType = (value: string | null | undefined): AdminDiscountType => {
+  if (value === "percent" || value === "fixed") return value;
+  return "none";
+};
 const toSafeInteger = (value: number, fallback = 1) => {
   if (!Number.isFinite(value)) return fallback;
   return Math.max(fallback, Math.round(value));
@@ -231,6 +235,9 @@ async function upsertOrderShared(formData: FormData) {
         : NaN;
   const total_price = formData.get("total_price") ? Number(formData.get("total_price")) : null;
   const submittedBatchWeights = normalizeAdminBatchWeights(formData.getAll("batch_weight_kg").map((value) => value.toString()));
+  const hasDiscountTypeControl = formData.has("admin_discount_type");
+  const hasDiscountValueControl = formData.has("admin_discount_value");
+  const hasPriceOverrideControl = formData.has("admin_price_override");
   const admin_discount_type = (formData.get("admin_discount_type")?.toString() || "none") as AdminDiscountType;
   const admin_discount_value_raw = Number(formData.get("admin_discount_value") || 0);
   const admin_discount_value =
@@ -242,6 +249,8 @@ async function upsertOrderShared(formData: FormData) {
   const payment_method = formData.get("payment_method")?.toString() || null;
   const notes = formData.get("notes")?.toString() || null;
   const customer_note = formData.get("customer_note")?.toString() || null;
+  const hasLabelsControl = formData.has("labels_opt_in");
+  const labelsOptIn = formData.get("labels_opt_in")?.toString() === "on";
   const hasIngredientLabelsControl = formData.has("ingredient_labels_opt_in");
   const ingredientLabelsOptIn = formData.get("ingredient_labels_opt_in")?.toString() === "on";
   const ingredientLabelsCountRaw = formData.get("ingredient_labels_count");
@@ -347,13 +356,41 @@ async function upsertOrderShared(formData: FormData) {
     const existingBatchWeights = normalizeAdminBatchWeights(
       Array.isArray(existing?.admin_batch_weights_kg) ? existing.admin_batch_weights_kg : [],
     );
+    const existingBatchWeightsForComparison =
+      existingBatchWeights.length > 0
+        ? existingBatchWeights
+        : Number(existing?.total_weight_kg) > 0
+          ? normalizeAdminBatchWeights([existing?.total_weight_kg])
+          : [];
     const existingBatchTotal = existingBatchWeights.reduce((sum, weight) => sum + weight, 0);
+    const submittedLabelsCount = hasLabelsControl
+      ? labelsOptIn && Number.isFinite(labels_count ?? NaN) && Number(labels_count) > 0
+        ? Number(labels_count)
+        : null
+      : labels_count ?? existing?.labels_count ?? null;
+    const submittedIngredientLabelsCount = hasIngredientLabelsControl
+      ? ingredientLabelsOptIn && Number.isFinite(ingredientLabelsCount ?? NaN) && Number(ingredientLabelsCount) > 0
+        ? Number(ingredientLabelsCount)
+        : null
+      : ingredientLabelsCount ?? existing?.ingredient_labels_count ?? null;
+    const existingBatchKey = existingBatchWeightsForComparison.map((weight) => weight.toFixed(2)).join("|");
+    const submittedBatchKey = submittedBatchWeights.map((weight) => weight.toFixed(2)).join("|");
     const sizeAffectingFieldsChanged =
       !existing ||
       Math.abs(Number(existing.total_weight_kg ?? 0) - resolvedWeightKg) > 0.02 ||
       (quantity !== null && Number(quantity) !== Number(existing.quantity ?? NaN)) ||
       (packaging_option_id !== null && packaging_option_id !== (existing.packaging_option_id ?? null)) ||
       (category_id !== null && category_id !== (existing.category_id ?? null));
+    const priceAffectingFieldsChanged =
+      sizeAffectingFieldsChanged ||
+      (hasDueDateField && (due_date ?? null) !== (existing?.due_date ?? null)) ||
+      (jacket !== null && jacket !== (existing?.jacket ?? null)) ||
+      Number(submittedLabelsCount ?? 0) !== Number(existing?.labels_count ?? 0) ||
+      Number(submittedIngredientLabelsCount ?? 0) !== Number(existing?.ingredient_labels_count ?? 0) ||
+      (submittedBatchWeights.length > 0 && submittedBatchKey !== existingBatchKey) ||
+      normalizeAdminDiscountType(admin_discount_type) !== normalizeAdminDiscountType(existing?.admin_discount_type) ||
+      Number(admin_discount_value ?? 0) !== Number(existing?.admin_discount_value ?? 0) ||
+      Number(admin_price_override ?? 0) !== Number(existing?.admin_price_override ?? 0);
     const existingBatchWeightsMismatch =
       existingBatchWeights.length > 0 && Math.abs(existingBatchTotal - resolvedWeightKg) > 0.02;
     const shouldRegenerateBatchWeights =
@@ -370,17 +407,17 @@ async function upsertOrderShared(formData: FormData) {
         : shouldRegenerateBatchWeights
           ? suggestedAdminBatchWeights(resolvedWeightKg, Number(settings.max_total_kg))
           : existingBatchWeights;
+    const shouldCalculateAdminPricing =
+      !isAdminPremade && pricingContext && (!existing || shouldReplaceSquareInvoice || (!isPriceLocked && priceAffectingFieldsChanged));
     const adminPricing =
-      !isAdminPremade && pricingContext && !isPriceLocked
+      shouldCalculateAdminPricing
         ? calculateAdminLargeOrderPricingWithContext(
             {
               categoryId: resolvedCategoryId ?? "",
               packagingOptionId: packaging_option_id ?? existing?.packaging_option_id ?? "",
               quantity: quantity ?? existing?.quantity ?? 0,
-              labelsCount: labels_count ?? existing?.labels_count ?? null,
-              ingredientLabelsCount: ingredientLabelsOptIn
-                ? ingredientLabelsCount
-                : existing?.ingredient_labels_count ?? null,
+              labelsCount: submittedLabelsCount,
+              ingredientLabelsCount: submittedIngredientLabelsCount,
               dueDate: resolvedDueDate,
               jacket: jacket ?? existing?.jacket ?? null,
               batchWeightsKg: batchWeightsForPricing,
@@ -432,14 +469,20 @@ async function upsertOrderShared(formData: FormData) {
       category_id: isAdminPremade ? null : category_id ?? existing?.category_id ?? null,
       packaging_option_id: isAdminPremade ? null : packaging_option_id ?? existing?.packaging_option_id ?? null,
       quantity: isAdminPremade ? null : quantity ?? existing?.quantity ?? null,
-      labels_count: isAdminPremade ? null : labels_count ?? existing?.labels_count ?? null,
+      labels_count: isAdminPremade
+        ? null
+        : hasLabelsControl
+          ? labelsOptIn
+            ? submittedLabelsCount
+            : null
+          : labels_count ?? existing?.labels_count ?? null,
       ingredient_labels_count: isAdminPremade
         ? null
-        : ingredientLabelsOptIn
-          ? Number.isFinite(ingredientLabelsCount)
-            ? ingredientLabelsCount
-            : existing?.ingredient_labels_count ?? null
-          : null,
+        : hasIngredientLabelsControl
+          ? ingredientLabelsOptIn
+            ? submittedIngredientLabelsCount
+            : null
+          : ingredientLabelsCount ?? existing?.ingredient_labels_count ?? null,
       jacket: isAdminPremade ? null : jacket ?? existing?.jacket ?? null,
       design_type: isAdminPremade ? "premade" : design_type ?? existing?.design_type ?? null,
       design_text: isAdminPremade ? resolvedAdminPremadeSelection : resolvedDesignText ?? existing?.design_text ?? null,
@@ -459,9 +502,17 @@ async function upsertOrderShared(formData: FormData) {
           : adminPricing?.total ?? total_price ?? existing?.total_price ?? null,
       admin_batch_weights_kg: isAdminPremade ? [] : adminPricing?.batchWeightsKg ?? resolvedBatchWeights,
       admin_pricing_subtotal: isAdminPremade ? null : adminPricing?.subtotalBeforeDiscount ?? existing?.admin_pricing_subtotal ?? null,
-      admin_discount_type: isAdminPremade ? null : adminPricing?.discountType ?? existing?.admin_discount_type ?? null,
-      admin_discount_value: isAdminPremade ? null : admin_discount_value ?? existing?.admin_discount_value ?? null,
-      admin_price_override: isAdminPremade ? null : adminPricing?.priceOverride ?? existing?.admin_price_override ?? null,
+      admin_discount_type: isAdminPremade
+        ? null
+        : adminPricing?.discountType ?? (hasDiscountTypeControl ? normalizeAdminDiscountType(admin_discount_type) : existing?.admin_discount_type ?? null),
+      admin_discount_value: isAdminPremade
+        ? null
+        : hasDiscountValueControl
+          ? admin_discount_value
+          : existing?.admin_discount_value ?? null,
+      admin_price_override: isAdminPremade
+        ? null
+        : adminPricing?.priceOverride ?? (hasPriceOverrideControl ? admin_price_override : existing?.admin_price_override ?? null),
       status: isAdminPremade ? "unassigned" : status ?? existing?.status ?? "pending",
       payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
       pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,

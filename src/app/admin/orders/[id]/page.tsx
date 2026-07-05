@@ -4,19 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import {
   getCategories,
-  getColorPalette,
   getFlavors,
-  getOrderSlots,
-  getOrders,
   getPackagingOptions,
-  getPremadeCandies,
-  getProductionSlots,
   getSettings,
   type OrderRow,
 } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { formatDate, formatMoney } from "../productionScheduleShared";
-import { NewOrderForm } from "../new/NewOrderForm";
+import { OrderDetailEditor } from "./OrderDetailEditor";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -64,18 +59,12 @@ export default async function AdminOrderDetailPage({
   const order = await loadOrder(rawId);
   if (!order) redirect("/admin/orders");
 
-  const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments] =
-    await Promise.all([
-      getCategories(),
-      getPackagingOptions(),
-      getFlavors(),
-      getColorPalette(),
-      getPremadeCandies(),
-      getSettings(),
-      getOrders(),
-      getProductionSlots(),
-      getOrderSlots(),
-    ]);
+  const [categories, packagingOptions, flavors, settings] = await Promise.all([
+    getCategories(),
+    getPackagingOptions(),
+    getFlavors(),
+    getSettings(),
+  ]);
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
   const orderLabel = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
@@ -141,19 +130,13 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      <NewOrderForm
-        mode="edit"
-        initialOrder={order}
+      <OrderDetailEditor
+        order={order}
         cancelHref={`/admin/orders?selected=${encodeURIComponent(order.id)}`}
         categories={categories}
         packagingOptions={packagingOptions}
         flavors={flavors}
-        palette={palette}
-        premadeCandies={premadeCandies}
         settings={settings}
-        orders={orders}
-        slots={slots}
-        assignments={assignments}
       />
     </section>
   );
