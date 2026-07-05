@@ -231,7 +231,7 @@ const formatInputNumber = (value: number | null | undefined, decimals = 2) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return "";
   const fixed = parsed.toFixed(decimals);
-  return fixed.replace(/\.?0+$/, "");
+  return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") : fixed;
 };
 
 const formatMoneyValue = (value: number | null | undefined) =>

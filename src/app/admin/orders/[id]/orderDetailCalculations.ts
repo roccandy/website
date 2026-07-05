@@ -13,6 +13,13 @@ export function formatKgInput(value: number | null | undefined) {
   return roundKg(parsed).toFixed(2).replace(/\.?0+$/, "");
 }
 
+export function formatNumberInput(value: number | null | undefined, decimals = 2) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "";
+  const fixed = parsed.toFixed(decimals);
+  return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") : fixed;
+}
+
 export function composeWeddingDesign(lineOne: string, lineTwo: string, initials: boolean) {
   const left = initials ? lineOne.trim().toUpperCase() : lineOne.trim();
   const right = initials ? lineTwo.trim().toUpperCase() : lineTwo.trim();

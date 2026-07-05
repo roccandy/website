@@ -5,6 +5,7 @@ import {
   calculatePackagingWeightKg,
   composeWeddingDesign,
   formatKgInput,
+  formatNumberInput,
   parseQuantityFromDescription,
   resolveOrderQuantity,
   splitWeddingOrderDesign,
@@ -25,6 +26,14 @@ describe("admin order detail calculations", () => {
     expect(resolveOrderQuantity({ quantity: 30, order_description: "Jar - Small" })).toBe(30);
     expect(resolveOrderQuantity({ quantity: 3, order_description: "30 x Small Jars" })).toBe(30);
     expect(resolveOrderQuantity({ quantity: 3, order_description: "Jar - Small (Qty: 30)" })).toBe(30);
+  });
+
+  it("does not strip trailing zeroes from whole-number quantities", () => {
+    expect(formatNumberInput(30, 0)).toBe("30");
+    expect(formatNumberInput(100, 0)).toBe("100");
+    expect(formatNumberInput(250, 0)).toBe("250");
+    expect(formatNumberInput(300, 0)).toBe("300");
+    expect(formatNumberInput(30.5, 2)).toBe("30.5");
   });
 
   it("parses package counts from common order description formats", () => {

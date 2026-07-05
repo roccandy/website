@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Edit3, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import {
+  fileToDataUrl,
+  optimizeBrowserImageToDataUrl,
+} from "@/lib/clientImageOptimization";
 import type { Category, Flavor, OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
   MAX_ADMIN_BATCH_COUNT,
@@ -18,6 +22,7 @@ import {
   calculatePackagingWeightKg,
   composeWeddingDesign,
   formatKgInput,
+  formatNumberInput,
   resolveOrderQuantity,
   splitWeddingOrderDesign,
 } from "./orderDetailCalculations";
@@ -132,12 +137,6 @@ type Props = {
   settings: SettingsRow;
   cancelHref: string;
 };
-
-function formatInputNumber(value: number | null | undefined, decimals = 2) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return "";
-  return parsed.toFixed(decimals).replace(/\.?0+$/, "");
-}
 
 function normalizeDiscountType(value: string | null | undefined): AdminDiscountType {
   if (value === "percent" || value === "fixed") return value;
@@ -281,19 +280,92 @@ function AssetPreview({ label, url }: { label: string; url: string }) {
               File
             </span>
           )}
-          <a
-            href={trimmed}
-            target="_blank"
-            rel="noreferrer"
-            className="min-w-0 truncate text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline"
-          >
-            {trimmed}
-          </a>
+          {!trimmed.startsWith("data:") ? (
+            <a
+              href={trimmed}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline"
+            >
+              Open file
+            </a>
+          ) : null}
         </div>
       ) : (
         "-"
       )}
     </DetailItem>
+  );
+}
+
+function AssetUploadField({
+  label,
+  value,
+  changed,
+  inputId,
+  accept,
+  pending,
+  error,
+  onUpload,
+}: {
+  label: string;
+  value: string;
+  changed: boolean;
+  inputId: string;
+  accept: string;
+  pending: boolean;
+  error: string | null;
+  onUpload: (file?: File | null) => void | Promise<void>;
+}) {
+  const trimmed = value.trim();
+
+  return (
+    <div className="block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 xl:col-span-3">
+      <span className="flex min-h-5 items-center gap-2">
+        {label}
+        {changed ? (
+          <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-amber-800">
+            Unsaved
+          </span>
+        ) : null}
+      </span>
+      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2">
+        {trimmed ? (
+          isImageLikeUrl(trimmed) ? (
+            <Image
+              src={trimmed}
+              alt={`${label} preview`}
+              width={56}
+              height={56}
+              unoptimized
+              className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
+            />
+          ) : (
+            <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50 text-[10px] font-semibold text-zinc-500">
+              File
+            </span>
+          )
+        ) : null}
+        <input
+          id={inputId}
+          type="file"
+          accept={accept}
+          onChange={(event) => {
+            void onUpload(event.target.files?.[0] ?? null);
+            event.target.value = "";
+          }}
+          className="sr-only"
+        />
+        <label
+          htmlFor={inputId}
+          className="inline-flex h-10 cursor-pointer items-center rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-zinc-700 hover:border-zinc-300"
+        >
+          {trimmed ? "Replace file" : "Upload file"}
+        </label>
+        {pending ? <span className="text-xs normal-case tracking-normal text-zinc-500">Optimising...</span> : null}
+        {error ? <span className="text-xs normal-case tracking-normal text-red-600">{error}</span> : null}
+      </div>
+    </div>
   );
 }
 
@@ -318,7 +390,7 @@ function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[])
     orderDescription: order.order_description ?? "",
     categoryId: order.category_id ?? "",
     packagingOptionId: order.packaging_option_id ?? "",
-    quantity: quantity ? formatInputNumber(quantity, Number.isInteger(quantity) ? 0 : 2) : "",
+    quantity: quantity ? formatNumberInput(quantity, Number.isInteger(quantity) ? 0 : 2) : "",
     dueDate: formatDateInput(order.due_date),
     status: order.status ?? "pending",
     pickup: Boolean(order.pickup),
@@ -342,17 +414,17 @@ function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[])
     logoUrl: order.logo_url ?? "",
     labelImageUrl: order.label_image_url ?? "",
     labelsEnabled: Number(order.labels_count) > 0,
-    labelsCount: order.labels_count ? formatInputNumber(order.labels_count, 0) : "",
+    labelsCount: order.labels_count ? formatNumberInput(order.labels_count, 0) : "",
     ingredientLabelsEnabled: Number(order.ingredient_labels_count) > 0,
     ingredientLabelsCount: order.ingredient_labels_count
-      ? formatInputNumber(order.ingredient_labels_count, 0)
+      ? formatNumberInput(order.ingredient_labels_count, 0)
       : "",
     totalWeightKg: formatKgInput(calculatedWeight ?? order.total_weight_kg),
     batchWeights,
     totalPrice: order.total_price !== null ? Number(order.total_price).toFixed(2) : "",
     discountType: normalizeDiscountType(order.admin_discount_type),
-    discountValue: order.admin_discount_value ? formatInputNumber(order.admin_discount_value) : "",
-    priceOverride: order.admin_price_override ? formatInputNumber(order.admin_price_override) : "",
+    discountValue: order.admin_discount_value ? formatNumberInput(order.admin_discount_value) : "",
+    priceOverride: order.admin_price_override ? formatNumberInput(order.admin_price_override) : "",
     paymentMethod: order.payment_method ?? "",
     notes: order.notes ?? "",
     customerNote: order.customer_note ?? "",
@@ -386,6 +458,10 @@ export function OrderDetailEditor({
   const [quoteState, setQuoteState] = useState<QuoteState>({ key: "", quote: null, error: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [labelImageError, setLabelImageError] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingLabelImage, setIsUploadingLabelImage] = useState(false);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const packagingById = useMemo(
@@ -394,6 +470,14 @@ export function OrderDetailEditor({
   );
   const selectedPackagingOption = packagingById.get(draft.packagingOptionId) ?? null;
   const originalPackagingOption = packagingById.get(original.packagingOptionId) ?? null;
+  const isJarOption = (selectedPackagingOption?.type ?? "").toLowerCase().includes("jar");
+  const availableLidColors = (selectedPackagingOption?.lid_colors ?? []).filter(Boolean);
+  const effectiveJarLidColor =
+    isJarOption && availableLidColors.length > 0
+      ? availableLidColors.includes(draft.jarLidColor)
+        ? draft.jarLidColor
+        : availableLidColors[0]
+      : "";
   const isWedding = draft.categoryId.startsWith("weddings");
   const isWeddingInitials = draft.categoryId === "weddings-initials";
   const weddingDesignText = composeWeddingDesign(draft.weddingLineOne, draft.weddingLineTwo, isWeddingInitials);
@@ -459,7 +543,7 @@ export function OrderDetailEditor({
     weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
     flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),
     jacket: draft.jacket !== original.jacket,
-    jarLidColor: normalizedText(draft.jarLidColor) !== normalizedText(original.jarLidColor),
+    jarLidColor: normalizedText(effectiveJarLidColor) !== normalizedText(original.jarLidColor),
     logoUrl: normalizedText(draft.logoUrl) !== normalizedText(original.logoUrl),
     labelImageUrl: normalizedText(draft.labelImageUrl) !== normalizedText(original.labelImageUrl),
     labelsEnabled: draft.labelsEnabled !== original.labelsEnabled,
@@ -617,6 +701,51 @@ export function OrderDetailEditor({
       batchWeights: [...current.batchWeights, ""].slice(0, MAX_ADMIN_BATCH_COUNT),
     }));
   };
+  const handleLogoUpload = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("File is too large. Max 2MB.");
+      return;
+    }
+    try {
+      setIsUploadingLogo(true);
+      const result = await optimizeBrowserImageToDataUrl(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+      });
+      setField("logoUrl", result);
+      setLogoError(null);
+    } catch {
+      setLogoError("Unable to read the file.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+  const handleLabelImageUpload = async (file?: File | null) => {
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setLabelImageError("File is too large. Max 2MB.");
+      return;
+    }
+    try {
+      setIsUploadingLabelImage(true);
+      const result =
+        file.type === "application/pdf"
+          ? await fileToDataUrl(file)
+          : await optimizeBrowserImageToDataUrl(file, {
+              maxWidth: 1800,
+              maxHeight: 1800,
+              quality: 0.82,
+            });
+      setField("labelImageUrl", result);
+      setLabelImageError(null);
+    } catch {
+      setLabelImageError("Unable to read the file.");
+    } finally {
+      setIsUploadingLabelImage(false);
+    }
+  };
 
   const replacementInvoiceAllowed = Boolean(
     order.square_invoice_id &&
@@ -711,7 +840,9 @@ export function OrderDetailEditor({
           <DetailItem label="Batches" className="xl:col-span-3">
             {draft.batchWeights.length > 0 ? draft.batchWeights.map((weight) => `${weight}kg`).join(" + ") : "-"}
           </DetailItem>
-          <DetailItem label="Jar lid">{draft.jarLidColor || "-"}</DetailItem>
+          {isJarOption && availableLidColors.length > 0 ? (
+            <DetailItem label="Jar lid">{effectiveJarLidColor || "-"}</DetailItem>
+          ) : null}
         </Section>
 
         <Section title="Design And Labels">
@@ -801,6 +932,9 @@ export function OrderDetailEditor({
       <input type="hidden" name="total_price" value={effectiveTotalPrice} />
       <input type="hidden" name="total_weight_kg" value={effectiveTotalWeightLabel} />
       <input type="hidden" name="order_description" value={draft.orderDescription} />
+      <input type="hidden" name="jar_lid_color" value={effectiveJarLidColor} />
+      <input type="hidden" name="logo_url" value={draft.logoUrl} />
+      <input type="hidden" name="label_image_url" value={draft.labelImageUrl} />
       {isWedding ? (
         <>
           <input type="hidden" name="title" value={effectiveTitle} />
@@ -1079,14 +1213,21 @@ export function OrderDetailEditor({
           />
         </Field>
         <ReadOnlyField label="Weight kg">{effectiveTotalWeightLabel ? `${effectiveTotalWeightLabel}kg` : "-"}</ReadOnlyField>
-        <Field label="Jar lid colour" changed={changed.jarLidColor}>
-          <input
-            name="jar_lid_color"
-            value={draft.jarLidColor}
-            onChange={(event) => setField("jarLidColor", event.target.value)}
-            className={inputClass(changed.jarLidColor)}
-          />
-        </Field>
+        {isJarOption && availableLidColors.length > 0 ? (
+          <Field label="Jar lid colour" changed={changed.jarLidColor}>
+            <select
+              value={effectiveJarLidColor}
+              onChange={(event) => setField("jarLidColor", event.target.value)}
+              className={inputClass(changed.jarLidColor)}
+            >
+              {availableLidColors.map((lid) => (
+                <option key={lid} value={lid}>
+                  {lid}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
         <div className="xl:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -1267,46 +1408,26 @@ export function OrderDetailEditor({
             />
           </div>
         </Field>
-        <Field label="Logo" changed={changed.logoUrl} className="xl:col-span-3">
-          <div className="mt-1 flex min-w-0 items-center gap-3">
-            {draft.logoUrl && isImageLikeUrl(draft.logoUrl) ? (
-              <Image
-                src={draft.logoUrl}
-                alt="Logo preview"
-                width={56}
-                height={56}
-                unoptimized
-                className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
-              />
-            ) : null}
-            <input
-              name="logo_url"
-              value={draft.logoUrl}
-              onChange={(event) => setField("logoUrl", event.target.value)}
-              className={inputClass(changed.logoUrl)}
-            />
-          </div>
-        </Field>
-        <Field label="Artwork" changed={changed.labelImageUrl} className="xl:col-span-3">
-          <div className="mt-1 flex min-w-0 items-center gap-3">
-            {draft.labelImageUrl && isImageLikeUrl(draft.labelImageUrl) ? (
-              <Image
-                src={draft.labelImageUrl}
-                alt="Artwork preview"
-                width={56}
-                height={56}
-                unoptimized
-                className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
-              />
-            ) : null}
-            <input
-              name="label_image_url"
-              value={draft.labelImageUrl}
-              onChange={(event) => setField("labelImageUrl", event.target.value)}
-              className={inputClass(changed.labelImageUrl)}
-            />
-          </div>
-        </Field>
+        <AssetUploadField
+          label="Logo"
+          value={draft.logoUrl}
+          changed={changed.logoUrl}
+          inputId="order-detail-logo-upload"
+          accept="image/*"
+          pending={isUploadingLogo}
+          error={logoError}
+          onUpload={handleLogoUpload}
+        />
+        <AssetUploadField
+          label="Artwork"
+          value={draft.labelImageUrl}
+          changed={changed.labelImageUrl}
+          inputId="order-detail-artwork-upload"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+          pending={isUploadingLabelImage}
+          error={labelImageError}
+          onUpload={handleLabelImageUpload}
+        />
       </Section>
 
       <Section title="Pricing">
