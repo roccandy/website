@@ -64,6 +64,7 @@ const toSafeInteger = (value: number, fallback = 1) => {
   return Math.max(fallback, Math.round(value));
 };
 const toMoneyCents = (value: number) => Math.round(value * 100);
+const roundKg = (value: number) => Math.round(value * 100) / 100;
 const refundedCentsForOrder = (order: { refunded_amount?: number | null; refunded_at?: string | null; status?: string | null; total_price?: number | null }) => {
   const stored = Number(order.refunded_amount);
   if (Number.isFinite(stored) && stored > 0) return toMoneyCents(stored);
@@ -227,12 +228,13 @@ async function upsertOrderShared(formData: FormData) {
   const postcode = formData.get("postcode")?.toString() || null;
   const order_weight_g = formData.get("order_weight_g");
   const total_weight_kg_input = formData.get("total_weight_kg");
-  const total_weight_kg =
+  const total_weight_kg_raw =
     order_weight_g !== null
       ? Number(order_weight_g) / 1000
       : total_weight_kg_input !== null
         ? Number(total_weight_kg_input)
         : NaN;
+  const total_weight_kg = Number.isFinite(total_weight_kg_raw) ? roundKg(total_weight_kg_raw) : NaN;
   const total_price = formData.get("total_price") ? Number(formData.get("total_price")) : null;
   const submittedBatchWeights = normalizeAdminBatchWeights(formData.getAll("batch_weight_kg").map((value) => value.toString()));
   const hasDiscountTypeControl = formData.has("admin_discount_type");

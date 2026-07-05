@@ -147,7 +147,7 @@ export function calculateAdminLargeOrderPricingWithContext(
     throw new Error("Packaging quantity is required.");
   }
 
-  const totalWeightKg = (Number(option.candy_weight_g) * quantity) / 1000;
+  const totalWeightKg = roundKg((Number(option.candy_weight_g) * quantity) / 1000);
   if (!Number.isFinite(totalWeightKg) || totalWeightKg <= 0) {
     throw new Error("Order weight is required.");
   }

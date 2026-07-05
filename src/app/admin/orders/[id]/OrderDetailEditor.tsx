@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { Edit3, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import type { Category, Flavor, OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
   MAX_ADMIN_BATCH_COUNT,
@@ -12,6 +13,7 @@ import {
 import { formatDateInput, formatMoney, formatOrderDescription, splitCustomerName } from "../productionScheduleShared";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { upsertOrder } from "../actions";
+import { splitWeddingDesign } from "@/app/quote/quoteBuilderShared";
 
 const BULK_LABEL_COUNT_MAX = 1000;
 
@@ -93,6 +95,8 @@ type DetailState = {
   postcode: string;
   designType: string;
   designText: string;
+  weddingLineOne: string;
+  weddingLineTwo: string;
   flavor: string;
   jacket: string;
   jarLidColor: string;
@@ -126,6 +130,16 @@ function formatInputNumber(value: number | null | undefined, decimals = 2) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return "";
   return parsed.toFixed(decimals).replace(/\.?0+$/, "");
+}
+
+function roundKg(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function formatKgInput(value: number | null | undefined) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "";
+  return roundKg(parsed).toFixed(2).replace(/\.?0+$/, "");
 }
 
 function normalizeDiscountType(value: string | null | undefined): AdminDiscountType {
@@ -165,6 +179,21 @@ function textareaClass(changed: boolean) {
   ].join(" ");
 }
 
+function isImageLikeUrl(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.startsWith("data:image/") ||
+    /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/.test(normalized)
+  );
+}
+
+function composeWeddingDesign(lineOne: string, lineTwo: string, initials: boolean) {
+  const left = initials ? lineOne.trim().toUpperCase() : lineOne.trim();
+  const right = initials ? lineTwo.trim().toUpperCase() : lineTwo.trim();
+  if (!left && !right) return "";
+  return `${left} ♥ ${right}`.trim();
+}
+
 function Field({
   label,
   changed,
@@ -199,23 +228,89 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
       <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   );
 }
 
-function buildInitialState(order: OrderRow): DetailState {
+function DetailItem({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`grid grid-cols-[8rem_minmax(0,1fr)] gap-2 ${className}`}>
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">{label}</dt>
+      <dd className="min-w-0 break-words text-sm font-semibold text-zinc-900">{children || "-"}</dd>
+    </div>
+  );
+}
+
+function AssetPreview({ label, url }: { label: string; url: string }) {
+  const trimmed = url.trim();
+  return (
+    <DetailItem label={label} className="xl:col-span-3">
+      {trimmed ? (
+        <div className="flex min-w-0 items-center gap-3">
+          {isImageLikeUrl(trimmed) ? (
+            <Image
+              src={trimmed}
+              alt={`${label} preview`}
+              width={56}
+              height={56}
+              unoptimized
+              className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
+            />
+          ) : (
+            <span className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded border border-zinc-200 bg-zinc-50 text-[10px] font-semibold text-zinc-500">
+              File
+            </span>
+          )}
+          <a
+            href={trimmed}
+            target="_blank"
+            rel="noreferrer"
+            className="min-w-0 truncate text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline"
+          >
+            {trimmed}
+          </a>
+        </div>
+      ) : (
+        "-"
+      )}
+    </DetailItem>
+  );
+}
+
+function buildInitialState(order: OrderRow, packagingOptions: PackagingOption[]): DetailState {
   const splitName = splitCustomerName(order.customer_name);
+  const packagingOption = packagingOptions.find((option) => option.id === order.packaging_option_id) ?? null;
+  const storedQuantity = Number(order.quantity);
+  const derivedQuantity =
+    packagingOption && Number(packagingOption.candy_weight_g) > 0 && Number(order.total_weight_kg) > 0
+      ? roundKg((Number(order.total_weight_kg) * 1000) / Number(packagingOption.candy_weight_g))
+      : NaN;
+  const quantity =
+    Number.isFinite(derivedQuantity) &&
+    derivedQuantity > 0 &&
+    (!Number.isFinite(storedQuantity) || Math.abs(storedQuantity - derivedQuantity) > 0.01)
+      ? derivedQuantity
+      : storedQuantity;
+  const wedding = splitWeddingDesign(order.design_text);
   const batchWeights =
     Array.isArray(order.admin_batch_weights_kg) && order.admin_batch_weights_kg.length > 0
       ? order.admin_batch_weights_kg
           .map((weight) => Number(weight))
           .filter((weight) => Number.isFinite(weight) && weight > 0)
-          .map((weight) => formatInputNumber(weight))
+          .map((weight) => formatKgInput(weight))
       : Number(order.total_weight_kg) > 0
-        ? [formatInputNumber(order.total_weight_kg)]
+        ? [formatKgInput(order.total_weight_kg)]
         : [];
 
   return {
@@ -223,7 +318,7 @@ function buildInitialState(order: OrderRow): DetailState {
     orderDescription: order.order_description ?? "",
     categoryId: order.category_id ?? "",
     packagingOptionId: order.packaging_option_id ?? "",
-    quantity: order.quantity ? formatInputNumber(order.quantity, 0) : "",
+    quantity: Number.isFinite(quantity) && quantity > 0 ? formatInputNumber(quantity, Number.isInteger(quantity) ? 0 : 2) : "",
     dueDate: formatDateInput(order.due_date),
     status: order.status ?? "pending",
     pickup: Boolean(order.pickup),
@@ -239,6 +334,8 @@ function buildInitialState(order: OrderRow): DetailState {
     postcode: order.postcode ?? "",
     designType: order.design_type ?? "",
     designText: order.design_text ?? "",
+    weddingLineOne: wedding.lineOne,
+    weddingLineTwo: wedding.lineTwo,
     flavor: order.flavor ?? "",
     jacket: order.jacket ?? "",
     jarLidColor: order.jar_lid_color ?? "",
@@ -250,7 +347,7 @@ function buildInitialState(order: OrderRow): DetailState {
     ingredientLabelsCount: order.ingredient_labels_count
       ? formatInputNumber(order.ingredient_labels_count, 0)
       : "",
-    totalWeightKg: formatInputNumber(order.total_weight_kg),
+    totalWeightKg: formatKgInput(order.total_weight_kg),
     batchWeights,
     totalPrice: order.total_price !== null ? Number(order.total_price).toFixed(2) : "",
     discountType: normalizeDiscountType(order.admin_discount_type),
@@ -284,10 +381,11 @@ export function OrderDetailEditor({
   settings,
   cancelHref,
 }: Props) {
-  const original = useMemo(() => buildInitialState(order), [order]);
+  const original = useMemo(() => buildInitialState(order, packagingOptions), [order, packagingOptions]);
   const [draft, setDraft] = useState<DetailState>(original);
   const [quoteState, setQuoteState] = useState<QuoteState>({ key: "", quote: null, error: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
 
   const packagingById = useMemo(
@@ -296,6 +394,11 @@ export function OrderDetailEditor({
   );
   const selectedPackagingOption = packagingById.get(draft.packagingOptionId) ?? null;
   const originalPackagingOption = packagingById.get(original.packagingOptionId) ?? null;
+  const isWedding = draft.categoryId.startsWith("weddings");
+  const isWeddingInitials = draft.categoryId === "weddings-initials";
+  const weddingDesignText = composeWeddingDesign(draft.weddingLineOne, draft.weddingLineTwo, isWeddingInitials);
+  const effectiveDesignText = isWedding ? weddingDesignText : draft.designText;
+  const effectiveTitle = isWedding ? weddingDesignText || draft.title : draft.title;
   const packagingOptionsForCategory = useMemo(() => {
     const filtered = draft.categoryId
       ? packagingOptions.filter((option) => option.allowed_categories?.includes(draft.categoryId))
@@ -324,12 +427,14 @@ export function OrderDetailEditor({
     return sum + (Number.isFinite(parsed) ? parsed : 0);
   }, 0);
   const totalWeightNumber = Number(draft.totalWeightKg);
+  const roundedBatchTotalKg = roundKg(batchTotalKg);
+  const roundedTotalWeightKg = roundKg(totalWeightNumber);
   const batchAllocationValid =
     draft.batchWeights.length > 0 &&
     draft.batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
     Number.isFinite(totalWeightNumber) &&
     totalWeightNumber > 0 &&
-    Math.abs(batchTotalKg - totalWeightNumber) <= 0.02;
+    Math.abs(roundedBatchTotalKg - roundedTotalWeightKg) <= 0.02;
 
   const changed = useMemo(
     () => ({
@@ -352,7 +457,9 @@ export function OrderDetailEditor({
       state: draft.state !== original.state,
       postcode: normalizedText(draft.postcode) !== normalizedText(original.postcode),
       designType: normalizedText(draft.designType) !== normalizedText(original.designType),
-      designText: normalizedText(draft.designText) !== normalizedText(original.designText),
+      designText: normalizedText(effectiveDesignText) !== normalizedText(original.designText),
+      weddingLineOne: normalizedText(draft.weddingLineOne) !== normalizedText(original.weddingLineOne),
+      weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
       flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),
       jacket: draft.jacket !== original.jacket,
       jarLidColor: normalizedText(draft.jarLidColor) !== normalizedText(original.jarLidColor),
@@ -373,7 +480,7 @@ export function OrderDetailEditor({
       notes: normalizedText(draft.notes) !== normalizedText(original.notes),
       customerNote: normalizedText(draft.customerNote) !== normalizedText(original.customerNote),
     }),
-    [draft, original],
+    [draft, effectiveDesignText, original],
   );
 
   const dirtyCount = Object.values(changed).filter(Boolean).length;
@@ -497,7 +604,7 @@ export function OrderDetailEditor({
       const quantity = Number(current.quantity);
       const nextWeight =
         nextOption && Number.isFinite(quantity) && quantity > 0
-          ? formatInputNumber((Number(nextOption.candy_weight_g) * quantity) / 1000)
+          ? formatKgInput((Number(nextOption.candy_weight_g) * quantity) / 1000)
           : current.totalWeightKg;
       return {
         ...current,
@@ -512,7 +619,7 @@ export function OrderDetailEditor({
       const quantity = Number(value);
       const nextWeight =
         selectedPackagingOption && Number.isFinite(quantity) && quantity > 0
-          ? formatInputNumber((Number(selectedPackagingOption.candy_weight_g) * quantity) / 1000)
+          ? formatKgInput((Number(selectedPackagingOption.candy_weight_g) * quantity) / 1000)
           : current.totalWeightKg;
       return {
         ...current,
@@ -529,7 +636,7 @@ export function OrderDetailEditor({
     if (weights.length === 0) return;
     setField(
       "batchWeights",
-      weights.map((weight) => formatInputNumber(weight)),
+      weights.map((weight) => formatKgInput(weight)),
     );
   };
 
@@ -583,6 +690,115 @@ export function OrderDetailEditor({
   const saveDisabled =
     dirtyCount === 0 || isSubmitting || (priceAffectingChanged && (!batchAllocationValid || isQuoteLoading || Boolean(quoteError)));
   const labelMax = Math.min(Number(settings.labels_max_bulk) || BULK_LABEL_COUNT_MAX, BULK_LABEL_COUNT_MAX);
+  const shownPaymentMethod = draft.paymentMethod || order.payment_provider || "-";
+
+  if (!isEditing) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-zinc-900 bg-zinc-950 px-4 py-3 text-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Total</p>
+                <p className="font-semibold">{formatMoney(order.total_price)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Weight</p>
+                <p className="font-semibold">{draft.totalWeightKg ? `${draft.totalWeightKg}kg` : "-"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Packaging</p>
+                <p className="font-semibold">{packagingDescription || "-"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-zinc-400">Payment</p>
+                <p className="font-semibold">{shownPaymentMethod}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white bg-white px-3 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-zinc-100"
+            >
+              <Edit3 size={14} aria-hidden="true" />
+              Edit
+            </button>
+          </div>
+        </div>
+
+        <Section title="Order">
+          <DetailItem label="Title">{effectiveTitle || "-"}</DetailItem>
+          <DetailItem label="Status">{draft.status || "-"}</DetailItem>
+          <DetailItem label="Required">{draft.dueDate || "-"}</DetailItem>
+          <DetailItem label="Order type">{categoryLabel(draft.categoryId, categories)}</DetailItem>
+          <DetailItem label="Pickup">{draft.pickup ? "Pickup" : "Delivery"}</DetailItem>
+          <DetailItem label="Payment">{shownPaymentMethod}</DetailItem>
+          <DetailItem label="Description" className="xl:col-span-3">{draft.orderDescription || "-"}</DetailItem>
+        </Section>
+
+        <Section title="Customer">
+          <DetailItem label="Name">{customerName || order.customer_name || "-"}</DetailItem>
+          <DetailItem label="Email">{draft.customerEmail || "-"}</DetailItem>
+          <DetailItem label="Phone">{draft.phone || "-"}</DetailItem>
+          <DetailItem label="Organisation">{draft.organizationName || "-"}</DetailItem>
+          <DetailItem label="Address" className="xl:col-span-2">
+            {draft.pickup
+              ? "Pickup"
+              : [draft.addressLine1, draft.addressLine2, draft.suburb, draft.state, draft.postcode].filter(Boolean).join(", ") || "-"}
+          </DetailItem>
+        </Section>
+
+        <Section title="Packaging And Production">
+          <DetailItem label="Packaging">{optionLabel(selectedPackagingOption)}</DetailItem>
+          <DetailItem label="Quantity">{draft.quantity || "-"}</DetailItem>
+          <DetailItem label="Weight">{draft.totalWeightKg ? `${draft.totalWeightKg}kg` : "-"}</DetailItem>
+          <DetailItem label="Batches" className="xl:col-span-3">
+            {draft.batchWeights.length > 0 ? draft.batchWeights.map((weight) => `${weight}kg`).join(" + ") : "-"}
+          </DetailItem>
+          <DetailItem label="Jar lid">{draft.jarLidColor || "-"}</DetailItem>
+        </Section>
+
+        <Section title="Design And Labels">
+          <DetailItem label="Design type">{draft.designType || "-"}</DetailItem>
+          <DetailItem label="Flavour">{draft.flavor || "-"}</DetailItem>
+          <DetailItem label="Jacket">
+            {JACKET_OPTIONS.find((option) => option.value === draft.jacket)?.label ?? (draft.jacket || "Single colour")}
+          </DetailItem>
+          {isWedding ? (
+            <>
+              <DetailItem label={`First ${isWeddingInitials ? "initial" : "name"}`}>{draft.weddingLineOne || "-"}</DetailItem>
+              <DetailItem label={`Second ${isWeddingInitials ? "initial" : "name"}`}>{draft.weddingLineTwo || "-"}</DetailItem>
+              <DetailItem label="Design text">{effectiveDesignText || "-"}</DetailItem>
+            </>
+          ) : (
+            <DetailItem label="Design text" className="xl:col-span-3">{draft.designText || "-"}</DetailItem>
+          )}
+          <DetailItem label="Custom labels">{draft.labelsEnabled ? `Yes - ${draft.labelsCount || "0"}` : "No"}</DetailItem>
+          <DetailItem label="Ingredient labels">
+            {draft.ingredientLabelsEnabled ? `Yes - ${draft.ingredientLabelsCount || "0"}` : "No"}
+          </DetailItem>
+          <AssetPreview label="Logo" url={draft.logoUrl} />
+          <AssetPreview label="Artwork" url={draft.labelImageUrl} />
+        </Section>
+
+        <Section title="Pricing">
+          <DetailItem label="Saved total">{formatMoney(order.total_price)}</DetailItem>
+          <DetailItem label="Discount">{draft.discountType === "none" ? "No" : draft.discountType}</DetailItem>
+          <DetailItem label="Discount value">{draft.discountValue || "-"}</DetailItem>
+          <DetailItem label="Price override">{draft.priceOverride || "-"}</DetailItem>
+        </Section>
+
+        <Section title="Notes">
+          <DetailItem label="Production notes" className="xl:col-span-3">
+            <span className="whitespace-pre-wrap font-medium text-zinc-800">{draft.notes || "-"}</span>
+          </DetailItem>
+          <DetailItem label="Customer note" className="xl:col-span-3">
+            <span className="whitespace-pre-wrap font-medium text-zinc-800">{draft.customerNote || "-"}</span>
+          </DetailItem>
+        </Section>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -627,6 +843,12 @@ export function OrderDetailEditor({
       <input type="hidden" name="labels_opt_in" value={draft.labelsEnabled ? "on" : "off"} />
       <input type="hidden" name="ingredient_labels_opt_in" value={draft.ingredientLabelsEnabled ? "on" : "off"} />
       <input type="hidden" name="total_price" value={effectiveTotalPrice} />
+      {isWedding ? (
+        <>
+          <input type="hidden" name="title" value={effectiveTitle} />
+          <input type="hidden" name="design_text" value={effectiveDesignText} />
+        </>
+      ) : null}
       {draft.batchWeights.map((weight, index) => (
         <input key={`batch-weight-hidden-${index}`} type="hidden" name="batch_weight_kg" value={weight} />
       ))}
@@ -698,14 +920,21 @@ export function OrderDetailEditor({
       </div>
 
       <Section title="Order">
-        <Field label="Title" changed={changed.title}>
-          <input
-            name="title"
-            value={draft.title}
-            onChange={(event) => setField("title", event.target.value)}
-            className={inputClass(changed.title)}
-          />
-        </Field>
+        {isWedding ? (
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Title</p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">{effectiveTitle || "-"}</p>
+          </div>
+        ) : (
+          <Field label="Title" changed={changed.title}>
+            <input
+              name="title"
+              value={draft.title}
+              onChange={(event) => setField("title", event.target.value)}
+              className={inputClass(changed.title)}
+            />
+          </Field>
+        )}
         <Field label="Status" changed={changed.status}>
           <select
             name="status"
@@ -761,14 +990,11 @@ export function OrderDetailEditor({
             ) : null}
           </select>
         </Field>
-        <Field label="Payment method" changed={changed.paymentMethod}>
-          <input
-            name="payment_method"
-            value={draft.paymentMethod}
-            onChange={(event) => setField("paymentMethod", event.target.value)}
-            className={inputClass(changed.paymentMethod)}
-          />
-        </Field>
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Payment method</p>
+          <p className="mt-1 text-sm font-semibold text-zinc-900">{draft.paymentMethod || order.payment_provider || "-"}</p>
+          <input type="hidden" name="payment_method" value={draft.paymentMethod} />
+        </div>
         <Field label="Pickup / delivery" changed={changed.pickup}>
           <select
             value={draft.pickup ? "pickup" : "delivery"}
@@ -778,6 +1004,14 @@ export function OrderDetailEditor({
             <option value="delivery">Delivery</option>
             <option value="pickup">Pickup</option>
           </select>
+        </Field>
+        <Field label="Description" changed={changed.orderDescription} className="xl:col-span-3">
+          <textarea
+            name="order_description"
+            value={draft.orderDescription}
+            onChange={(event) => setField("orderDescription", event.target.value)}
+            className={textareaClass(changed.orderDescription)}
+          />
         </Field>
       </Section>
 
@@ -1023,14 +1257,39 @@ export function OrderDetailEditor({
             ) : null}
           </select>
         </Field>
-        <Field label="Design text" changed={changed.designText} className="xl:col-span-3">
-          <textarea
-            name="design_text"
-            value={draft.designText}
-            onChange={(event) => setField("designText", event.target.value)}
-            className={textareaClass(changed.designText)}
-          />
-        </Field>
+        {isWedding ? (
+          <>
+            <Field label={`First ${isWeddingInitials ? "initial" : "name"}`} changed={changed.weddingLineOne}>
+              <input
+                value={draft.weddingLineOne}
+                maxLength={isWeddingInitials ? 3 : 30}
+                onChange={(event) => setField("weddingLineOne", event.target.value)}
+                className={inputClass(changed.weddingLineOne)}
+              />
+            </Field>
+            <Field label={`Second ${isWeddingInitials ? "initial" : "name"}`} changed={changed.weddingLineTwo}>
+              <input
+                value={draft.weddingLineTwo}
+                maxLength={isWeddingInitials ? 3 : 30}
+                onChange={(event) => setField("weddingLineTwo", event.target.value)}
+                className={inputClass(changed.weddingLineTwo)}
+              />
+            </Field>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Design text</p>
+              <p className="mt-1 text-sm font-semibold text-zinc-900">{effectiveDesignText || "-"}</p>
+            </div>
+          </>
+        ) : (
+          <Field label="Design text" changed={changed.designText} className="xl:col-span-3">
+            <textarea
+              name="design_text"
+              value={draft.designText}
+              onChange={(event) => setField("designText", event.target.value)}
+              className={textareaClass(changed.designText)}
+            />
+          </Field>
+        )}
         <Field label="Custom labels" changed={changed.labelsEnabled || changed.labelsCount}>
           <div className="mt-1 grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
             <select
@@ -1075,21 +1334,45 @@ export function OrderDetailEditor({
             />
           </div>
         </Field>
-        <Field label="Logo URL" changed={changed.logoUrl} className="xl:col-span-2">
-          <input
-            name="logo_url"
-            value={draft.logoUrl}
-            onChange={(event) => setField("logoUrl", event.target.value)}
-            className={inputClass(changed.logoUrl)}
-          />
+        <Field label="Logo" changed={changed.logoUrl} className="xl:col-span-3">
+          <div className="mt-1 flex min-w-0 items-center gap-3">
+            {draft.logoUrl && isImageLikeUrl(draft.logoUrl) ? (
+              <Image
+                src={draft.logoUrl}
+                alt="Logo preview"
+                width={56}
+                height={56}
+                unoptimized
+                className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
+              />
+            ) : null}
+            <input
+              name="logo_url"
+              value={draft.logoUrl}
+              onChange={(event) => setField("logoUrl", event.target.value)}
+              className={inputClass(changed.logoUrl)}
+            />
+          </div>
         </Field>
-        <Field label="Artwork URL" changed={changed.labelImageUrl} className="xl:col-span-2">
-          <input
-            name="label_image_url"
-            value={draft.labelImageUrl}
-            onChange={(event) => setField("labelImageUrl", event.target.value)}
-            className={inputClass(changed.labelImageUrl)}
-          />
+        <Field label="Artwork" changed={changed.labelImageUrl} className="xl:col-span-3">
+          <div className="mt-1 flex min-w-0 items-center gap-3">
+            {draft.labelImageUrl && isImageLikeUrl(draft.labelImageUrl) ? (
+              <Image
+                src={draft.labelImageUrl}
+                alt="Artwork preview"
+                width={56}
+                height={56}
+                unoptimized
+                className="h-14 w-14 shrink-0 rounded border border-zinc-200 bg-zinc-50 object-contain"
+              />
+            ) : null}
+            <input
+              name="label_image_url"
+              value={draft.labelImageUrl}
+              onChange={(event) => setField("labelImageUrl", event.target.value)}
+              className={inputClass(changed.labelImageUrl)}
+            />
+          </div>
         </Field>
       </Section>
 
