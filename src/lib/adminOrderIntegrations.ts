@@ -42,7 +42,7 @@ type SquareConfig = {
 };
 
 type SquareRequestOptions = {
-  method?: "GET" | "POST" | "PUT";
+  method?: "DELETE" | "GET" | "POST" | "PUT";
   body?: unknown;
 };
 
@@ -82,7 +82,23 @@ export type AdminSquareInvoiceSendResult = {
   invoiceSentAt: string | null;
 };
 
+export type AdminSquareInvoiceReplacementResult = AdminSquareInvoiceSendResult & {
+  customerId: string;
+  squareOrderId: string;
+  invoiceDueDate: string;
+  invoiceCreatedAt: string | null;
+};
+
+export type AdminSquareInvoiceRemovalResult = {
+  invoiceId: string;
+  invoiceVersion: number | null;
+  invoiceStatus: string | null;
+  action: "canceled" | "deleted" | "skipped";
+};
+
 const DEFAULT_COUNTRY = "AU";
+const CANCELABLE_INVOICE_STATUSES = new Set(["SCHEDULED", "UNPAID", "PARTIALLY_PAID"]);
+const SKIPPABLE_INVOICE_STATUSES = new Set(["CANCELED", "FAILED", "REFUNDED"]);
 
 function moneyToCents(value: number | null | undefined) {
   const amount = Number(value);
@@ -329,14 +345,14 @@ async function updateSquareCustomer(order: AdminIntegrationOrder, customerId: st
   });
 }
 
-async function createSquareOrder(order: AdminIntegrationOrder, customerId: string) {
+async function createSquareOrder(order: AdminIntegrationOrder, customerId: string, idempotencySuffix?: string) {
   const config = getSquareConfig();
   const totalCents = moneyToCents(order.total_price);
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
   const data = await squareRequest<{ order?: SquareOrder }>("/v2/orders", {
     method: "POST",
     body: {
-      idempotency_key: `rc-admin-order-${order.id}`,
+      idempotency_key: `rc-admin-order-${order.id}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
       order: {
         location_id: config.locationId,
         customer_id: customerId,
@@ -476,14 +492,42 @@ async function retrieveSquareInvoice(invoiceId: string) {
   return data.invoice;
 }
 
-async function publishSquareInvoice(invoiceId: string, invoiceVersion: number, orderId: string) {
+async function deleteSquareInvoice(invoiceId: string, invoiceVersion: number) {
+  await squareRequest<Record<string, never>>(
+    `/v2/invoices/${encodeURIComponent(invoiceId)}?version=${encodeURIComponent(String(invoiceVersion))}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+async function cancelSquareInvoice(invoiceId: string, invoiceVersion: number, orderId: string, idempotencySuffix?: string) {
+  const data = await squareRequest<{ invoice?: SquareInvoice }>(
+    `/v2/invoices/${encodeURIComponent(invoiceId)}/cancel`,
+    {
+      method: "POST",
+      body: {
+        invoice: {
+          version: invoiceVersion,
+        },
+        idempotency_key: `rc-admin-invoice-cancel-${orderId}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
+      },
+    },
+  );
+  if (!data.invoice?.id) {
+    throw new Error("Square invoice cancellation failed.");
+  }
+  return data.invoice;
+}
+
+async function publishSquareInvoice(invoiceId: string, invoiceVersion: number, orderId: string, idempotencySuffix?: string) {
   const data = await squareRequest<{ invoice?: SquareInvoice }>(
     `/v2/invoices/${encodeURIComponent(invoiceId)}/publish`,
     {
       method: "POST",
       body: {
         version: invoiceVersion,
-        idempotency_key: `rc-admin-invoice-publish-${orderId}`,
+        idempotency_key: `rc-admin-invoice-publish-${orderId}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
       },
     },
   );
@@ -498,7 +542,7 @@ export async function createAdminSquareInvoiceDraft(
   options: { idempotencySuffix?: string } = {},
 ): Promise<AdminSquareInvoiceDraftResult> {
   const customerId = await createSquareCustomer(order);
-  const squareOrderId = await createSquareOrder(order, customerId);
+  const squareOrderId = await createSquareOrder(order, customerId, options.idempotencySuffix);
   const { invoice, dueDate } = await createSquareInvoice(
     order,
     customerId,
@@ -514,6 +558,88 @@ export async function createAdminSquareInvoiceDraft(
     invoiceUrl: invoice.public_url ?? null,
     invoiceDueDate: dueDate,
     invoiceCreatedAt: invoice.created_at ?? new Date().toISOString(),
+  };
+}
+
+export async function removeAdminSquareInvoice(
+  order: Pick<AdminIntegrationOrder, "id" | "square_invoice_id" | "square_invoice_version">,
+  options: { idempotencySuffix?: string } = {},
+): Promise<AdminSquareInvoiceRemovalResult | null> {
+  if (!order.square_invoice_id) return null;
+  const invoice = await retrieveSquareInvoice(order.square_invoice_id);
+  const invoiceVersion = Number(invoice.version ?? order.square_invoice_version);
+  if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
+    throw new Error("Square invoice version could not be retrieved.");
+  }
+  const status = invoice.status?.toUpperCase() ?? "";
+
+  if (status === "DRAFT") {
+    await deleteSquareInvoice(order.square_invoice_id, invoiceVersion);
+    return {
+      invoiceId: order.square_invoice_id,
+      invoiceVersion,
+      invoiceStatus: status,
+      action: "deleted",
+    };
+  }
+
+  if (CANCELABLE_INVOICE_STATUSES.has(status)) {
+    const canceled = await cancelSquareInvoice(
+      order.square_invoice_id,
+      invoiceVersion,
+      order.id,
+      options.idempotencySuffix,
+    );
+    return {
+      invoiceId: canceled.id,
+      invoiceVersion: Number.isFinite(Number(canceled.version)) ? Number(canceled.version) : invoiceVersion,
+      invoiceStatus: canceled.status ?? "CANCELED",
+      action: "canceled",
+    };
+  }
+
+  if (SKIPPABLE_INVOICE_STATUSES.has(status)) {
+    return {
+      invoiceId: order.square_invoice_id,
+      invoiceVersion,
+      invoiceStatus: status,
+      action: "skipped",
+    };
+  }
+
+  throw new Error(`Square invoice cannot be removed while it is ${status || "in its current state"}.`);
+}
+
+export async function createAndPublishAdminSquareInvoice(
+  order: AdminIntegrationOrder,
+  options: { idempotencySuffix?: string } = {},
+): Promise<AdminSquareInvoiceReplacementResult> {
+  const customerId = order.square_customer_id || (await createSquareCustomer(order));
+  if (order.square_customer_id) {
+    await updateSquareCustomer(order, order.square_customer_id);
+  }
+  const squareOrderId = await createSquareOrder(order, customerId, options.idempotencySuffix);
+  const { invoice, dueDate } = await createSquareInvoice(
+    order,
+    customerId,
+    squareOrderId,
+    options.idempotencySuffix,
+  );
+  const invoiceVersion = Number(invoice.version);
+  if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
+    throw new Error("Square invoice version could not be retrieved.");
+  }
+  const published = await publishSquareInvoice(invoice.id, invoiceVersion, order.id, options.idempotencySuffix);
+  return {
+    customerId,
+    squareOrderId,
+    invoiceId: published.id,
+    invoiceVersion: Number.isFinite(Number(published.version)) ? Number(published.version) : invoiceVersion,
+    invoiceStatus: published.status ?? null,
+    invoiceUrl: published.public_url ?? invoice.public_url ?? null,
+    invoiceDueDate: dueDate,
+    invoiceCreatedAt: invoice.created_at ?? new Date().toISOString(),
+    invoiceSentAt: published.updated_at ?? new Date().toISOString(),
   };
 }
 

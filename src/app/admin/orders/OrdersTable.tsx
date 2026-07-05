@@ -15,6 +15,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import type { PricingBreakdown } from "@/lib/pricing";
+import { suggestedAdminBatchWeights } from "@/lib/adminLargeOrders";
 import {
   archiveOrderInline,
   deleteOrder,
@@ -47,7 +48,6 @@ import {
 } from "./orderColorUtils";
 import {
   canCompleteOrderForSlotDates,
-  dateKey,
   formatDate,
   formatDateInput,
   formatDueDateDistance,
@@ -63,7 +63,11 @@ import {
   statusBadge,
   weightLabel,
 } from "./productionScheduleShared";
-import { isAdminManagedCustomOrderUnpaid, isVisibleOnProductionSchedule } from "./scheduleVisibility";
+import {
+  isAdminManagedCustomOrder,
+  isAdminManagedCustomOrderUnpaid,
+  isVisibleOnProductionSchedule,
+} from "./scheduleVisibility";
 
 type Props = {
   orders: OrderRow[];
@@ -107,6 +111,12 @@ const remainingRefundCentsForOrder = (order: OrderRow) => {
 const isPartiallyRefundedOrder = (order: OrderRow) =>
   Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
 const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
+const numericInputChanged = (nextValue: string, currentValue: number | null | undefined) => {
+  const next = Number(nextValue);
+  const current = Number(currentValue);
+  if (!Number.isFinite(next) && !Number.isFinite(current)) return false;
+  return next !== current;
+};
 
 export function OrdersTable({
   orders,
@@ -158,7 +168,6 @@ export function OrdersTable({
   const [editKey, setEditKey] = useState(0);
   const designTextInputRef = useRef<HTMLInputElement | null>(null);
   const selected = useMemo(() => orders.find((o) => o.id === selectedId) ?? null, [orders, selectedId]);
-  const todayKey = useMemo(() => dateKey(new Date()), []);
   const showJacketColorTwo = jacketMode === "two_colour" || jacketMode === "two_colour_pinstripe";
   const colorOptions = useMemo(() => buildPaletteOptions(palette), [palette]);
   const packagingById = useMemo(() => new Map(packagingOptions.map((option) => [option.id, option])), [packagingOptions]);
@@ -495,9 +504,12 @@ export function OrdersTable({
   const emitToast = (tone: "success" | "error", message: string) => {
     window.dispatchEvent(new CustomEvent("toast", { detail: { tone, message } }));
   };
-  const saveOrderInline = (form: HTMLFormElement) => {
+  const saveOrderInline = (form: HTMLFormElement, options: { sendUpdatedInvoice?: boolean } = {}) => {
     const formData = new FormData(form);
     formData.set("response_mode", "inline");
+    if (options.sendUpdatedInvoice) {
+      formData.set("send_updated_invoice", "on");
+    }
     startOrderSaveTransition(async () => {
       try {
         const result = await upsertOrderInline(formData);
@@ -543,12 +555,11 @@ export function OrdersTable({
                 );
                 const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
                 const isAdminPremade = isAdminPremadeOrder(order);
+                const isAdminManagedCustom = isAdminManagedCustomOrder(order);
                 const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
-                const hasUnsentSquareInvoice = Boolean(order.square_invoice_id && !order.square_invoice_sent_at);
-                const isPaymentOverdue =
-                  isAdminManagedCustomUnpaid &&
-                  !hasUnsentSquareInvoice &&
-                  Boolean(order.due_date && order.due_date < todayKey);
+                const hasUnsentSquareInvoice = Boolean(
+                  isAdminManagedCustom && order.square_invoice_id && !order.square_invoice_sent_at,
+                );
                 const dueDateDistance = formatDueDateDistance(order.due_date);
                 return (
                   <Fragment key={order.id}>
@@ -609,12 +620,7 @@ export function OrdersTable({
                               </button>
                             </form>
                           ) : null}
-                          {isPaymentOverdue ? (
-                            <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                              Payment overdue
-                            </span>
-                          ) : null}
-                          {order.square_invoice_error ? (
+                          {isAdminManagedCustom && order.square_invoice_error ? (
                             <span
                               className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
                               title={order.square_invoice_error}
@@ -673,6 +679,16 @@ export function OrdersTable({
                               const weightG = Number.isFinite(Number(order.total_weight_kg ?? NaN))
                                 ? Math.round(Number(order.total_weight_kg) * 1000)
                                 : "";
+                              const quantityNumber = Number(quantityInput);
+                              const computedWeightG =
+                                selectedPackagingOption && Number.isFinite(quantityNumber) && quantityNumber > 0
+                                  ? Math.round(Number(selectedPackagingOption.candy_weight_g) * quantityNumber)
+                                  : weightG;
+                              const computedWeightKg = Number(computedWeightG) / 1000;
+                              const inlineBatchWeights =
+                                Number.isFinite(computedWeightKg) && computedWeightKg > 0
+                                  ? suggestedAdminBatchWeights(computedWeightKg, Number(settings.max_total_kg))
+                                  : [];
                               const activeCategoryId =
                                 orderCategoryId || (isAdminPremadeOrder(order) ? ADMIN_PREMADE_CATEGORY_ID : order.category_id || "");
                               const isWedding = activeCategoryId.startsWith("weddings");
@@ -706,6 +722,19 @@ export function OrdersTable({
                               const detailBodyValueClass = "text-xs font-semibold text-zinc-900 capitalize";
                               const compactFieldClass =
                                 "mt-0.5 w-full rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-900";
+                              const originalCategoryId = isAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : order.category_id ?? "";
+                              const priceAffectingInvoiceFieldsChanged =
+                                (orderCategoryId || "") !== originalCategoryId ||
+                                selectedPackagingOptionId !== (order.packaging_option_id ?? "") ||
+                                numericInputChanged(quantityInput, order.quantity) ||
+                                (jacketMode || "") !== (order.jacket ?? "");
+                              const shouldPromptForUpdatedInvoice =
+                                isEditing &&
+                                isAdminManagedCustom &&
+                                Boolean(order.square_invoice_id) &&
+                                !order.paid_at &&
+                                order.square_invoice_status?.toUpperCase() !== "PAID" &&
+                                priceAffectingInvoiceFieldsChanged;
 
                               return (
                                 <form
@@ -717,7 +746,15 @@ export function OrdersTable({
                                     if (submitter?.dataset.submitIntent === "mark-paid") return;
                                     if (submitter?.dataset.submitIntent === "delete-order") return;
                                     event.preventDefault();
-                                    saveOrderInline(event.currentTarget);
+                                    if (shouldPromptForUpdatedInvoice) {
+                                      const confirmed = window.confirm(
+                                        "Send customer updated invoice? This will cancel the current Square invoice and email the customer a replacement with the latest total.",
+                                      );
+                                      if (!confirmed) return;
+                                    }
+                                    saveOrderInline(event.currentTarget, {
+                                      sendUpdatedInvoice: shouldPromptForUpdatedInvoice,
+                                    });
                                   }}
                                 >
                                   <input type="hidden" name="id" value={order.id} />
@@ -1016,7 +1053,8 @@ export function OrdersTable({
                                               name="order_weight_g"
                                               min={1}
                                               required
-                                              defaultValue={weightG}
+                                              value={computedWeightG}
+                                              readOnly
                                               className={compactFieldClass}
                                             />
                                           ) : (
@@ -1248,6 +1286,16 @@ export function OrdersTable({
                                           )}
                                         </label>
                                         <input type="hidden" name="packaging_option_id" value={selectedPackagingOptionId} />
+                                        {isEditing
+                                          ? inlineBatchWeights.map((weight, index) => (
+                                              <input
+                                                key={`inline-batch-weight-${order.id}-${index}`}
+                                                type="hidden"
+                                                name="batch_weight_kg"
+                                                value={weight.toFixed(2)}
+                                              />
+                                            ))
+                                          : null}
                                         <label className={detailLabelClass}>
                                           Quantity
                                           {isEditing ? (
@@ -1255,7 +1303,6 @@ export function OrdersTable({
                                               type="number"
                                               name="quantity"
                                               min={1}
-                                              max={Number.isFinite(maxPackages ?? NaN) ? Number(maxPackages) : undefined}
                                               value={quantityInput}
                                               onChange={(event) => setQuantityInput(event.target.value)}
                                               className={compactFieldClass}
@@ -1307,38 +1354,40 @@ export function OrdersTable({
                                           </p>
                                           <p className={detailValueClass}>{order.payment_method ?? "-"}</p>
                                         </div>
-                                        <div>
-                                          <p className={detailMetaClass}>Square invoice</p>
-                                          <p className={detailValueClass}>
-                                            {order.square_invoice_id
-                                              ? `${order.square_invoice_status ?? "draft"} · ${order.square_invoice_id}`
-                                              : "No draft"}
-                                          </p>
-                                          {order.square_invoice_error ? (
-                                            <p className="mt-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold normal-case text-rose-700">
-                                              {order.square_invoice_error}
+                                        {isAdminManagedCustom ? (
+                                          <div>
+                                            <p className={detailMetaClass}>Square invoice</p>
+                                            <p className={detailValueClass}>
+                                              {order.square_invoice_id
+                                                ? `${order.square_invoice_status ?? "draft"} · ${order.square_invoice_id}`
+                                                : "No draft"}
                                             </p>
-                                          ) : null}
-                                          {order.square_invoice_id && !order.square_invoice_sent_at ? (
-                                            <a
-                                              href={`/admin/orders/${order.id}/invoice`}
-                                              className="mt-2 inline-flex rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
-                                            >
-                                              Review / send invoice
-                                            </a>
-                                          ) : null}
-                                          {!order.square_invoice_id ? (
-                                            <form action={retryAdminSquareInvoiceDraft} className="mt-2">
-                                              <input type="hidden" name="order_id" value={order.id} />
-                                              <button
-                                                type="submit"
-                                                className="inline-flex rounded border border-zinc-900 bg-zinc-900 px-2 py-1 text-[11px] font-semibold text-white hover:bg-zinc-800"
+                                            {order.square_invoice_error ? (
+                                              <p className="mt-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold normal-case text-rose-700">
+                                                {order.square_invoice_error}
+                                              </p>
+                                            ) : null}
+                                            {order.square_invoice_id && !order.square_invoice_sent_at ? (
+                                              <a
+                                                href={`/admin/orders/${order.id}/invoice`}
+                                                className="mt-2 inline-flex rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-700 hover:border-zinc-300"
                                               >
-                                                Retry draft invoice
-                                              </button>
-                                            </form>
-                                          ) : null}
-                                        </div>
+                                                Review / send invoice
+                                              </a>
+                                            ) : null}
+                                            {!order.square_invoice_id ? (
+                                              <form action={retryAdminSquareInvoiceDraft} className="mt-2">
+                                                <input type="hidden" name="order_id" value={order.id} />
+                                                <button
+                                                  type="submit"
+                                                  className="inline-flex rounded border border-zinc-900 bg-zinc-900 px-2 py-1 text-[11px] font-semibold text-white hover:bg-zinc-800"
+                                                >
+                                                  Retry draft invoice
+                                                </button>
+                                              </form>
+                                            ) : null}
+                                          </div>
+                                        ) : null}
                                         {pricing ? (
                                           <div className="space-y-0.5 text-[11px] text-zinc-600">
                                             {pricing.items.map((item) => (

@@ -83,14 +83,44 @@ export const formatPackagingOptionLabel = (
   return `${type} - ${normalizedSize}`;
 };
 
+const pluralPackagingType = (type: string) => {
+  const trimmed = type.trim();
+  const lower = trimmed.toLowerCase();
+  if (!trimmed) return "";
+  if (lower === "bulk") return trimmed;
+  if (lower.endsWith("jars")) return trimmed;
+  if (lower.endsWith("jar")) return `${trimmed.slice(0, -3)}Jars`;
+  if (lower.endsWith("bags")) return trimmed;
+  if (lower.endsWith("bag")) return `${trimmed.slice(0, -3)}Bags`;
+  if (lower.endsWith("box")) return `${trimmed}es`;
+  if (lower.endsWith("s")) return trimmed;
+  return `${trimmed}s`;
+};
+
+const packagingOrderDescription = (
+  option: Pick<PackagingOption, "type" | "size"> | null | undefined,
+  quantityLabel: string,
+) => {
+  if (!option) return "";
+  const type = option.type?.trim() ?? "";
+  const size = option.size?.trim() ?? "";
+  if (!type && !size) return "";
+  const normalizedSize = type.toLowerCase().includes("jar")
+    ? size.replace(/\s*\(?\d+\s*g\)?$/i, "").trim() || size
+    : size;
+  const packageLabel = [normalizedSize, pluralPackagingType(type)].filter(Boolean).join(" ").trim();
+  if (!packageLabel) {
+    const fallbackLabel = formatPackagingOptionLabel(option);
+    return quantityLabel ? `${quantityLabel} x ${fallbackLabel}` : fallbackLabel;
+  }
+  return quantityLabel ? `${quantityLabel} x ${packageLabel}` : packageLabel;
+};
+
 export const formatOrderDescription = (order: OrderRow, packagingOption?: PackagingOption | null) => {
   const description = order.order_description?.trim() ?? "";
   const qty = formatQuantity(order.quantity);
-  const packagingLabel = formatPackagingOptionLabel(packagingOption);
-  if (!description) {
-    if (packagingLabel && qty) return `${packagingLabel} (Qty: ${qty})`;
-    if (packagingLabel) return packagingLabel;
-  }
+  const packagingDescription = packagingOrderDescription(packagingOption, qty);
+  if (packagingDescription) return packagingDescription;
   if (!qty) return description;
   return description ? `${description} (Qty: ${qty})` : `Qty: ${qty}`;
 };

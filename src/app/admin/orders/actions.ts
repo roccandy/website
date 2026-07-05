@@ -17,11 +17,14 @@ import { buildPricingContext } from "@/lib/pricing";
 import {
   calculateAdminLargeOrderPricingWithContext,
   normalizeAdminBatchWeights,
+  suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
 import {
+  createAndPublishAdminSquareInvoice,
   createAdminSquareInvoiceDraft,
   defaultAdminSquareInvoiceTitle,
+  removeAdminSquareInvoice,
   updateAndPublishAdminSquareInvoice,
 } from "@/lib/adminOrderIntegrations";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
@@ -177,6 +180,7 @@ async function upsertOrderShared(formData: FormData) {
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const toastSuccess = formData.get("toast_success")?.toString() || null;
   const toastError = formData.get("toast_error")?.toString() || null;
+  const sendUpdatedInvoice = formData.get("send_updated_invoice")?.toString() === "on";
   const id = formData.get("id")?.toString() || undefined;
   const order_number_raw = formData.get("order_number")?.toString() || null;
   const order_number = normalizeBaseOrderNumber(order_number_raw);
@@ -264,6 +268,8 @@ async function upsertOrderShared(formData: FormData) {
     : null;
   let activity: AdminActivityInput | null = null;
   let postSaveRedirect: string | null = null;
+  let inlineTone: "success" | "error" = "success";
+  let inlineMessage = toastSuccess ?? "Order Updated";
   const resolvedCategoryId = category_id ?? existing?.category_id ?? null;
   const isAdminPremade =
     isAdminPremadeOrder(existing) ||
@@ -321,20 +327,49 @@ async function upsertOrderShared(formData: FormData) {
       throw new Error("Order weight is required.");
     }
 
+    const existingInvoiceStatus = existing?.square_invoice_status?.toUpperCase() ?? null;
+    const shouldReplaceSquareInvoice =
+      Boolean(
+        id &&
+          existing?.square_invoice_id &&
+          sendUpdatedInvoice &&
+          isAdminManagedCustomOrder(existing) &&
+          !existing.paid_at &&
+          existingInvoiceStatus !== "PAID",
+      );
+    if (sendUpdatedInvoice && !shouldReplaceSquareInvoice) {
+      throw new Error("Updated Square invoices can only be sent for unpaid admin-created orders with an existing Square invoice.");
+    }
+
     const pricingContext = isAdminPremade ? null : await buildPricingContext();
     const settings = pricingContext?.settings ?? (await getSettings());
-    const isPriceLocked = Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id);
+    const isPriceLocked = Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id) && !shouldReplaceSquareInvoice;
     const existingBatchWeights = normalizeAdminBatchWeights(
       Array.isArray(existing?.admin_batch_weights_kg) ? existing.admin_batch_weights_kg : [],
     );
+    const existingBatchTotal = existingBatchWeights.reduce((sum, weight) => sum + weight, 0);
+    const sizeAffectingFieldsChanged =
+      !existing ||
+      Math.abs(Number(existing.total_weight_kg ?? 0) - resolvedWeightKg) > 0.02 ||
+      (quantity !== null && Number(quantity) !== Number(existing.quantity ?? NaN)) ||
+      (packaging_option_id !== null && packaging_option_id !== (existing.packaging_option_id ?? null)) ||
+      (category_id !== null && category_id !== (existing.category_id ?? null));
+    const existingBatchWeightsMismatch =
+      existingBatchWeights.length > 0 && Math.abs(existingBatchTotal - resolvedWeightKg) > 0.02;
+    const shouldRegenerateBatchWeights =
+      submittedBatchWeights.length === 0 && (sizeAffectingFieldsChanged || existingBatchWeightsMismatch);
     const batchWeightsForPricing =
       submittedBatchWeights.length > 0
         ? submittedBatchWeights
-        : existingBatchWeights.length > 0
+        : !shouldRegenerateBatchWeights && existingBatchWeights.length > 0
           ? existingBatchWeights
-          : resolvedWeightKg <= Number(settings.max_total_kg)
-            ? [resolvedWeightKg]
-            : [];
+          : [];
+    const resolvedBatchWeights =
+      submittedBatchWeights.length > 0
+        ? submittedBatchWeights
+        : shouldRegenerateBatchWeights
+          ? suggestedAdminBatchWeights(resolvedWeightKg, Number(settings.max_total_kg))
+          : existingBatchWeights;
     const adminPricing =
       !isAdminPremade && pricingContext && !isPriceLocked
         ? calculateAdminLargeOrderPricingWithContext(
@@ -422,7 +457,7 @@ async function upsertOrderShared(formData: FormData) {
         : isPriceLocked
           ? existing?.total_price ?? null
           : adminPricing?.total ?? total_price ?? existing?.total_price ?? null,
-      admin_batch_weights_kg: isAdminPremade ? [] : adminPricing?.batchWeightsKg ?? existingBatchWeights,
+      admin_batch_weights_kg: isAdminPremade ? [] : adminPricing?.batchWeightsKg ?? resolvedBatchWeights,
       admin_pricing_subtotal: isAdminPremade ? null : adminPricing?.subtotalBeforeDiscount ?? existing?.admin_pricing_subtotal ?? null,
       admin_discount_type: isAdminPremade ? null : adminPricing?.discountType ?? existing?.admin_discount_type ?? null,
       admin_discount_value: isAdminPremade ? null : admin_discount_value ?? existing?.admin_discount_value ?? null,
@@ -461,6 +496,65 @@ async function upsertOrderShared(formData: FormData) {
     if (id) {
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
       if (error) throw new Error(error.message);
+      if (shouldReplaceSquareInvoice && existing?.square_invoice_id) {
+        const idempotencySuffix = `replace-${Date.now()}`;
+        let oldInvoiceRemoved = false;
+        try {
+          const removal = await removeAdminSquareInvoice(existing, { idempotencySuffix });
+          oldInvoiceRemoved = Boolean(removal && removal.action !== "skipped");
+          const integrationOrder = {
+            ...existing,
+            ...basePayload,
+            id,
+            square_invoice_id: null,
+            square_invoice_version: null,
+            square_customer_id: existing.square_customer_id,
+          } as Parameters<typeof createAndPublishAdminSquareInvoice>[0];
+          const updatedInvoice = await createAndPublishAdminSquareInvoice(integrationOrder, {
+            idempotencySuffix,
+          });
+          const { error: invoiceUpdateError } = await client
+            .from("orders")
+            .update({
+              square_customer_id: updatedInvoice.customerId,
+              square_order_id: updatedInvoice.squareOrderId,
+              square_invoice_id: updatedInvoice.invoiceId,
+              square_invoice_version: updatedInvoice.invoiceVersion,
+              square_invoice_status: updatedInvoice.invoiceStatus,
+              square_invoice_url: updatedInvoice.invoiceUrl,
+              square_invoice_due_date: updatedInvoice.invoiceDueDate,
+              square_invoice_created_at: updatedInvoice.invoiceCreatedAt,
+              square_invoice_sent_at: updatedInvoice.invoiceSentAt,
+              square_invoice_error: null,
+              admin_price_locked_at: new Date().toISOString(),
+              payment_method: "Square invoice",
+              payment_provider: "square_invoice",
+            })
+            .eq("id", id);
+          if (invoiceUpdateError) throw new Error(invoiceUpdateError.message);
+          inlineMessage = "Order updated and replacement Square invoice sent.";
+        } catch (invoiceError) {
+          const message = invoiceError instanceof Error ? invoiceError.message : "Unable to send updated Square invoice.";
+          const invoiceFailurePatch: Record<string, unknown> = {
+            square_invoice_error: `Updated Square invoice failed: ${message}`,
+          };
+          if (oldInvoiceRemoved) {
+            Object.assign(invoiceFailurePatch, {
+              square_order_id: null,
+              square_invoice_id: null,
+              square_invoice_version: null,
+              square_invoice_status: null,
+              square_invoice_url: null,
+              square_invoice_due_date: null,
+              square_invoice_created_at: null,
+              square_invoice_sent_at: null,
+            });
+          }
+          await client.from("orders").update(invoiceFailurePatch).eq("id", id);
+          inlineTone = "error";
+          inlineMessage = `Order saved, but updated Square invoice failed: ${message}`;
+        }
+      }
       activity = {
         area: "operations",
         action: "updated",
@@ -477,10 +571,11 @@ async function upsertOrderShared(formData: FormData) {
           customerName: basePayload.customer_name,
         })}.`,
         path: redirectTo ?? ORDERS_PATH,
-        changedFields: ["Order details"],
+        changedFields: shouldReplaceSquareInvoice ? ["Order details", "Square invoice"] : ["Order details"],
         metadata: {
           status: basePayload.status,
           dueDate: basePayload.due_date,
+          replacedSquareInvoice: shouldReplaceSquareInvoice,
         },
       };
     } else {
@@ -543,6 +638,7 @@ async function upsertOrderShared(formData: FormData) {
             title: payload.title,
             designType: payload.design_type,
             quantity: payload.quantity,
+            flavor: payload.flavor,
             dueDate: payload.due_date,
             customerName: payload.customer_name,
             customerEmail: payload.customer_email,
@@ -680,6 +776,7 @@ async function upsertOrderShared(formData: FormData) {
                   title: premadePayload.title ?? null,
                   designType: premadePayload.design_type ?? null,
                   quantity: premadePayload.quantity ?? null,
+                  flavor: null,
                   dueDate: premadePayload.due_date ?? null,
                   customerName: premadePayload.customer_name ?? null,
                   customerEmail: premadePayload.customer_email ?? null,
@@ -768,7 +865,7 @@ async function upsertOrderShared(formData: FormData) {
     revalidatePath(redirectTo);
   }
   if (inlineResponse) {
-    return { ok: true, tone: "success" as const, message: toastSuccess ?? "Order Updated" };
+    return { ok: true, tone: inlineTone, message: inlineMessage };
   }
   const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
   if (redirectTo && toastSuccess) {
@@ -801,6 +898,9 @@ export async function retryAdminSquareInvoiceDraft(formData: FormData) {
   }
   if (!order) {
     redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
+  }
+  if (!isAdminManagedCustomOrder(order)) {
+    redirect(toastRedirect(ORDERS_PATH, "error", "Website orders do not use Square invoices."));
   }
   if (order.square_invoice_id) {
     redirect(`/admin/orders/${orderId}/invoice`);
@@ -885,6 +985,10 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   }
   if (!existing) {
     redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
+  }
+  if (!isAdminManagedCustomOrder(existing)) {
+    const params = new URLSearchParams({ selected: orderId, toast: "error", message: "Website orders do not use Square invoices." });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
   if (!existing.square_invoice_id) {
     const params = new URLSearchParams({ selected: orderId, toast: "error", message: "Square invoice draft is missing." });
@@ -1537,7 +1641,7 @@ export async function deleteOrder(formData: FormData) {
   const client = supabaseAdminClient;
   const { data: order, error: fetchError } = await client
     .from("orders")
-    .select("id,order_number,title,customer_name")
+    .select("id,order_number,title,customer_name,square_invoice_id,square_invoice_version")
     .eq("id", orderId)
     .maybeSingle();
   if (fetchError) {
@@ -1548,6 +1652,10 @@ export async function deleteOrder(formData: FormData) {
   }
 
   try {
+    if (order.square_invoice_id) {
+      await removeAdminSquareInvoice(order, { idempotencySuffix: `delete-${Date.now()}` });
+    }
+
     const { error: assignmentError } = await client.from("order_slots").delete().eq("order_id", orderId);
     if (assignmentError) throw new Error(assignmentError.message);
 

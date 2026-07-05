@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OrderRow, SettingsRow } from "@/lib/data";
+import type { OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
@@ -9,6 +9,7 @@ import {
   buildProductionWorkweekMonthCells,
   dateKey,
   formatBatchBreakdown,
+  formatOrderDescription,
   formatScheduleStatusLabel,
   getMultiAssignmentScheduleStatus,
   logoDownloadNameForOrder,
@@ -161,6 +162,34 @@ describe("batch breakdown labels", () => {
     });
 
     expect(formatBatchBreakdown(order)).toBe("3 x 8kg + 1 x 6kg");
+  });
+});
+
+describe("order description labels", () => {
+  it("formats jar quantities before size and plural packaging type", () => {
+    const order = makeOrder({
+      quantity: 110,
+      order_description: "Jar - Small",
+    });
+    const packaging = {
+      type: "Jar",
+      size: "Small (95g)",
+    } as PackagingOption;
+
+    expect(formatOrderDescription(order, packaging)).toBe("110 x Small Jars");
+  });
+
+  it("formats bag quantities before size and plural packaging type", () => {
+    const order = makeOrder({
+      quantity: 100,
+      order_description: "Clear Bag - 8-10pc",
+    });
+    const packaging = {
+      type: "Clear Bag",
+      size: "8-10pc",
+    } as PackagingOption;
+
+    expect(formatOrderDescription(order, packaging)).toBe("100 x 8-10pc Clear Bags");
   });
 });
 

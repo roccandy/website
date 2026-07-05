@@ -197,6 +197,56 @@ const groupBatchWeights = (weights: number[]) =>
     return groups;
   }, []);
 
+const normalizePrintBatchWeights = (weights: number[], totalWeightKg: number) => {
+  if (weights.length <= 1 || !Number.isFinite(totalWeightKg) || totalWeightKg <= 0) return weights;
+  const allocated = weights.reduce((sum, weight) => sum + weight, 0);
+  if (Math.abs(allocated - totalWeightKg) <= 0.02) return weights;
+
+  const base = Math.floor((totalWeightKg / weights.length) * 100) / 100;
+  const normalized = Array.from({ length: weights.length }, () => base);
+  const allocatedBeforeLast = normalized.slice(0, -1).reduce((sum, weight) => sum + weight, 0);
+  normalized[normalized.length - 1] = Math.round((totalWeightKg - allocatedBeforeLast) * 100) / 100;
+  return normalized;
+};
+
+const resolvePrintQuantity = ({
+  quantity,
+  totalWeightKg,
+  packagingWeightG,
+  batchCount,
+}: {
+  quantity: number | null | undefined;
+  totalWeightKg: number;
+  packagingWeightG: number | null | undefined;
+  batchCount: number;
+}) => {
+  const storedQuantity = Number(quantity);
+  if (!Number.isFinite(storedQuantity) || storedQuantity <= 0) return null;
+  const unitWeightG = Number(packagingWeightG);
+  if (!Number.isFinite(unitWeightG) || unitWeightG <= 0 || batchCount <= 1) {
+    return Math.floor(storedQuantity);
+  }
+
+  const totalWeightG = totalWeightKg * 1000;
+  const storedTotalWeightG = storedQuantity * unitWeightG;
+  const asPerBatchTotalWeightG = storedTotalWeightG * batchCount;
+  return Math.abs(totalWeightG - asPerBatchTotalWeightG) < Math.abs(totalWeightG - storedTotalWeightG)
+    ? Math.floor(storedQuantity * batchCount)
+    : Math.floor(storedQuantity);
+};
+
+const batchQuantityLabel = (group: { weight: number; count: number }, totalBatchWeightKg: number, totalQuantity: number | null) => {
+  if (!totalQuantity || !Number.isFinite(totalBatchWeightKg) || totalBatchWeightKg <= 0) return "";
+  const perBatchQuantity = Math.round((totalQuantity * group.weight) / totalBatchWeightKg);
+  if (!Number.isFinite(perBatchQuantity) || perBatchQuantity <= 0) return "";
+  return ` (${perBatchQuantity} bags each)`;
+};
+
+const formatLabelPrintCount = (count: number | null) => {
+  if (!count || !Number.isFinite(count) || count <= 0) return "No";
+  return `Yes - ${Math.floor(count)}`;
+};
+
 export default async function PrintOrderPage({ params, searchParams }: Params) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
@@ -251,8 +301,12 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     );
   }
 
-  const { data: packagingOptions } = await client.from("packaging_options").select("id,type,size");
+  const { data: packagingOptions } = await client.from("packaging_options").select("id,type,size,candy_weight_g");
   const packaging = packagingOptions?.find((opt) => opt.id === order.packaging_option_id) ?? null;
+  const { data: orderSlotRows } = await client
+    .from("order_slots")
+    .select("kg_assigned")
+    .eq("order_id", order.id);
   const { data: paletteRows } = await client.from("color_palette").select("category,shade,hex");
   const paletteHexMap = buildPaletteHexMap(paletteRows ?? []);
 
@@ -288,34 +342,53 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     if (order.jacket === "pinstripe") return "Single Colour + Pinstripe";
     return "Single Colour";
   })();
+  const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
+  const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
+  const explicitBatchWeights = Array.isArray(order.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg.map((weight) => Number(weight)).filter((weight) => Number.isFinite(weight) && weight > 0)
+    : [];
+  const assignmentBatchWeights = (orderSlotRows ?? [])
+    .map((slot) => Number(slot.kg_assigned))
+    .filter((weight) => Number.isFinite(weight) && weight > 0);
+  const batchWeights = normalizePrintBatchWeights(
+    explicitBatchWeights.length > 0
+      ? explicitBatchWeights
+      : assignmentBatchWeights.length > 0
+        ? assignmentBatchWeights
+        : batchWeightsForOrder(order),
+    Number(order.total_weight_kg),
+  );
+  const batchWeightGroups = groupBatchWeights(batchWeights);
+  const totalBatchWeightKg = batchWeights.reduce((sum, weight) => sum + weight, 0);
+  const printQuantity = resolvePrintQuantity({
+    quantity: order.quantity,
+    totalWeightKg: Number(order.total_weight_kg),
+    packagingWeightG: packaging?.candy_weight_g,
+    batchCount: batchWeights.length,
+  });
   const packagingSummary = (() => {
     const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
     const summaryParts = [];
-    if (Number.isFinite(Number(order.quantity)) && Number(order.quantity) > 0) {
-      summaryParts.push(`Qty: ${Number(order.quantity)}`);
+    if (printQuantity) {
+      summaryParts.push(`Qty: ${printQuantity}`);
     }
     if (packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay) {
       summaryParts.push(`Lid colour: ${jarLidColorDisplay.label}`);
     }
     return summaryParts.length > 0 ? `${packagingLabel} (${summaryParts.join(", ")})` : packagingLabel;
   })();
-  const labelsToPrint = Number.isFinite(Number(order.labels_count)) && Number(order.labels_count) > 0 ? Number(order.labels_count) : null;
-  const ingredientLabelsRequested = hasIngredientLabelsRequested({ notes: order.notes });
-  const batchWeights = batchWeightsForOrder(order);
-  const batchWeightGroups = groupBatchWeights(batchWeights);
   const ingredientLabelsToPrint = (() => {
     const storedCount = Number(order.ingredient_labels_count);
     if (Number.isFinite(storedCount) && storedCount > 0) {
-      return String(Math.floor(storedCount));
+      return Math.floor(storedCount);
     }
-    if (!ingredientLabelsRequested) return "-";
+    if (!ingredientLabelsRequested) return null;
     const packagingType = packaging?.type?.trim().toLowerCase();
-    if (packagingType === "bulk") return "-";
-    const quantity = Number(order.quantity);
-    if (Number.isFinite(quantity) && quantity > 0) {
-      return String(Math.floor(quantity));
+    if (packagingType === "bulk") return null;
+    if (printQuantity && printQuantity > 0) {
+      return Math.floor(printQuantity);
     }
-    return "1";
+    return 1;
   })();
 
   const showJacketColorOne =
@@ -440,6 +513,14 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                   <span className={INLINE_VALUE_CLASS}>{order.customer_email || "-"}</span>
                 </p>
                 <p className={INLINE_ROW_CLASS}>
+                  <span className={INLINE_LABEL_CLASS}>First name:</span>
+                  <span className={INLINE_VALUE_CLASS}>{order.first_name || "-"}</span>
+                </p>
+                <p className={INLINE_ROW_CLASS}>
+                  <span className={INLINE_LABEL_CLASS}>Last name:</span>
+                  <span className={INLINE_VALUE_CLASS}>{order.last_name || "-"}</span>
+                </p>
+                <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Phone:</span>
                   <span className={INLINE_VALUE_CLASS}>{order.phone || "-"}</span>
                 </p>
@@ -508,7 +589,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     <span className="block">
                       {batchWeightGroups.map((group) => (
                         <span key={group.weight} className="block whitespace-nowrap">
-                          {group.count} x {formatPrintKg(group.weight)}kg
+                          {group.count} x {formatPrintKg(group.weight)}kg{batchQuantityLabel(group, totalBatchWeightKg, printQuantity)}
                         </span>
                       ))}
                     </span>
@@ -561,11 +642,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </p>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Custom Labels:</span>
-                <span className={SPEC_VALUE_CLASS}>{labelsToPrint ?? "-"}</span>
+                <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
               </p>
               <p className={SPEC_ROW_CLASS}>
                 <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
-                <span className={SPEC_VALUE_CLASS}>{ingredientLabelsToPrint}</span>
+                <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
               </p>
               {order.notes ? (
                 <div className="rounded border border-zinc-200 bg-zinc-50 p-3 print:p-2">

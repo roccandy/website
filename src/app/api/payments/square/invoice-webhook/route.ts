@@ -95,7 +95,7 @@ export async function POST(request: Request) {
   const client = supabaseAdminClient;
   const { data: order, error: fetchError } = await client
     .from("orders")
-    .select("id,order_number,title,design_type,quantity,due_date,customer_name,customer_email,total_weight_kg,total_price,notes,paid_at")
+    .select("id,order_number,title,design_type,quantity,flavor,due_date,customer_name,customer_email,total_weight_kg,total_price,notes,paid_at")
     .eq("square_invoice_id", invoice.id)
     .maybeSingle();
 
@@ -143,6 +143,7 @@ export async function POST(request: Request) {
             title: order.title ?? null,
             designType: order.design_type ?? null,
             quantity: order.quantity ?? null,
+            flavor: order.flavor ?? null,
             dueDate: order.due_date ?? null,
             customerName: order.customer_name ?? null,
             customerEmail: order.customer_email ?? null,

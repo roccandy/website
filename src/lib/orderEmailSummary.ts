@@ -14,6 +14,7 @@ type BillingAddress = {
 export type AdminOrderSummaryItem = {
   title: string;
   quantity: number;
+  flavor: string | null;
   labelsCount: number | null;
   totalPrice: number | null;
 };
@@ -25,6 +26,7 @@ export type AdminCustomOrderDetails = {
   weightKg: number | null;
   outerColours: string;
   pinstripe: "Yes" | "No";
+  flavor: string | null;
   textColour: string;
   heartColour: string | null;
   packaging: string;
@@ -307,6 +309,7 @@ export async function buildAdminOrderSummaryEmailPayload({
   const items = orderPayloads.map((payload) => ({
     title: String(payload.title ?? "Order item"),
     quantity: Number(payload.quantity ?? 1),
+    flavor: typeof payload.flavor === "string" && payload.flavor.trim() ? payload.flavor.trim() : null,
     labelsCount: toNumber(payload.labels_count),
     totalPrice: toNumber(payload.total_price),
   }));
@@ -337,6 +340,7 @@ export async function buildAdminOrderSummaryEmailPayload({
         : colourOne;
 
     const customWeight = toNumber(customItem.total_weight_kg) ?? 0;
+    const flavor = typeof customItem.flavor === "string" && customItem.flavor.trim() ? customItem.flavor.trim() : null;
     const packagingLabel = packagingMap.get(String(customItem.packaging_option_id ?? "")) ?? "-";
     const packageQty = Math.max(1, Number(customItem.quantity ?? 1) || 1);
     const lidColourRaw = String(customItem.jar_lid_color ?? "").trim();
@@ -393,6 +397,7 @@ export async function buildAdminOrderSummaryEmailPayload({
       weightKg: customWeight > 0 ? customWeight : null,
       outerColours,
       pinstripe: pinstripe ? "Yes" : "No",
+      flavor,
       textColour: formatColour(customItem.text_color),
       heartColour: shouldShowHeart ? formatColour(customItem.heart_color) : null,
       packaging: packagingWithQty,

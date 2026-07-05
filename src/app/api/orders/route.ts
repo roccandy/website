@@ -188,6 +188,7 @@ export async function POST(req: Request) {
           title,
           designType: body.designType ?? null,
           quantity: body.quantity ?? null,
+          flavor: body.flavor ?? null,
           dueDate: due_date,
           customerName: body.customerName?.trim() || null,
           customerEmail: body.customerEmail?.trim() || null,

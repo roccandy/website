@@ -50,6 +50,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
           order_number: "0008-a",
           title: "ONE",
           quantity: 10,
+          flavor: "Passionfruit",
           packaging_option_id: "pack-1",
           total_weight_kg: 1,
           total_price: 100,
@@ -63,6 +64,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
           order_number: "0008-b",
           title: "TWO",
           quantity: 4,
+          flavor: "Lemon",
           packaging_option_id: "pack-2",
           total_weight_kg: 2,
           total_price: 150,
@@ -89,6 +91,8 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
 
     expect(summary.customDetailsList).toHaveLength(2);
     expect(summary.customDetailsList.map((detail) => detail.orderNumber)).toEqual(["0008-a", "0008-b"]);
+    expect(summary.items.map((item) => item.flavor)).toEqual(["Passionfruit", "Lemon"]);
+    expect(summary.customDetailsList.map((detail) => detail.flavor)).toEqual(["Passionfruit", "Lemon"]);
     expect(summary.customDetailsList.map((detail) => detail.packaging)).toEqual(["10 x Bag 100g", "4 x Jar 250g"]);
     expect(summary.customDetailsList.map((detail) => detail.ingredientLabels)).toEqual(["24", "No"]);
     expect(summary.customDetailsList.map((detail) => detail.imageDataUrl)).toEqual([

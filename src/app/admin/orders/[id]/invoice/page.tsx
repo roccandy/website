@@ -6,6 +6,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { OrderRow } from "@/lib/data";
 import { defaultAdminSquareInvoiceTitle } from "@/lib/adminOrderIntegrations";
 import { formatDate, formatMoney } from "../../productionScheduleShared";
+import { isAdminManagedCustomOrder } from "../../scheduleVisibility";
 import { sendAdminSquareInvoice } from "../../actions";
 import { SendInvoiceButton } from "./SendInvoiceButton";
 
@@ -29,6 +30,9 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
   if (error || !data) redirect("/admin/orders");
 
   const order = data as OrderRow;
+  if (!isAdminManagedCustomOrder(order)) {
+    redirect(`/admin/orders?selected=${encodeURIComponent(order.id)}`);
+  }
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
   const totalPrice = Number(order.total_price);
   const gstIncluded = Number.isFinite(totalPrice) && totalPrice > 0 ? totalPrice / 11 : null;
