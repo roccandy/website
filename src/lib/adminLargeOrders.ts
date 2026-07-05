@@ -31,12 +31,34 @@ export type AdminLargeOrderPricingBreakdown = PricingBreakdown & {
   subtotalBeforeDiscount: number;
 };
 
-function findTierForWeight(tiers: WeightTier[], weightKg: number) {
-  return tiers.find((tier) => weightKg >= Number(tier.min_kg) && weightKg <= Number(tier.max_kg));
+function sortTiersByRange(tiers: WeightTier[]) {
+  return [...tiers].sort((a, b) => Number(a.min_kg) - Number(b.min_kg) || Number(a.max_kg) - Number(b.max_kg));
 }
 
-function basePriceForBatch(tiers: WeightTier[], weightKg: number) {
-  const matchedTier = findTierForWeight(tiers, weightKg);
+function effectiveTierMaxKg(sortedTiers: WeightTier[], tier: WeightTier, configuredMaxKg?: number | null) {
+  const savedMax = Number(tier.max_kg);
+  const configuredMax = Number(configuredMaxKg);
+  const lastTier = sortedTiers[sortedTiers.length - 1] ?? null;
+
+  if (lastTier === tier && Number.isFinite(configuredMax) && configuredMax > savedMax) {
+    return configuredMax;
+  }
+
+  return savedMax;
+}
+
+function findTierForWeight(tiers: WeightTier[], weightKg: number, configuredMaxKg?: number | null) {
+  const sortedTiers = sortTiersByRange(tiers);
+  return sortedTiers.find((tier) => {
+    const minKg = Number(tier.min_kg);
+    const maxKg = effectiveTierMaxKg(sortedTiers, tier, configuredMaxKg);
+    return weightKg >= minKg && weightKg <= maxKg;
+  });
+}
+
+function basePriceForBatch(tiers: WeightTier[], weightKg: number, configuredMaxKg?: number | null) {
+  const sortedTiers = sortTiersByRange(tiers);
+  const matchedTier = findTierForWeight(sortedTiers, weightKg, configuredMaxKg);
   if (!matchedTier) {
     throw new Error(`No pricing tier matches ${formatKg(weightKg)} batch weight.`);
   }
@@ -45,10 +67,11 @@ function basePriceForBatch(tiers: WeightTier[], weightKg: number) {
     return Number(matchedTier.price);
   }
 
-  const priorFlat = tiers
+  const priorFlat = sortedTiers
     .filter((tier) => !tier.per_kg && Number(tier.max_kg) <= Number(matchedTier.min_kg))
     .sort((a, b) => Number(b.max_kg) - Number(a.max_kg))[0];
-  const spanKg = Math.min(weightKg, Number(matchedTier.max_kg)) - Number(matchedTier.min_kg);
+  const matchedMaxKg = effectiveTierMaxKg(sortedTiers, matchedTier, configuredMaxKg);
+  const spanKg = Math.min(weightKg, matchedMaxKg) - Number(matchedTier.min_kg);
   return (priorFlat ? Number(priorFlat.price) : 0) + Number(matchedTier.price) * Math.max(0, spanKg);
 }
 
@@ -160,10 +183,10 @@ export function calculateAdminLargeOrderPricingWithContext(
       : suggestedAdminBatchWeights(totalWeightKg, maxBatchKg);
   validateAdminBatchWeights({ weights: batchWeightsKg, totalWeightKg, maxBatchKg });
 
-  const categoryTiers = context.tiers.filter((tier) => tier.category_id === category.id);
+  const categoryTiers = sortTiersByRange(context.tiers.filter((tier) => tier.category_id === category.id));
   const batchBasePrices = batchWeightsKg.map((weightKg) => ({
     weightKg,
-    amount: basePriceForBatch(categoryTiers, weightKg),
+    amount: basePriceForBatch(categoryTiers, weightKg, maxBatchKg),
   }));
   const basePrice = batchBasePrices.reduce((sum, item) => sum + item.amount, 0);
   const packagingPrice = Number(option.unit_price) * quantity;

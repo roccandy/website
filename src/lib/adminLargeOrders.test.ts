@@ -74,6 +74,29 @@ describe("admin large order batching", () => {
     expect(pricing.total).toBe(480);
   });
 
+  it("uses the configured max weight as the effective final pricing tier max", () => {
+    const context = {
+      ...pricingContext,
+      settings: {
+        ...pricingContext.settings,
+        max_total_kg: 8.5,
+      },
+    } as PricingContext;
+    const pricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "bulk-bag",
+        quantity: 10,
+        batchWeightsKg: [8.5, 1.5],
+      },
+      context,
+    );
+
+    expect(pricing.batchBasePrices.map((item) => item.amount)).toEqual([190, 100]);
+    expect(pricing.basePrice).toBe(290);
+    expect(pricing.total).toBe(300);
+  });
+
   it("rounds calculated packaging weight to 2 decimals before validating batch splits", () => {
     const context = {
       ...pricingContext,

@@ -846,7 +846,6 @@ export function OrderDetailEditor({
         </Section>
 
         <Section title="Design And Labels">
-          <DetailItem label="Design type">{draft.designType || "-"}</DetailItem>
           <DetailItem label="Flavour">{draft.flavor || "-"}</DetailItem>
           <DetailItem label="Jacket">
             {JACKET_OPTIONS.find((option) => option.value === draft.jacket)?.label ?? (draft.jacket || "Single colour")}
@@ -865,7 +864,7 @@ export function OrderDetailEditor({
             {draft.ingredientLabelsEnabled ? `Yes - ${draft.ingredientLabelsCount || "0"}` : "No"}
           </DetailItem>
           <AssetPreview label="Logo" url={draft.logoUrl} />
-          <AssetPreview label="Artwork" url={draft.labelImageUrl} />
+          <AssetPreview label="Custom Label" url={draft.labelImageUrl} />
         </Section>
 
         <Section title="Pricing">
@@ -932,6 +931,7 @@ export function OrderDetailEditor({
       <input type="hidden" name="total_price" value={effectiveTotalPrice} />
       <input type="hidden" name="total_weight_kg" value={effectiveTotalWeightLabel} />
       <input type="hidden" name="order_description" value={draft.orderDescription} />
+      <input type="hidden" name="design_type" value={draft.designType} />
       <input type="hidden" name="jar_lid_color" value={effectiveJarLidColor} />
       <input type="hidden" name="logo_url" value={draft.logoUrl} />
       <input type="hidden" name="label_image_url" value={draft.labelImageUrl} />
@@ -1295,27 +1295,23 @@ export function OrderDetailEditor({
       </Section>
 
       <Section title="Design And Labels">
-        <Field label="Design type" changed={changed.designType}>
-          <input
-            name="design_type"
-            value={draft.designType}
-            onChange={(event) => setField("designType", event.target.value)}
-            className={inputClass(changed.designType)}
-          />
-        </Field>
         <Field label="Flavour" changed={changed.flavor}>
-          <input
+          <select
             name="flavor"
-            list="order-flavors"
             value={draft.flavor}
             onChange={(event) => setField("flavor", event.target.value)}
             className={inputClass(changed.flavor)}
-          />
-          <datalist id="order-flavors">
+          >
+            <option value="">Select flavour</option>
             {flavors.map((flavor) => (
-              <option key={flavor.id} value={flavor.name} />
+              <option key={flavor.id} value={flavor.name}>
+                {flavor.name}
+              </option>
             ))}
-          </datalist>
+            {draft.flavor && !flavors.some((flavor) => flavor.name === draft.flavor) ? (
+              <option value={draft.flavor}>{draft.flavor}</option>
+            ) : null}
+          </select>
         </Field>
         <Field label="Jacket" changed={changed.jacket}>
           <select
@@ -1419,7 +1415,7 @@ export function OrderDetailEditor({
           onUpload={handleLogoUpload}
         />
         <AssetUploadField
-          label="Artwork"
+          label="Custom Label"
           value={draft.labelImageUrl}
           changed={changed.labelImageUrl}
           inputId="order-detail-artwork-upload"

@@ -1,15 +1,4 @@
-import {
-  getCategories,
-  getLabelRanges,
-  getPackagingOptions,
-  getSettings,
-  getWeightTiers,
-  type Category,
-  type PackagingOption,
-  type SettingsRow,
-  type LabelRange,
-  type WeightTier,
-} from "@/lib/data";
+import type { Category, LabelRange, PackagingOption, SettingsRow, WeightTier } from "@/lib/data";
 import type { CustomPricingInput } from "@/lib/customPricingInput";
 export {
   buildCustomPricingInput,
@@ -39,8 +28,29 @@ export type PricingContext = {
   settings: SettingsRow;
 };
 
-function findTierForWeight(tiers: WeightTier[], weightKg: number) {
-  return tiers.find((t) => weightKg >= Number(t.min_kg) && weightKg <= Number(t.max_kg));
+function sortTiersByRange(tiers: WeightTier[]) {
+  return [...tiers].sort((a, b) => Number(a.min_kg) - Number(b.min_kg) || Number(a.max_kg) - Number(b.max_kg));
+}
+
+function effectiveTierMaxKg(sortedTiers: WeightTier[], tier: WeightTier, configuredMaxKg?: number | null) {
+  const savedMax = Number(tier.max_kg);
+  const configuredMax = Number(configuredMaxKg);
+  const lastTier = sortedTiers[sortedTiers.length - 1] ?? null;
+
+  if (lastTier === tier && Number.isFinite(configuredMax) && configuredMax > savedMax) {
+    return configuredMax;
+  }
+
+  return savedMax;
+}
+
+function findTierForWeight(tiers: WeightTier[], weightKg: number, configuredMaxKg?: number | null) {
+  const sortedTiers = sortTiersByRange(tiers);
+  return sortedTiers.find((t) => {
+    const minKg = Number(t.min_kg);
+    const maxKg = effectiveTierMaxKg(sortedTiers, t, configuredMaxKg);
+    return weightKg >= minKg && weightKg <= maxKg;
+  });
 }
 
 function findLabelRange(labelRanges: LabelRange[], count: number) {
@@ -54,6 +64,9 @@ export async function calculatePricing(input: PricingInput): Promise<PricingBrea
 }
 
 export async function buildPricingContext(): Promise<PricingContext> {
+  const { getCategories, getLabelRanges, getPackagingOptions, getSettings, getWeightTiers } = await import(
+    "@/lib/data"
+  );
   const [categories, tiers, packagingOptions, labelRanges, settings] = await Promise.all([
     getCategories(),
     getWeightTiers(),
@@ -95,8 +108,8 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     throw new Error("Total weight exceeds limit");
   }
 
-  const categoryTiers = tiers.filter((t) => t.category_id === category.id);
-  const matchedTier = findTierForWeight(categoryTiers, totalWeightKg);
+  const categoryTiers = sortTiersByRange(tiers.filter((t) => t.category_id === category.id));
+  const matchedTier = findTierForWeight(categoryTiers, totalWeightKg, settings.max_total_kg);
   if (!matchedTier) {
     throw new Error("No pricing tier matches weight");
   }
@@ -108,7 +121,8 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
       .filter((t) => !t.per_kg && Number(t.max_kg) <= Number(matchedTier.min_kg))
       .sort((a, b) => Number(b.max_kg) - Number(a.max_kg))[0];
 
-    const spanKg = Math.min(totalWeightKg, Number(matchedTier.max_kg)) - Number(matchedTier.min_kg);
+    const matchedMaxKg = effectiveTierMaxKg(categoryTiers, matchedTier, settings.max_total_kg);
+    const spanKg = Math.min(totalWeightKg, matchedMaxKg) - Number(matchedTier.min_kg);
     const weightInTier = Math.max(0, spanKg); // use exact kg (can be fractional)
     basePrice = (priorFlat ? Number(priorFlat.price) : 0) + Number(matchedTier.price) * weightInTier;
   } else {
