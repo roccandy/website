@@ -20,6 +20,15 @@ export function formatNumberInput(value: number | null | undefined, decimals = 2
   return fixed.includes(".") ? fixed.replace(/\.?0+$/, "") : fixed;
 }
 
+export function normalizeDesignTextComparisonKey(value: string) {
+  return value
+    .trim()
+    .replace(/\ufe0f/g, "")
+    .replace(/\s*[\u2665\u2764]\s*/g, " \u2665 ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function composeWeddingDesign(lineOne: string, lineTwo: string, initials: boolean) {
   const left = initials ? lineOne.trim().toUpperCase() : lineOne.trim();
   const right = initials ? lineTwo.trim().toUpperCase() : lineTwo.trim();

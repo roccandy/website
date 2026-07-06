@@ -39,6 +39,7 @@ import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 const BULK_LABEL_COUNT_MAX = 1000;
+const WEDDING_HEART = "❤️";
 
 const STATES = [
   { value: "", label: "Select state" },
@@ -249,10 +250,9 @@ const dateInputValue = (value: string | null | undefined) => {
 
 const splitWeddingDesign = (value: string | null | undefined) => {
   const normalized = (value ?? "")
-    .replace(/[\u2665\u2764]\ufe0f?/g, "\u2665")
-    .replace(/\ufe0f/g, "")
+    .replace(/[\u2665\u2764]\ufe0f?/g, WEDDING_HEART)
     .trim();
-  const [left = "", right = ""] = normalized.split("\u2665");
+  const [left = "", right = ""] = normalized.split(WEDDING_HEART);
   return {
     left: left.trim(),
     right: right.trim(),
@@ -683,7 +683,7 @@ export function NewOrderForm({
         ? (weddingLineTwo || "").trim().toUpperCase()
         : (weddingLineTwo || "").trim();
       if (!left && !right) return "";
-      return `${left} \u2665 ${right}`.trim();
+      return `${left} ${WEDDING_HEART} ${right}`.trim();
     }
     if (isCustomText) return (customText || "").trim();
     if (isBranded) return (brandName || "").trim();

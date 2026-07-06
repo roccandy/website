@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 const DEFAULT_COLOR = "#b7b7b7";
 const DEFAULT_TEXT = "#5f5f5f";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+const PREVIEW_HEART = "❤️";
 
 function escapeXml(value: string) {
   return value
@@ -56,13 +57,13 @@ export async function GET(request: Request) {
     isInitials && (lineOne || lineTwo)
       ? `
       ${lineOne ? `<text x="228" y="214" text-anchor="middle" font-size="42" font-weight="700" fill="${textColor}">${escapeXml(lineOne)}</text>` : ""}
-      ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">♥</text>` : ""}
+      ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">${PREVIEW_HEART}</text>` : ""}
       ${lineTwo ? `<text x="372" y="214" text-anchor="middle" font-size="42" font-weight="700" fill="${textColor}">${escapeXml(lineTwo)}</text>` : ""}
     `
       : lineOne || lineTwo
       ? `
       ${lineOne ? `<text x="300" y="178" text-anchor="middle" font-size="30" font-weight="700" fill="${textColor}">${escapeXml(lineOne)}</text>` : ""}
-      ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">♥</text>` : ""}
+      ${showHeart ? `<text x="300" y="214" text-anchor="middle" font-size="38" fill="${heartColor}">${PREVIEW_HEART}</text>` : ""}
       ${lineTwo ? `<text x="300" y="250" text-anchor="middle" font-size="30" font-weight="700" fill="${textColor}">${escapeXml(lineTwo)}</text>` : ""}
     `
       : "";
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
 
   const heartOnlyNode =
     !weddingTextNode && !logoNode && !singleTextNode && showHeart
-      ? `<text x="300" y="212" text-anchor="middle" font-size="46" fill="${heartColor}">♥</text>`
+      ? `<text x="300" y="212" text-anchor="middle" font-size="46" fill="${heartColor}">${PREVIEW_HEART}</text>`
       : "";
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>

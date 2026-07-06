@@ -40,6 +40,7 @@ import {
   composeWeddingDesign,
   formatKgInput,
   formatNumberInput,
+  normalizeDesignTextComparisonKey,
   resolveOrderQuantity,
   splitWeddingOrderDesign,
 } from "./orderDetailCalculations";
@@ -626,7 +627,7 @@ export function OrderDetailEditor({
     state: draft.state !== original.state,
     postcode: normalizedText(draft.postcode) !== normalizedText(original.postcode),
     designType: normalizedText(draft.designType) !== normalizedText(original.designType),
-    designText: normalizedText(effectiveDesignText) !== normalizedText(original.designText),
+    designText: normalizeDesignTextComparisonKey(effectiveDesignText) !== normalizeDesignTextComparisonKey(original.designText),
     weddingLineOne: normalizedText(draft.weddingLineOne) !== normalizedText(original.weddingLineOne),
     weddingLineTwo: normalizedText(draft.weddingLineTwo) !== normalizedText(original.weddingLineTwo),
     flavor: normalizedText(draft.flavor) !== normalizedText(original.flavor),

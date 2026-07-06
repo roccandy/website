@@ -9,6 +9,7 @@ const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 const SHORT_CUSTOM_TEXT_MAX_LENGTH = 6;
 const LONG_CUSTOM_TEXT_MAX_LENGTH = 14;
 const LONG_CUSTOM_TEXT_MAX_WORD_LENGTH = 10;
+const PREVIEW_HEART = "❤️";
 
 function normalizeHex(value: string | null, fallback: string) {
   if (!value) return fallback;
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
                   },
                 },
                 createElement("span", { style: { fontSize: "42px" } }, lineOne),
-                showHeart ? createElement("span", { style: { color: heartColor, fontSize: "34px" } }, "♥") : null,
+                showHeart ? createElement("span", { style: { color: heartColor, fontSize: "34px" } }, PREVIEW_HEART) : null,
                 createElement("span", { style: { fontSize: "42px" } }, lineTwo)
               )
             : isWedding
@@ -205,7 +206,7 @@ export async function GET(request: Request) {
                             lineHeight: 1,
                           },
                         },
-                        "♥"
+                        PREVIEW_HEART
                       )
                     : null,
                   lineTwo
@@ -237,7 +238,7 @@ export async function GET(request: Request) {
                       whiteSpace: "nowrap",
                     },
                   },
-                  designText || (showHeart ? "♥" : "")
+                  designText || (showHeart ? PREVIEW_HEART : "")
                 )
       ),
       showPinstripe && mode !== "pinstripe"

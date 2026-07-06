@@ -6,10 +6,13 @@ import {
   composeWeddingDesign,
   formatKgInput,
   formatNumberInput,
+  normalizeDesignTextComparisonKey,
   parseQuantityFromDescription,
   resolveOrderQuantity,
   splitWeddingOrderDesign,
 } from "./[id]/orderDetailCalculations";
+
+const LEGACY_HEART = "\u2665";
 
 describe("admin order detail calculations", () => {
   it("uses the red heart emoji for wedding design text", () => {
@@ -18,8 +21,17 @@ describe("admin order detail calculations", () => {
   });
 
   it("splits existing black-heart and red-heart wedding text", () => {
-    expect(splitWeddingOrderDesign("R ♥ S")).toEqual({ lineOne: "R", lineTwo: "S" });
+    expect(splitWeddingOrderDesign(`R ${LEGACY_HEART} S`)).toEqual({ lineOne: "R", lineTwo: "S" });
     expect(splitWeddingOrderDesign(`Rose ${WEDDING_HEART} Sam`)).toEqual({ lineOne: "Rose", lineTwo: "Sam" });
+  });
+
+  it("does not count black-heart to red-heart normalization as a design text change", () => {
+    expect(normalizeDesignTextComparisonKey(`PYMBLE ${LEGACY_HEART} 2026`)).toBe(
+      normalizeDesignTextComparisonKey(`PYMBLE ${WEDDING_HEART} 2026`),
+    );
+    expect(normalizeDesignTextComparisonKey(`PYMBLE ${LEGACY_HEART} 2026`)).not.toBe(
+      normalizeDesignTextComparisonKey(`PYMBLE ${WEDDING_HEART} 2027`),
+    );
   });
 
   it("resolves quantity from saved quantity unless the description has an explicit package count", () => {

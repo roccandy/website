@@ -20,6 +20,7 @@ import { PrintButton } from "./PrintButton";
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+const WEDDING_HEART = "❤️";
 
 type Params = {
   params?: { id?: string } | Promise<{ id?: string }>;
@@ -60,11 +61,10 @@ const renderCmyk = (cmyk: { c: number; m: number; y: number; k: number }) => (
 
 const normalizeHeart = (text: string) =>
   text
-    .replace(/&#x2665;|&#9829;|&hearts;|&heart;/gi, "\u2665")
-    .replace(/\u00E2\u009D\u00A4\u00EF\u00B8\u008F|\u00E2\u009D\u00A4|\u00E2\u0099\u00A5|\u0192T\u00BE/g, "\u2665")
-    .replace(/[\u2665\u2764]\ufe0f?/g, "\u2665")
-    .replace(/\ufe0f/g, "")
-    .replace(/\s*\u2665\s*/g, " \u2665 ");
+    .replace(/&#x2665;|&#9829;|&hearts;|&heart;/gi, WEDDING_HEART)
+    .replace(/\u00E2\u009D\u00A4\u00EF\u00B8\u008F|\u00E2\u009D\u00A4|\u00E2\u0099\u00A5|\u0192T\u00BE/g, WEDDING_HEART)
+    .replace(/[\u2665\u2764]\ufe0f?/g, WEDDING_HEART)
+    .replace(/\s*❤️\s*/g, ` ${WEDDING_HEART} `);
 
 const isImageUrl = (value: string) => {
   if (/^data:image\//i.test(value)) return true;
@@ -317,8 +317,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const logoDownloadName = logoDownloadNameForOrder(order);
 
   const designText = order.design_text ? normalizeHeart(order.design_text) : "";
-  const hasHeart = designText.includes("\u2665");
-  const [lineOne, lineTwo] = hasHeart ? designText.split("\u2665").map((part) => part.trim()) : ["", ""];
+  const hasHeart = designText.includes(WEDDING_HEART);
+  const [lineOne, lineTwo] = hasHeart ? designText.split(WEDDING_HEART).map((part) => part.trim()) : ["", ""];
   const isWeddingInitials = order.category_id === "weddings-initials";
   const isWedding = order.category_id?.startsWith("weddings");
   const jacketPreview = resolveCandyPreviewJacket(order);
