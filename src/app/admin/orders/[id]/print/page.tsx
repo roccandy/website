@@ -12,6 +12,7 @@ import {
   batchWeightsForOrder,
   formatPackagingOptionLabel,
   logoDownloadNameForOrder,
+  normalizeBatchWeightsForTotal,
 } from "@/app/admin/orders/productionScheduleShared";
 import { resolveCandyPreviewJacket } from "@/app/admin/orders/orderColorUtils";
 import { PrintButton } from "./PrintButton";
@@ -197,18 +198,6 @@ const groupBatchWeights = (weights: number[]) =>
     return groups;
   }, []);
 
-const normalizePrintBatchWeights = (weights: number[], totalWeightKg: number) => {
-  if (weights.length <= 1 || !Number.isFinite(totalWeightKg) || totalWeightKg <= 0) return weights;
-  const allocated = weights.reduce((sum, weight) => sum + weight, 0);
-  if (Math.abs(allocated - totalWeightKg) <= 0.02) return weights;
-
-  const base = Math.floor((totalWeightKg / weights.length) * 100) / 100;
-  const normalized = Array.from({ length: weights.length }, () => base);
-  const allocatedBeforeLast = normalized.slice(0, -1).reduce((sum, weight) => sum + weight, 0);
-  normalized[normalized.length - 1] = Math.round((totalWeightKg - allocatedBeforeLast) * 100) / 100;
-  return normalized;
-};
-
 const resolvePrintQuantity = ({
   quantity,
   totalWeightKg,
@@ -350,7 +339,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   const assignmentBatchWeights = (orderSlotRows ?? [])
     .map((slot) => Number(slot.kg_assigned))
     .filter((weight) => Number.isFinite(weight) && weight > 0);
-  const batchWeights = normalizePrintBatchWeights(
+  const batchWeights = normalizeBatchWeightsForTotal(
     explicitBatchWeights.length > 0
       ? explicitBatchWeights
       : assignmentBatchWeights.length > 0

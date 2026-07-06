@@ -13,6 +13,7 @@ import {
   formatScheduleStatusLabel,
   getMultiAssignmentScheduleStatus,
   logoDownloadNameForOrder,
+  normalizeBatchWeightsForTotal,
   productionCompletionActionLabel,
   statusBadge,
 } from "./productionScheduleShared";
@@ -176,6 +177,19 @@ describe("batch breakdown labels", () => {
     });
 
     expect(formatBatchBreakdown(order)).toBe("3 x 8kg + 1 x 6kg");
+  });
+
+  it("normalizes stale stored batch weights to the stored order total", () => {
+    const order = makeOrder({
+      total_weight_kg: 24.75,
+      admin_batch_weights_kg: [7.92, 7.92, 7.92],
+    });
+
+    expect(formatBatchBreakdown(order)).toBe("3 x 8.25kg");
+  });
+
+  it("can normalize stale stored batch weights to a recalculated packaging total", () => {
+    expect(normalizeBatchWeightsForTotal([7.92, 7.92, 7.92], 24.3)).toEqual([8.1, 8.1, 8.1]);
   });
 });
 

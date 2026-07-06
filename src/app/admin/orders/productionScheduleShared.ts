@@ -288,15 +288,46 @@ export const getScheduleStatus = (
   return "scheduled";
 };
 
-export const batchWeightsForOrder = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
-  const weights = Array.isArray(order.admin_batch_weights_kg)
-    ? order.admin_batch_weights_kg
+const KG_TOLERANCE = 0.02;
+
+const roundKgValue = (weight: number) => Math.round(weight * 100) / 100;
+
+export const splitTotalWeightAcrossBatchCount = (totalWeightKg: number, batchCount: number) => {
+  const total = roundKgValue(Number(totalWeightKg));
+  const count = Math.max(1, Math.floor(Number(batchCount)));
+  if (!Number.isFinite(total) || total <= 0) return [];
+  if (count <= 1) return [total];
+
+  const base = Math.floor((total / count) * 100) / 100;
+  const normalized = Array.from({ length: count }, () => base);
+  const allocatedBeforeLast = normalized.slice(0, -1).reduce((sum, weight) => sum + weight, 0);
+  normalized[normalized.length - 1] = roundKgValue(total - allocatedBeforeLast);
+  return normalized;
+};
+
+export const normalizeBatchWeightsForTotal = (
+  batchWeights: number[] | null | undefined,
+  totalWeightKg: number | null | undefined,
+) => {
+  const weights = Array.isArray(batchWeights)
+    ? batchWeights
         .map((weight) => Number(weight))
         .filter((weight) => Number.isFinite(weight) && weight > 0)
     : [];
-  if (weights.length > 0) return weights;
-  const total = Number(order.total_weight_kg);
-  return Number.isFinite(total) && total > 0 ? [total] : [];
+  const total = Number(totalWeightKg);
+  if (!Number.isFinite(total) || total <= 0) return weights.map(roundKgValue);
+  if (weights.length === 0) return [roundKgValue(total)];
+
+  const allocated = weights.reduce((sum, weight) => sum + weight, 0);
+  if (Math.abs(roundKgValue(allocated) - roundKgValue(total)) <= KG_TOLERANCE) {
+    return weights.map(roundKgValue);
+  }
+
+  return splitTotalWeightAcrossBatchCount(total, weights.length);
+};
+
+export const batchWeightsForOrder = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
+  return normalizeBatchWeightsForTotal(order.admin_batch_weights_kg, order.total_weight_kg);
 };
 
 const formatKgValue = (weight: number) => {
