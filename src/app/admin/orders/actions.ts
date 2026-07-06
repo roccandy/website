@@ -46,6 +46,15 @@ const INGREDIENT_LABELS_NOTE = "Ingredient labels requested.";
 const ORDER_SUFFIX_PATTERN = /-[a-z]+$/i;
 const toastRedirect = (base: string, tone: "success" | "error", message: string) =>
   `${base}?toast=${tone}&message=${encodeURIComponent(message)}`;
+const SCROLL_HASH_PREFIX = "scroll-y-";
+const appendOrderDetailScrollHash = (destination: string, orderId: string | undefined, scrollYRaw: string | null) => {
+  if (!orderId) return destination;
+  const detailPath = `/admin/orders/${orderId}`;
+  if (destination !== detailPath && !destination.startsWith(`${detailPath}?`)) return destination;
+  const scrollY = Math.round(Number(scrollYRaw));
+  if (!Number.isFinite(scrollY) || scrollY <= 0) return destination;
+  return `${destination.split("#")[0]}#${SCROLL_HASH_PREFIX}${scrollY}`;
+};
 const normalizeWeddingDesignText = (value: string | null) =>
   value
     ?.replace(/\s*[\u2665\u2764]\ufe0f?\s*/g, " ❤️ ")
@@ -184,6 +193,7 @@ async function upsertOrderShared(formData: FormData) {
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
   const redirectTo = formData.get("redirect_to")?.toString() || null;
+  const redirectScrollY = formData.get("redirect_scroll_y")?.toString() || null;
   const toastSuccess = formData.get("toast_success")?.toString() || null;
   const toastError = formData.get("toast_error")?.toString() || null;
   const sendUpdatedInvoice = formData.get("send_updated_invoice")?.toString() === "on";
@@ -901,7 +911,7 @@ async function upsertOrderShared(formData: FormData) {
     }
     if (redirectTo && toastError) {
       const params = new URLSearchParams({ toast: "error", message: toastError });
-      redirect(`${redirectTo}?${params.toString()}`);
+      redirect(appendOrderDetailScrollHash(`${redirectTo}?${params.toString()}`, id, redirectScrollY));
     }
     throw error;
   }
@@ -928,9 +938,9 @@ async function upsertOrderShared(formData: FormData) {
   const destination = postSaveRedirect ?? redirectTo ?? ORDERS_PATH;
   if (redirectTo && inlineMessage) {
     const params = new URLSearchParams({ toast: inlineTone, message: inlineMessage });
-    redirect(`${destination}?${params.toString()}`);
+    redirect(appendOrderDetailScrollHash(`${destination}?${params.toString()}`, id, redirectScrollY));
   }
-  redirect(destination);
+  redirect(appendOrderDetailScrollHash(destination, id, redirectScrollY));
 }
 
 export async function upsertOrder(formData: FormData) {

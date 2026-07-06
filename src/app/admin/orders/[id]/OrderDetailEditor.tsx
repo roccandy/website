@@ -521,6 +521,31 @@ export function OrderDetailEditor({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingLabelImage, setIsUploadingLabelImage] = useState(false);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const redirectScrollYInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const match = window.location.hash.match(/^#scroll-y-(\d+)$/);
+    if (!match) return;
+    const scrollY = Number(match[1]);
+    if (!Number.isFinite(scrollY) || scrollY <= 0) return;
+
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, behavior: "auto" });
+      secondFrame = window.requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: "auto" });
+      });
+    });
+
+    const currentUrl = new URL(window.location.href);
+    currentUrl.hash = "";
+    window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}`);
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
 
   const packagingById = useMemo(
     () => new Map(packagingOptions.map((option) => [option.id, option])),
@@ -1080,6 +1105,9 @@ export function OrderDetailEditor({
         if (sendUpdatedInvoiceInputRef.current) {
           sendUpdatedInvoiceInputRef.current.value = "";
         }
+        if (redirectScrollYInputRef.current) {
+          redirectScrollYInputRef.current.value = String(Math.max(0, Math.round(window.scrollY)));
+        }
         if (replacementInvoiceAllowed && priceAffectingChanged && invoiceChangeLines.length > 0) {
           const confirmed = window.confirm(
             [
@@ -1103,6 +1131,7 @@ export function OrderDetailEditor({
     >
       <input type="hidden" name="id" value={order.id} />
       <input type="hidden" name="redirect_to" value={`/admin/orders/${order.id}`} />
+      <input ref={redirectScrollYInputRef} type="hidden" name="redirect_scroll_y" defaultValue="" />
       <input type="hidden" name="toast_success" value="Order updated." />
       <input type="hidden" name="toast_error" value="Failed to update order." />
       <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
