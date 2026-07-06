@@ -24,7 +24,13 @@ import {
   selectValueForColor,
   type ColorFormat,
 } from "../orderColorUtils";
-import { formatDateInput, formatMoney, formatOrderDescription, splitCustomerName } from "../productionScheduleShared";
+import {
+  formatDateInput,
+  formatMoney,
+  formatOrderDescription,
+  resolveOrderPackagingQuantity,
+  splitCustomerName,
+} from "../productionScheduleShared";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { upsertOrder } from "../actions";
 import {
@@ -395,7 +401,7 @@ function buildInitialState(
 ): DetailState {
   const splitName = splitCustomerName(order.customer_name);
   const packagingOption = packagingOptions.find((option) => option.id === order.packaging_option_id) ?? null;
-  const quantity = resolveOrderQuantity(order);
+  const quantity = resolveOrderPackagingQuantity(order, packagingOption) ?? resolveOrderQuantity(order);
   const calculatedWeight = calculatePackagingWeightKg(packagingOption, quantity);
   const wedding = splitWeddingOrderDesign(order.design_text);
   const batchWeights =

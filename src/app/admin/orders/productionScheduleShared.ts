@@ -116,9 +116,45 @@ const packagingOrderDescription = (
   return quantityLabel ? `${quantityLabel} x ${packageLabel}` : packageLabel;
 };
 
+export const resolveOrderPackagingQuantity = (
+  order: Pick<OrderRow, "quantity" | "total_weight_kg" | "admin_batch_weights_kg">,
+  packagingOption?: Pick<PackagingOption, "candy_weight_g"> | null,
+) => {
+  const storedQuantity = Number(order.quantity);
+  if (!Number.isFinite(storedQuantity) || storedQuantity <= 0) return null;
+
+  const unitWeightG = Number(packagingOption?.candy_weight_g);
+  const totalWeightKg = Number(order.total_weight_kg);
+  if (!Number.isFinite(unitWeightG) || unitWeightG <= 0 || !Number.isFinite(totalWeightKg) || totalWeightKg <= 0) {
+    return storedQuantity;
+  }
+
+  const storedTotalWeightG = storedQuantity * unitWeightG;
+  if (!Number.isFinite(storedTotalWeightG) || storedTotalWeightG <= 0) return storedQuantity;
+
+  const totalWeightG = totalWeightKg * 1000;
+  const explicitBatchCount = Array.isArray(order.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg.filter((weight) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
+    : 0;
+  const weightRatio = totalWeightG / storedTotalWeightG;
+  const inferredBatchCount = Math.round(weightRatio);
+  const batchCount =
+    explicitBatchCount > 1
+      ? explicitBatchCount
+      : inferredBatchCount > 1 && Math.abs(weightRatio - inferredBatchCount) <= 0.03
+        ? inferredBatchCount
+        : 1;
+
+  if (batchCount <= 1) return storedQuantity;
+
+  const storedDiff = Math.abs(totalWeightG - storedTotalWeightG);
+  const expandedDiff = Math.abs(totalWeightG - storedTotalWeightG * batchCount);
+  return expandedDiff + 0.5 < storedDiff ? storedQuantity * batchCount : storedQuantity;
+};
+
 export const formatOrderDescription = (order: OrderRow, packagingOption?: PackagingOption | null) => {
   const description = order.order_description?.trim() ?? "";
-  const qty = formatQuantity(order.quantity);
+  const qty = formatQuantity(resolveOrderPackagingQuantity(order, packagingOption));
   const packagingDescription = packagingOrderDescription(packagingOption, qty);
   if (packagingDescription) return packagingDescription;
   if (!qty) return description;

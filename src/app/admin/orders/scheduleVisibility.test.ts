@@ -205,6 +205,38 @@ describe("order description labels", () => {
 
     expect(formatOrderDescription(order, packaging)).toBe("100 x 8-10pc Clear Bags");
   });
+
+  it("expands stored per-batch quantities to the full customer order quantity", () => {
+    const order = makeOrder({
+      quantity: 150,
+      total_weight_kg: 24.75,
+      admin_batch_weights_kg: [8.25, 8.25, 8.25],
+      order_description: "Zip Bag - 25 pc",
+    });
+    const packaging = {
+      type: "Zip Bag",
+      size: "25 pc",
+      candy_weight_g: 55,
+    } as PackagingOption;
+
+    expect(formatOrderDescription(order, packaging)).toBe("450 x 25 pc Zip Bags");
+  });
+
+  it("keeps the saved quantity when it already matches the full order weight", () => {
+    const order = makeOrder({
+      quantity: 450,
+      total_weight_kg: 24.75,
+      admin_batch_weights_kg: [8.25, 8.25, 8.25],
+      order_description: "Zip Bag - 25 pc",
+    });
+    const packaging = {
+      type: "Zip Bag",
+      size: "25 pc",
+      candy_weight_g: 55,
+    } as PackagingOption;
+
+    expect(formatOrderDescription(order, packaging)).toBe("450 x 25 pc Zip Bags");
+  });
 });
 
 describe("production calendar month cells", () => {
