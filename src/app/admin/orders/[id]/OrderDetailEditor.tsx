@@ -28,7 +28,7 @@ import {
   formatDateInput,
   formatMoney,
   formatOrderDescription,
-  normalizeBatchWeightsForTotal,
+  batchWeightsForOrder,
   resolveOrderPackagingQuantity,
   splitCustomerName,
 } from "../productionScheduleShared";
@@ -407,10 +407,10 @@ function buildInitialState(
   const quantity = resolveOrderPackagingQuantity(order, packagingOption) ?? resolveOrderQuantity(order);
   const calculatedWeight = calculatePackagingWeightKg(packagingOption, quantity);
   const wedding = splitWeddingOrderDesign(order.design_text);
-  const batchWeights = normalizeBatchWeightsForTotal(
-    order.admin_batch_weights_kg,
-    calculatedWeight ?? order.total_weight_kg,
-  ).map((weight) => formatKgInput(weight));
+  const batchWeights = batchWeightsForOrder({
+    admin_batch_weights_kg: order.admin_batch_weights_kg,
+    total_weight_kg: calculatedWeight ?? order.total_weight_kg,
+  }).map((weight) => formatKgInput(weight));
 
   return {
     title: order.title ?? "",

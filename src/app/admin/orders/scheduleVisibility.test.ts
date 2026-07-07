@@ -179,16 +179,16 @@ describe("batch breakdown labels", () => {
     expect(formatBatchBreakdown(order)).toBe("3 x 8kg + 1 x 6kg");
   });
 
-  it("normalizes stale stored batch weights to the stored order total", () => {
+  it("preserves explicit stored batch weights even when they do not match order total", () => {
     const order = makeOrder({
       total_weight_kg: 24.75,
       admin_batch_weights_kg: [7.92, 7.92, 7.92],
     });
 
-    expect(formatBatchBreakdown(order)).toBe("3 x 8.25kg");
+    expect(formatBatchBreakdown(order)).toBe("3 x 7.92kg");
   });
 
-  it("can normalize stale stored batch weights to a recalculated packaging total", () => {
+  it("can still normalize arbitrary batch weights to a requested total when explicitly asked", () => {
     expect(normalizeBatchWeightsForTotal([7.92, 7.92, 7.92], 24.3)).toEqual([8.1, 8.1, 8.1]);
   });
 });

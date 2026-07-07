@@ -328,7 +328,14 @@ export const normalizeBatchWeightsForTotal = (
 };
 
 export const batchWeightsForOrder = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
-  return normalizeBatchWeightsForTotal(order.admin_batch_weights_kg, order.total_weight_kg);
+  const explicitWeights = Array.isArray(order.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg
+        .map((weight) => Number(weight))
+        .filter((weight) => Number.isFinite(weight) && weight > 0)
+        .map(roundKgValue)
+    : [];
+  if (explicitWeights.length > 0) return explicitWeights;
+  return normalizeBatchWeightsForTotal(null, order.total_weight_kg);
 };
 
 const formatKgValue = (weight: number) => {
@@ -354,8 +361,13 @@ export const formatBatchBreakdown = (order: Pick<OrderRow, "admin_batch_weights_
 export const assignedKgForOrder = (assignments: OrderSlot[]) =>
   assignments.reduce((sum, assignment) => sum + Number(assignment.kg_assigned || 0), 0);
 
+export const productionKgForOrder = (order: Pick<OrderRow, "admin_batch_weights_kg" | "total_weight_kg">) => {
+  const total = batchWeightsForOrder(order).reduce((sum, weight) => sum + weight, 0);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
 export const remainingKgForOrder = (order: OrderRow, assignments: OrderSlot[]) => {
-  const total = Number(order.total_weight_kg);
+  const total = productionKgForOrder(order);
   if (!Number.isFinite(total) || total <= 0) return 0;
   return Math.max(0, total - assignedKgForOrder(assignments));
 };

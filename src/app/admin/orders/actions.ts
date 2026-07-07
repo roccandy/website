@@ -39,7 +39,7 @@ import {
   isAdminPremadeCategoryId,
   isAdminPremadeOrder,
 } from "@/lib/adminPremadeOrder";
-import { findFirstAvailableSlotIndexForDate } from "./productionScheduleShared";
+import { batchWeightsForOrder, findFirstAvailableSlotIndexForDate, productionKgForOrder } from "./productionScheduleShared";
 import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 
 const ORDERS_PATH = "/admin/orders";
@@ -58,6 +58,36 @@ const appendOrderDetailScrollHash = (destination: string, orderId: string | unde
   const scrollY = Math.round(Number(scrollYRaw));
   if (!Number.isFinite(scrollY) || scrollY <= 0) return destination;
   return `${destination.split("#")[0]}#${SCROLL_HASH_PREFIX}${scrollY}`;
+};
+
+const syncOrderSlotWeightsWithBatches = async (
+  client: typeof supabaseAdminClient,
+  orderId: string,
+  batchWeights: number[],
+) => {
+  const weights = batchWeights.filter((weight) => Number.isFinite(weight) && weight > 0);
+  if (weights.length === 0) return;
+
+  const { data: assignments, error } = await client
+    .from("order_slots")
+    .select("id,kg_assigned,created_at")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  if (!assignments?.length) return;
+
+  await Promise.all(
+    assignments.slice(0, weights.length).map(async (assignment, index) => {
+      const nextWeight = weights[index];
+      if (!Number.isFinite(nextWeight) || nextWeight <= 0) return;
+      if (Math.abs(Number(assignment.kg_assigned || 0) - nextWeight) <= 0.005) return;
+      const { error: updateError } = await client
+        .from("order_slots")
+        .update({ kg_assigned: nextWeight })
+        .eq("id", assignment.id);
+      if (updateError) throw new Error(updateError.message);
+    }),
+  );
 };
 const normalizeWeddingDesignText = (value: string | null) =>
   value
@@ -976,6 +1006,14 @@ async function upsertOrderShared(formData: FormData) {
     if (id) {
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
       if (error) throw new Error(error.message);
+      await syncOrderSlotWeightsWithBatches(
+        client,
+        id,
+        batchWeightsForOrder({
+          admin_batch_weights_kg: basePayload.admin_batch_weights_kg,
+          total_weight_kg: basePayload.total_weight_kg,
+        }),
+      );
       if (shouldReplaceSquareInvoice && existing?.square_invoice_id) {
         const idempotencySuffix = `replace-${Date.now()}`;
         const replacementPaymentMode: AdminSquareInvoicePaymentMode = isBankTransferSquareInvoicePaymentMethod(
@@ -2087,11 +2125,11 @@ export async function assignOrderToSlot(formData: FormData) {
 
     const { data: order, error: orderError } = await client
       .from("orders")
-      .select("id,order_number,title,customer_name,total_weight_kg")
+      .select("id,order_number,title,customer_name,total_weight_kg,admin_batch_weights_kg")
       .eq("id", order_id)
       .single();
     if (orderError) throw new Error(orderError.message);
-    const totalOrderKgRaw = Number(order.total_weight_kg);
+    const totalOrderKgRaw = productionKgForOrder(order);
     const totalOrderKg =
       Number.isFinite(totalOrderKgRaw) && totalOrderKgRaw > 0 ? totalOrderKgRaw : null;
     const kg_assigned =
