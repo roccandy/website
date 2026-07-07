@@ -10,6 +10,7 @@ import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
   analyzeImageOptimization,
   fileToDataUrl,
+  formatBytes,
   optimizeBrowserImageToDataUrl,
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
@@ -239,6 +240,11 @@ const formatInputNumber = (value: number | null | undefined, decimals = 2) => {
 
 const formatMoneyValue = (value: number | null | undefined) =>
   Number.isFinite(value ?? NaN) ? `$${Number(value).toFixed(2)}` : "$0.00";
+
+const formatCompactBytes = (bytes: number | null | undefined) =>
+  formatBytes(Number(bytes ?? 0)).replace(/\s+/g, "").toLowerCase();
+
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
 const normalizeDiscountType = (value: string | null | undefined): AdminDiscountType => {
   if (value === "percent" || value === "fixed") return value;
@@ -523,6 +529,9 @@ export function NewOrderForm({
   const [discountType, setDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialOrder?.admin_discount_type));
   const [discountValue, setDiscountValue] = useState(initialOrder?.admin_discount_value ? formatInputNumber(initialOrder.admin_discount_value) : "");
   const [priceOverride, setPriceOverride] = useState(initialOrder?.admin_price_override ? formatInputNumber(initialOrder.admin_price_override) : "");
+  const [invoiceDiscountType, setInvoiceDiscountType] = useState<AdminDiscountType>("none");
+  const [invoiceDiscountValue, setInvoiceDiscountValue] = useState("");
+  const [invoicePriceOverride, setInvoicePriceOverride] = useState("");
   const [quoteItems, setQuoteItems] = useState<Array<{ label: string; amount: number }>>([]);
   const [weddingLineOne, setWeddingLineOne] = useState(initialWeddingDesign.left);
   const [weddingLineTwo, setWeddingLineTwo] = useState(initialWeddingDesign.right);
@@ -657,7 +666,14 @@ export function NewOrderForm({
   }, [adminPremadeFlavor, adminPremadeMode, selectedAdminPremadeCandy]);
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const customPriceNumber = Number(priceValue);
+  const liveInvoiceTotal = invoiceOrderDrafts.reduce((sum, draft) => {
+    if (draft.id === activeInvoiceDraftId) {
+      return sum + (Number.isFinite(customPriceNumber) ? customPriceNumber : 0);
+    }
+    return sum + (draftNumber(draft.fields.total_price) ?? 0);
+  }, 0);
   const customWeightLabel = customOrderTotalWeightKg > 0 ? `${customOrderTotalWeightKg.toFixed(2)}kg` : "0.00kg";
+  const labelAttachmentSizeLabel = labelImageSummary ? formatCompactBytes(labelImageSummary.finalBytes) : "";
   const formatMoney = formatMoneyValue;
   const labelsNumber = Number(labelsCount);
   const resolvedLabelsCount =
@@ -1188,18 +1204,60 @@ export function NewOrderForm({
     });
   };
   const reviewDrafts = useMemo(() => (reviewMode ? invoiceOrderDrafts : []), [invoiceOrderDrafts, reviewMode]);
-  const reviewTotal = reviewDrafts.reduce((sum, draft) => {
+  const reviewSubtotal = reviewDrafts.reduce((sum, draft) => {
     const amount = draftNumber(draft.fields.total_price);
     return sum + (amount ?? 0);
   }, 0);
+  const invoiceDiscountNumber = Number(invoiceDiscountValue);
+  const invoicePriceOverrideNumber = Number(invoicePriceOverride);
+  const invoiceDiscountAmount =
+    invoiceDiscountType === "percent" && Number.isFinite(invoiceDiscountNumber) && invoiceDiscountNumber > 0
+      ? Math.min(reviewSubtotal, reviewSubtotal * (Math.min(invoiceDiscountNumber, 100) / 100))
+      : invoiceDiscountType === "fixed" && Number.isFinite(invoiceDiscountNumber) && invoiceDiscountNumber > 0
+        ? Math.min(reviewSubtotal, invoiceDiscountNumber)
+        : 0;
+  const reviewTotal =
+    Number.isFinite(invoicePriceOverrideNumber) && invoicePriceOverride.trim()
+      ? Math.max(reviewDrafts.length > 0 ? reviewDrafts.length / 100 : 0, roundCurrency(invoicePriceOverrideNumber))
+      : Math.max(reviewDrafts.length > 0 ? reviewDrafts.length / 100 : 0, roundCurrency(reviewSubtotal - invoiceDiscountAmount));
+  const adjustedReviewTotals = useMemo(() => {
+    const totals = new Map<string, string>();
+    if (reviewDrafts.length === 0) return totals;
+
+    const targetCents = Math.max(reviewDrafts.length, Math.round(reviewTotal * 100));
+    const originalCents = reviewDrafts.map((draft) => Math.max(0, Math.round((draftNumber(draft.fields.total_price) ?? 0) * 100)));
+    const subtotalCents = originalCents.reduce((sum, value) => sum + value, 0);
+    let remainingCents = targetCents;
+
+    reviewDrafts.forEach((draft, index) => {
+      const remainingDrafts = reviewDrafts.length - index - 1;
+      const minForRemaining = remainingDrafts;
+      const adjustedCents =
+        index === reviewDrafts.length - 1
+          ? remainingCents
+          : Math.min(
+              Math.max(1, subtotalCents > 0 ? Math.round((targetCents * originalCents[index]) / subtotalCents) : index === 0 ? targetCents : 1),
+              remainingCents - minForRemaining,
+            );
+      remainingCents -= adjustedCents;
+      totals.set(draft.id, (adjustedCents / 100).toFixed(2));
+    });
+
+    return totals;
+  }, [reviewDrafts, reviewTotal]);
   const reviewPayload = useMemo(
     () =>
       JSON.stringify(
-        reviewDrafts.map((draft) => {
+        reviewDrafts.map((draft, index) => {
           const draftCategoryId = draft.fields.category_id ?? "";
+          const adjustedTotal = adjustedReviewTotals.get(draft.id);
           return {
             fields: {
               ...draft.fields,
+              total_price: adjustedTotal ?? draft.fields.total_price ?? "",
+              admin_discount_type: index === 0 ? invoiceDiscountType : "none",
+              admin_discount_value: index === 0 && invoiceDiscountType !== "none" ? invoiceDiscountValue : "",
+              admin_price_override: index === 0 ? invoicePriceOverride : "",
               title:
                 orderTitleFromDetails({
                   categoryId: draftCategoryId,
@@ -1212,7 +1270,7 @@ export function NewOrderForm({
           };
         }),
       ),
-    [categories, reviewDrafts, sharedOrganizationName],
+    [adjustedReviewTotals, categories, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride, reviewDrafts, sharedOrganizationName],
   );
 
   useEffect(() => {
@@ -1811,12 +1869,66 @@ export function NewOrderForm({
               />
             </label>
           </div>
+          <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pricing adjustments</p>
+                <h4 className="admin-card-title text-zinc-900">Invoice pricing</h4>
+              </div>
+              <div className="text-right text-xs text-zinc-600">
+                <p>Subtotal: <span className="font-semibold text-zinc-900">{formatMoney(reviewSubtotal)}</span></p>
+                <p>Invoice total: <span className="font-semibold text-zinc-900">{formatMoney(reviewTotal)}</span></p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Discount
+                <select
+                  value={invoiceDiscountType}
+                  onChange={(event) => setInvoiceDiscountType(event.target.value as AdminDiscountType)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                >
+                  <option value="none">None</option>
+                  <option value="percent">Percent</option>
+                  <option value="fixed">Fixed $</option>
+                </select>
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Discount value
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={invoiceDiscountValue}
+                  disabled={invoiceDiscountType === "none"}
+                  onChange={(event) => setInvoiceDiscountValue(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-100 disabled:text-zinc-400"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Override invoice total
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={invoicePriceOverride}
+                  onChange={(event) => setInvoicePriceOverride(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+            </div>
+            {invoiceDiscountAmount > 0 || invoicePriceOverride.trim() ? (
+              <p className="mt-3 text-xs text-zinc-600">
+                Adjustment applied across the order lines sent to Square.
+              </p>
+            ) : null}
+          </div>
           <div className="mt-5 grid gap-3">
             {reviewDrafts.map((draft, index) => {
               const category = categories.find((item) => item.id === draft.fields.category_id);
               const packaging = packagingOptions.find((item) => item.id === draft.fields.packaging_option_id);
               const weightKg = draftNumber(draft.fields.order_weight_g) !== null ? Number(draft.fields.order_weight_g) / 1000 : null;
-              const total = draftNumber(draft.fields.total_price);
+              const total = draftNumber(adjustedReviewTotals.get(draft.id) ?? draft.fields.total_price);
               const title =
                 orderTitleFromDetails({
                   categoryId: draft.fields.category_id ?? "",
@@ -1877,10 +1989,14 @@ export function NewOrderForm({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-300">
-                {isAdminPremadeOrder ? "Premade stock batch" : "Order total"}
+                {isAdminPremadeOrder ? "Premade stock batch" : invoiceDraftMode ? "Invoice total" : "Order total"}
               </p>
               <p className="mt-1 text-3xl font-semibold">
-                {isAdminPremadeOrder ? "N/A" : formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}
+                {isAdminPremadeOrder
+                  ? "N/A"
+                  : invoiceDraftMode
+                    ? formatMoney(liveInvoiceTotal)
+                    : formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}
               </p>
             </div>
             {isAdminPremadeOrder ? (
@@ -1897,7 +2013,7 @@ export function NewOrderForm({
             ) : (
               <div className="grid flex-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Custom candy</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Order total</p>
                   <p className="mt-1 text-sm font-semibold">{formatMoney(Number.isFinite(customPriceNumber) ? customPriceNumber : 0)}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
@@ -2161,165 +2277,6 @@ export function NewOrderForm({
             )}
 
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Labels</p>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-zinc-200 bg-white p-3">
-                  <label className="flex items-start gap-3 text-sm text-zinc-700">
-                    <input
-                      type="checkbox"
-                      checked={customLabelsOptIn}
-                      onChange={(event) => setCustomLabelsOptIn(event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                    />
-                    <span>
-                      <span className="block font-semibold text-zinc-900">Custom labels</span>
-                    </span>
-                  </label>
-                  {customLabelsOptIn ? (
-                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Quantity
-                      <input
-                        type="number"
-                        name="labels_count"
-                        min={0}
-                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                        value={labelsCount}
-                        onChange={(event) => {
-                          if (!event.target.value.trim()) {
-                            setLabelsCount("");
-                            return;
-                          }
-                          const parsed = Number(event.target.value);
-                          setLabelsCount(
-                            Number.isFinite(parsed)
-                              ? String(
-                                  Math.min(
-                                    Math.max(0, Math.floor(parsed)),
-                                    settings.labels_max_bulk,
-                                    BULK_LABEL_COUNT_MAX,
-                                  )
-                                )
-                              : ""
-                          );
-                        }}
-                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-                <div className="rounded-lg border border-zinc-200 bg-white p-3">
-                  <label className="flex items-start gap-3 text-sm text-zinc-700">
-                    <input
-                      type="checkbox"
-                      checked={ingredientLabelsOptIn}
-                      onChange={(event) => setIngredientLabelsOptIn(event.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                    />
-                    <span>
-                      <span className="block font-semibold text-zinc-900">Ingredient labels</span>
-                      <span className="mt-0.5 block text-xs text-zinc-500">{`${formatMoney(ingredientLabelPrice)} each.`}</span>
-                    </span>
-                  </label>
-                  {ingredientLabelsOptIn ? (
-                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      Quantity
-                      <input
-                        type="number"
-                        min={0}
-                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
-                        value={ingredientLabelsCount}
-                        onChange={(event) => {
-                          if (!event.target.value.trim()) {
-                            setIngredientLabelsCount("");
-                            return;
-                          }
-                          const parsed = Number(event.target.value);
-                          const next = Number.isFinite(parsed)
-                            ? String(
-                                Math.min(
-                                  Math.max(0, Math.floor(parsed)),
-                                  settings.labels_max_bulk,
-                                  BULK_LABEL_COUNT_MAX,
-                                )
-                              )
-                            : "";
-                          setIngredientLabelsCount(next);
-                        }}
-                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-              </div>
-
-              {customLabelsOptIn ? (
-                <div className="mt-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  <label htmlFor="label-artwork-upload">Label artwork</label>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <input
-                      id="label-artwork-upload"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
-                      onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
-                      className="sr-only"
-                    />
-                    <label
-                      htmlFor="label-artwork-upload"
-                      className="inline-flex min-h-11 cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
-                    >
-                      {labelFileName ? "Change file" : "Choose file"}
-                    </label>
-                    {labelImageUrl ? (
-                      labelImageUrl.startsWith("data:image/") ? (
-                        <Image
-                          src={labelImageUrl}
-                          alt="Label preview"
-                          width={44}
-                          height={44}
-                          className="h-11 w-11 rounded border border-zinc-200 object-cover"
-                          unoptimized
-                        />
-                      ) : labelImageUrl.startsWith("data:application/pdf") ? (
-                        <span className="inline-flex h-11 min-w-11 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
-                          PDF
-                        </span>
-                      ) : null
-                    ) : null}
-                    {labelFileName ? (
-                      <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
-                        {labelFileName}
-                      </span>
-                    ) : null}
-                    {labelImageUrl ? (
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
-                        Ready
-                      </span>
-                    ) : null}
-                  </div>
-                  {labelImageError ? (
-                    <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
-                  ) : null}
-                  {isOptimisingLabelImage ? (
-                    <div className="mt-2">
-                      <ImageOptimizationStatus
-                        summary={null}
-                        pendingLabel="Optimising artwork..."
-                        helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                      />
-                    </div>
-                  ) : labelImageSummary ? (
-                    <div className="mt-2">
-                      <ImageOptimizationStatus
-                        summary={labelImageSummary}
-                        helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Production batches</p>
@@ -2420,67 +2377,216 @@ export function NewOrderForm({
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-white p-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pricing adjustments</p>
-              {isPricing || pricingError ? (
-                <p
-                  className={`mt-3 rounded-lg border px-3 py-2 text-xs font-semibold ${
-                    pricingError
-                      ? "border-amber-200 bg-amber-50 text-amber-800"
-                      : "border-zinc-200 bg-zinc-50 text-zinc-600"
-                  }`}
-                >
-                  {isPricing ? "Calculating price..." : pricingError}
-                </p>
-              ) : null}
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Discount
-                  <select
-                    value={discountType}
-                    onChange={(event) => setDiscountType(event.target.value as AdminDiscountType)}
-                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  >
-                    <option value="none">None</option>
-                    <option value="percent">Percent</option>
-                    <option value="fixed">Fixed $</option>
-                  </select>
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Discount value
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={discountValue}
-                    disabled={discountType === "none"}
-                    onChange={(event) => setDiscountValue(event.target.value)}
-                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
-                  />
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Override total
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={priceOverride}
-                    onChange={(event) => setPriceOverride(event.target.value)}
-                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Labels</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <label className="flex items-start gap-3 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={customLabelsOptIn}
+                      onChange={(event) => setCustomLabelsOptIn(event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                    />
+                    <span>
+                      <span className="block font-semibold text-zinc-900">Custom labels</span>
+                    </span>
+                  </label>
+                  {customLabelsOptIn ? (
+                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Quantity
+                      <input
+                        type="number"
+                        name="labels_count"
+                        min={0}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        value={labelsCount}
+                        onChange={(event) => {
+                          if (!event.target.value.trim()) {
+                            setLabelsCount("");
+                            return;
+                          }
+                          const parsed = Number(event.target.value);
+                          setLabelsCount(
+                            Number.isFinite(parsed)
+                              ? String(
+                                  Math.min(
+                                    Math.max(0, Math.floor(parsed)),
+                                    settings.labels_max_bulk,
+                                    BULK_LABEL_COUNT_MAX,
+                                  )
+                                )
+                              : "",
+                          );
+                        }}
+                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <label className="flex items-start gap-3 text-sm text-zinc-700">
+                    <input
+                      type="checkbox"
+                      checked={ingredientLabelsOptIn}
+                      onChange={(event) => setIngredientLabelsOptIn(event.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                    />
+                    <span>
+                      <span className="block font-semibold text-zinc-900">Ingredient labels</span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">{`${formatMoney(ingredientLabelPrice)} each.`}</span>
+                    </span>
+                  </label>
+                  {ingredientLabelsOptIn ? (
+                    <label className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-500">
+                      Quantity
+                      <input
+                        type="number"
+                        min={0}
+                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        value={ingredientLabelsCount}
+                        onChange={(event) => {
+                          if (!event.target.value.trim()) {
+                            setIngredientLabelsCount("");
+                            return;
+                          }
+                          const parsed = Number(event.target.value);
+                          const next = Number.isFinite(parsed)
+                            ? String(
+                                Math.min(
+                                  Math.max(0, Math.floor(parsed)),
+                                  settings.labels_max_bulk,
+                                  BULK_LABEL_COUNT_MAX,
+                                )
+                              )
+                            : "";
+                          setIngredientLabelsCount(next);
+                        }}
+                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  ) : null}
+                </div>
               </div>
-              {quoteItems.length > 0 ? (
-                <div className="mt-4 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2">
-                  {quoteItems.map((item) => (
-                    <div key={item.label} className="flex justify-between gap-3 rounded border border-zinc-100 bg-zinc-50 px-2 py-1">
-                      <span>{item.label}</span>
-                      <span className="font-semibold text-zinc-900">{formatMoney(item.amount)}</span>
-                    </div>
-                  ))}
+
+              {customLabelsOptIn ? (
+                <div className="mt-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  <label htmlFor="label-artwork-upload">Label artwork</label>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      id="label-artwork-upload"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                      onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="label-artwork-upload"
+                      className="inline-flex min-h-11 cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+                    >
+                      {labelFileName ? "Change file" : "Choose file"}
+                    </label>
+                    {labelImageUrl ? (
+                      labelImageUrl.startsWith("data:image/") ? (
+                        <Image
+                          src={labelImageUrl}
+                          alt="Label preview"
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 rounded border border-zinc-200 object-cover"
+                          unoptimized
+                        />
+                      ) : labelImageUrl.startsWith("data:application/pdf") ? (
+                        <span className="inline-flex h-11 min-w-11 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
+                          PDF
+                        </span>
+                      ) : null
+                    ) : null}
+                    {labelFileName ? (
+                      <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
+                        {labelFileName}
+                        {labelAttachmentSizeLabel ? ` (${labelAttachmentSizeLabel})` : ""}
+                      </span>
+                    ) : null}
+                    {labelImageUrl ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
+                        Ready
+                      </span>
+                    ) : null}
+                  </div>
+                  {labelImageError ? (
+                    <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
+                  ) : null}
+                  {isOptimisingLabelImage ? (
+                    <p className="mt-2 text-xs font-semibold normal-case tracking-normal text-zinc-600">Optimising artwork...</p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
+
+            {!invoiceDraftMode ? (
+              <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pricing adjustments</p>
+                {isPricing || pricingError ? (
+                  <p
+                    className={`mt-3 rounded-lg border px-3 py-2 text-xs font-semibold ${
+                      pricingError
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-600"
+                    }`}
+                  >
+                    {isPricing ? "Calculating price..." : pricingError}
+                  </p>
+                ) : null}
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Discount
+                    <select
+                      value={discountType}
+                      onChange={(event) => setDiscountType(event.target.value as AdminDiscountType)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="none">None</option>
+                      <option value="percent">Percent</option>
+                      <option value="fixed">Fixed $</option>
+                    </select>
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Discount value
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={discountValue}
+                      disabled={discountType === "none"}
+                      onChange={(event) => setDiscountValue(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                    />
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Override total
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={priceOverride}
+                      onChange={(event) => setPriceOverride(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                </div>
+                {quoteItems.length > 0 ? (
+                  <div className="mt-4 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2">
+                    {quoteItems.map((item) => (
+                      <div key={item.label} className="flex justify-between gap-3 rounded border border-zinc-100 bg-zinc-50 px-2 py-1">
+                        <span>{item.label}</span>
+                        <span className="font-semibold text-zinc-900">{formatMoney(item.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -49,7 +49,6 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
           <h2 className="admin-page-title">Create order</h2>
-          <p className="text-sm text-zinc-600">Add an order manually for email or phone requests.</p>
         </div>
         <Link
           href="/admin/orders"
