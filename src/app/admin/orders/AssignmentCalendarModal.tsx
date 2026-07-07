@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
+import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actions";
 import SplitOrderDecisionModal from "./SplitOrderDecisionModal";
 import {
@@ -91,6 +92,7 @@ export default function AssignmentCalendarModal({
   onPickSlot,
 }: Props) {
   const router = useRouter();
+  const isAdminPremade = isAdminPremadeOrder(order);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     if (assignment?.slot?.slot_date) {
       return new Date(`${assignment.slot.slot_date}T00:00:00`);
@@ -282,7 +284,9 @@ export default function AssignmentCalendarModal({
                     return;
                   }
                   const confirmed = window.confirm(
-                    `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`,
+                    isAdminPremade
+                      ? "Confirm this premade batch is made? It will move out of the production schedule."
+                      : `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`,
                   );
                   if (!confirmed) return;
                   completeOrder(false);

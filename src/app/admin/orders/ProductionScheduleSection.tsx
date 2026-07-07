@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
+import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { archiveOrderInline, assignOrderToSlot, upsertProductionDayNote } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
@@ -382,6 +383,7 @@ export default function ProductionScheduleSection({
                         const slotKey = `${key}:${slotIndex}`;
                         const assignment = assignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
+                        const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
                         const printTarget = order?.id ?? order?.order_number;
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
@@ -532,7 +534,11 @@ export default function ProductionScheduleSection({
                                             hiddenFields={[{ name: "order_id", value: order.id }]}
                                             buttonLabel={productionCompletionActionLabel(order)}
                                             buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                            confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                            confirmMessage={
+                                              isAdminPremade
+                                                ? "Confirm this premade batch is made? It will move out of the production schedule."
+                                                : `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                            }
                                             companionMeta={premadeSiblingMeta}
                                           />
                                         ) : (
@@ -610,6 +616,7 @@ export default function ProductionScheduleSection({
                         const slotKey = `${key}:${slotIndex}`;
                         const assignment = assignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
+                        const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
                         const printTarget = order?.id ?? order?.order_number;
                         const title =
                           order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
@@ -693,7 +700,7 @@ export default function ProductionScheduleSection({
                                           <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
                                         ) : null}
                                       </span>
-                                      <span>{order.pickup ? "Pickup" : "Delivery"}</span>
+                                      <span>{isAdminPremade ? "Premade" : order.pickup ? "Pickup" : "Delivery"}</span>
                                     </div>
                                   </div>
                                   <div className="flex w-[9.5rem] shrink-0 flex-col items-stretch gap-1">
@@ -713,7 +720,11 @@ export default function ProductionScheduleSection({
                                         hiddenFields={[{ name: "order_id", value: order.id }]}
                                         buttonLabel={productionCompletionActionLabel(order)}
                                         buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                        confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                        confirmMessage={
+                                          isAdminPremade
+                                            ? "Confirm this premade batch is made? It will move out of the production schedule."
+                                            : `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                        }
                                         companionMeta={premadeSiblingMeta}
                                       />
                                     ) : (

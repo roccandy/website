@@ -1,4 +1,5 @@
 import type { OrderRow, OrderSlot, PackagingOption, ProductionBlock, ProductionSlot, SettingsRow } from "@/lib/data";
+import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 
 export const formatDate = (iso: string | null) => {
@@ -452,23 +453,31 @@ export const canCompleteOrderForSlotDates = (order: OrderRow, slotDates: string[
   return validDates.every((slotDate) => slotDate <= today);
 };
 
-export const completionActionLabel = (order: OrderRow) =>
-  order.status === "archived" || order.status === "shipped"
+export const completionActionLabel = (order: OrderRow) => {
+  if (isAdminPremadeOrder(order)) {
+    return order.status === "archived" || order.status === "shipped" ? "Made" : "Mark as made";
+  }
+  return order.status === "archived" || order.status === "shipped"
     ? order.pickup
       ? "Collected"
       : "Shipped"
     : order.pickup
       ? "Mark as collected"
       : "Mark as shipped";
+};
 
-export const productionCompletionActionLabel = (order: OrderRow) =>
-  order.status === "archived" || order.status === "shipped"
+export const productionCompletionActionLabel = (order: OrderRow) => {
+  if (isAdminPremadeOrder(order)) {
+    return order.status === "archived" || order.status === "shipped" ? "Made" : "Mark as made";
+  }
+  return order.status === "archived" || order.status === "shipped"
     ? order.pickup
       ? "Collected"
       : "Shipped"
     : order.pickup
       ? "Mark as collected"
       : "Mark as shipped";
+};
 
 const sanitizeFocusKey = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 

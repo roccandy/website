@@ -27,6 +27,7 @@ import type {
 } from "@/lib/data";
 import {
   ADMIN_PREMADE_CATEGORY_ID,
+  ADMIN_PREMADE_ORDER_LABEL,
   ADMIN_PREMADE_ORDER_MARKER,
   isAdminPremadeOrder as isAdminPremadeOrderRow,
 } from "@/lib/adminPremadeOrder";
@@ -226,8 +227,7 @@ function formatPremadeWeight(weightG: number) {
 
 function formatPremadeLabel(item: PremadeCandy) {
   const weightLabel = formatPremadeWeight(Number(item.weight_g));
-  const priceLabel = Number.isFinite(item.price) ? `$${Number(item.price).toFixed(2)}` : "";
-  const parts = [item.name, weightLabel, priceLabel].filter(Boolean);
+  const parts = [item.name, weightLabel].filter(Boolean);
   return parts.join(" - ");
 }
 
@@ -395,6 +395,8 @@ type InvoiceOrderDraft = {
   batchWeights: string[];
 };
 
+type AdminPremadeMode = "" | "premade" | "custom";
+
 const SHARED_INVOICE_FIELD_NAMES = new Set([
   "first_name",
   "last_name",
@@ -427,6 +429,12 @@ const draftValue = (draft: InvoiceOrderDraft | null | undefined, name: string, f
 const draftNumber = (value: string | null | undefined) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalizeAdminPremadeMode = (value: string | null | undefined): AdminPremadeMode => {
+  if (value === "premade") return "premade";
+  if (value === "custom" || value === "flavor") return "custom";
+  return "";
 };
 
 const draftHasBatchWeightMismatch = (draft: InvoiceOrderDraft) => {
@@ -563,10 +571,17 @@ export function NewOrderForm({
   const [labelImageError, setLabelImageError] = useState<string | null>(null);
   const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
-  const [adminPremadeMode, setAdminPremadeMode] = useState<"" | "flavor" | "premade">(
-    initialIsAdminPremade ? "flavor" : "",
+  const [adminPremadeMode, setAdminPremadeMode] = useState<AdminPremadeMode>(
+    initialIsAdminPremade ? "custom" : "",
   );
-  const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? initialOrder?.design_text ?? "" : "");
+  const [adminPremadeCustomName, setAdminPremadeCustomName] = useState(
+    initialIsAdminPremade
+      ? initialOrder?.design_text?.trim() ||
+        initialOrder?.title?.replace(/^premade stock\s*-\s*/i, "").trim() ||
+        ""
+      : "",
+  );
+  const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? "" : "");
   const [adminPremadeCandyId, setAdminPremadeCandyId] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
@@ -661,10 +676,17 @@ export function NewOrderForm({
     [adminPremadeCandyId, premadeOptions],
   );
   const adminPremadeSelectionLabel = useMemo(() => {
-    if (adminPremadeMode === "flavor") return adminPremadeFlavor.trim();
+    if (adminPremadeMode === "custom") return adminPremadeCustomName.trim();
     if (adminPremadeMode === "premade") return selectedAdminPremadeCandy?.name?.trim() ?? "";
     return "";
-  }, [adminPremadeFlavor, adminPremadeMode, selectedAdminPremadeCandy]);
+  }, [adminPremadeCustomName, adminPremadeMode, selectedAdminPremadeCandy]);
+  const adminPremadeWeightKg = Number(weightValue);
+  const isAdminPremadeReady =
+    !isAdminPremadeOrder ||
+    (Number.isFinite(adminPremadeWeightKg) &&
+      adminPremadeWeightKg > 0 &&
+      Boolean(adminPremadeSelectionLabel) &&
+      Boolean(adminPremadeFlavor.trim()));
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
   const customPriceNumber = Number(priceValue);
   const liveInvoiceTotal = invoiceOrderDrafts.reduce((sum, draft) => {
@@ -730,7 +752,7 @@ export function NewOrderForm({
       jacket_color_two: null,
       text_color: null,
       heart_color: null,
-      flavor: adminPremadeMode === "flavor" ? adminPremadeFlavor.trim() || null : null,
+      flavor: adminPremadeFlavor.trim() || null,
       payment_method: null,
       logo_url: null,
       label_image_url: null,
@@ -784,7 +806,7 @@ export function NewOrderForm({
       shipped_at: null,
       created_at: new Date().toISOString(),
     };
-  }, [adminPremadeFlavor, adminPremadeMode, adminPremadeSelectionLabel, productionSlotDate, weightValue]);
+  }, [adminPremadeFlavor, adminPremadeSelectionLabel, productionSlotDate, weightValue]);
   const showJacketColorTwo = jacket === "two_colour" || jacket === "two_colour_pinstripe";
   const previewJacketMode =
     jacket === "rainbow"
@@ -814,16 +836,17 @@ export function NewOrderForm({
     if (isBranded) return (sharedOrganizationName || "").trim();
     return (designText || "").trim();
   }, [customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, sharedOrganizationName, weddingLineOne, weddingLineTwo]);
-  const derivedOrderTitle = useMemo(
-    () =>
-      orderTitleFromDetails({
-        categoryId,
-        designText: designTextValue,
-        organizationName: sharedOrganizationName,
-        fallback: categories.find((category) => category.id === categoryId)?.name ?? "Custom candy order",
-      }),
-    [categories, categoryId, designTextValue, sharedOrganizationName],
-  );
+  const derivedOrderTitle = useMemo(() => {
+    if (isAdminPremadeOrder) {
+      return adminPremadeSelectionLabel ? `Premade stock - ${adminPremadeSelectionLabel}` : "Premade stock";
+    }
+    return orderTitleFromDetails({
+      categoryId,
+      designText: designTextValue,
+      organizationName: sharedOrganizationName,
+      fallback: categories.find((category) => category.id === categoryId)?.name ?? "Custom candy order",
+    });
+  }, [adminPremadeSelectionLabel, categories, categoryId, designTextValue, isAdminPremadeOrder, sharedOrganizationName]);
   const jacketTypeValue = useMemo(() => {
     if (jacket === "rainbow") return "rainbow";
     if (jacket === "two_colour" || jacket === "two_colour_pinstripe") return "two_colour";
@@ -1039,11 +1062,12 @@ export function NewOrderForm({
         jacket_color_two: isAdminPremadeOrder ? "" : jacketColorTwo,
         text_color: !isBranded && !isAdminPremadeOrder ? textColor : "",
         heart_color: isWedding && !isAdminPremadeOrder ? heartColor : "",
-        flavor,
+        flavor: isAdminPremadeOrder ? adminPremadeFlavor : flavor,
         logo_url: isBranded && !isAdminPremadeOrder ? logoUrl : "",
         label_image_url: !isAdminPremadeOrder && customLabelsOptIn ? labelImageUrl : "",
         admin_premade_mode: adminPremadeMode,
         admin_premade_candy_id: adminPremadeCandyId,
+        admin_premade_custom_name: adminPremadeCustomName,
         production_slot_date: productionSlotDate,
       },
       batchWeights: isAdminPremadeOrder ? [] : draftBatchWeights.length > 0 ? draftBatchWeights : batchWeights,
@@ -1097,8 +1121,10 @@ export function NewOrderForm({
     setLabelImageUrl(fields.label_image_url ?? "");
     setLabelImageError(null);
     setLabelImageSummary(null);
-    setAdminPremadeMode((fields.admin_premade_mode as "" | "flavor" | "premade") || "");
+    setAdminPremadeMode(normalizeAdminPremadeMode(fields.admin_premade_mode));
     setAdminPremadeCandyId(fields.admin_premade_candy_id ?? "");
+    setAdminPremadeCustomName(fields.admin_premade_custom_name || fields.design_text || "");
+    setAdminPremadeFlavor(nextCategoryId === ADMIN_PREMADE_CATEGORY_ID ? fields.flavor ?? "" : "");
     setProductionSlotDate(fields.production_slot_date ?? "");
     previousPackagingOptionIdRef.current = fields.packaging_option_id ?? null;
     preserveInitialBatchWeightsRef.current = draft.batchWeights.length > 0;
@@ -1525,11 +1551,13 @@ export function NewOrderForm({
           <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-xl">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
             <p className="mt-4 text-lg font-semibold text-zinc-900">
-              {isEditMode ? "Saving order" : "Creating invoice draft"}
+              {isEditMode ? "Saving order" : isAdminPremadeOrder ? "Saving premade order" : "Creating invoice draft"}
             </p>
             <p className="mt-2 text-sm text-zinc-600">
               {isEditMode
                 ? "Please wait while the order details and invoice records are updated."
+                : isAdminPremadeOrder
+                  ? "Please wait while the premade batch placeholder is saved."
                 : "Please wait while the order is saved and Square prepares the draft invoice."}
             </p>
           </div>
@@ -2005,7 +2033,7 @@ export function NewOrderForm({
               <div className="grid flex-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">What gets saved</p>
-                  <p className="mt-1 text-sm text-zinc-100">Selected flavour or premade item and stock weight only.</p>
+                  <p className="mt-1 text-sm text-zinc-100">Stock item, batch flavour, and stock weight only.</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-300">Other order fields</p>
@@ -2070,11 +2098,23 @@ export function NewOrderForm({
                   </button>
                 );
               })}
+              <button
+                key={ADMIN_PREMADE_CATEGORY_ID}
+                type="button"
+                onClick={() => setCategoryId(ADMIN_PREMADE_CATEGORY_ID)}
+                className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold normal-case tracking-normal transition ${
+                  isAdminPremadeOrder
+                    ? "border-zinc-900 bg-zinc-900 text-white"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+                }`}
+              >
+                {ADMIN_PREMADE_ORDER_LABEL}
+              </button>
             </div>
           </div>
           {isAdminPremadeOrder ? (
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              Total weight (kg)
+              Batch weight (kg)
               <input
                 type="number"
                 name="total_weight_kg"
@@ -2090,26 +2130,26 @@ export function NewOrderForm({
           {isAdminPremadeOrder ? (
             <>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Premade order type
+                Stock item
                 <select
                   name="admin_premade_mode"
                   value={adminPremadeMode}
                   required
                   onChange={(event) => {
-                    const next = event.target.value as "" | "flavor" | "premade";
+                    const next = normalizeAdminPremadeMode(event.target.value);
                     setAdminPremadeMode(next);
-                    if (next !== "flavor") setAdminPremadeFlavor("");
                     if (next !== "premade") setAdminPremadeCandyId("");
+                    if (next !== "custom") setAdminPremadeCustomName("");
                   }}
                   className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 >
-                  <option value="">Select order type</option>
-                  <option value="flavor">Flavor</option>
-                  <option value="premade">Pre-made</option>
+                  <option value="">Select stock item</option>
+                  <option value="premade">Premade candy</option>
+                  <option value="custom">Custom candy name</option>
                 </select>
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                {adminPremadeMode === "premade" ? "Pre-made candy" : "Candy flavor"}
+                {adminPremadeMode === "premade" ? "Premade candy" : "Custom candy name"}
                 {adminPremadeMode === "premade" ? (
                   <select
                     name="admin_premade_candy_id"
@@ -2118,7 +2158,7 @@ export function NewOrderForm({
                     onChange={(event) => setAdminPremadeCandyId(event.target.value)}
                     className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   >
-                    <option value="">Select pre-made candy</option>
+                    <option value="">Select premade candy</option>
                     {premadeOptions.map((item) => (
                       <option key={item.id} value={item.id}>
                         {formatPremadeLabel(item)}
@@ -2126,24 +2166,33 @@ export function NewOrderForm({
                     ))}
                   </select>
                 ) : (
-                  <select
-                    name="flavor"
-                    value={adminPremadeFlavor}
-                    required={adminPremadeMode === "flavor"}
-                    disabled={adminPremadeMode !== "flavor"}
-                    onChange={(event) => setAdminPremadeFlavor(event.target.value)}
+                  <input
+                    name="admin_premade_custom_name"
+                    value={adminPremadeCustomName}
+                    required={adminPremadeMode === "custom"}
+                    disabled={adminPremadeMode !== "custom"}
+                    onChange={(event) => setAdminPremadeCustomName(event.target.value)}
+                    placeholder={adminPremadeMode === "custom" ? "e.g. Watermelon mix" : "Select stock item first"}
                     className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
-                  >
-                    <option value="">
-                      {adminPremadeMode === "flavor" ? "Select flavor" : "Select order type first"}
-                    </option>
-                    {flavors.map((item) => (
-                      <option key={item.id} value={item.name}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 )}
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Batch flavour
+                <select
+                  name="flavor"
+                  value={adminPremadeFlavor}
+                  required
+                  onChange={(event) => setAdminPremadeFlavor(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                >
+                  <option value="">Select flavour</option>
+                  {flavors.map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               <div className="md:col-span-2">
                 <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -3104,7 +3153,8 @@ export function NewOrderForm({
               setSubmitAfterCalendarPick(false);
               setProductionSlotPickerOpen(true);
             }}
-            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
+            disabled={isSubmittingOrder || !isAdminPremadeReady}
+            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
           >
             Add to Calendar
           </button>
@@ -3132,7 +3182,7 @@ export function NewOrderForm({
             type="submit"
             name="submit_intent"
             value={invoiceDraftMode && !isAdminPremadeOrder ? "create_tabbed_invoice" : "save"}
-            disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchWeightsValid || Boolean(pricingError)))}
+            disabled={isSubmittingOrder || (isAdminPremadeOrder ? !isAdminPremadeReady : !batchWeightsValid || Boolean(pricingError))}
             className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
           >
             {isSubmittingOrder

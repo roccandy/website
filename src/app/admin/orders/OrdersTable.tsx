@@ -334,7 +334,7 @@ export function OrdersTable({
                       <PackagingDescription value={packagingDescription} />
                     </td>
                     <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
-                    <td className="px-3 py-2 text-zinc-700">{order.pickup ? "Pickup" : "Delivery"}</td>
+                    <td className="px-3 py-2 text-zinc-700">{isAdminPremade ? "-" : order.pickup ? "Pickup" : "Delivery"}</td>
                     <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>
                   </tr>
                   {selectedId === order.id ? (
@@ -384,7 +384,11 @@ export function OrdersTable({
                                   hiddenFields={[{ name: "order_id", value: order.id }]}
                                   buttonLabel={productionCompletionActionLabel(order)}
                                   buttonClassName="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                  confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`}
+                                  confirmMessage={
+                                    isAdminPremade
+                                      ? "Confirm this premade batch is made? It will move out of the production schedule."
+                                      : `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
+                                  }
                                   companionMeta={premadeSiblingMeta}
                                 />
                               ) : null}
@@ -421,12 +425,14 @@ export function OrdersTable({
                             <DetailField label="Email">{order.customer_email || "-"}</DetailField>
                             <DetailField label="Phone">{order.phone || "-"}</DetailField>
                             <DetailField label="Organisation">{order.organization_name || "-"}</DetailField>
-                            <DetailField label={order.pickup ? "Pickup" : "Delivery"} className="xl:col-span-2">
-                              {order.pickup
-                                ? "Pickup"
-                                : [order.address_line1, order.address_line2, order.suburb, order.state, order.postcode]
-                                    .filter(Boolean)
-                                    .join(", ") || "Delivery"}
+                            <DetailField label={isAdminPremade ? "Fulfilment" : order.pickup ? "Pickup" : "Delivery"} className="xl:col-span-2">
+                              {isAdminPremade
+                                ? "-"
+                                : order.pickup
+                                  ? "Pickup"
+                                  : [order.address_line1, order.address_line2, order.suburb, order.state, order.postcode]
+                                      .filter(Boolean)
+                                      .join(", ") || "Delivery"}
                             </DetailField>
                           </dl>
 

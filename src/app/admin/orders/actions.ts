@@ -589,7 +589,14 @@ async function upsertOrderShared(formData: FormData) {
   const design_text_raw = formData.get("design_text")?.toString() || null;
   const design_text = design_text_raw?.trim() || null;
   const adminPremadeModeRaw = formData.get("admin_premade_mode")?.toString() || null;
-  const adminPremadeMode = adminPremadeModeRaw?.trim() || null;
+  const adminPremadeMode =
+    adminPremadeModeRaw === "premade"
+      ? "premade"
+      : adminPremadeModeRaw === "custom" || adminPremadeModeRaw === "flavor"
+        ? "custom"
+        : null;
+  const adminPremadeCandyId = formData.get("admin_premade_candy_id")?.toString().trim() || null;
+  const adminPremadeCustomName = formData.get("admin_premade_custom_name")?.toString().trim() || null;
   const jacket_type_raw = formData.get("jacket_type")?.toString() || null;
   const jacket_type = jacket_type_raw?.trim() || null;
   const jacket_color_one = formData.get("jacket_color_one")?.toString() || null;
@@ -669,6 +676,7 @@ async function upsertOrderShared(formData: FormData) {
   let inlineMessage = toastSuccess ?? "Order Updated";
   const resolvedCategoryId = category_id ?? existing?.category_id ?? null;
   const isAdminPremade =
+    isAdminPremadeCategoryId(category_id_raw) ||
     isAdminPremadeOrder(existing) ||
     isAdminPremadeOrder({
       category_id: category_id_raw,
@@ -841,18 +849,32 @@ async function upsertOrderShared(formData: FormData) {
     const existingFlavor = existing?.flavor?.trim() || null;
     const existingDesignText = existing?.design_text?.trim() || null;
     const resolvedFlavor = submittedFlavor || existingFlavor || null;
+    let resolvedAdminPremadeCandyName: string | null = null;
+    if (isAdminPremade && adminPremadeMode === "premade" && adminPremadeCandyId) {
+      const { data: premadeCandy, error: premadeCandyError } = await client
+        .from("premade_candies")
+        .select("name")
+        .eq("id", adminPremadeCandyId)
+        .maybeSingle();
+      if (premadeCandyError) throw new Error(premadeCandyError.message);
+      resolvedAdminPremadeCandyName = premadeCandy?.name?.trim() || null;
+      if (!resolvedAdminPremadeCandyName) {
+        throw new Error("Selected premade candy is unavailable.");
+      }
+    }
     const resolvedAdminPremadeSelection = isAdminPremade
       ? adminPremadeMode === "premade"
-        ? resolvedDesignText ?? existingDesignText ?? null
-        : submittedFlavor ?? resolvedDesignText ?? existingFlavor ?? existingDesignText ?? null
+        ? resolvedAdminPremadeCandyName ?? resolvedDesignText ?? existingDesignText ?? null
+        : adminPremadeCustomName ?? resolvedDesignText ?? existingDesignText ?? null
       : null;
     const resolvedAdminPremadeFlavor = isAdminPremade
-      ? adminPremadeMode === "premade"
-        ? null
-        : submittedFlavor ?? existingFlavor ?? null
+      ? submittedFlavor ?? existingFlavor ?? null
       : resolvedFlavor;
     if (isAdminPremade && !resolvedAdminPremadeSelection) {
-      throw new Error("A flavor or pre-made candy is required for premade stock orders.");
+      throw new Error("A stock item is required for premade stock orders.");
+    }
+    if (isAdminPremade && !resolvedAdminPremadeFlavor) {
+      throw new Error("A batch flavour is required for premade stock orders.");
     }
     if (isAdminPremade && shouldScheduleAfterCreate && !productionSlotDate) {
       throw new Error("Production date is required to slot this premade order.");
@@ -917,7 +939,7 @@ async function upsertOrderShared(formData: FormData) {
       admin_price_override: isAdminPremade
         ? null
         : adminPricing?.priceOverride ?? (hasPriceOverrideControl ? admin_price_override : existing?.admin_price_override ?? null),
-      status: isAdminPremade ? "unassigned" : status ?? existing?.status ?? "pending",
+      status: isAdminPremade ? status ?? existing?.status ?? "unassigned" : status ?? existing?.status ?? "pending",
       payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
       pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,
       state: isAdminPremade ? null : state ?? existing?.state ?? null,
@@ -1076,15 +1098,16 @@ async function upsertOrderShared(formData: FormData) {
         const candidate = {
           ...basePayload,
           order_number: orderNumbers.customOrderNumber,
-          square_invoice_title:
-            basePayload.square_invoice_title ??
-            defaultAdminSquareInvoiceTitle({
-              id: "pending",
-              order_number: orderNumbers.customOrderNumber,
-              title: basePayload.title,
-              organization_name: basePayload.organization_name,
-              customer_name: basePayload.customer_name,
-            }),
+          square_invoice_title: isAdminPremade
+            ? null
+            : basePayload.square_invoice_title ??
+              defaultAdminSquareInvoiceTitle({
+                id: "pending",
+                order_number: orderNumbers.customOrderNumber,
+                title: basePayload.title,
+                organization_name: basePayload.organization_name,
+                customer_name: basePayload.customer_name,
+              }),
         };
         const { data, error } = await client.from("orders").insert(candidate).select("id").single();
         if (!error) {
