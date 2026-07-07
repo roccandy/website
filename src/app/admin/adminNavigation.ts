@@ -34,6 +34,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       { label: "Production Schedule", href: "/admin/orders", description: "Current custom-order pipeline and slot planning." },
       { label: "Pre-made Orders", href: "/admin/orders/additional-items", description: "Pre-made orders waiting to ship or complete." },
+      { label: "Invoices", href: "/admin/orders/invoices", description: "Square invoice drafts, sent invoices, and payment status." },
       { label: "All Orders / Refunds", href: "/admin/orders/archived", description: "Full order history, refunds, and archived records." },
       { label: "Create Order", href: "/admin/orders/new", description: "Manual order entry for custom or special cases." },
       { label: "Production Settings", href: "/admin/settings/production", description: "Capacity, blocked dates, overrides, and production rules." },

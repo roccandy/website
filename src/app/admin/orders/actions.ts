@@ -295,6 +295,10 @@ async function upsertOrderShared(formData: FormData) {
   const inlineResponse = isInlineResponse(formData);
   const submitIntent = formData.get("submit_intent")?.toString() || "save";
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
+  const shouldSaveAndAddInvoiceOrder = submitIntent === "save_and_add_invoice_order";
+  const combineInvoiceOrderIds = Array.from(
+    new Set(formData.getAll("combine_invoice_order_id").map((value) => value.toString().trim()).filter(Boolean)),
+  );
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const redirectScrollY = formData.get("redirect_scroll_y")?.toString() || null;
@@ -857,7 +861,15 @@ async function upsertOrderShared(formData: FormData) {
           console.error("Order email failed:", error);
         }
       }
-      if (!isAdminPremade && !hasPremadeSelections) {
+      const combinedInvoiceIdsAfterCreate = Array.from(new Set([...combineInvoiceOrderIds, createdOrderId]));
+      const shouldCreateCombinedInvoiceDraft =
+        !isAdminPremade && !hasPremadeSelections && combineInvoiceOrderIds.length > 0 && !shouldSaveAndAddInvoiceOrder;
+      if (!isAdminPremade && !hasPremadeSelections && shouldSaveAndAddInvoiceOrder) {
+        postSaveRedirect = `/admin/orders/new?combine=${encodeURIComponent(combinedInvoiceIdsAfterCreate.join(","))}`;
+      } else if (shouldCreateCombinedInvoiceDraft) {
+        const { primaryOrder } = await createCombinedAdminSquareInvoiceDraftForOrderIds(combinedInvoiceIdsAfterCreate, client);
+        postSaveRedirect = `/admin/orders/${primaryOrder.id}/invoice`;
+      } else if (!isAdminPremade && !hasPremadeSelections) {
         const integrationOrder = {
           id: createdOrderId,
           ...payload,
@@ -1171,49 +1183,37 @@ export async function retryAdminSquareInvoiceDraft(formData: FormData) {
   redirect(`/admin/orders/${orderId}/invoice`);
 }
 
-export async function createCombinedAdminSquareInvoiceDraft(formData: FormData) {
-  await requireAdminWriteAccess({ onDenied: "redirect" });
-  const orderIds = Array.from(new Set(formData.getAll("order_id").map((value) => value.toString().trim()).filter(Boolean)));
-
-  const fail = (message: string) => {
-    const params = new URLSearchParams({ toast: "error", message });
-    if (orderIds[0]) params.set("selected", orderIds[0]);
-    redirect(`${ORDERS_PATH}?${params.toString()}`);
-  };
-
-  if (orderIds.length < 2) {
-    fail("Select at least two orders to create one invoice.");
+async function createCombinedAdminSquareInvoiceDraftForOrderIds(orderIds: string[], client = supabaseAdminClient) {
+  const uniqueOrderIds = Array.from(new Set(orderIds.map((value) => value.trim()).filter(Boolean)));
+  if (uniqueOrderIds.length < 2) {
+    throw new Error("Select at least two orders to create one invoice.");
   }
 
-  const client = supabaseAdminClient;
-  const { data, error } = await client.from("orders").select("*").in("id", orderIds);
-  if (error) {
-    fail(error.message);
-  }
+  const { data, error } = await client.from("orders").select("*").in("id", uniqueOrderIds);
+  if (error) throw new Error(error.message);
 
   const foundOrders = (data ?? []) as OrderRow[];
-  if (foundOrders.length !== orderIds.length) {
-    fail("One or more selected orders could not be found.");
+  if (foundOrders.length !== uniqueOrderIds.length) {
+    throw new Error("One or more selected orders could not be found.");
   }
 
-  const invoiceOrders = sortOrdersForInvoice(foundOrders, orderIds);
+  const invoiceOrders = sortOrdersForInvoice(foundOrders, uniqueOrderIds);
   const unavailable = invoiceOrders.find((order) => !isOrderAvailableForCombinedInvoice(order));
   if (unavailable) {
-    fail(
+    throw new Error(
       `${unavailable.order_number ? `#${unavailable.order_number}` : unavailable.title ?? "A selected order"} cannot be combined because it is paid, already sent, or missing a total.`,
     );
   }
 
   const customerEmails = Array.from(new Set(invoiceOrders.map((order) => normalizeInvoiceCustomerEmail(order.customer_email)).filter(Boolean)));
   if (customerEmails.length !== 1) {
-    fail("Selected orders must have the same customer email before they can share one invoice.");
+    throw new Error("Selected orders must have the same customer email before they can share one invoice.");
   }
 
   const primaryOrder = invoiceOrders[0];
   const invoiceTitle = sharedInvoiceTitle(primaryOrder, invoiceOrders);
   const idempotencySuffix = `combined-${Date.now()}`;
   const removedInvoiceIds = new Set<string>();
-  let successRedirect: string | null = null;
   try {
     for (const order of invoiceOrders) {
       if (!order.square_invoice_id || removedInvoiceIds.has(order.square_invoice_id)) continue;
@@ -1236,7 +1236,7 @@ export async function createCombinedAdminSquareInvoiceDraft(formData: FormData) 
       ...squareInvoiceDraftPatch(invoiceDraft),
       square_invoice_title: invoiceTitle,
     };
-    const { error: updateError } = await client.from("orders").update(invoicePatch).in("id", orderIds);
+    const { error: updateError } = await client.from("orders").update(invoicePatch).in("id", uniqueOrderIds);
     if (updateError) throw new Error(updateError.message);
 
     await logAdminActivity({
@@ -1254,13 +1254,11 @@ export async function createCombinedAdminSquareInvoiceDraft(formData: FormData) 
       changedFields: ["Square invoice"],
       metadata: {
         invoiceId: invoiceDraft.invoiceId,
-        orderIds,
+        orderIds: uniqueOrderIds,
       },
     });
 
-    revalidatePath(ORDERS_PATH);
-    revalidatePath(`/admin/orders/${primaryOrder.id}/invoice`);
-    successRedirect = `/admin/orders/${primaryOrder.id}/invoice`;
+    return { primaryOrder, invoiceDraft, orderIds: uniqueOrderIds };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create combined Square invoice.";
     const failurePatch: Record<string, unknown> = {
@@ -1278,11 +1276,8 @@ export async function createCombinedAdminSquareInvoiceDraft(formData: FormData) 
         square_invoice_sent_at: null,
       });
     }
-    await client.from("orders").update(failurePatch).in("id", orderIds);
-    fail(message);
-  }
-  if (successRedirect) {
-    redirect(successRedirect);
+    await client.from("orders").update(failurePatch).in("id", uniqueOrderIds);
+    throw new Error(message);
   }
 }
 

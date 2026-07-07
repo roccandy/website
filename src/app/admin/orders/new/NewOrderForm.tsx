@@ -379,6 +379,7 @@ type Props = {
   assignments: OrderSlot[];
   mode?: "create" | "edit";
   initialOrder?: OrderRow | null;
+  combinedInvoiceOrders?: OrderRow[];
   cancelHref?: string;
 };
 
@@ -394,12 +395,14 @@ export function NewOrderForm({
   assignments,
   mode = "create",
   initialOrder = null,
+  combinedInvoiceOrders = [],
   cancelHref = "/admin/orders",
 }: Props) {
   const isEditMode = mode === "edit" && Boolean(initialOrder);
   const initialIsAdminPremade = initialOrder ? isAdminPremadeOrderRow(initialOrder) : false;
   const initialCategoryId = initialIsAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : initialOrder?.category_id ?? "";
   const initialWeddingDesign = splitWeddingDesign(initialOrder?.design_text);
+  const customerDefaults = initialOrder ?? combinedInvoiceOrders[0] ?? null;
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
@@ -409,7 +412,7 @@ export function NewOrderForm({
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
-  const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">(initialOrder?.pickup ? "pickup" : "delivery");
+  const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">(customerDefaults?.pickup ? "pickup" : "delivery");
   const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [packagingOptionId, setPackagingOptionId] = useState(initialOrder?.packaging_option_id ?? "");
   const [quantity, setQuantity] = useState(initialOrder?.quantity ? formatInputNumber(initialOrder.quantity, 0) : "");
@@ -1097,6 +1100,40 @@ export function NewOrderForm({
           </div>
         </div>
       ) : null}
+      {!isEditMode && combinedInvoiceOrders.length > 0 ? (
+        <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-blue-700">Combined invoice</p>
+              <h3 className="mt-1 text-base font-semibold text-zinc-900">
+                {combinedInvoiceOrders.length} saved order{combinedInvoiceOrders.length === 1 ? "" : "s"} will share this invoice
+              </h3>
+            </div>
+            <Link
+              href="/admin/orders/new"
+              className="rounded border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
+            >
+              Start separate invoice
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {combinedInvoiceOrders.map((order) => (
+              <div key={order.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm">
+                <div>
+                  <span className="font-semibold text-zinc-900">
+                    {order.order_number ? `#${order.order_number}` : order.id.slice(0, 8)}
+                  </span>
+                  <span className="ml-2 text-zinc-600">{order.title || order.design_text || "Custom candy order"}</span>
+                </div>
+                <span className="font-semibold text-zinc-900">{formatMoney(order.total_price)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs font-semibold text-blue-800">
+            Save this order to create one Square invoice for all listed orders plus the order below, or save and add another design.
+          </p>
+        </section>
+      ) : null}
       <div className="sticky top-20 z-20">
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1144,6 +1181,11 @@ export function NewOrderForm({
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
           <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
           <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
+          {!isEditMode
+            ? combinedInvoiceOrders.map((order) => (
+                <input key={order.id} type="hidden" name="combine_invoice_order_id" value={order.id} />
+              ))
+            : null}
           {isEditMode && initialOrder ? (
             <>
               <input type="hidden" name="id" value={initialOrder.id} />
@@ -1989,7 +2031,7 @@ export function NewOrderForm({
                 First name
                 <input
                   name="first_name"
-                  defaultValue={initialOrder?.first_name ?? ""}
+                  defaultValue={customerDefaults?.first_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -1997,7 +2039,7 @@ export function NewOrderForm({
                 Last name
                 <input
                   name="last_name"
-                  defaultValue={initialOrder?.last_name ?? ""}
+                  defaultValue={customerDefaults?.last_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -2006,7 +2048,7 @@ export function NewOrderForm({
                 <input
                   type="email"
                   name="customer_email"
-                  defaultValue={initialOrder?.customer_email ?? ""}
+                  defaultValue={customerDefaults?.customer_email ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -2014,7 +2056,7 @@ export function NewOrderForm({
                 Phone number
                 <input
                   name="phone"
-                  defaultValue={initialOrder?.phone ?? ""}
+                  defaultValue={customerDefaults?.phone ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -2022,7 +2064,7 @@ export function NewOrderForm({
                 Organization name
                 <input
                   name="organization_name"
-                  defaultValue={initialOrder?.organization_name ?? ""}
+                  defaultValue={customerDefaults?.organization_name ?? ""}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
@@ -2037,7 +2079,7 @@ export function NewOrderForm({
                   Address line 1
                   <input
                     name="address_line1"
-                    defaultValue={initialOrder?.address_line1 ?? ""}
+                    defaultValue={customerDefaults?.address_line1 ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -2045,7 +2087,7 @@ export function NewOrderForm({
                   Address line 2
                   <input
                     name="address_line2"
-                    defaultValue={initialOrder?.address_line2 ?? ""}
+                    defaultValue={customerDefaults?.address_line2 ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -2053,7 +2095,7 @@ export function NewOrderForm({
                   Suburb
                   <input
                     name="suburb"
-                    defaultValue={initialOrder?.suburb ?? ""}
+                    defaultValue={customerDefaults?.suburb ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -2061,7 +2103,7 @@ export function NewOrderForm({
                   Postcode
                   <input
                     name="postcode"
-                    defaultValue={initialOrder?.postcode ?? ""}
+                    defaultValue={customerDefaults?.postcode ?? ""}
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -2070,7 +2112,7 @@ export function NewOrderForm({
                   <select
                     name="state"
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                    defaultValue={initialOrder?.state ?? ""}
+                    defaultValue={customerDefaults?.state ?? ""}
                   >
                     {STATES.map((state) => (
                       <option key={state.value} value={state.value}>
@@ -2099,7 +2141,7 @@ export function NewOrderForm({
                 <span className="admin-card-title text-zinc-900">Customer Note</span>
                 <textarea
                   name="customer_note"
-                  defaultValue={initialOrder?.customer_note ?? ""}
+                  defaultValue={customerDefaults?.customer_note ?? ""}
                   className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   rows={5}
                   placeholder="Visible on the customer invoice."
@@ -2355,6 +2397,17 @@ export function NewOrderForm({
             Add to Calendar
           </button>
         ) : null}
+        {!isEditMode && !isAdminPremadeOrder ? (
+          <button
+            type="submit"
+            name="submit_intent"
+            value="save_and_add_invoice_order"
+            disabled={isSubmittingOrder || !batchWeightsValid || Boolean(pricingError)}
+            className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-100 disabled:text-zinc-400"
+          >
+            Save and add another design
+          </button>
+        ) : null}
         <button
           type="submit"
           name="submit_intent"
@@ -2370,7 +2423,9 @@ export function NewOrderForm({
               ? "Save order"
               : isAdminPremadeOrder
                 ? "Add to Orders"
-                : "Create Invoice"}
+                : combinedInvoiceOrders.length > 0
+                  ? "Create combined invoice"
+                  : "Create Invoice"}
         </button>
         <button
           ref={scheduleSubmitButtonRef}

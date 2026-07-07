@@ -11,7 +11,7 @@ import type {
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
-import { archiveOrderInline, createCombinedAdminSquareInvoiceDraft, markOrderAsPaid } from "./actions";
+import { archiveOrderInline, markOrderAsPaid } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import ProductionScheduleSection from "./ProductionScheduleSection";
@@ -89,16 +89,6 @@ const customerDisplayName = (order: OrderRow) => {
 const designDisplay = (order: OrderRow) =>
   order.design_text?.trim() || order.title?.trim() || order.order_description?.trim() || "-";
 
-const SENT_SQUARE_INVOICE_STATUSES = new Set(["UNPAID", "PAID", "PARTIALLY_PAID"]);
-const normalizeInvoiceCustomerEmail = (value: string | null | undefined) => value?.trim().toLowerCase() || "";
-const canSelectForCombinedInvoice = (order: OrderRow) =>
-  isAdminManagedCustomOrder(order) &&
-  !order.paid_at &&
-  !order.square_invoice_sent_at &&
-  !SENT_SQUARE_INVOICE_STATUSES.has(order.square_invoice_status?.toUpperCase() ?? "") &&
-  Number.isFinite(Number(order.total_price)) &&
-  Number(order.total_price) > 0;
-
 export function OrdersTable({
   orders,
   slots,
@@ -110,7 +100,6 @@ export function OrdersTable({
   initialSelectedId = null,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
-  const [selectedInvoiceOrderIds, setSelectedInvoiceOrderIds] = useState<string[]>([]);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
 
@@ -189,28 +178,6 @@ export function OrdersTable({
   const assignmentModalAssignment = assignmentModalOrder
     ? assignmentByOrderId.get(assignmentModalOrder.id) ?? null
     : null;
-  const orderById = useMemo(() => new Map(orders.map((order) => [order.id, order])), [orders]);
-  const selectedInvoiceOrders = useMemo(
-    () =>
-      selectedInvoiceOrderIds
-        .map((id) => orderById.get(id))
-        .filter((order): order is OrderRow => Boolean(order))
-        .filter(canSelectForCombinedInvoice),
-    [orderById, selectedInvoiceOrderIds],
-  );
-  const selectedInvoiceTotal = selectedInvoiceOrders.reduce((sum, order) => {
-    const amount = Number(order.total_price);
-    return sum + (Number.isFinite(amount) ? amount : 0);
-  }, 0);
-  const selectedInvoiceEmails = Array.from(
-    new Set(selectedInvoiceOrders.map((order) => normalizeInvoiceCustomerEmail(order.customer_email)).filter(Boolean)),
-  );
-  const combinedInvoiceBlockedReason =
-    selectedInvoiceOrders.length < 2
-      ? "Select at least two unpaid admin orders."
-      : selectedInvoiceEmails.length !== 1
-        ? "Selected orders must share one customer email."
-        : "";
 
   useEffect(() => {
     if (!selectedId) return;
@@ -242,64 +209,10 @@ export function OrdersTable({
 
   return (
     <div className="space-y-4">
-      <form
-        action={createCombinedAdminSquareInvoiceDraft}
-        onSubmit={(event) => {
-          if (combinedInvoiceBlockedReason) {
-            event.preventDefault();
-            return;
-          }
-          if (
-            !window.confirm(
-              `Create one Square invoice for ${selectedInvoiceOrders.length} orders totalling ${formatMoney(selectedInvoiceTotal)}? Existing unsent drafts for those orders will be replaced.`,
-            )
-          ) {
-            event.preventDefault();
-          }
-        }}
-        className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm"
-      >
-        {selectedInvoiceOrders.map((order) => (
-          <input key={order.id} type="hidden" name="order_id" value={order.id} />
-        ))}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Combined invoice</p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
-              {selectedInvoiceOrders.length > 0
-                ? `${selectedInvoiceOrders.length} selected / ${formatMoney(selectedInvoiceTotal)}`
-                : "Select unpaid admin orders from the table"}
-            </p>
-            {combinedInvoiceBlockedReason && selectedInvoiceOrders.length > 0 ? (
-              <p className="mt-1 text-xs font-semibold text-amber-700">{combinedInvoiceBlockedReason}</p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {selectedInvoiceOrderIds.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setSelectedInvoiceOrderIds([])}
-                className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-              >
-                Clear
-              </button>
-            ) : null}
-            <button
-              type="submit"
-              disabled={Boolean(combinedInvoiceBlockedReason)}
-              className="rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
-            >
-              Create invoice
-            </button>
-          </div>
-        </div>
-      </form>
-
       <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
-              <th className="w-12 px-3 py-3 text-left">Invoice</th>
               <th className="px-3 py-3 text-left">Order #</th>
               <th className="px-3 py-3 text-left">Title</th>
               <th className="px-3 py-3 text-left">Date required</th>
@@ -319,9 +232,6 @@ export function OrdersTable({
               const isAdminPremade = isAdminPremadeOrder(order);
               const isAdminManagedCustom = isAdminManagedCustomOrder(order);
               const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
-              const hasUnsentSquareInvoice = Boolean(
-                isAdminManagedCustom && order.square_invoice_id && !order.square_invoice_sent_at,
-              );
               const packagingOption = packagingById.get(order.packaging_option_id ?? "") ?? null;
               const packagingDescription = formatOrderDescription(order, packagingOption);
               const dueDateDistance = formatDueDateDistance(order.due_date);
@@ -330,8 +240,6 @@ export function OrdersTable({
                 : order.category_id
                   ? categoryLabelById.get(order.category_id) ?? order.category_id
                   : "-";
-              const canSelectInvoice = canSelectForCombinedInvoice(order);
-              const selectedForInvoice = selectedInvoiceOrderIds.includes(order.id);
 
               return (
                 <Fragment key={order.id}>
@@ -342,27 +250,6 @@ export function OrdersTable({
                     }`}
                     onClick={() => setSelectedId((prev) => (prev === order.id ? null : order.id))}
                   >
-                    <td className="px-3 py-2">
-                      {canSelectInvoice ? (
-                        <input
-                          type="checkbox"
-                          checked={selectedForInvoice}
-                          onClick={(event) => event.stopPropagation()}
-                          onChange={(event) => {
-                            const checked = event.target.checked;
-                            setSelectedInvoiceOrderIds((current) =>
-                              checked
-                                ? current.includes(order.id)
-                                  ? current
-                                  : [...current, order.id]
-                                : current.filter((id) => id !== order.id),
-                            );
-                          }}
-                          aria-label={`Select ${order.order_number ? `order ${order.order_number}` : "order"} for combined invoice`}
-                          className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                        />
-                      ) : null}
-                    </td>
                     <td className="px-3 py-2 font-semibold text-zinc-900">
                       <div className="flex items-center gap-2">
                         <span>
@@ -384,7 +271,7 @@ export function OrdersTable({
                         >
                           {formatScheduleStatusLabel(scheduleStatus)}
                         </button>
-                        {hasUnsentSquareInvoice ? (
+                        {isAdminManagedCustom && order.square_invoice_id ? (
                           <Link
                             href={`/admin/orders/${order.id}/invoice`}
                             onClick={(event) => event.stopPropagation()}
@@ -452,7 +339,7 @@ export function OrdersTable({
                   </tr>
                   {selectedId === order.id ? (
                     <tr className="bg-white">
-                      <td colSpan={8} className="px-3 pb-4">
+                      <td colSpan={7} className="px-3 pb-4">
                         <div
                           id={`order-detail-${order.id}`}
                           className="mt-2 rounded-lg border border-zinc-200 bg-white p-4 text-xs text-zinc-700 shadow-sm"
