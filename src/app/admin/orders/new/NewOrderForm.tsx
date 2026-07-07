@@ -216,19 +216,8 @@ function sanitizeHexInput(value: string): string {
   return `#${stripped}`;
 }
 
-function formatPremadeWeight(weightG: number) {
-  if (!Number.isFinite(weightG) || weightG <= 0) return "";
-  if (weightG >= 1000) {
-    const kg = weightG / 1000;
-    return `${kg % 1 === 0 ? kg.toFixed(0) : kg.toFixed(1)}kg`;
-  }
-  return `${weightG}g`;
-}
-
 function formatPremadeLabel(item: PremadeCandy) {
-  const weightLabel = formatPremadeWeight(Number(item.weight_g));
-  const parts = [item.name, weightLabel].filter(Boolean);
-  return parts.join(" - ");
+  return item.name;
 }
 
 const formatInputNumber = (value: number | null | undefined, decimals = 2) => {
@@ -680,6 +669,15 @@ export function NewOrderForm({
     if (adminPremadeMode === "premade") return selectedAdminPremadeCandy?.name?.trim() ?? "";
     return "";
   }, [adminPremadeCustomName, adminPremadeMode, selectedAdminPremadeCandy]);
+  const selectAdminPremadeCandy = (candyId: string) => {
+    setAdminPremadeCandyId(candyId);
+    const selectedCandy = premadeOptions.find((item) => item.id === candyId) ?? null;
+    const singleFlavor =
+      selectedCandy?.flavors?.length === 1 ? selectedCandy.flavors[0]?.trim() ?? "" : "";
+    if (singleFlavor) {
+      setAdminPremadeFlavor(singleFlavor);
+    }
+  };
   const adminPremadeWeightKg = Number(weightValue);
   const isAdminPremadeReady =
     !isAdminPremadeOrder ||
@@ -2145,17 +2143,17 @@ export function NewOrderForm({
                 >
                   <option value="">Select stock item</option>
                   <option value="premade">Premade candy</option>
-                  <option value="custom">Custom candy name</option>
+                  <option value="custom">Custom</option>
                 </select>
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                {adminPremadeMode === "premade" ? "Premade candy" : "Custom candy name"}
+                {adminPremadeMode === "premade" ? "Premade candy" : "Custom"}
                 {adminPremadeMode === "premade" ? (
                   <select
                     name="admin_premade_candy_id"
                     value={adminPremadeCandyId}
                     required
-                    onChange={(event) => setAdminPremadeCandyId(event.target.value)}
+                    onChange={(event) => selectAdminPremadeCandy(event.target.value)}
                     className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   >
                     <option value="">Select premade candy</option>
