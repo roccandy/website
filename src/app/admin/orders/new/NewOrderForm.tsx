@@ -658,7 +658,15 @@ export function NewOrderForm({
     [selectedPackagingOption],
   );
   const premadeOptions = useMemo(
-    () => premadeCandies.filter((item) => item.is_active),
+    () =>
+      premadeCandies
+        .filter((item) => item.is_active)
+        .sort((a, b) => {
+          const aSingleFlavor = a.flavors?.length === 1 ? 0 : 1;
+          const bSingleFlavor = b.flavors?.length === 1 ? 0 : 1;
+          if (aSingleFlavor !== bSingleFlavor) return aSingleFlavor - bSingleFlavor;
+          return a.name.localeCompare(b.name);
+        }),
     [premadeCandies]
   );
   const selectedAdminPremadeCandy = useMemo(
