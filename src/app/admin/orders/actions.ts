@@ -748,7 +748,6 @@ async function upsertOrderShared(formData: FormData) {
 
     const pricingContext = isAdminPremade ? null : await buildPricingContext();
     const settings = pricingContext?.settings ?? (await getSettings());
-    const isPriceLocked = Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id) && !shouldReplaceSquareInvoice;
     const existingBatchWeights = normalizeAdminBatchWeights(
       Array.isArray(existing?.admin_batch_weights_kg) ? existing.admin_batch_weights_kg : [],
     );
@@ -788,6 +787,10 @@ async function upsertOrderShared(formData: FormData) {
       normalizeAdminDiscountType(admin_discount_type) !== normalizeAdminDiscountType(existing?.admin_discount_type) ||
       Number(admin_discount_value ?? 0) !== Number(existing?.admin_discount_value ?? 0) ||
       Number(admin_price_override ?? 0) !== Number(existing?.admin_price_override ?? 0);
+    const shouldPreserveLockedPrice =
+      Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id) &&
+      !shouldReplaceSquareInvoice &&
+      !priceAffectingFieldsChanged;
     const existingBatchWeightsMismatch =
       existingBatchWeights.length > 0 && Math.abs(existingBatchTotal - resolvedWeightKg) > 0.02;
     const submittedBatchWeightsMismatch =
@@ -818,7 +821,7 @@ async function upsertOrderShared(formData: FormData) {
             })()
           : existingBatchWeights;
     const shouldCalculateAdminPricing =
-      !isAdminPremade && pricingContext && (!existing || shouldReplaceSquareInvoice || (!isPriceLocked && priceAffectingFieldsChanged));
+      !isAdminPremade && pricingContext && (!existing || shouldReplaceSquareInvoice || priceAffectingFieldsChanged);
     const adminPricing =
       shouldCalculateAdminPricing
         ? calculateAdminLargeOrderPricingWithContext(
@@ -923,7 +926,7 @@ async function upsertOrderShared(formData: FormData) {
       total_weight_kg: resolvedWeightKg,
       total_price: isAdminPremade
         ? null
-        : isPriceLocked
+        : shouldPreserveLockedPrice
           ? existing?.total_price ?? null
           : adminPricing?.total ?? total_price ?? existing?.total_price ?? null,
       admin_batch_weights_kg: isAdminPremade ? [] : adminPricing?.batchWeightsKg ?? resolvedBatchWeights,

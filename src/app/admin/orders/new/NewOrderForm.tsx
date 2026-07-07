@@ -1536,20 +1536,16 @@ export function NewOrderForm({
         if (shouldOfferUpdatedInvoice) {
           const changeLines = buildUpdatedInvoiceChangeLines();
           if (changeLines.length > 0) {
-            const confirmed = window.confirm(
+            const sendReplacementInvoice = window.confirm(
               [
-                "Customer will get a new invoice with these changes:",
+                "Send the customer a replacement invoice with these changes?",
                 "",
                 ...changeLines,
                 "",
-                "Save these updates and send the replacement invoice?",
+                "OK sends the replacement invoice. Cancel saves the order without sending one.",
               ].join("\n"),
             );
-            if (!confirmed) {
-              event.preventDefault();
-              return;
-            }
-            if (sendUpdatedInvoiceInputRef.current) {
+            if (sendReplacementInvoice && sendUpdatedInvoiceInputRef.current) {
               sendUpdatedInvoiceInputRef.current.value = "on";
             }
           }
