@@ -41,6 +41,7 @@ import { formatFullDateLabel, formatOrderDescription } from "../productionSchedu
 import { paletteSections } from "@/app/admin/settings/palette";
 import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
+import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 const BULK_LABEL_COUNT_MAX = 1000;
 const WEDDING_HEART = "❤️";
@@ -663,6 +664,10 @@ export function NewOrderForm({
   const selectedAdminPremadeCandy = useMemo(
     () => premadeOptions.find((item) => item.id === adminPremadeCandyId) ?? null,
     [adminPremadeCandyId, premadeOptions],
+  );
+  const selectedAdminPremadeImageUrl = useMemo(
+    () => (selectedAdminPremadeCandy?.image_path ? buildPremadeImageUrl(selectedAdminPremadeCandy.image_path) : ""),
+    [selectedAdminPremadeCandy],
   );
   const adminPremadeSelectionLabel = useMemo(() => {
     if (adminPremadeMode === "custom") return adminPremadeCustomName.trim();
@@ -2149,20 +2154,41 @@ export function NewOrderForm({
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 {adminPremadeMode === "premade" ? "Premade candy" : "Custom"}
                 {adminPremadeMode === "premade" ? (
-                  <select
-                    name="admin_premade_candy_id"
-                    value={adminPremadeCandyId}
-                    required
-                    onChange={(event) => selectAdminPremadeCandy(event.target.value)}
-                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  >
-                    <option value="">Select premade candy</option>
-                    {premadeOptions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {formatPremadeLabel(item)}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      name="admin_premade_candy_id"
+                      value={adminPremadeCandyId}
+                      required
+                      onChange={(event) => selectAdminPremadeCandy(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    >
+                      <option value="">Select premade candy</option>
+                      {premadeOptions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {formatPremadeLabel(item)}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedAdminPremadeCandy && selectedAdminPremadeImageUrl ? (
+                      <div className="mt-3 flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-2 normal-case tracking-normal">
+                        <Image
+                          src={selectedAdminPremadeImageUrl}
+                          alt={selectedAdminPremadeCandy.name}
+                          width={72}
+                          height={72}
+                          className="h-[72px] w-[72px] shrink-0 rounded-md border border-zinc-200 bg-white object-cover"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-zinc-900">{selectedAdminPremadeCandy.name}</p>
+                          {selectedAdminPremadeCandy.flavors?.length ? (
+                            <p className="mt-1 text-xs text-zinc-500">
+                              {selectedAdminPremadeCandy.flavors.join(", ")}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <input
                     name="admin_premade_custom_name"
