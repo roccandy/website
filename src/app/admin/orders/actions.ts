@@ -12,7 +12,7 @@ import {
 } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getSettings } from "@/lib/data";
+import { getSettings, type OrderRow } from "@/lib/data";
 import { buildPricingContext } from "@/lib/pricing";
 import {
   calculateAdminLargeOrderPricingWithContext,
@@ -28,6 +28,7 @@ import {
   removeAdminSquareInvoice,
   squareInvoicePaymentMethodLabel,
   updateAndPublishAdminSquareInvoice,
+  type AdminInvoiceOrderInput,
   type AdminSquareInvoicePaymentMode,
 } from "@/lib/adminOrderIntegrations";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
@@ -148,6 +149,10 @@ const describeOrderTarget = (input: {
 async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>) {
   const customerEmail = typeof order.customer_email === "string" ? order.customer_email.trim() : "";
   if (!customerEmail) return;
+  const orderPayloads =
+    Array.isArray(order.invoiceOrders) && order.invoiceOrders.length > 0
+      ? (order.invoiceOrders as Record<string, unknown>[])
+      : [order];
   const pickup = Boolean(order.pickup);
   const billing = {
     address_1: typeof order.address_line1 === "string" ? order.address_line1 : "",
@@ -156,17 +161,113 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
     state: typeof order.state === "string" ? order.state : "",
     postcode: typeof order.postcode === "string" ? order.postcode : "",
   };
-  const paymentAmount = Number(order.total_price);
+  const paymentAmount = orderPayloads.reduce((sum, item) => {
+    const amount = Number(item.total_price);
+    return sum + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
   const summary = await buildAdminOrderSummaryEmailPayload({
-    orderPayloads: [order],
-    orderNumber: typeof order.order_number === "string" ? order.order_number : null,
+    orderPayloads,
+    orderNumber:
+      orderPayloads.length > 1
+        ? orderPayloads
+            .map((item) => (typeof item.order_number === "string" ? item.order_number : null))
+            .filter(Boolean)
+            .join(", ") || null
+        : typeof order.order_number === "string"
+          ? order.order_number
+          : null,
     requestedDate: typeof order.due_date === "string" ? order.due_date : null,
     billing,
     pickup,
-    paymentMethod: "Square invoice",
+    paymentMethod: typeof order.payment_method === "string" ? order.payment_method : "Square invoice",
     paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
   });
   await sendCustomerOrderSummaryEmail([customerEmail], summary);
+}
+
+const normalizeInvoiceCustomerEmail = (value: string | null | undefined) => value?.trim().toLowerCase() || "";
+
+const sentSquareInvoiceStatuses = new Set(["UNPAID", "PAID", "PARTIALLY_PAID"]);
+
+const isOrderAvailableForCombinedInvoice = (order: OrderRow) =>
+  isAdminManagedCustomOrder(order) &&
+  !order.paid_at &&
+  !order.square_invoice_sent_at &&
+  !sentSquareInvoiceStatuses.has(order.square_invoice_status?.toUpperCase() ?? "") &&
+  Number.isFinite(Number(order.total_price)) &&
+  Number(order.total_price) > 0;
+
+const sortOrdersForInvoice = <T extends Pick<OrderRow, "id" | "order_number" | "due_date" | "created_at">>(
+  orders: T[],
+  preferredOrderIds: string[] = [],
+) => {
+  const preferredIndex = new Map(preferredOrderIds.map((id, index) => [id, index]));
+  return [...orders].sort((a, b) => {
+    const aPreferred = preferredIndex.get(a.id);
+    const bPreferred = preferredIndex.get(b.id);
+    if (aPreferred !== undefined || bPreferred !== undefined) {
+      return (aPreferred ?? Number.POSITIVE_INFINITY) - (bPreferred ?? Number.POSITIVE_INFINITY);
+    }
+    const aDate = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+    const bDate = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+    if (aDate !== bDate) return aDate - bDate;
+    return (a.order_number ?? a.created_at ?? a.id).localeCompare(b.order_number ?? b.created_at ?? b.id);
+  });
+};
+
+async function fetchInvoiceGroupOrders(invoiceId: string | null | undefined, fallback: OrderRow, client = supabaseAdminClient) {
+  if (!invoiceId) return [fallback];
+  const { data, error } = await client.from("orders").select("*").eq("square_invoice_id", invoiceId);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as OrderRow[];
+  return rows.length > 0 ? sortOrdersForInvoice(rows) : [fallback];
+}
+
+function sharedInvoiceTitle(primaryOrder: OrderRow, invoiceOrders: OrderRow[]) {
+  return defaultAdminSquareInvoiceTitle({
+    id: primaryOrder.id,
+    order_number: primaryOrder.order_number,
+    title: primaryOrder.title,
+    organization_name: primaryOrder.organization_name,
+    customer_name: primaryOrder.customer_name,
+    invoiceOrders,
+  });
+}
+
+function squareInvoiceDraftPatch(
+  invoice: Awaited<ReturnType<typeof createAdminSquareInvoiceDraft>>,
+  paymentMode: AdminSquareInvoicePaymentMode = "card",
+) {
+  return {
+    square_customer_id: invoice.customerId,
+    square_order_id: invoice.squareOrderId,
+    square_invoice_id: invoice.invoiceId,
+    square_invoice_version: invoice.invoiceVersion,
+    square_invoice_status: invoice.invoiceStatus,
+    square_invoice_url: invoice.invoiceUrl,
+    square_invoice_due_date: invoice.invoiceDueDate,
+    square_invoice_created_at: invoice.invoiceCreatedAt,
+    square_invoice_error: null,
+    admin_price_locked_at: new Date().toISOString(),
+    payment_method: squareInvoicePaymentMethodLabel(paymentMode),
+    payment_provider: "square_invoice",
+  };
+}
+
+function squareInvoiceSendPatch(
+  invoice: Awaited<ReturnType<typeof updateAndPublishAdminSquareInvoice>>,
+  paymentMode: AdminSquareInvoicePaymentMode,
+) {
+  return {
+    square_invoice_id: invoice.invoiceId,
+    square_invoice_version: invoice.invoiceVersion,
+    square_invoice_status: invoice.invoiceStatus,
+    square_invoice_url: invoice.invoiceUrl,
+    square_invoice_sent_at: invoice.invoiceSentAt,
+    square_invoice_error: null,
+    payment_method: squareInvoicePaymentMethodLabel(paymentMode),
+    payment_provider: "square_invoice",
+  };
 }
 
 async function resolveFirstAvailableSlotIndex(
@@ -587,39 +688,50 @@ async function upsertOrderShared(formData: FormData) {
           ? "bank_transfer"
           : "card";
         let oldInvoiceRemoved = false;
+        const invoiceGroupOrders = await fetchInvoiceGroupOrders(existing.square_invoice_id, existing as OrderRow, client);
+        const replacementGroupOrders = sortOrdersForInvoice(
+          invoiceGroupOrders.map((groupOrder) =>
+            groupOrder.id === id
+              ? ({
+                  ...groupOrder,
+                  ...basePayload,
+                  id,
+                } as OrderRow)
+              : groupOrder,
+          ),
+        );
+        const replacementPrimary = replacementGroupOrders.find((groupOrder) => groupOrder.id === id) ?? replacementGroupOrders[0];
+        const replacementTitle = sharedInvoiceTitle(replacementPrimary, replacementGroupOrders);
         try {
           const removal = await removeAdminSquareInvoice(existing, { idempotencySuffix });
           oldInvoiceRemoved = Boolean(removal && removal.action !== "skipped");
           const integrationOrder = {
-            ...existing,
-            ...basePayload,
-            id,
+            ...replacementPrimary,
+            square_invoice_title: replacementTitle,
             square_invoice_id: null,
             square_invoice_version: null,
-            square_customer_id: existing.square_customer_id,
-          } as Parameters<typeof createAndPublishAdminSquareInvoice>[0];
+            square_customer_id: replacementPrimary.square_customer_id,
+            invoiceOrders: replacementGroupOrders.map((groupOrder) => ({
+              ...groupOrder,
+              square_invoice_title: replacementTitle,
+            })),
+          } satisfies AdminInvoiceOrderInput;
           const updatedInvoice = await createAndPublishAdminSquareInvoice(integrationOrder, {
             idempotencySuffix,
             paymentMode: replacementPaymentMode,
           });
+          const invoicePatch = {
+            ...squareInvoiceDraftPatch(updatedInvoice, replacementPaymentMode),
+            square_invoice_title: replacementTitle,
+            square_invoice_sent_at: updatedInvoice.invoiceSentAt,
+          };
           const { error: invoiceUpdateError } = await client
             .from("orders")
-            .update({
-              square_customer_id: updatedInvoice.customerId,
-              square_order_id: updatedInvoice.squareOrderId,
-              square_invoice_id: updatedInvoice.invoiceId,
-              square_invoice_version: updatedInvoice.invoiceVersion,
-              square_invoice_status: updatedInvoice.invoiceStatus,
-              square_invoice_url: updatedInvoice.invoiceUrl,
-              square_invoice_due_date: updatedInvoice.invoiceDueDate,
-              square_invoice_created_at: updatedInvoice.invoiceCreatedAt,
-              square_invoice_sent_at: updatedInvoice.invoiceSentAt,
-              square_invoice_error: null,
-              admin_price_locked_at: new Date().toISOString(),
-              payment_method: squareInvoicePaymentMethodLabel(replacementPaymentMode),
-              payment_provider: "square_invoice",
-            })
-            .eq("id", id);
+            .update(invoicePatch)
+            .in(
+              "id",
+              replacementGroupOrders.map((groupOrder) => groupOrder.id),
+            );
           if (invoiceUpdateError) throw new Error(invoiceUpdateError.message);
           inlineMessage = "Order updated and replacement Square invoice sent.";
         } catch (invoiceError) {
@@ -639,7 +751,13 @@ async function upsertOrderShared(formData: FormData) {
               square_invoice_sent_at: null,
             });
           }
-          await client.from("orders").update(invoiceFailurePatch).eq("id", id);
+          await client
+            .from("orders")
+            .update(invoiceFailurePatch)
+            .in(
+              "id",
+              replacementGroupOrders.map((groupOrder) => groupOrder.id),
+            );
           inlineTone = "error";
           inlineMessage = `Order saved, but updated Square invoice failed: ${message}`;
         }
@@ -1053,6 +1171,121 @@ export async function retryAdminSquareInvoiceDraft(formData: FormData) {
   redirect(`/admin/orders/${orderId}/invoice`);
 }
 
+export async function createCombinedAdminSquareInvoiceDraft(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const orderIds = Array.from(new Set(formData.getAll("order_id").map((value) => value.toString().trim()).filter(Boolean)));
+
+  const fail = (message: string) => {
+    const params = new URLSearchParams({ toast: "error", message });
+    if (orderIds[0]) params.set("selected", orderIds[0]);
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  };
+
+  if (orderIds.length < 2) {
+    fail("Select at least two orders to create one invoice.");
+  }
+
+  const client = supabaseAdminClient;
+  const { data, error } = await client.from("orders").select("*").in("id", orderIds);
+  if (error) {
+    fail(error.message);
+  }
+
+  const foundOrders = (data ?? []) as OrderRow[];
+  if (foundOrders.length !== orderIds.length) {
+    fail("One or more selected orders could not be found.");
+  }
+
+  const invoiceOrders = sortOrdersForInvoice(foundOrders, orderIds);
+  const unavailable = invoiceOrders.find((order) => !isOrderAvailableForCombinedInvoice(order));
+  if (unavailable) {
+    fail(
+      `${unavailable.order_number ? `#${unavailable.order_number}` : unavailable.title ?? "A selected order"} cannot be combined because it is paid, already sent, or missing a total.`,
+    );
+  }
+
+  const customerEmails = Array.from(new Set(invoiceOrders.map((order) => normalizeInvoiceCustomerEmail(order.customer_email)).filter(Boolean)));
+  if (customerEmails.length !== 1) {
+    fail("Selected orders must have the same customer email before they can share one invoice.");
+  }
+
+  const primaryOrder = invoiceOrders[0];
+  const invoiceTitle = sharedInvoiceTitle(primaryOrder, invoiceOrders);
+  const idempotencySuffix = `combined-${Date.now()}`;
+  const removedInvoiceIds = new Set<string>();
+  let successRedirect: string | null = null;
+  try {
+    for (const order of invoiceOrders) {
+      if (!order.square_invoice_id || removedInvoiceIds.has(order.square_invoice_id)) continue;
+      await removeAdminSquareInvoice(order, { idempotencySuffix });
+      removedInvoiceIds.add(order.square_invoice_id);
+    }
+
+    const integrationOrder = {
+      ...primaryOrder,
+      square_invoice_title: invoiceTitle,
+      square_invoice_id: null,
+      square_invoice_version: null,
+      invoiceOrders: invoiceOrders.map((order) => ({
+        ...order,
+        square_invoice_title: invoiceTitle,
+      })),
+    } satisfies AdminInvoiceOrderInput;
+    const invoiceDraft = await createAdminSquareInvoiceDraft(integrationOrder, { idempotencySuffix });
+    const invoicePatch = {
+      ...squareInvoiceDraftPatch(invoiceDraft),
+      square_invoice_title: invoiceTitle,
+    };
+    const { error: updateError } = await client.from("orders").update(invoicePatch).in("id", orderIds);
+    if (updateError) throw new Error(updateError.message);
+
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "order",
+      entityId: primaryOrder.id,
+      entityLabel: describeOrderTarget({
+        orderNumber: primaryOrder.order_number,
+        title: primaryOrder.title,
+        customerName: primaryOrder.customer_name,
+      }),
+      summary: `Created one Square invoice draft for ${invoiceOrders.length} orders.`,
+      path: ORDERS_PATH,
+      changedFields: ["Square invoice"],
+      metadata: {
+        invoiceId: invoiceDraft.invoiceId,
+        orderIds,
+      },
+    });
+
+    revalidatePath(ORDERS_PATH);
+    revalidatePath(`/admin/orders/${primaryOrder.id}/invoice`);
+    successRedirect = `/admin/orders/${primaryOrder.id}/invoice`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to create combined Square invoice.";
+    const failurePatch: Record<string, unknown> = {
+      square_invoice_error: `Combined Square invoice failed: ${message}`,
+    };
+    if (removedInvoiceIds.size > 0) {
+      Object.assign(failurePatch, {
+        square_order_id: null,
+        square_invoice_id: null,
+        square_invoice_version: null,
+        square_invoice_status: null,
+        square_invoice_url: null,
+        square_invoice_due_date: null,
+        square_invoice_created_at: null,
+        square_invoice_sent_at: null,
+      });
+    }
+    await client.from("orders").update(failurePatch).in("id", orderIds);
+    fail(message);
+  }
+  if (successRedirect) {
+    redirect(successRedirect);
+  }
+}
+
 export async function sendAdminSquareInvoice(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString() || null;
@@ -1078,22 +1311,33 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   if (!existing) {
     redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
   }
-  if (!isAdminManagedCustomOrder(existing)) {
+  const existingOrder = existing as OrderRow;
+  if (!isAdminManagedCustomOrder(existingOrder)) {
     const params = new URLSearchParams({ selected: orderId, toast: "error", message: "Website orders do not use Square invoices." });
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
-  if (!existing.square_invoice_id) {
+  if (!existingOrder.square_invoice_id) {
     const params = new URLSearchParams({ selected: orderId, toast: "error", message: "Square invoice draft is missing." });
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
-  if (existing.square_invoice_sent_at || existing.square_invoice_status === "UNPAID" || existing.square_invoice_status === "PAID") {
+  if (
+    existingOrder.square_invoice_sent_at ||
+    existingOrder.square_invoice_status === "UNPAID" ||
+    existingOrder.square_invoice_status === "PAID"
+  ) {
     const params = new URLSearchParams({ selected: orderId, toast: "error", message: "This Square invoice has already been sent." });
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
-  const productionBatchCount = Array.isArray(existing.admin_batch_weights_kg)
-    ? existing.admin_batch_weights_kg.filter((weight: unknown) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
-    : 0;
-  if (invoicePaymentMode === "bank_transfer" && productionBatchCount <= 1) {
+  const invoiceGroupOrders = await fetchInvoiceGroupOrders(existingOrder.square_invoice_id, existingOrder, client);
+  const productionBatchCount = invoiceGroupOrders.reduce(
+    (count, order) =>
+      count +
+      (Array.isArray(order.admin_batch_weights_kg)
+        ? order.admin_batch_weights_kg.filter((weight: unknown) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
+        : 0),
+    0,
+  );
+  if (invoicePaymentMode === "bank_transfer" && productionBatchCount <= 1 && invoiceGroupOrders.length <= 1) {
     const params = new URLSearchParams({
       selected: orderId,
       toast: "error",
@@ -1103,13 +1347,14 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   }
 
   const localPatch = {
-    square_invoice_title: invoiceTitle ?? existing.square_invoice_title ?? defaultAdminSquareInvoiceTitle(existing),
+    square_invoice_title:
+      invoiceTitle ?? existingOrder.square_invoice_title ?? sharedInvoiceTitle(existingOrder, invoiceGroupOrders),
     customer_note: customerNote,
-    customer_name: customerName ?? existing.customer_name,
-    first_name: firstName ?? existing.first_name,
-    last_name: lastName ?? existing.last_name,
-    customer_email: customerEmail ?? existing.customer_email,
-    phone: phone ?? existing.phone,
+    customer_name: customerName ?? existingOrder.customer_name,
+    first_name: firstName ?? existingOrder.first_name,
+    last_name: lastName ?? existingOrder.last_name,
+    customer_email: customerEmail ?? existingOrder.customer_email,
+    phone: phone ?? existingOrder.phone,
     square_invoice_error: null,
   };
   const paymentPatch = {
@@ -1118,28 +1363,40 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   };
 
   const integrationOrder = {
-    ...existing,
+    ...existingOrder,
     ...localPatch,
     ...paymentPatch,
-  } as Parameters<typeof updateAndPublishAdminSquareInvoice>[0];
+    invoiceOrders: invoiceGroupOrders.map((order) =>
+      order.id === existingOrder.id
+        ? ({
+            ...order,
+            ...localPatch,
+            ...paymentPatch,
+          } as OrderRow)
+        : ({
+            ...order,
+            square_invoice_title: localPatch.square_invoice_title,
+            payment_method: paymentPatch.payment_method,
+            payment_provider: paymentPatch.payment_provider,
+          } as OrderRow),
+    ),
+  } satisfies AdminInvoiceOrderInput;
 
   try {
     const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder, {
       paymentMode: invoicePaymentMode,
     });
+    const invoicePatch = squareInvoiceSendPatch(sentInvoice, invoicePaymentMode);
     const { error: updateError } = await client
       .from("orders")
       .update({
         ...localPatch,
-        ...paymentPatch,
-        square_invoice_id: sentInvoice.invoiceId,
-        square_invoice_version: sentInvoice.invoiceVersion,
-        square_invoice_status: sentInvoice.invoiceStatus,
-        square_invoice_url: sentInvoice.invoiceUrl,
-        square_invoice_sent_at: sentInvoice.invoiceSentAt,
-        square_invoice_error: null,
+        ...invoicePatch,
       })
-      .eq("id", orderId);
+      .in(
+        "id",
+        invoiceGroupOrders.map((order) => order.id),
+      );
     if (updateError) throw new Error(updateError.message);
 
     await logAdminActivity({
@@ -1148,34 +1405,55 @@ export async function sendAdminSquareInvoice(formData: FormData) {
       entityType: "order",
       entityId: orderId,
       entityLabel: describeOrderTarget({
-        orderNumber: existing.order_number,
-        title: existing.title,
+        orderNumber: existingOrder.order_number,
+        title: existingOrder.title,
         customerName: localPatch.customer_name,
       }),
       summary: `Sent ${squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
-        orderNumber: existing.order_number,
-        title: existing.title,
+        orderNumber: existingOrder.order_number,
+        title: existingOrder.title,
         customerName: localPatch.customer_name,
-      })}.`,
+      })}${invoiceGroupOrders.length > 1 ? ` and ${invoiceGroupOrders.length - 1} other order${invoiceGroupOrders.length === 2 ? "" : "s"}` : ""}.`,
       path: ORDERS_PATH,
       changedFields: ["Square invoice"],
       metadata: {
         invoiceId: sentInvoice.invoiceId,
         invoiceStatus: sentInvoice.invoiceStatus,
+        orderIds: invoiceGroupOrders.map((order) => order.id),
       },
     });
     try {
       await sendAdminCreatedCustomerOrderEmail({
-        ...existing,
+        ...existingOrder,
         ...localPatch,
         ...paymentPatch,
+        invoiceOrders: invoiceGroupOrders.map((order) =>
+          order.id === existingOrder.id
+            ? {
+                ...order,
+                ...localPatch,
+                ...paymentPatch,
+              }
+            : {
+                ...order,
+                square_invoice_title: localPatch.square_invoice_title,
+                payment_method: paymentPatch.payment_method,
+                payment_provider: paymentPatch.payment_provider,
+              },
+        ),
       });
     } catch (error) {
       console.error("Admin-created customer order email failed:", error);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to send Square invoice.";
-    await client.from("orders").update({ ...localPatch, square_invoice_error: message }).eq("id", orderId);
+    await client
+      .from("orders")
+      .update({ ...localPatch, square_invoice_error: message })
+      .in(
+        "id",
+        invoiceGroupOrders.map((order) => order.id),
+      );
     redirect(toastRedirect(`/admin/orders/${orderId}/invoice`, "error", message));
   }
 
@@ -1225,13 +1503,20 @@ export async function markOrderAsPaid(formData: FormData) {
 
     const paidAt = new Date().toISOString();
     const paymentMethod = existing.payment_method?.trim() || "Manual payment";
+    const targetOrders = existing.square_invoice_id
+      ? await fetchInvoiceGroupOrders(existing.square_invoice_id, existing as OrderRow, client)
+      : [existing as OrderRow];
+    const unpaidTargetIds = targetOrders.filter((order) => !order.paid_at).map((order) => order.id);
+    if (unpaidTargetIds.length === 0) {
+      throw new Error("Order is already marked as paid.");
+    }
     const { error } = await client
       .from("orders")
       .update({
         paid_at: paidAt,
         payment_method: paymentMethod,
       })
-      .eq("id", orderId);
+      .in("id", unpaidTargetIds);
     if (error) throw new Error(error.message);
 
     await logAdminActivity({
@@ -1253,6 +1538,7 @@ export async function markOrderAsPaid(formData: FormData) {
       changedFields: ["Payment status"],
       metadata: {
         paidAt,
+        orderIds: unpaidTargetIds,
       },
     });
 

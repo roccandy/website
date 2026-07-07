@@ -93,20 +93,20 @@ export async function POST(request: Request) {
   }
 
   const client = supabaseAdminClient;
-  const { data: order, error: fetchError } = await client
+  const { data: orders, error: fetchError } = await client
     .from("orders")
     .select("id,order_number,title,design_type,quantity,flavor,due_date,customer_name,customer_email,total_weight_kg,total_price,notes,paid_at")
-    .eq("square_invoice_id", invoice.id)
-    .maybeSingle();
+    .eq("square_invoice_id", invoice.id);
 
   if (fetchError) {
     console.error("Square invoice webhook fetch failed:", fetchError);
     return NextResponse.json({ error: "Fetch failed." }, { status: 500 });
   }
 
-  if (!order) {
+  if (!orders || orders.length === 0) {
     return NextResponse.json({ ok: true });
   }
+  const orderIds = orders.map((order) => order.id);
 
   const patch: Record<string, unknown> = {
     square_invoice_status: invoice.status,
@@ -120,23 +120,23 @@ export async function POST(request: Request) {
   }
 
   if (eventType === "invoice.payment_made") {
-    patch.paid_at = order.paid_at ?? payload.created_at ?? new Date().toISOString();
-    patch.payment_method = "Square invoice";
+    patch.paid_at = payload.created_at ?? new Date().toISOString();
     patch.payment_provider = "square_invoice";
     patch.payment_transaction_id = invoice.id;
     patch.status = "pending";
   }
 
-  const { error: updateError } = await client.from("orders").update(patch).eq("id", order.id);
+  const { error: updateError } = await client.from("orders").update(patch).in("id", orderIds);
   if (updateError) {
     console.error("Square invoice webhook update failed:", updateError);
     return NextResponse.json({ error: "Update failed." }, { status: 500 });
   }
 
   if (eventType === "invoice.payment_made") {
-    if (!order.paid_at) {
-      const recipients = getOrdersRecipients();
-      if (recipients.length > 0) {
+    const unpaidOrders = orders.filter((order) => !order.paid_at);
+    const recipients = getOrdersRecipients();
+    if (recipients.length > 0) {
+      for (const order of unpaidOrders) {
         try {
           await sendOrderEmail(recipients, {
             orderNumber: order.order_number ?? null,

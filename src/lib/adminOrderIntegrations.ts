@@ -1,6 +1,6 @@
 import { getPackagingOptions, type OrderRow, type PackagingOption } from "@/lib/data";
 
-type AdminIntegrationOrder = Pick<
+export type AdminIntegrationOrder = Pick<
   OrderRow,
   | "id"
   | "order_number"
@@ -33,6 +33,10 @@ type AdminIntegrationOrder = Pick<
   | "square_invoice_id"
   | "square_invoice_version"
 >;
+
+export type AdminInvoiceOrderInput = AdminIntegrationOrder & {
+  invoiceOrders?: AdminIntegrationOrder[];
+};
 
 type SquareConfig = {
   accessToken: string;
@@ -112,6 +116,10 @@ function moneyToCents(value: number | null | undefined) {
   return Math.round(amount * 100);
 }
 
+function invoiceOrdersFor(order: AdminInvoiceOrderInput) {
+  return order.invoiceOrders?.length ? order.invoiceOrders : [order];
+}
+
 function splitName(order: AdminIntegrationOrder) {
   const first = order.first_name?.trim();
   const last = order.last_name?.trim();
@@ -141,16 +149,26 @@ function buildBilling(order: AdminIntegrationOrder) {
   };
 }
 
-function orderReference(order: AdminIntegrationOrder) {
+function orderReference(order: Pick<AdminIntegrationOrder, "id" | "order_number">) {
   return order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
 }
 
-function orderTitle(order: AdminIntegrationOrder) {
+function orderTitle(order: Pick<AdminIntegrationOrder, "title" | "organization_name" | "customer_name">) {
   return order.title?.trim() || order.organization_name?.trim() || order.customer_name?.trim() || "Custom candy order";
 }
 
-export function defaultAdminSquareInvoiceTitle(order: Pick<AdminIntegrationOrder, "title" | "organization_name" | "customer_name" | "order_number" | "id">) {
-  return `Personalised ${orderTitle(order as AdminIntegrationOrder)} candy ${orderReference(order as AdminIntegrationOrder)}`.trim();
+export function defaultAdminSquareInvoiceTitle(
+  order: Pick<AdminIntegrationOrder, "title" | "organization_name" | "customer_name" | "order_number" | "id"> & {
+    invoiceOrders?: Array<Pick<AdminIntegrationOrder, "id" | "order_number" | "title" | "organization_name" | "customer_name">>;
+  },
+) {
+  const invoiceOrders = order.invoiceOrders?.length ? order.invoiceOrders : null;
+  if (invoiceOrders && invoiceOrders.length > 1) {
+    const refs = invoiceOrders.map(orderReference).join(", ");
+    const customer = order.organization_name?.trim() || order.customer_name?.trim();
+    return `Personalised candy orders ${refs}${customer ? ` - ${customer}` : ""}`.trim();
+  }
+  return `Personalised ${orderTitle(order)} candy ${orderReference(order)}`.trim();
 }
 
 export function squareInvoicePaymentMethodLabel(mode: AdminSquareInvoicePaymentMode) {
@@ -232,11 +250,22 @@ async function invoiceOrderDescription(order: AdminIntegrationOrder) {
   return `${quantityLabel ? `${quantityLabel} x ` : ""}${packagingLabel}`.trim();
 }
 
-async function invoiceDescription(order: AdminIntegrationOrder) {
+async function invoiceDescription(order: AdminInvoiceOrderInput) {
+  const invoiceOrders = invoiceOrdersFor(order);
   const orderDescription = await invoiceOrderDescription(order);
+  const groupedOrderDescriptions =
+    invoiceOrders.length > 1
+      ? await Promise.all(
+          invoiceOrders.map(async (invoiceOrder) => {
+            const description = await invoiceOrderDescription(invoiceOrder);
+            return `${orderReference(invoiceOrder)} - ${description || orderTitle(invoiceOrder)}`;
+          }),
+        )
+      : null;
   return [
     order.customer_note?.trim() ?? "",
-    `Thank you for your order: ${orderDescription}`,
+    groupedOrderDescriptions ? "Thank you for your orders:" : `Thank you for your order: ${orderDescription}`,
+    ...(groupedOrderDescriptions ?? []),
     "",
     "For Direct Deposits:",
     "Bsb: 086 006",
@@ -295,10 +324,14 @@ function formatDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function invoiceDueDate(order: AdminIntegrationOrder) {
-  if (order.due_date && /^\d{4}-\d{2}-\d{2}$/.test(order.due_date)) {
+function invoiceDueDate(order: AdminInvoiceOrderInput) {
+  const dueDate = invoiceOrdersFor(order)
+    .map((invoiceOrder) => invoiceOrder.due_date)
+    .filter((value): value is string => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value)))
+    .sort()[0];
+  if (dueDate) {
     const today = formatDateKey(new Date());
-    return order.due_date < today ? today : order.due_date;
+    return dueDate < today ? today : dueDate;
   }
   const fallback = new Date();
   fallback.setDate(fallback.getDate() + 7);
@@ -322,11 +355,11 @@ function paymentReminders(dueDate: string) {
   return reminders;
 }
 
-async function createSquareCustomer(order: AdminIntegrationOrder) {
+async function createSquareCustomer(order: AdminIntegrationOrder, idempotencySuffix?: string) {
   const { firstName, lastName } = splitName(order);
   const billing = buildBilling(order);
   const body = {
-    idempotency_key: `rc-admin-customer-${order.id}`,
+    idempotency_key: `rc-admin-customer-${order.id}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
     given_name: firstName || undefined,
     family_name: lastName || undefined,
     company_name: order.organization_name?.trim() || undefined,
@@ -379,10 +412,32 @@ async function updateSquareCustomer(order: AdminIntegrationOrder, customerId: st
   });
 }
 
-async function createSquareOrder(order: AdminIntegrationOrder, customerId: string, idempotencySuffix?: string) {
+async function squareLineItemsForOrders(order: AdminInvoiceOrderInput, currency: string) {
+  return Promise.all(
+    invoiceOrdersFor(order).map(async (invoiceOrder) => {
+      const title = `${orderReference(invoiceOrder)} - ${orderTitle(invoiceOrder)}`.trim();
+      const description = await invoiceOrderDescription(invoiceOrder);
+      return {
+        name: title,
+        quantity: "1",
+        note: description || undefined,
+        applied_taxes: [
+          {
+            tax_uid: "GST",
+          },
+        ],
+        base_price_money: {
+          amount: moneyToCents(invoiceOrder.total_price),
+          currency,
+        },
+      };
+    }),
+  );
+}
+
+async function createSquareOrder(order: AdminInvoiceOrderInput, customerId: string, idempotencySuffix?: string) {
   const config = getSquareConfig();
-  const totalCents = moneyToCents(order.total_price);
-  const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
+  const lineItems = await squareLineItemsForOrders(order, config.currency);
   const data = await squareRequest<{ order?: SquareOrder }>("/v2/orders", {
     method: "POST",
     body: {
@@ -394,22 +449,7 @@ async function createSquareOrder(order: AdminIntegrationOrder, customerId: strin
         source: {
           name: "Roc Candy Admin",
         },
-        line_items: [
-          {
-            name: invoiceTitle,
-            quantity: "1",
-            note: order.order_description ?? undefined,
-            applied_taxes: [
-              {
-                tax_uid: "GST",
-              },
-            ],
-            base_price_money: {
-              amount: totalCents,
-              currency: config.currency,
-            },
-          },
-        ],
+        line_items: lineItems,
         taxes: [
           {
             uid: "GST",
@@ -429,7 +469,7 @@ async function createSquareOrder(order: AdminIntegrationOrder, customerId: strin
 }
 
 async function createSquareInvoice(
-  order: AdminIntegrationOrder,
+  order: AdminInvoiceOrderInput,
   customerId: string,
   squareOrderId: string,
   idempotencySuffix?: string,
@@ -493,7 +533,7 @@ async function clearSquareInvoiceRecipient(orderId: string, invoiceId: string, i
 }
 
 async function updateSquareInvoiceDraft(
-  order: AdminIntegrationOrder,
+  order: AdminInvoiceOrderInput,
   invoiceId: string,
   invoiceVersion: number,
   paymentMode: AdminSquareInvoicePaymentMode = squareInvoicePaymentModeFromOrder(order),
@@ -578,10 +618,13 @@ async function publishSquareInvoice(invoiceId: string, invoiceVersion: number, o
 }
 
 export async function createAdminSquareInvoiceDraft(
-  order: AdminIntegrationOrder,
+  order: AdminInvoiceOrderInput,
   options: { idempotencySuffix?: string; paymentMode?: AdminSquareInvoicePaymentMode } = {},
 ): Promise<AdminSquareInvoiceDraftResult> {
-  const customerId = await createSquareCustomer(order);
+  const customerId = order.square_customer_id || (await createSquareCustomer(order, options.idempotencySuffix));
+  if (order.square_customer_id) {
+    await updateSquareCustomer(order, order.square_customer_id);
+  }
   const squareOrderId = await createSquareOrder(order, customerId, options.idempotencySuffix);
   const paymentMode = options.paymentMode ?? squareInvoicePaymentModeFromOrder(order);
   const { invoice, dueDate } = await createSquareInvoice(
@@ -653,10 +696,10 @@ export async function removeAdminSquareInvoice(
 }
 
 export async function createAndPublishAdminSquareInvoice(
-  order: AdminIntegrationOrder,
+  order: AdminInvoiceOrderInput,
   options: { idempotencySuffix?: string; paymentMode?: AdminSquareInvoicePaymentMode } = {},
 ): Promise<AdminSquareInvoiceReplacementResult> {
-  const customerId = order.square_customer_id || (await createSquareCustomer(order));
+  const customerId = order.square_customer_id || (await createSquareCustomer(order, options.idempotencySuffix));
   if (order.square_customer_id) {
     await updateSquareCustomer(order, order.square_customer_id);
   }
@@ -688,7 +731,7 @@ export async function createAndPublishAdminSquareInvoice(
 }
 
 export async function updateAndPublishAdminSquareInvoice(
-  order: AdminIntegrationOrder,
+  order: AdminInvoiceOrderInput,
   options: { paymentMode?: AdminSquareInvoicePaymentMode } = {},
 ): Promise<AdminSquareInvoiceSendResult> {
   if (!order.square_invoice_id) {
