@@ -1024,7 +1024,7 @@ export function NewOrderForm({
         heart_color: isWedding && !isAdminPremadeOrder ? heartColor : "",
         flavor,
         logo_url: isBranded && !isAdminPremadeOrder ? logoUrl : "",
-        label_image_url: !isAdminPremadeOrder ? labelImageUrl : "",
+        label_image_url: !isAdminPremadeOrder && customLabelsOptIn ? labelImageUrl : "",
         admin_premade_mode: adminPremadeMode,
         admin_premade_candy_id: adminPremadeCandyId,
         production_slot_date: productionSlotDate,
@@ -1048,6 +1048,7 @@ export function NewOrderForm({
     setCustomLabelsOptIn(Boolean(fields.labels_count));
     setLabelsCount(fields.labels_count ?? "");
     setJarLidColor(fields.jar_lid_color ?? "");
+    setDueDate(fields.due_date ?? "");
     setJacket(fields.jacket ?? "");
     setPriceValue(fields.total_price ?? "");
     setWeightValue(fields.order_weight_g || fields.total_weight_kg || "");
@@ -1112,12 +1113,28 @@ export function NewOrderForm({
     applyInvoiceDraft(nextActive);
     setReviewMode(false);
   };
+  const invoiceDraftTabLabel = (draft: InvoiceOrderDraft, index: number, isActive: boolean) => {
+    if (isActive) {
+      return derivedOrderTitle || draftLabel(draft, index);
+    }
+    const draftCategoryId = draft.fields.category_id ?? "";
+    return (
+      orderTitleFromDetails({
+        categoryId: draftCategoryId,
+        designText: draft.fields.design_text ?? "",
+        organizationName: sharedOrganizationName,
+        fallback: categories.find((category) => category.id === draftCategoryId)?.name ?? "",
+      }) ||
+      draftLabel(draft, index)
+    );
+  };
   const renderInvoiceTabs = (placement: "top" | "bottom") => (
     <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap gap-2" role="tablist" aria-label={`${placement} invoice orders`}>
           {invoiceOrderDrafts.map((draft, index) => {
             const isActive = draft.id === activeInvoiceDraftId;
+            const tabLabel = invoiceDraftTabLabel(draft, index, isActive);
             return (
               <div key={draft.id} className="inline-flex items-center">
                 <button
@@ -1131,7 +1148,7 @@ export function NewOrderForm({
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                   }`}
                 >
-                  {draftLabel(draft, index)}
+                  {tabLabel}
                 </button>
                 {invoiceOrderDrafts.length > 1 ? (
                   <button
@@ -1142,7 +1159,7 @@ export function NewOrderForm({
                         ? "border-zinc-900 bg-zinc-900 text-white"
                         : "border-zinc-200 bg-white text-zinc-500 hover:border-rose-300 hover:text-rose-700"
                     }`}
-                    aria-label={`Remove ${draftLabel(draft, index)}`}
+                    aria-label={`Remove ${tabLabel}`}
                   >
                     X
                   </button>
@@ -1183,7 +1200,6 @@ export function NewOrderForm({
           return {
             fields: {
               ...draft.fields,
-              due_date: dueDate,
               title:
                 orderTitleFromDetails({
                   categoryId: draftCategoryId,
@@ -1196,7 +1212,7 @@ export function NewOrderForm({
           };
         }),
       ),
-    [categories, dueDate, reviewDrafts, sharedOrganizationName],
+    [categories, reviewDrafts, sharedOrganizationName],
   );
 
   useEffect(() => {
@@ -1244,6 +1260,10 @@ export function NewOrderForm({
   useEffect(() => {
     if (!customLabelsOptIn) {
       setLabelsCount("");
+      setLabelFileName("");
+      setLabelImageUrl("");
+      setLabelImageSummary(null);
+      setLabelImageError(null);
     }
   }, [customLabelsOptIn]);
 
@@ -1502,16 +1522,6 @@ export function NewOrderForm({
               </div>
             </div>
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              Date required
-              <input
-                type="date"
-                name="due_date"
-                value={dueDate}
-                onChange={(event) => setDueDate(event.target.value)}
-                className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-              />
-            </label>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
               First name
               <input
                 name="first_name"
@@ -1568,7 +1578,7 @@ export function NewOrderForm({
                     name="address_line1"
                     value={sharedAddressLine1}
                     onChange={(event) => setSharedAddressLine1(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
@@ -1577,7 +1587,7 @@ export function NewOrderForm({
                     name="address_line2"
                     value={sharedAddressLine2}
                     onChange={(event) => setSharedAddressLine2(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -1602,7 +1612,7 @@ export function NewOrderForm({
                   State
                   <select
                     name="state"
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                     value={sharedState}
                     onChange={(event) => setSharedState(event.target.value)}
                   >
@@ -1683,17 +1693,6 @@ export function NewOrderForm({
                   </label>
                 </div>
               </div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Date required
-                <input
-                  type="date"
-                  name="due_date"
-                  value={dueDate}
-                  required
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 First name
                 <input
@@ -1845,6 +1844,10 @@ export function NewOrderForm({
                       <dd>{draft.fields.quantity || "-"}</dd>
                     </div>
                     <div>
+                      <dt className="font-semibold text-zinc-900">Required</dt>
+                      <dd>{draft.fields.due_date || "-"}</dd>
+                    </div>
+                    <div>
                       <dt className="font-semibold text-zinc-900">Weight</dt>
                       <dd>{weightKg !== null ? `${weightKg.toFixed(2)}kg` : "-"}</dd>
                     </div>
@@ -1980,7 +1983,7 @@ export function NewOrderForm({
                     if (next !== "flavor") setAdminPremadeFlavor("");
                     if (next !== "premade") setAdminPremadeCandyId("");
                   }}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 >
                   <option value="">Select order type</option>
                   <option value="flavor">Flavor</option>
@@ -1995,7 +1998,7 @@ export function NewOrderForm({
                     value={adminPremadeCandyId}
                     required
                     onChange={(event) => setAdminPremadeCandyId(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   >
                     <option value="">Select pre-made candy</option>
                     {premadeOptions.map((item) => (
@@ -2038,12 +2041,7 @@ export function NewOrderForm({
                 <input type="hidden" name="production_slot_date" value={productionSlotDate} />
               </div>
             </>
-          ) : (
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">Calculated title</p>
-              <p className="mt-1 font-semibold text-zinc-900">{derivedOrderTitle || "Complete the design details"}</p>
-            </div>
-          )}
+          ) : null}
           <input type="hidden" name="title" value={derivedOrderTitle ?? ""} />
           <input type="hidden" name="status" value={isEditMode && initialOrder ? initialOrder.status : "unassigned"} />
         </div>
@@ -2254,69 +2252,71 @@ export function NewOrderForm({
                 </div>
               </div>
 
-              <div className="mt-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
-                <label htmlFor="label-artwork-upload">Label artwork</label>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    id="label-artwork-upload"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
-                    onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor="label-artwork-upload"
-                    className="inline-flex min-h-11 cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
-                  >
-                    {labelFileName ? "Change file" : "Choose file"}
-                  </label>
-                  {labelImageUrl ? (
-                    labelImageUrl.startsWith("data:image/") ? (
-                      <Image
-                        src={labelImageUrl}
-                        alt="Label preview"
-                        width={44}
-                        height={44}
-                        className="h-11 w-11 rounded border border-zinc-200 object-cover"
-                        unoptimized
-                      />
-                    ) : labelImageUrl.startsWith("data:application/pdf") ? (
-                      <span className="inline-flex h-11 min-w-11 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
-                        PDF
+              {customLabelsOptIn ? (
+                <div className="mt-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  <label htmlFor="label-artwork-upload">Label artwork</label>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      id="label-artwork-upload"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                      onChange={(event) => handleLabelUpload(event.target.files?.[0] ?? null)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="label-artwork-upload"
+                      className="inline-flex min-h-11 cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+                    >
+                      {labelFileName ? "Change file" : "Choose file"}
+                    </label>
+                    {labelImageUrl ? (
+                      labelImageUrl.startsWith("data:image/") ? (
+                        <Image
+                          src={labelImageUrl}
+                          alt="Label preview"
+                          width={44}
+                          height={44}
+                          className="h-11 w-11 rounded border border-zinc-200 object-cover"
+                          unoptimized
+                        />
+                      ) : labelImageUrl.startsWith("data:application/pdf") ? (
+                        <span className="inline-flex h-11 min-w-11 items-center justify-center rounded border border-zinc-200 bg-white px-2 text-[10px] font-semibold text-zinc-600">
+                          PDF
+                        </span>
+                      ) : null
+                    ) : null}
+                    {labelFileName ? (
+                      <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
+                        {labelFileName}
                       </span>
-                    ) : null
+                    ) : null}
+                    {labelImageUrl ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
+                        Ready
+                      </span>
+                    ) : null}
+                  </div>
+                  {labelImageError ? (
+                    <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
                   ) : null}
-                  {labelFileName ? (
-                    <span className="text-xs normal-case tracking-normal text-zinc-500" title={labelFileName}>
-                      {labelFileName}
-                    </span>
-                  ) : null}
-                  {labelImageUrl ? (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0.08em] text-emerald-700">
-                      Ready
-                    </span>
+                  {isOptimisingLabelImage ? (
+                    <div className="mt-2">
+                      <ImageOptimizationStatus
+                        summary={null}
+                        pendingLabel="Optimising artwork..."
+                        helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                      />
+                    </div>
+                  ) : labelImageSummary ? (
+                    <div className="mt-2">
+                      <ImageOptimizationStatus
+                        summary={labelImageSummary}
+                        helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
+                      />
+                    </div>
                   ) : null}
                 </div>
-                {labelImageError ? (
-                  <p className="mt-1 text-xs normal-case tracking-normal text-red-600">{labelImageError}</p>
-                ) : null}
-                {isOptimisingLabelImage ? (
-                  <div className="mt-2">
-                    <ImageOptimizationStatus
-                      summary={null}
-                      pendingLabel="Optimising artwork..."
-                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                    />
-                  </div>
-                ) : labelImageSummary ? (
-                  <div className="mt-2">
-                    <ImageOptimizationStatus
-                      summary={labelImageSummary}
-                      helperText="Image uploads are compressed before they are added to the order. PDFs stay as PDF."
-                    />
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
             </div>
 
             <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
@@ -2493,7 +2493,7 @@ export function NewOrderForm({
       {!isBranded && !isAdminPremadeOrder ? <input type="hidden" name="text_color" value={textColor} /> : null}
       {isWedding && !isAdminPremadeOrder ? <input type="hidden" name="heart_color" value={heartColor} /> : null}
       {isBranded && !isAdminPremadeOrder && logoUrl ? <input type="hidden" name="logo_url" value={logoUrl} /> : null}
-      {!isAdminPremadeOrder && labelImageUrl ? <input type="hidden" name="label_image_url" value={labelImageUrl} /> : null}
+      {!isAdminPremadeOrder && customLabelsOptIn && labelImageUrl ? <input type="hidden" name="label_image_url" value={labelImageUrl} /> : null}
       {!isAdminPremadeOrder ? <input type="hidden" name="ingredient_labels_count" value={ingredientLabelsCount} /> : null}
 
       {!isAdminPremadeOrder ? (
@@ -2725,17 +2725,29 @@ export function NewOrderForm({
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <label className="block">
-              <span className="admin-card-title text-zinc-900">Production Notes</span>
-              <textarea
-                name="notes"
-                key={`notes-${activeInvoiceDraftId}-${orderFieldsKey}`}
-                defaultValue={draftValue(activeInvoiceDraft, "notes", initialOrder?.notes ?? "")}
-                className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                rows={5}
-                placeholder="Internal notes for this order."
-              />
-            </label>
+            <div className="grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Date required
+                <input
+                  type="date"
+                  name="due_date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="mt-4 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="block">
+                <span className="admin-card-title text-zinc-900">Production Notes</span>
+                <textarea
+                  name="notes"
+                  key={`notes-${activeInvoiceDraftId}-${orderFieldsKey}`}
+                  defaultValue={draftValue(activeInvoiceDraft, "notes", initialOrder?.notes ?? "")}
+                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  rows={5}
+                  placeholder="Internal notes for this order."
+                />
+              </label>
+            </div>
           </div>
           {invoiceDraftMode ? renderInvoiceTabs("bottom") : null}
         </>
