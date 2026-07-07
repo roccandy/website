@@ -2285,10 +2285,13 @@ export async function deleteAssignment(formData: FormData) {
   redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
 }
 
-export async function deleteOrder(formData: FormData) {
+async function deleteOrderShared(formData: FormData, inlineResponse: boolean) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("order_id")?.toString() || formData.get("id")?.toString() || null;
   if (!orderId) {
+    if (inlineResponse) {
+      return { ok: false, tone: "error" as const, message: "Missing order id." };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
   }
 
@@ -2299,9 +2302,15 @@ export async function deleteOrder(formData: FormData) {
     .eq("id", orderId)
     .maybeSingle();
   if (fetchError) {
+    if (inlineResponse) {
+      return { ok: false, tone: "error" as const, message: fetchError.message };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", fetchError.message));
   }
   if (!order) {
+    if (inlineResponse) {
+      return { ok: false, tone: "error" as const, message: "Order not found." };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", "Order not found."));
   }
 
@@ -2336,6 +2345,10 @@ export async function deleteOrder(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete order.";
+    if (inlineResponse) {
+      revalidatePath(ORDERS_PATH);
+      return { ok: false, tone: "error" as const, message };
+    }
     redirect(toastRedirect(ORDERS_PATH, "error", message));
   }
 
@@ -2343,7 +2356,19 @@ export async function deleteOrder(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/admin/production");
   revalidatePath("/admin/orders/archived");
+  if (inlineResponse) {
+    return { ok: true, tone: "success" as const, message: "Order deleted." };
+  }
   redirect(toastRedirect(ORDERS_PATH, "success", "Order deleted."));
+}
+
+export async function deleteOrder(formData: FormData) {
+  await deleteOrderShared(formData, false);
+}
+
+export async function deleteOrderInline(formData: FormData) {
+  formData.set("response_mode", "inline");
+  return deleteOrderShared(formData, true);
 }
 
 async function completeOrder(formData: FormData, inlineResponse: boolean) {

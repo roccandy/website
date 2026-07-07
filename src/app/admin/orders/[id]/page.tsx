@@ -6,13 +6,17 @@ import {
   getCategories,
   getColorPalette,
   getFlavors,
+  getOrderSlots,
+  getOrders,
   getPackagingOptions,
+  getPremadeCandies,
+  getProductionSlots,
   getSettings,
   type OrderRow,
 } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { formatDate, formatMoney } from "../productionScheduleShared";
-import { OrderDetailEditor } from "./OrderDetailEditor";
+import { NewOrderForm } from "../new/NewOrderForm";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -60,13 +64,26 @@ export default async function AdminOrderDetailPage({
   const order = await loadOrder(rawId);
   if (!order) redirect("/admin/orders");
 
-  const [categories, packagingOptions, flavors, settings, palette] = await Promise.all([
+  const [categories, packagingOptions, flavors, settings, palette, premadeCandies, orders, slots, assignments] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getFlavors(),
     getSettings(),
     getColorPalette(),
+    getPremadeCandies(),
+    getOrders(),
+    getProductionSlots(),
+    getOrderSlots(),
   ]);
+  const invoiceGroupOrders = order.square_invoice_id
+    ? orders
+        .filter((item) => item.square_invoice_id === order.square_invoice_id)
+        .sort((a, b) => {
+          const aNumber = a.order_number ?? "";
+          const bNumber = b.order_number ?? "";
+          return aNumber.localeCompare(bNumber) || a.created_at.localeCompare(b.created_at);
+        })
+    : [];
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
   const orderLabel = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
@@ -111,6 +128,33 @@ export default async function AdminOrderDetailPage({
         </p>
       ) : null}
 
+      {invoiceGroupOrders.length > 1 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">This order is part of a combined Square invoice.</p>
+          <p className="mt-1">
+            Edit this order here, then approve the replacement invoice prompt if price, quantity, packaging, date,
+            batches, labels, or design changes affect what the customer should pay.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {invoiceGroupOrders.map((invoiceOrder) => (
+              <Link
+                key={invoiceOrder.id}
+                href={`/admin/orders/${invoiceOrder.id}`}
+                className={`rounded border px-2 py-1 font-semibold ${
+                  invoiceOrder.id === order.id
+                    ? "border-amber-300 bg-white text-amber-900"
+                    : "border-amber-200 bg-amber-100 text-amber-800 hover:border-amber-300"
+                }`}
+              >
+                {invoiceOrder.order_number ? `#${invoiceOrder.order_number}` : invoiceOrder.title ?? "Order"}
+                {" · "}
+                {formatMoney(invoiceOrder.total_price)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-zinc-200 bg-white p-3">
           <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Total</p>
@@ -132,14 +176,19 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      <OrderDetailEditor
-        order={order}
-        cancelHref={`/admin/orders?selected=${encodeURIComponent(order.id)}`}
+      <NewOrderForm
         categories={categories}
         packagingOptions={packagingOptions}
         flavors={flavors}
-        settings={settings}
         palette={palette}
+        premadeCandies={premadeCandies}
+        settings={settings}
+        orders={orders}
+        slots={slots}
+        assignments={assignments}
+        mode="edit"
+        initialOrder={order}
+        cancelHref={`/admin/orders?selected=${encodeURIComponent(order.id)}`}
       />
     </section>
   );
