@@ -218,7 +218,6 @@ export function OrdersTable({
               <th className="px-3 py-3 text-left">Date required</th>
               <th className="px-3 py-3 text-left">Packaging</th>
               <th className="px-3 py-3 text-left">Weight</th>
-              <th className="px-3 py-3 text-left">Pickup</th>
               <th className="px-3 py-3 text-left">State</th>
             </tr>
           </thead>
@@ -334,12 +333,11 @@ export function OrdersTable({
                       <PackagingDescription value={packagingDescription} />
                     </td>
                     <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
-                    <td className="px-3 py-2 text-zinc-700">{isAdminPremade ? "-" : order.pickup ? "Pickup" : "Delivery"}</td>
                     <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>
                   </tr>
                   {selectedId === order.id ? (
                     <tr className="bg-white">
-                      <td colSpan={7} className="px-3 pb-4">
+                      <td colSpan={6} className="px-3 pb-4">
                         <div
                           id={`order-detail-${order.id}`}
                           className="mt-2 rounded-lg border border-zinc-200 bg-white p-4 text-xs text-zinc-700 shadow-sm"
