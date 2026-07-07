@@ -45,6 +45,12 @@ const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
 
 const WORKWEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
+const productionScheduleTitle = (order: OrderRow | null | undefined) => {
+  if (!order) return "Order";
+  const title = order.title || formatOrderDescription(order) || order.order_number || "Order";
+  return isAdminPremadeOrder(order) ? title.replace(/^premade stock\s*-\s*/i, "").trim() || title : title;
+};
+
 export default function ProductionScheduleSection({
   orders,
   slots,
@@ -385,8 +391,7 @@ export default function ProductionScheduleSection({
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
                         const printTarget = order?.id ?? order?.order_number;
-                        const title =
-                          order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
+                        const title = productionScheduleTitle(order);
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canCompleteSlotOrder = order
                           ? canCompleteOrderForSlotDates(order, assignedSlotDatesByOrderId.get(order.id) ?? [key])
@@ -618,8 +623,7 @@ export default function ProductionScheduleSection({
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
                         const printTarget = order?.id ?? order?.order_number;
-                        const title =
-                          order?.title || (order ? formatOrderDescription(order) : "") || order?.order_number || "Order";
+                        const title = productionScheduleTitle(order);
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canCompleteSlotOrder = order
                           ? canCompleteOrderForSlotDates(order, assignedSlotDatesByOrderId.get(order.id) ?? [key])
@@ -835,7 +839,7 @@ export default function ProductionScheduleSection({
                       >
                         <OrderTitleWithLogo
                           order={order}
-                          title={order.title ?? "Untitled"}
+                          title={productionScheduleTitle(order)}
                           logoClassName="h-4 w-4"
                           imageClassName="h-5 w-5"
                         />
