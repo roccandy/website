@@ -2315,7 +2315,16 @@ async function deleteOrderShared(formData: FormData, inlineResponse: boolean) {
   }
 
   try {
+    let remainingInvoiceOrderIds: string[] = [];
     if (order.square_invoice_id) {
+      const { data: invoicePeers, error: peersError } = await client
+        .from("orders")
+        .select("id")
+        .eq("square_invoice_id", order.square_invoice_id);
+      if (peersError) throw new Error(peersError.message);
+      remainingInvoiceOrderIds = (invoicePeers ?? [])
+        .map((peer) => peer.id)
+        .filter((peerId): peerId is string => Boolean(peerId && peerId !== orderId));
       await removeAdminSquareInvoice(order, { idempotencySuffix: `delete-${Date.now()}` });
     }
 
@@ -2324,6 +2333,25 @@ async function deleteOrderShared(formData: FormData, inlineResponse: boolean) {
 
     const { error: deleteError } = await client.from("orders").delete().eq("id", orderId);
     if (deleteError) throw new Error(deleteError.message);
+
+    if (remainingInvoiceOrderIds.length > 0) {
+      const { error: clearInvoiceError } = await client
+        .from("orders")
+        .update({
+          square_order_id: null,
+          square_invoice_id: null,
+          square_invoice_version: null,
+          square_invoice_status: null,
+          square_invoice_url: null,
+          square_invoice_due_date: null,
+          square_invoice_created_at: null,
+          square_invoice_sent_at: null,
+          square_invoice_title: null,
+          square_invoice_error: "Square invoice removed because another order on this invoice was deleted. Create a new invoice for the remaining orders.",
+        })
+        .in("id", remainingInvoiceOrderIds);
+      if (clearInvoiceError) throw new Error(clearInvoiceError.message);
+    }
 
     await logAdminActivity({
       area: "operations",

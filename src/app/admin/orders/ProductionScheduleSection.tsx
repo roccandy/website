@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
-import { archiveOrderInline, assignOrderToSlot, deleteOrderInline, upsertProductionDayNote } from "./actions";
+import { archiveOrderInline, assignOrderToSlot, upsertProductionDayNote } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
@@ -553,13 +553,6 @@ export default function ProductionScheduleSection({
                                         >
                                           Change
                                         </button>
-                                        <SplitAwareActionForm
-                                          action={deleteOrderInline}
-                                          hiddenFields={[{ name: "order_id", value: order.id }]}
-                                          buttonLabel="Delete"
-                                          buttonClassName="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[8px] font-semibold text-rose-700 hover:border-rose-300"
-                                          confirmMessage="Delete this order permanently? This also removes any production assignments and removes the linked Square invoice if there is one."
-                                        />
                                       </div>
                                     </div>
                                   </div>
@@ -741,13 +734,6 @@ export default function ProductionScheduleSection({
                                     >
                                       Change
                                     </button>
-                                    <SplitAwareActionForm
-                                      action={deleteOrderInline}
-                                      hiddenFields={[{ name: "order_id", value: order.id }]}
-                                      buttonLabel="Delete order"
-                                      buttonClassName="w-full rounded border border-rose-200 bg-rose-50 px-2 py-1 text-center text-[11px] font-semibold text-rose-700 hover:border-rose-300"
-                                      confirmMessage="Delete this order permanently? This also removes any production assignments and removes the linked Square invoice if there is one."
-                                    />
                                   </div>
                                 </div>
                               </div>

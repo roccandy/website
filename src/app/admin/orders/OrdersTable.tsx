@@ -11,7 +11,7 @@ import type {
   ProductionSlot,
   SettingsRow,
 } from "@/lib/data";
-import { archiveOrderInline, markOrderAsPaid } from "./actions";
+import { archiveOrderInline, deleteOrderInline, markOrderAsPaid } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import ProductionScheduleSection from "./ProductionScheduleSection";
@@ -388,6 +388,13 @@ export function OrdersTable({
                                   companionMeta={premadeSiblingMeta}
                                 />
                               ) : null}
+                              <SplitAwareActionForm
+                                action={deleteOrderInline}
+                                hiddenFields={[{ name: "order_id", value: order.id }]}
+                                buttonLabel="Delete order"
+                                buttonClassName="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300"
+                                confirmMessage="Delete this order permanently? This also removes any production assignments and removes the linked Square invoice if there is one."
+                              />
                             </div>
                           </div>
 
