@@ -270,6 +270,237 @@ function squareInvoiceSendPatch(
   };
 }
 
+type TabbedInvoiceOrderInput = {
+  fields?: Record<string, unknown>;
+  batchWeights?: unknown[];
+};
+
+const tabbedField = (input: TabbedInvoiceOrderInput, name: string) => {
+  const value = input.fields?.[name];
+  return typeof value === "string" ? value.trim() : "";
+};
+
+const tabbedNullableField = (input: TabbedInvoiceOrderInput, name: string) => tabbedField(input, name) || null;
+
+const tabbedNumberField = (input: TabbedInvoiceOrderInput, name: string) => {
+  const value = Number(tabbedField(input, name));
+  return Number.isFinite(value) ? value : null;
+};
+
+const orderNumberSuffix = (index: number) => {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz";
+  return alphabet[index] ?? String(index + 1);
+};
+
+async function createTabbedAdminInvoiceOrders(formData: FormData) {
+  const rawPayload = formData.get("admin_invoice_orders_json")?.toString() || "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawPayload);
+  } catch {
+    throw new Error("Unable to read invoice order tabs.");
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("Add at least one order before creating the invoice.");
+  }
+  const tabbedOrders = parsed as TabbedInvoiceOrderInput[];
+  if (tabbedOrders.length > 12) {
+    throw new Error("A combined invoice can include up to 12 order tabs.");
+  }
+
+  const first_name = formData.get("first_name")?.toString().trim() || null;
+  const last_name = formData.get("last_name")?.toString().trim() || null;
+  const customer_email = formData.get("customer_email")?.toString().trim() || null;
+  const phone = formData.get("phone")?.toString().trim() || null;
+  const organization_name = formData.get("organization_name")?.toString().trim() || null;
+  const address_line1 = formData.get("address_line1")?.toString().trim() || null;
+  const address_line2 = formData.get("address_line2")?.toString().trim() || null;
+  const suburb = formData.get("suburb")?.toString().trim() || null;
+  const postcode = formData.get("postcode")?.toString().trim() || null;
+  const state = formData.get("state")?.toString().trim() || null;
+  const customer_note = formData.get("customer_note")?.toString() || null;
+  const pickup = formData.get("pickup")?.toString() === "on";
+  const customer_name = [first_name, last_name].filter(Boolean).join(" ") || organization_name || null;
+  if (!customer_email) {
+    throw new Error("Customer email is required before creating a Square invoice.");
+  }
+
+  const batchWeightMismatchApproved = formData.get("batch_weight_mismatch_approved")?.toString() === "on";
+  const createdPayloads = tabbedOrders.map((input, index) => {
+    const category_id = tabbedNullableField(input, "category_id");
+    const packaging_option_id = tabbedNullableField(input, "packaging_option_id");
+    const quantity = tabbedNumberField(input, "quantity");
+    const orderWeightG = tabbedNumberField(input, "order_weight_g");
+    const total_weight_kg = orderWeightG !== null ? roundKg(orderWeightG / 1000) : NaN;
+    const total_price = tabbedNumberField(input, "total_price");
+    const submittedBatchWeights = normalizeAdminBatchWeights(
+      Array.isArray(input.batchWeights) ? input.batchWeights.map((value) => String(value)) : [],
+    );
+    const batchTotal = submittedBatchWeights.reduce((sum, weight) => sum + weight, 0);
+    const batchMismatch = submittedBatchWeights.length > 0 && Math.abs(roundKg(batchTotal) - roundKg(total_weight_kg)) > 0.02;
+    if (!category_id) throw new Error(`Order ${index + 1} needs an order type.`);
+    if (!packaging_option_id) throw new Error(`Order ${index + 1} needs packaging.`);
+    if (!quantity || quantity <= 0) throw new Error(`Order ${index + 1} needs a quantity.`);
+    if (!Number.isFinite(total_weight_kg) || total_weight_kg <= 0) throw new Error(`Order ${index + 1} needs a valid weight.`);
+    if (!total_price || total_price <= 0) throw new Error(`Order ${index + 1} needs a valid total.`);
+    if (batchMismatch && !batchWeightMismatchApproved) {
+      throw new Error("Batch weights do not match one or more order weights. Confirm the mismatch before saving.");
+    }
+
+    const isBranded = category_id === "branded";
+    const isWedding = category_id.startsWith("weddings");
+    const designTextRaw = tabbedNullableField(input, "design_text");
+    const design_text = isWedding ? normalizeWeddingDesignText(designTextRaw) : designTextRaw;
+    const title = tabbedNullableField(input, "title") ?? design_text ?? organization_name ?? `Custom candy order ${index + 1}`;
+    const labelsCount = tabbedNumberField(input, "labels_count");
+    const ingredientLabelsOptIn = tabbedField(input, "ingredient_labels_opt_in") === "on";
+    const ingredientLabelsCount = ingredientLabelsOptIn ? tabbedNumberField(input, "ingredient_labels_count") : null;
+    const notes = syncIngredientLabelsNote(tabbedNullableField(input, "notes"), ingredientLabelsOptIn);
+    const discountType = normalizeAdminDiscountType(tabbedField(input, "admin_discount_type"));
+    const discountValue = tabbedNumberField(input, "admin_discount_value");
+    const priceOverride = tabbedNumberField(input, "admin_price_override");
+
+    return {
+      order_number: "",
+      title,
+      order_description: tabbedNullableField(input, "order_description"),
+      customer_name,
+      customer_email,
+      category_id,
+      packaging_option_id,
+      quantity,
+      labels_count: labelsCount && labelsCount > 0 ? labelsCount : null,
+      ingredient_labels_count: ingredientLabelsCount && ingredientLabelsCount > 0 ? ingredientLabelsCount : null,
+      jacket: tabbedNullableField(input, "jacket"),
+      design_type: category_id,
+      design_text,
+      jacket_type: tabbedNullableField(input, "jacket_type"),
+      jacket_color_one: tabbedNullableField(input, "jacket_color_one"),
+      jacket_color_two: tabbedNullableField(input, "jacket_color_two"),
+      flavor: tabbedNullableField(input, "flavor"),
+      jar_lid_color: tabbedNullableField(input, "jar_lid_color"),
+      logo_url: isBranded ? tabbedNullableField(input, "logo_url") : null,
+      label_image_url: tabbedNullableField(input, "label_image_url"),
+      due_date: tabbedNullableField(input, "due_date"),
+      total_weight_kg,
+      total_price,
+      admin_batch_weights_kg: submittedBatchWeights,
+      admin_pricing_subtotal: null,
+      admin_discount_type: discountType,
+      admin_discount_value: discountValue && discountValue > 0 ? discountValue : null,
+      admin_price_override: priceOverride && priceOverride >= 0 ? priceOverride : null,
+      status: "unassigned",
+      payment_method: null,
+      pickup,
+      state,
+      first_name,
+      last_name,
+      phone,
+      organization_name,
+      address_line1: pickup ? null : address_line1,
+      address_line2: pickup ? null : address_line2,
+      suburb: pickup ? null : suburb,
+      postcode: pickup ? null : postcode,
+      notes,
+      customer_note,
+      square_invoice_title: null,
+      text_color: !isBranded ? tabbedNullableField(input, "text_color") : null,
+      heart_color: isWedding ? tabbedNullableField(input, "heart_color") : null,
+    };
+  });
+
+  const client = supabaseAdminClient;
+  let insertedOrders: OrderRow[] = [];
+  let insertError: { code?: string | null; message?: string | null } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const baseNumber = (await generateOrderNumber()).replace(ORDER_SUFFIX_PATTERN, "");
+    const candidatePayloads = createdPayloads.map((payload, index) => ({
+      ...payload,
+      order_number: createdPayloads.length > 1 ? `${baseNumber}-${orderNumberSuffix(index)}` : baseNumber,
+    }));
+    const { data, error } = await client.from("orders").insert(candidatePayloads).select("*");
+    if (!error) {
+      insertedOrders = (data ?? []) as OrderRow[];
+      insertError = null;
+      break;
+    }
+    if (isOrderNumberConflict(error)) {
+      insertError = error;
+      continue;
+    }
+    throw new Error(error.message);
+  }
+  if (insertedOrders.length !== createdPayloads.length) {
+    throw new Error(insertError?.message || "Unable to create invoice orders.");
+  }
+
+  const createdOrderIds = insertedOrders.map((order) => order.id);
+  const { primaryOrder } = await createCombinedAdminSquareInvoiceDraftForOrderIds(createdOrderIds, client);
+
+  const ordersRecipients = getOrdersRecipients();
+  if (ordersRecipients.length > 0) {
+    for (const order of insertedOrders) {
+      try {
+        await sendOrderEmail(ordersRecipients, {
+          orderNumber: order.order_number,
+          title: order.title,
+          designType: order.design_type,
+          quantity: order.quantity,
+          flavor: order.flavor,
+          dueDate: order.due_date,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          totalWeightKg: order.total_weight_kg,
+          totalPrice: order.total_price,
+          notes: order.notes,
+        });
+      } catch (error) {
+        console.error("Order email failed:", error);
+      }
+    }
+  }
+
+  try {
+    await sendAdminCreatedCustomerOrderEmail({
+      ...primaryOrder,
+      invoiceOrders: insertedOrders,
+      customer_email,
+      pickup,
+      address_line1,
+      address_line2,
+      suburb,
+      state,
+      postcode,
+      payment_method: "Square invoice",
+    });
+  } catch (error) {
+    console.error("Customer order email failed:", error);
+  }
+
+  await logAdminActivity({
+    area: "operations",
+    action: "created",
+    entityType: "order",
+    entityId: primaryOrder.id,
+    entityLabel: describeOrderTarget({
+      orderNumber: primaryOrder.order_number,
+      title: primaryOrder.title,
+      customerName: primaryOrder.customer_name,
+    }),
+    summary: `Created ${insertedOrders.length} order${insertedOrders.length === 1 ? "" : "s"} for one Square invoice draft.`,
+    path: `/admin/orders/${primaryOrder.id}/invoice`,
+    changedFields: ["Order details", "Square invoice"],
+    metadata: {
+      orderIds: createdOrderIds,
+    },
+  });
+
+  revalidatePath(ORDERS_PATH);
+  revalidatePath("/admin/orders/invoices");
+  revalidatePath(`/admin/orders/${primaryOrder.id}/invoice`);
+  redirect(`/admin/orders/${primaryOrder.id}/invoice`);
+}
+
 async function resolveFirstAvailableSlotIndex(
   slotDate: string,
   client: typeof supabaseAdminClient,
@@ -294,11 +525,10 @@ async function upsertOrderShared(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
   const submitIntent = formData.get("submit_intent")?.toString() || "save";
+  if (submitIntent === "create_tabbed_invoice") {
+    await createTabbedAdminInvoiceOrders(formData);
+  }
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
-  const shouldSaveAndAddInvoiceOrder = submitIntent === "save_and_add_invoice_order";
-  const combineInvoiceOrderIds = Array.from(
-    new Set(formData.getAll("combine_invoice_order_id").map((value) => value.toString().trim()).filter(Boolean)),
-  );
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const redirectScrollY = formData.get("redirect_scroll_y")?.toString() || null;
@@ -861,15 +1091,7 @@ async function upsertOrderShared(formData: FormData) {
           console.error("Order email failed:", error);
         }
       }
-      const combinedInvoiceIdsAfterCreate = Array.from(new Set([...combineInvoiceOrderIds, createdOrderId]));
-      const shouldCreateCombinedInvoiceDraft =
-        !isAdminPremade && !hasPremadeSelections && combineInvoiceOrderIds.length > 0 && !shouldSaveAndAddInvoiceOrder;
-      if (!isAdminPremade && !hasPremadeSelections && shouldSaveAndAddInvoiceOrder) {
-        postSaveRedirect = `/admin/orders/new?combine=${encodeURIComponent(combinedInvoiceIdsAfterCreate.join(","))}`;
-      } else if (shouldCreateCombinedInvoiceDraft) {
-        const { primaryOrder } = await createCombinedAdminSquareInvoiceDraftForOrderIds(combinedInvoiceIdsAfterCreate, client);
-        postSaveRedirect = `/admin/orders/${primaryOrder.id}/invoice`;
-      } else if (!isAdminPremade && !hasPremadeSelections) {
+      if (!isAdminPremade && !hasPremadeSelections) {
         const integrationOrder = {
           id: createdOrderId,
           ...payload,

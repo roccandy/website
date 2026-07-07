@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import AssignmentCalendarModal from "@/app/admin/orders/AssignmentCalendarModal";
+import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
   analyzeImageOptimization,
   fileToDataUrl,
@@ -379,8 +380,58 @@ type Props = {
   assignments: OrderSlot[];
   mode?: "create" | "edit";
   initialOrder?: OrderRow | null;
-  combinedInvoiceOrders?: OrderRow[];
   cancelHref?: string;
+};
+
+type InvoiceOrderDraft = {
+  id: string;
+  fields: Record<string, string>;
+  batchWeights: string[];
+};
+
+const SHARED_INVOICE_FIELD_NAMES = new Set([
+  "first_name",
+  "last_name",
+  "customer_email",
+  "phone",
+  "organization_name",
+  "pickup",
+  "address_line1",
+  "address_line2",
+  "suburb",
+  "postcode",
+  "state",
+  "customer_note",
+]);
+
+const emptyInvoiceOrderDraft = (id: string): InvoiceOrderDraft => ({
+  id,
+  fields: {},
+  batchWeights: [],
+});
+
+const draftLabel = (draft: InvoiceOrderDraft, index: number) =>
+  draft.fields.title?.trim() ||
+  draft.fields.design_text?.trim() ||
+  `Order ${index + 1}`;
+
+const draftValue = (draft: InvoiceOrderDraft | null | undefined, name: string, fallback = "") =>
+  draft?.fields[name] ?? fallback;
+
+const draftNumber = (value: string | null | undefined) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const draftHasBatchWeightMismatch = (draft: InvoiceOrderDraft) => {
+  const orderWeightG = draftNumber(draft.fields.order_weight_g);
+  if (orderWeightG === null || draft.batchWeights.length === 0) return false;
+  const orderWeightKg = orderWeightG / 1000;
+  const batchTotalKg = draft.batchWeights.reduce((sum, value) => {
+    const parsed = Number(value);
+    return sum + (Number.isFinite(parsed) ? parsed : 0);
+  }, 0);
+  return Math.abs(batchTotalKg - orderWeightKg) > 0.02;
 };
 
 export function NewOrderForm({
@@ -395,14 +446,32 @@ export function NewOrderForm({
   assignments,
   mode = "create",
   initialOrder = null,
-  combinedInvoiceOrders = [],
   cancelHref = "/admin/orders",
 }: Props) {
   const isEditMode = mode === "edit" && Boolean(initialOrder);
   const initialIsAdminPremade = initialOrder ? isAdminPremadeOrderRow(initialOrder) : false;
   const initialCategoryId = initialIsAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : initialOrder?.category_id ?? "";
   const initialWeddingDesign = splitWeddingDesign(initialOrder?.design_text);
-  const customerDefaults = initialOrder ?? combinedInvoiceOrders[0] ?? null;
+  const customerDefaults = initialOrder;
+  const invoiceDraftMode = !isEditMode;
+  const initialInvoiceDraftIdRef = useRef(`order-${Date.now()}`);
+  const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => [
+    emptyInvoiceOrderDraft(initialInvoiceDraftIdRef.current),
+  ]);
+  const [activeInvoiceDraftId, setActiveInvoiceDraftId] = useState(initialInvoiceDraftIdRef.current);
+  const [orderFieldsKey, setOrderFieldsKey] = useState(0);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [sharedFirstName, setSharedFirstName] = useState(customerDefaults?.first_name ?? "");
+  const [sharedLastName, setSharedLastName] = useState(customerDefaults?.last_name ?? "");
+  const [sharedEmail, setSharedEmail] = useState(customerDefaults?.customer_email ?? "");
+  const [sharedPhone, setSharedPhone] = useState(customerDefaults?.phone ?? "");
+  const [sharedOrganizationName, setSharedOrganizationName] = useState(customerDefaults?.organization_name ?? "");
+  const [sharedAddressLine1, setSharedAddressLine1] = useState(customerDefaults?.address_line1 ?? "");
+  const [sharedAddressLine2, setSharedAddressLine2] = useState(customerDefaults?.address_line2 ?? "");
+  const [sharedSuburb, setSharedSuburb] = useState(customerDefaults?.suburb ?? "");
+  const [sharedPostcode, setSharedPostcode] = useState(customerDefaults?.postcode ?? "");
+  const [sharedState, setSharedState] = useState(customerDefaults?.state ?? "");
+  const [sharedCustomerNote, setSharedCustomerNote] = useState(customerDefaults?.customer_note ?? "");
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
@@ -442,7 +511,6 @@ export function NewOrderForm({
   const [weddingLineOne, setWeddingLineOne] = useState(initialWeddingDesign.left);
   const [weddingLineTwo, setWeddingLineTwo] = useState(initialWeddingDesign.right);
   const [customText, setCustomText] = useState(initialOrder?.category_id?.startsWith("custom-") ? initialOrder.design_text ?? "" : "");
-  const [brandName, setBrandName] = useState(initialOrder?.category_id === "branded" ? initialOrder.design_text ?? "" : "");
   const [designText, setDesignText] = useState(
     initialOrder && !initialOrder.category_id?.startsWith("weddings") && !initialOrder.category_id?.startsWith("custom-") && initialOrder.category_id !== "branded"
       ? initialOrder.design_text ?? ""
@@ -486,6 +554,7 @@ export function NewOrderForm({
     () => hexToRgba(defaultJacketColor) ?? { r: 0, g: 0, b: 0, a: 1 },
   );
   const [customInputMode, setCustomInputMode] = useState<"hex" | "cmyk" | "rgba">("hex");
+  const activeInvoiceDraft = invoiceOrderDrafts.find((draft) => draft.id === activeInvoiceDraftId) ?? invoiceOrderDrafts[0] ?? null;
   const showAddress = deliveryMode === "delivery";
   const isAdminPremadeOrder = categoryId === ADMIN_PREMADE_CATEGORY_ID;
   const filteredPackagingOptions = useMemo(() => {
@@ -684,6 +753,17 @@ export function NewOrderForm({
     };
   }, [adminPremadeFlavor, adminPremadeMode, adminPremadeSelectionLabel, productionSlotDate, weightValue]);
   const showJacketColorTwo = jacket === "two_colour" || jacket === "two_colour_pinstripe";
+  const previewJacketMode =
+    jacket === "rainbow"
+      ? "rainbow"
+      : jacket === "two_colour" || jacket === "two_colour_pinstripe"
+        ? "two_colour"
+        : jacket === "pinstripe"
+          ? "pinstripe"
+          : "";
+  const previewShowPinstripe = jacket === "pinstripe" || jacket === "two_colour_pinstripe";
+  const previewCustomTextVariant =
+    categoryId === "custom-1-6" ? "short" : categoryId === "custom-7-14" ? "long" : undefined;
   const customTextLimit =
     categoryId === "custom-7-14" ? LONG_CUSTOM_TEXT_MAX_LENGTH : SHORT_CUSTOM_TEXT_MAX_LENGTH;
   const designTextValue = useMemo(() => {
@@ -698,9 +778,9 @@ export function NewOrderForm({
       return `${left} ${WEDDING_HEART} ${right}`.trim();
     }
     if (isCustomText) return (customText || "").trim();
-    if (isBranded) return (brandName || "").trim();
+    if (isBranded) return (sharedOrganizationName || "").trim();
     return (designText || "").trim();
-  }, [brandName, customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, weddingLineOne, weddingLineTwo]);
+  }, [customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, sharedOrganizationName, weddingLineOne, weddingLineTwo]);
   const jacketTypeValue = useMemo(() => {
     if (jacket === "rainbow") return "rainbow";
     if (jacket === "two_colour" || jacket === "two_colour_pinstripe") return "two_colour";
@@ -864,6 +944,171 @@ export function NewOrderForm({
     if (customTarget === "jacket2") setJacketColorTwo(normalized);
     setCustomPickerOpen(false);
   };
+  const captureCurrentInvoiceDraft = (draftId = activeInvoiceDraftId): InvoiceOrderDraft => {
+    const fields: Record<string, string> = {};
+    const draftBatchWeights: string[] = [];
+    const form = formRef.current;
+    if (form) {
+      const formData = new FormData(form);
+      formData.forEach((value, key) => {
+        if (key === "batch_weight_kg") {
+          const weight = value.toString().trim();
+          if (weight) draftBatchWeights.push(weight);
+          return;
+        }
+        if (
+          SHARED_INVOICE_FIELD_NAMES.has(key) ||
+          key === "submit_intent" ||
+          key === "admin_invoice_orders_json" ||
+          key === "combine_invoice_order_id" ||
+          key === "send_updated_invoice" ||
+          key === "batch_weight_mismatch_approved"
+        ) {
+          return;
+        }
+        fields[key] = value.toString();
+      });
+    }
+    return {
+      id: draftId,
+      fields: {
+        ...fields,
+        category_id: categoryId,
+        packaging_option_id: packagingOptionId,
+        quantity,
+        labels_count: customLabelsOptIn ? labelsCount : "",
+        jar_lid_color: jarLidColor,
+        due_date: dueDate,
+        total_price: isAdminPremadeOrder ? "" : priceValue,
+        order_weight_g: isAdminPremadeOrder ? "" : weightValue,
+        total_weight_kg: isAdminPremadeOrder ? weightValue : "",
+        admin_discount_type: isAdminPremadeOrder ? "none" : discountType,
+        admin_discount_value: isAdminPremadeOrder ? "" : discountValue,
+        admin_price_override: isAdminPremadeOrder ? "" : priceOverride,
+        ingredient_labels_opt_in: isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off",
+        ingredient_labels_count: isAdminPremadeOrder ? "" : ingredientLabelsCount,
+        design_type: isAdminPremadeOrder ? "premade" : categoryId,
+        design_text: isAdminPremadeOrder ? adminPremadeSelectionLabel : designTextValue,
+        jacket,
+        jacket_type: isAdminPremadeOrder ? "" : jacketTypeValue,
+        jacket_color_one: isAdminPremadeOrder ? "" : jacketColorOne,
+        jacket_color_two: isAdminPremadeOrder ? "" : jacketColorTwo,
+        text_color: !isBranded && !isAdminPremadeOrder ? textColor : "",
+        heart_color: isWedding && !isAdminPremadeOrder ? heartColor : "",
+        flavor,
+        logo_url: isBranded && !isAdminPremadeOrder ? logoUrl : "",
+        label_image_url: !isAdminPremadeOrder ? labelImageUrl : "",
+        admin_premade_mode: adminPremadeMode,
+        admin_premade_candy_id: adminPremadeCandyId,
+        production_slot_date: productionSlotDate,
+      },
+      batchWeights: isAdminPremadeOrder ? [] : draftBatchWeights.length > 0 ? draftBatchWeights : batchWeights,
+    };
+  };
+  const saveActiveInvoiceDraft = () => {
+    const currentDraft = captureCurrentInvoiceDraft();
+    const nextDrafts = invoiceOrderDrafts.map((draft) => (draft.id === activeInvoiceDraftId ? currentDraft : draft));
+    setInvoiceOrderDrafts(nextDrafts);
+    return nextDrafts;
+  };
+  const applyInvoiceDraft = (draft: InvoiceOrderDraft) => {
+    const fields = draft.fields;
+    const nextCategoryId = fields.category_id ?? "";
+    const nextWeddingDesign = splitWeddingDesign(fields.design_text);
+    setCategoryId(nextCategoryId);
+    setPackagingOptionId(fields.packaging_option_id ?? "");
+    setQuantity(fields.quantity ?? "");
+    setCustomLabelsOptIn(Boolean(fields.labels_count));
+    setLabelsCount(fields.labels_count ?? "");
+    setJarLidColor(fields.jar_lid_color ?? "");
+    setJacket(fields.jacket ?? "");
+    setDueDate(fields.due_date ?? "");
+    setPriceValue(fields.total_price ?? "");
+    setWeightValue(fields.order_weight_g || fields.total_weight_kg || "");
+    setPricingError(null);
+    setQuoteItems([]);
+    setBatchWeights(draft.batchWeights.length > 0 ? draft.batchWeights : []);
+    setDiscountType(normalizeDiscountType(fields.admin_discount_type));
+    setDiscountValue(fields.admin_discount_value ?? "");
+    setPriceOverride(fields.admin_price_override ?? "");
+    setWeddingLineOne(nextWeddingDesign.left);
+    setWeddingLineTwo(nextWeddingDesign.right);
+    setCustomText(nextCategoryId.startsWith("custom-") ? fields.design_text ?? "" : "");
+    setDesignText(
+      nextCategoryId && !nextCategoryId.startsWith("weddings") && !nextCategoryId.startsWith("custom-") && nextCategoryId !== "branded"
+        ? fields.design_text ?? ""
+        : "",
+    );
+    setJacketColorOne(fields.jacket_color_one || defaultJacketColor);
+    setJacketColorTwo(fields.jacket_color_two || defaultJacketColor);
+    setTextColor(fields.text_color || defaultTextColor);
+    setHeartColor(fields.heart_color || defaultTextColor);
+    setFlavor(fields.flavor ?? "");
+    setLogoUrl(fields.logo_url ?? "");
+    setLogoError(null);
+    setLogoSummary(null);
+    setIngredientLabelsOptIn(fields.ingredient_labels_opt_in === "on");
+    setIngredientLabelsCount(fields.ingredient_labels_count ?? "");
+    setLabelFileName(fields.label_image_url ? "Existing artwork" : "");
+    setLabelImageUrl(fields.label_image_url ?? "");
+    setLabelImageError(null);
+    setLabelImageSummary(null);
+    setAdminPremadeMode((fields.admin_premade_mode as "" | "flavor" | "premade") || "");
+    setAdminPremadeCandyId(fields.admin_premade_candy_id ?? "");
+    setProductionSlotDate(fields.production_slot_date ?? "");
+    previousPackagingOptionIdRef.current = fields.packaging_option_id ?? null;
+    preserveInitialBatchWeightsRef.current = draft.batchWeights.length > 0;
+    setOrderFieldsKey((value) => value + 1);
+  };
+  const switchInvoiceDraft = (draftId: string) => {
+    if (draftId === activeInvoiceDraftId) return;
+    const nextDrafts = saveActiveInvoiceDraft();
+    const nextDraft = nextDrafts.find((draft) => draft.id === draftId);
+    if (!nextDraft) return;
+    setActiveInvoiceDraftId(draftId);
+    applyInvoiceDraft(nextDraft);
+    setReviewMode(false);
+  };
+  const addInvoiceDraft = () => {
+    const nextDrafts = saveActiveInvoiceDraft();
+    const nextDraft = emptyInvoiceOrderDraft(`order-${Date.now()}-${nextDrafts.length + 1}`);
+    setInvoiceOrderDrafts([...nextDrafts, nextDraft]);
+    setActiveInvoiceDraftId(nextDraft.id);
+    applyInvoiceDraft(nextDraft);
+    setReviewMode(false);
+  };
+  const removeInvoiceDraft = (draftId: string) => {
+    if (invoiceOrderDrafts.length <= 1) return;
+    const nextDrafts = invoiceOrderDrafts.filter((draft) => draft.id !== draftId);
+    const nextActive = activeInvoiceDraftId === draftId ? nextDrafts[0] : nextDrafts.find((draft) => draft.id === activeInvoiceDraftId) ?? nextDrafts[0];
+    setInvoiceOrderDrafts(nextDrafts);
+    setActiveInvoiceDraftId(nextActive.id);
+    applyInvoiceDraft(nextActive);
+    setReviewMode(false);
+  };
+  const openReview = () => {
+    const nextDrafts = saveActiveInvoiceDraft();
+    setInvoiceOrderDrafts(nextDrafts);
+    setReviewMode(true);
+    window.requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+  const reviewDrafts = useMemo(() => (reviewMode ? invoiceOrderDrafts : []), [invoiceOrderDrafts, reviewMode]);
+  const reviewTotal = reviewDrafts.reduce((sum, draft) => {
+    const amount = draftNumber(draft.fields.total_price);
+    return sum + (amount ?? 0);
+  }, 0);
+  const reviewPayload = useMemo(
+    () =>
+      JSON.stringify(
+        reviewDrafts.map((draft) => ({
+          fields: draft.fields,
+          batchWeights: draft.batchWeights,
+        })),
+      ),
+    [reviewDrafts],
+  );
 
   useEffect(() => {
     if (!submitAfterCalendarPick || !productionSlotDate) return;
@@ -1036,13 +1281,34 @@ export function NewOrderForm({
       action={upsertOrder}
       className="space-y-6"
       onSubmit={(event) => {
+        if (invoiceDraftMode && !isAdminPremadeOrder && !reviewMode) {
+          event.preventDefault();
+          openReview();
+          return;
+        }
         if (sendUpdatedInvoiceInputRef.current) {
           sendUpdatedInvoiceInputRef.current.value = "";
         }
         if (batchWeightMismatchApprovedInputRef.current) {
           batchWeightMismatchApprovedInputRef.current.value = "";
         }
-        if (!isAdminPremadeOrder && batchWeightMismatch) {
+        if (invoiceDraftMode && reviewMode && reviewDrafts.some(draftHasBatchWeightMismatch)) {
+          const confirmed = window.confirm(
+            [
+              "One or more order tabs have batch totals that do not match their order weight.",
+              "",
+              "Create this combined invoice anyway?",
+            ].join("\n"),
+          );
+          if (!confirmed) {
+            event.preventDefault();
+            return;
+          }
+          if (batchWeightMismatchApprovedInputRef.current) {
+            batchWeightMismatchApprovedInputRef.current.value = "on";
+          }
+        }
+        if (!reviewMode && !isAdminPremadeOrder && batchWeightMismatch) {
           const confirmed = window.confirm(
             [
               "Total batch weight does not match the order weight.",
@@ -1100,40 +1366,287 @@ export function NewOrderForm({
           </div>
         </div>
       ) : null}
-      {!isEditMode && combinedInvoiceOrders.length > 0 ? (
-        <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+      {invoiceDraftMode && reviewMode ? (
+        <input type="hidden" name="admin_invoice_orders_json" value={reviewPayload} />
+      ) : null}
+      {!isAdminPremadeOrder ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-blue-700">Combined invoice</p>
-              <h3 className="mt-1 text-base font-semibold text-zinc-900">
-                {combinedInvoiceOrders.length} saved order{combinedInvoiceOrders.length === 1 ? "" : "s"} will share this invoice
-              </h3>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Invoice details</p>
+              <h3 className="admin-card-title text-zinc-900">Customer and invoice note</h3>
             </div>
-            <Link
-              href="/admin/orders/new"
-              className="rounded border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300"
-            >
-              Start separate invoice
-            </Link>
+            {invoiceDraftMode ? (
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Shared across all tabs
+              </span>
+            ) : null}
           </div>
-          <div className="mt-3 grid gap-2">
-            {combinedInvoiceOrders.map((order) => (
-              <div key={order.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm">
-                <div>
-                  <span className="font-semibold text-zinc-900">
-                    {order.order_number ? `#${order.order_number}` : order.id.slice(0, 8)}
-                  </span>
-                  <span className="ml-2 text-zinc-600">{order.title || order.design_text || "Custom candy order"}</span>
-                </div>
-                <span className="font-semibold text-zinc-900">{formatMoney(order.total_price)}</span>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+              Pickup or delivery
+              <div className="mt-2 flex items-center gap-4 text-sm text-zinc-700">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pickup"
+                    value="off"
+                    checked={deliveryMode === "delivery"}
+                    onChange={() => setDeliveryMode("delivery")}
+                    className="h-4 w-4"
+                  />
+                  Delivery
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="pickup"
+                    value="on"
+                    checked={deliveryMode === "pickup"}
+                    onChange={() => setDeliveryMode("pickup")}
+                    className="h-4 w-4"
+                  />
+                  Pickup
+                </label>
               </div>
-            ))}
+            </div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              First name
+              <input
+                name="first_name"
+                value={sharedFirstName}
+                onChange={(event) => setSharedFirstName(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Last name
+              <input
+                name="last_name"
+                value={sharedLastName}
+                onChange={(event) => setSharedLastName(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Email address
+              <input
+                type="email"
+                name="customer_email"
+                value={sharedEmail}
+                onChange={(event) => setSharedEmail(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Phone number
+              <input
+                name="phone"
+                value={sharedPhone}
+                onChange={(event) => setSharedPhone(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+              Organisation / brand name
+              <input
+                name="organization_name"
+                value={sharedOrganizationName}
+                onChange={(event) => setSharedOrganizationName(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
           </div>
-          <p className="mt-3 text-xs font-semibold text-blue-800">
-            Save this order to create one Square invoice for all listed orders plus the order below, or save and add another design.
-          </p>
+          {showAddress ? (
+            <div className="mt-5 border-t border-zinc-100 pt-5">
+              <h3 className="admin-card-title text-zinc-900">Delivery address</h3>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                  Address line 1
+                  <input
+                    name="address_line1"
+                    value={sharedAddressLine1}
+                    onChange={(event) => setSharedAddressLine1(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                  Address line 2
+                  <input
+                    name="address_line2"
+                    value={sharedAddressLine2}
+                    onChange={(event) => setSharedAddressLine2(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Suburb
+                  <input
+                    name="suburb"
+                    value={sharedSuburb}
+                    onChange={(event) => setSharedSuburb(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Postcode
+                  <input
+                    name="postcode"
+                    value={sharedPostcode}
+                    onChange={(event) => setSharedPostcode(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  State
+                  <select
+                    name="state"
+                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                    value={sharedState}
+                    onChange={(event) => setSharedState(event.target.value)}
+                  >
+                    {STATES.map((state) => (
+                      <option key={state.value} value={state.value}>
+                        {state.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+          ) : null}
+          <label className="mt-5 block">
+            <span className="admin-card-title text-zinc-900">Customer Note</span>
+            <textarea
+              name="customer_note"
+              value={sharedCustomerNote}
+              onChange={(event) => setSharedCustomerNote(event.target.value)}
+              className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              rows={4}
+              placeholder="Visible on the customer invoice."
+            />
+          </label>
         </section>
       ) : null}
+      {invoiceDraftMode && !isAdminPremadeOrder ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap gap-2" role="tablist" aria-label="Invoice orders">
+              {invoiceOrderDrafts.map((draft, index) => {
+                const isActive = draft.id === activeInvoiceDraftId;
+                return (
+                  <div key={draft.id} className="inline-flex items-center">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => switchInvoiceDraft(draft.id)}
+                      className={`rounded-l-lg border px-3 py-2 text-xs font-semibold ${
+                        isActive
+                          ? "border-zinc-900 bg-zinc-900 text-white"
+                          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                      }`}
+                    >
+                      {draftLabel(draft, index)}
+                    </button>
+                    {invoiceOrderDrafts.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeInvoiceDraft(draft.id)}
+                        className={`rounded-r-lg border-y border-r px-2 py-2 text-xs font-semibold ${
+                          isActive
+                            ? "border-zinc-900 bg-zinc-900 text-white"
+                            : "border-zinc-200 bg-white text-zinc-500 hover:border-rose-300 hover:text-rose-700"
+                        }`}
+                        aria-label={`Remove ${draftLabel(draft, index)}`}
+                      >
+                        X
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={addInvoiceDraft}
+              className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100"
+            >
+              <Plus size={14} aria-hidden="true" />
+              Add order tab
+            </button>
+          </div>
+        </section>
+      ) : null}
+      {reviewMode ? (
+        <section className="rounded-2xl border border-zinc-900 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Review</p>
+              <h3 className="admin-page-title text-xl">Invoice summary</h3>
+              <p className="mt-1 text-sm text-zinc-600">
+                {reviewDrafts.length} order{reviewDrafts.length === 1 ? "" : "s"} for {sharedOrganizationName || sharedEmail || "this customer"}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Invoice total</p>
+              <p className="mt-1 text-2xl font-semibold text-zinc-900">{formatMoney(reviewTotal)}</p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3">
+            {reviewDrafts.map((draft, index) => {
+              const category = categories.find((item) => item.id === draft.fields.category_id);
+              const packaging = packagingOptions.find((item) => item.id === draft.fields.packaging_option_id);
+              const weightKg = draftNumber(draft.fields.order_weight_g) !== null ? Number(draft.fields.order_weight_g) / 1000 : null;
+              const total = draftNumber(draft.fields.total_price);
+              return (
+                <div key={draft.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Order {index + 1}</p>
+                      <h4 className="mt-1 text-sm font-semibold text-zinc-900">{draftLabel(draft, index)}</h4>
+                      <p className="mt-1 text-xs text-zinc-600">{category?.name ?? draft.fields.category_id ?? "-"}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-zinc-900">{formatMoney(total ?? 0)}</p>
+                  </div>
+                  <dl className="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Packaging</dt>
+                      <dd>{packaging ? `${packaging.type} ${packaging.size}` : "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Quantity</dt>
+                      <dd>{draft.fields.quantity || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Weight</dt>
+                      <dd>{weightKg !== null ? `${weightKg.toFixed(2)}kg` : "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Batches</dt>
+                      <dd>{draft.batchWeights.length > 0 ? draft.batchWeights.map((weight) => `${weight}kg`).join(" + ") : "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Due</dt>
+                      <dd>{draft.fields.due_date || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-zinc-900">Flavour</dt>
+                      <dd>{draft.fields.flavor || "-"}</dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="font-semibold text-zinc-900">Production notes</dt>
+                      <dd>{draft.fields.notes || "-"}</dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+      {!reviewMode ? (
+        <>
       <div className="sticky top-20 z-20">
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1181,11 +1694,6 @@ export function NewOrderForm({
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
           <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
           <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
-          {!isEditMode
-            ? combinedInvoiceOrders.map((order) => (
-                <input key={order.id} type="hidden" name="combine_invoice_order_id" value={order.id} />
-              ))
-            : null}
           {isEditMode && initialOrder ? (
             <>
               <input type="hidden" name="id" value={initialOrder.id} />
@@ -1317,9 +1825,20 @@ export function NewOrderForm({
                 <input
                   name="title"
                   required
-                  defaultValue={initialOrder?.title ?? ""}
+                  key={`title-${activeInvoiceDraftId}-${orderFieldsKey}`}
+                  defaultValue={draftValue(activeInvoiceDraft, "title", initialOrder?.title ?? "")}
                   className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   placeholder="Order title"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Date required
+                <input
+                  type="date"
+                  name="due_date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
             </>
@@ -1783,7 +2302,8 @@ export function NewOrderForm({
             }`}
           >
             <h3 className="admin-card-title text-zinc-900">Candy design & flavor</h3>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="grid gap-4 md:grid-cols-2">
               {isWedding && (
                 <>
                   <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -1840,17 +2360,12 @@ export function NewOrderForm({
                   </div>
                 </label>
               )}
-              {isBranded && (
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                  Brand name
-                  <input
-                    value={brandName}
-                    onChange={(event) => setBrandName(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                    placeholder="Brand name"
-                  />
-                </label>
-              )}
+              {isBranded ? (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 md:col-span-2">
+                  <span className="font-semibold text-zinc-900">Brand name:</span>{" "}
+                  {sharedOrganizationName || "Use the organisation / brand name in invoice details."}
+                </div>
+              ) : null}
               {!isWedding && !isCustomText && !isBranded && (
                 <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
                   Design text
@@ -1984,171 +2499,45 @@ export function NewOrderForm({
                   ) : null}
                 </div>
               )}
+              </div>
+              <aside className="flex min-h-[17rem] items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-4 lg:sticky lg:top-40">
+                <CandyPreview
+                  designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
+                  lineOne={isWedding ? weddingLineOne : undefined}
+                  lineTwo={isWedding ? weddingLineTwo : undefined}
+                  showHeart={isWedding}
+                  mode={previewJacketMode}
+                  showPinstripe={previewShowPinstripe}
+                  colorOne={jacketColorOne || defaultJacketColor}
+                  colorTwo={jacketColorTwo || jacketColorOne || defaultJacketColor}
+                  logoUrl={isBranded ? logoUrl : undefined}
+                  textColor={textColor || defaultTextColor}
+                  heartColor={heartColor || textColor || defaultTextColor}
+                  isInitials={isWeddingInitials}
+                  customTextVariant={previewCustomTextVariant}
+                  dimensions={{ width: 360, height: 268 }}
+                  zoom={1.18}
+                />
+              </aside>
             </div>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="admin-card-title text-zinc-900">Customer details</h3>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                Pickup or delivery
-                <div className="mt-2 flex items-center gap-4 text-sm text-zinc-700">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="pickup"
-                      value="off"
-                      checked={deliveryMode === "delivery"}
-                      onChange={() => setDeliveryMode("delivery")}
-                      className="h-4 w-4"
-                    />
-                    Delivery
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="pickup"
-                      value="on"
-                      checked={deliveryMode === "pickup"}
-                      onChange={() => setDeliveryMode("pickup")}
-                      className="h-4 w-4"
-                    />
-                    Pickup
-                  </label>
-                </div>
-              </div>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Date required
-                <input
-                  type="date"
-                  name="due_date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                First name
-                <input
-                  name="first_name"
-                  defaultValue={customerDefaults?.first_name ?? ""}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Last name
-                <input
-                  name="last_name"
-                  defaultValue={customerDefaults?.last_name ?? ""}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Email address
-                <input
-                  type="email"
-                  name="customer_email"
-                  defaultValue={customerDefaults?.customer_email ?? ""}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Phone number
-                <input
-                  name="phone"
-                  defaultValue={customerDefaults?.phone ?? ""}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                Organization name
-                <input
-                  name="organization_name"
-                  defaultValue={customerDefaults?.organization_name ?? ""}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-            </div>
+            <label className="block">
+              <span className="admin-card-title text-zinc-900">Production Notes</span>
+              <textarea
+                name="notes"
+                key={`notes-${activeInvoiceDraftId}-${orderFieldsKey}`}
+                defaultValue={draftValue(activeInvoiceDraft, "notes", initialOrder?.notes ?? "")}
+                className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+                rows={5}
+                placeholder="Internal notes for this order."
+              />
+            </label>
           </div>
+        </>
+      ) : null}
 
-          {showAddress && (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="admin-card-title text-zinc-900">Delivery address</h3>
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                  Address line 1
-                  <input
-                    name="address_line1"
-                    defaultValue={customerDefaults?.address_line1 ?? ""}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
-                  Address line 2
-                  <input
-                    name="address_line2"
-                    defaultValue={customerDefaults?.address_line2 ?? ""}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Suburb
-                  <input
-                    name="suburb"
-                    defaultValue={customerDefaults?.suburb ?? ""}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  Postcode
-                  <input
-                    name="postcode"
-                    defaultValue={customerDefaults?.postcode ?? ""}
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                  State
-                  <select
-                    name="state"
-                    className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                    defaultValue={customerDefaults?.state ?? ""}
-                  >
-                    {STATES.map((state) => (
-                      <option key={state.value} value={state.value}>
-                        {state.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-          )}
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="admin-card-title text-zinc-900">Production Notes</span>
-                <textarea
-                  name="notes"
-                  defaultValue={initialOrder?.notes ?? ""}
-                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  rows={5}
-                  placeholder="Internal notes for production."
-                />
-              </label>
-              <label className="block">
-                <span className="admin-card-title text-zinc-900">Customer Note</span>
-                <textarea
-                  name="customer_note"
-                  defaultValue={customerDefaults?.customer_note ?? ""}
-                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  rows={5}
-                  placeholder="Visible on the customer invoice."
-                />
-              </label>
-            </div>
-          </div>
         </>
       ) : null}
 
@@ -2397,36 +2786,45 @@ export function NewOrderForm({
             Add to Calendar
           </button>
         ) : null}
-        {!isEditMode && !isAdminPremadeOrder ? (
+        {reviewMode ? (
+          <button
+            type="button"
+            onClick={() => setReviewMode(false)}
+            className="rounded border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+          >
+            Back to edit
+          </button>
+        ) : null}
+        {invoiceDraftMode && !isAdminPremadeOrder && !reviewMode ? (
+          <button
+            type="button"
+            onClick={openReview}
+            disabled={isSubmittingOrder || !batchWeightsValid || Boolean(pricingError) || isPricing}
+            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+          >
+            Review order
+          </button>
+        ) : (
           <button
             type="submit"
             name="submit_intent"
-            value="save_and_add_invoice_order"
-            disabled={isSubmittingOrder || !batchWeightsValid || Boolean(pricingError)}
-            className="rounded border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-100 disabled:text-zinc-400"
+            value={invoiceDraftMode && !isAdminPremadeOrder ? "create_tabbed_invoice" : "save"}
+            disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchWeightsValid || Boolean(pricingError)))}
+            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
           >
-            Save and add another design
+            {isSubmittingOrder
+              ? isEditMode
+                ? "Saving..."
+                : "Creating invoice..."
+              : isEditMode
+                ? "Save order"
+                : isAdminPremadeOrder
+                  ? "Add to Orders"
+                  : reviewMode
+                    ? "Create Square draft invoice"
+                    : "Create Invoice"}
           </button>
-        ) : null}
-        <button
-          type="submit"
-          name="submit_intent"
-          value="save"
-          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchWeightsValid || Boolean(pricingError)))}
-          className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
-        >
-          {isSubmittingOrder
-            ? isEditMode
-              ? "Saving..."
-              : "Creating invoice..."
-            : isEditMode
-              ? "Save order"
-              : isAdminPremadeOrder
-                ? "Add to Orders"
-                : combinedInvoiceOrders.length > 0
-                  ? "Create combined invoice"
-                  : "Create Invoice"}
-        </button>
+        )}
         <button
           ref={scheduleSubmitButtonRef}
           type="submit"

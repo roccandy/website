@@ -19,14 +19,9 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-type SearchParams = {
-  combine?: string;
-};
-
-export default async function NewOrderPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
+export default async function NewOrderPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
-  const resolvedSearchParams = await Promise.resolve(searchParams);
 
   const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments] = await Promise.all([
     getCategories(),
@@ -39,17 +34,6 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
     getProductionSlots(),
     getOrderSlots(),
   ]);
-  const combinedInvoiceOrderIds = Array.from(
-    new Set(
-      (resolvedSearchParams?.combine ?? "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  );
-  const combinedInvoiceOrders = combinedInvoiceOrderIds
-    .map((id) => orders.find((order) => order.id === id))
-    .filter((order): order is (typeof orders)[number] => Boolean(order));
 
   return (
     <section className="space-y-6">
@@ -77,7 +61,6 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         orders={orders}
         slots={slots}
         assignments={assignments}
-        combinedInvoiceOrders={combinedInvoiceOrders}
       />
     </section>
   );
