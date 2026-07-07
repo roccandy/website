@@ -1460,23 +1460,7 @@ export function NewOrderForm({
       ) : null}
       <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
       <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
-      {reviewMode ? (
-        <>
-          <input type="hidden" name="pickup" value={deliveryMode === "pickup" ? "on" : "off"} />
-          <input type="hidden" name="first_name" value={sharedFirstName} />
-          <input type="hidden" name="last_name" value={sharedLastName} />
-          <input type="hidden" name="customer_email" value={sharedEmail} />
-          <input type="hidden" name="phone" value={sharedPhone} />
-          <input type="hidden" name="organization_name" value={sharedOrganizationName} />
-          <input type="hidden" name="address_line1" value={sharedAddressLine1} />
-          <input type="hidden" name="address_line2" value={sharedAddressLine2} />
-          <input type="hidden" name="suburb" value={sharedSuburb} />
-          <input type="hidden" name="postcode" value={sharedPostcode} />
-          <input type="hidden" name="state" value={sharedState} />
-          <input type="hidden" name="customer_note" value={sharedCustomerNote} />
-        </>
-      ) : null}
-      {!reviewMode && !isAdminPremadeOrder ? (
+      {!reviewMode && !isAdminPremadeOrder && !invoiceDraftMode ? (
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -1651,7 +1635,7 @@ export function NewOrderForm({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Review</p>
-              <h3 className="admin-page-title text-xl">Invoice summary</h3>
+              <h3 className="admin-page-title text-xl">Review order</h3>
               <p className="mt-1 text-sm text-zinc-600">
                 {reviewDrafts.length} order{reviewDrafts.length === 1 ? "" : "s"} for {sharedOrganizationName || sharedEmail || "this customer"}
               </p>
@@ -1662,41 +1646,171 @@ export function NewOrderForm({
             </div>
           </div>
           <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Customer details</p>
-            <dl className="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <dt className="font-semibold text-zinc-900">Name</dt>
-                <dd>{[sharedFirstName, sharedLastName].filter(Boolean).join(" ") || "-"}</dd>
+                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Invoice details</p>
+                <h4 className="admin-card-title text-zinc-900">Customer and invoice details</h4>
               </div>
-              <div>
-                <dt className="font-semibold text-zinc-900">Email</dt>
-                <dd>{sharedEmail || "-"}</dd>
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-blue-700">
+                Shared across all orders
+              </span>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                Pickup or delivery
+                <div className="mt-2 flex items-center gap-4 text-sm text-zinc-700">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="pickup"
+                      value="off"
+                      checked={deliveryMode === "delivery"}
+                      onChange={() => setDeliveryMode("delivery")}
+                      className="h-4 w-4"
+                    />
+                    Delivery
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="pickup"
+                      value="on"
+                      checked={deliveryMode === "pickup"}
+                      onChange={() => setDeliveryMode("pickup")}
+                      className="h-4 w-4"
+                    />
+                    Pickup
+                  </label>
+                </div>
               </div>
-              <div>
-                <dt className="font-semibold text-zinc-900">Phone</dt>
-                <dd>{sharedPhone || "-"}</dd>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Date required
+                <input
+                  type="date"
+                  name="due_date"
+                  value={dueDate}
+                  required
+                  onChange={(event) => setDueDate(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                First name
+                <input
+                  name="first_name"
+                  value={sharedFirstName}
+                  onChange={(event) => setSharedFirstName(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Last name
+                <input
+                  name="last_name"
+                  value={sharedLastName}
+                  onChange={(event) => setSharedLastName(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Email address
+                <input
+                  type="email"
+                  name="customer_email"
+                  value={sharedEmail}
+                  required
+                  onChange={(event) => setSharedEmail(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                Phone number
+                <input
+                  name="phone"
+                  value={sharedPhone}
+                  onChange={(event) => setSharedPhone(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                Organisation / brand name
+                <input
+                  name="organization_name"
+                  value={sharedOrganizationName}
+                  onChange={(event) => setSharedOrganizationName(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
+            </div>
+            {showAddress ? (
+              <div className="mt-5 border-t border-zinc-200 pt-5">
+                <h4 className="admin-card-title text-zinc-900">Delivery address</h4>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                    Address line 1
+                    <input
+                      name="address_line1"
+                      value={sharedAddressLine1}
+                      onChange={(event) => setSharedAddressLine1(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
+                    Address line 2
+                    <input
+                      name="address_line2"
+                      value={sharedAddressLine2}
+                      onChange={(event) => setSharedAddressLine2(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Suburb
+                    <input
+                      name="suburb"
+                      value={sharedSuburb}
+                      onChange={(event) => setSharedSuburb(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    Postcode
+                    <input
+                      name="postcode"
+                      value={sharedPostcode}
+                      onChange={(event) => setSharedPostcode(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                  <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                    State
+                    <select
+                      name="state"
+                      className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      value={sharedState}
+                      onChange={(event) => setSharedState(event.target.value)}
+                    >
+                      {STATES.map((state) => (
+                        <option key={state.value} value={state.value}>
+                          {state.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
-              <div>
-                <dt className="font-semibold text-zinc-900">Required</dt>
-                <dd>{dueDate || "-"}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-zinc-900">Organisation / brand</dt>
-                <dd>{sharedOrganizationName || "-"}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="font-semibold text-zinc-900">{deliveryMode === "pickup" ? "Pickup" : "Delivery"}</dt>
-                <dd>
-                  {deliveryMode === "pickup"
-                    ? "Pickup"
-                    : [sharedAddressLine1, sharedAddressLine2, sharedSuburb, sharedState, sharedPostcode].filter(Boolean).join(", ") || "-"}
-                </dd>
-              </div>
-              <div className="lg:col-span-4">
-                <dt className="font-semibold text-zinc-900">Customer note</dt>
-                <dd>{sharedCustomerNote || "-"}</dd>
-              </div>
-            </dl>
+            ) : null}
+            <label className="mt-5 block">
+              <span className="admin-card-title text-zinc-900">Customer Note</span>
+              <textarea
+                name="customer_note"
+                value={sharedCustomerNote}
+                onChange={(event) => setSharedCustomerNote(event.target.value)}
+                className="mt-4 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                rows={4}
+                placeholder="Visible on the customer invoice."
+              />
+            </label>
           </div>
           <div className="mt-5 grid gap-3">
             {reviewDrafts.map((draft, index) => {
