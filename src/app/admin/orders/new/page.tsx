@@ -19,9 +19,15 @@ export const revalidate = 0;
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export default async function NewOrderPage() {
+type SearchParams = {
+  toast?: string;
+  message?: string;
+};
+
+export default async function NewOrderPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
+  const resolvedSearchParams = await Promise.resolve(searchParams);
 
   const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments] = await Promise.all([
     getCategories(),
@@ -34,6 +40,8 @@ export default async function NewOrderPage() {
     getProductionSlots(),
     getOrderSlots(),
   ]);
+  const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
+  const toastMessage = resolvedSearchParams?.message ?? null;
 
   return (
     <section className="space-y-6">
@@ -50,6 +58,18 @@ export default async function NewOrderPage() {
           Back to schedule
         </Link>
       </div>
+
+      {toastTone && toastMessage ? (
+        <p
+          className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
+            toastTone === "error"
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          }`}
+        >
+          {toastMessage}
+        </p>
+      ) : null}
 
       <NewOrderForm
         categories={categories}

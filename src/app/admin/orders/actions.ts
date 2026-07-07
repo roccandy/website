@@ -69,6 +69,12 @@ const normalizeWeddingDesignText = (value: string | null) =>
 const isInvalidIntegerInputError = (message: string) =>
   message.toLowerCase().includes("invalid input syntax for type integer");
 const isInlineResponse = (formData: FormData) => formData.get("response_mode")?.toString() === "inline";
+const isRedirectControlError = (error: unknown) =>
+  typeof error === "object" &&
+  error !== null &&
+  "digest" in error &&
+  typeof (error as { digest?: unknown }).digest === "string" &&
+  (error as { digest: string }).digest.startsWith("NEXT_REDIRECT");
 const normalizeAdminDiscountType = (value: string | null | undefined): AdminDiscountType => {
   if (value === "percent" || value === "fixed") return value;
   return "none";
@@ -435,7 +441,31 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
   }
 
   const createdOrderIds = insertedOrders.map((order) => order.id);
-  const { primaryOrder } = await createCombinedAdminSquareInvoiceDraftForOrderIds(createdOrderIds, client);
+  let primaryOrder = insertedOrders[0];
+  if (!primaryOrder) {
+    throw new Error("Unable to create invoice order.");
+  }
+  if (insertedOrders.length > 1) {
+    const combinedResult = await createCombinedAdminSquareInvoiceDraftForOrderIds(createdOrderIds, client);
+    primaryOrder = combinedResult.primaryOrder;
+  } else {
+    const invoiceDraft = await createAdminSquareInvoiceDraft({
+      ...primaryOrder,
+      square_customer_id: null,
+      square_invoice_id: null,
+      square_invoice_version: null,
+    });
+    const invoicePatch = squareInvoiceDraftPatch(invoiceDraft);
+    const { data: updatedPrimary, error: invoiceUpdateError } = await client
+      .from("orders")
+      .update(invoicePatch)
+      .eq("id", primaryOrder.id)
+      .select("*")
+      .single();
+    if (invoiceUpdateError) throw new Error(invoiceUpdateError.message);
+    primaryOrder = updatedPrimary as OrderRow;
+    insertedOrders[0] = primaryOrder;
+  }
 
   const ordersRecipients = getOrdersRecipients();
   if (ordersRecipients.length > 0) {
@@ -526,7 +556,13 @@ async function upsertOrderShared(formData: FormData) {
   const inlineResponse = isInlineResponse(formData);
   const submitIntent = formData.get("submit_intent")?.toString() || "save";
   if (submitIntent === "create_tabbed_invoice") {
-    await createTabbedAdminInvoiceOrders(formData);
+    try {
+      await createTabbedAdminInvoiceOrders(formData);
+    } catch (error) {
+      if (isRedirectControlError(error)) throw error;
+      const message = error instanceof Error ? error.message : "Unable to create invoice orders.";
+      redirect(toastRedirect("/admin/orders/new", "error", message));
+    }
   }
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;

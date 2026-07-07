@@ -434,6 +434,22 @@ const draftHasBatchWeightMismatch = (draft: InvoiceOrderDraft) => {
   return Math.abs(batchTotalKg - orderWeightKg) > 0.02;
 };
 
+const orderTitleFromDetails = ({
+  categoryId,
+  designText,
+  organizationName,
+  fallback,
+}: {
+  categoryId: string;
+  designText: string;
+  organizationName: string;
+  fallback: string;
+}) => {
+  if (categoryId === "branded") return organizationName.trim() || null;
+  if (categoryId.startsWith("custom-")) return designText.trim().toUpperCase() || fallback;
+  return designText.trim() || fallback;
+};
+
 export function NewOrderForm({
   categories,
   packagingOptions,
@@ -781,6 +797,16 @@ export function NewOrderForm({
     if (isBranded) return (sharedOrganizationName || "").trim();
     return (designText || "").trim();
   }, [customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, sharedOrganizationName, weddingLineOne, weddingLineTwo]);
+  const derivedOrderTitle = useMemo(
+    () =>
+      orderTitleFromDetails({
+        categoryId,
+        designText: designTextValue,
+        organizationName: sharedOrganizationName,
+        fallback: categories.find((category) => category.id === categoryId)?.name ?? "Custom candy order",
+      }),
+    [categories, categoryId, designTextValue, sharedOrganizationName],
+  );
   const jacketTypeValue = useMemo(() => {
     if (jacket === "rainbow") return "rainbow";
     if (jacket === "two_colour" || jacket === "two_colour_pinstripe") return "two_colour";
@@ -974,6 +1000,7 @@ export function NewOrderForm({
       fields: {
         ...fields,
         category_id: categoryId,
+        title: derivedOrderTitle ?? "",
         packaging_option_id: packagingOptionId,
         quantity,
         labels_count: customLabelsOptIn ? labelsCount : "",
@@ -1022,7 +1049,6 @@ export function NewOrderForm({
     setLabelsCount(fields.labels_count ?? "");
     setJarLidColor(fields.jar_lid_color ?? "");
     setJacket(fields.jacket ?? "");
-    setDueDate(fields.due_date ?? "");
     setPriceValue(fields.total_price ?? "");
     setWeightValue(fields.order_weight_g || fields.total_weight_kg || "");
     setPricingError(null);
@@ -1086,6 +1112,56 @@ export function NewOrderForm({
     applyInvoiceDraft(nextActive);
     setReviewMode(false);
   };
+  const renderInvoiceTabs = (placement: "top" | "bottom") => (
+    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap gap-2" role="tablist" aria-label={`${placement} invoice orders`}>
+          {invoiceOrderDrafts.map((draft, index) => {
+            const isActive = draft.id === activeInvoiceDraftId;
+            return (
+              <div key={draft.id} className="inline-flex items-center">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => switchInvoiceDraft(draft.id)}
+                  className={`rounded-l-lg border px-3 py-2 text-xs font-semibold ${
+                    isActive
+                      ? "border-zinc-900 bg-zinc-900 text-white"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                  }`}
+                >
+                  {draftLabel(draft, index)}
+                </button>
+                {invoiceOrderDrafts.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeInvoiceDraft(draft.id)}
+                    className={`rounded-r-lg border-y border-r px-2 py-2 text-xs font-semibold ${
+                      isActive
+                        ? "border-zinc-900 bg-zinc-900 text-white"
+                        : "border-zinc-200 bg-white text-zinc-500 hover:border-rose-300 hover:text-rose-700"
+                    }`}
+                    aria-label={`Remove ${draftLabel(draft, index)}`}
+                  >
+                    X
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={addInvoiceDraft}
+          className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100"
+        >
+          <Plus size={14} aria-hidden="true" />
+          Add order tab
+        </button>
+      </div>
+    </section>
+  );
   const openReview = () => {
     const nextDrafts = saveActiveInvoiceDraft();
     setInvoiceOrderDrafts(nextDrafts);
@@ -1102,12 +1178,25 @@ export function NewOrderForm({
   const reviewPayload = useMemo(
     () =>
       JSON.stringify(
-        reviewDrafts.map((draft) => ({
-          fields: draft.fields,
-          batchWeights: draft.batchWeights,
-        })),
+        reviewDrafts.map((draft) => {
+          const draftCategoryId = draft.fields.category_id ?? "";
+          return {
+            fields: {
+              ...draft.fields,
+              due_date: dueDate,
+              title:
+                orderTitleFromDetails({
+                  categoryId: draftCategoryId,
+                  designText: draft.fields.design_text ?? "",
+                  organizationName: sharedOrganizationName,
+                  fallback: categories.find((category) => category.id === draftCategoryId)?.name ?? "Custom candy order",
+                }) ?? "",
+            },
+            batchWeights: draft.batchWeights,
+          };
+        }),
       ),
-    [reviewDrafts],
+    [categories, dueDate, reviewDrafts, sharedOrganizationName],
   );
 
   useEffect(() => {
@@ -1369,7 +1458,25 @@ export function NewOrderForm({
       {invoiceDraftMode && reviewMode ? (
         <input type="hidden" name="admin_invoice_orders_json" value={reviewPayload} />
       ) : null}
-      {!isAdminPremadeOrder ? (
+      <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
+      <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
+      {reviewMode ? (
+        <>
+          <input type="hidden" name="pickup" value={deliveryMode === "pickup" ? "on" : "off"} />
+          <input type="hidden" name="first_name" value={sharedFirstName} />
+          <input type="hidden" name="last_name" value={sharedLastName} />
+          <input type="hidden" name="customer_email" value={sharedEmail} />
+          <input type="hidden" name="phone" value={sharedPhone} />
+          <input type="hidden" name="organization_name" value={sharedOrganizationName} />
+          <input type="hidden" name="address_line1" value={sharedAddressLine1} />
+          <input type="hidden" name="address_line2" value={sharedAddressLine2} />
+          <input type="hidden" name="suburb" value={sharedSuburb} />
+          <input type="hidden" name="postcode" value={sharedPostcode} />
+          <input type="hidden" name="state" value={sharedState} />
+          <input type="hidden" name="customer_note" value={sharedCustomerNote} />
+        </>
+      ) : null}
+      {!reviewMode && !isAdminPremadeOrder ? (
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -1410,6 +1517,16 @@ export function NewOrderForm({
                 </label>
               </div>
             </div>
+            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+              Date required
+              <input
+                type="date"
+                name="due_date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+                className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
+              />
+            </label>
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
               First name
               <input
@@ -1528,56 +1645,7 @@ export function NewOrderForm({
           </label>
         </section>
       ) : null}
-      {invoiceDraftMode && !isAdminPremadeOrder ? (
-        <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex min-w-0 flex-wrap gap-2" role="tablist" aria-label="Invoice orders">
-              {invoiceOrderDrafts.map((draft, index) => {
-                const isActive = draft.id === activeInvoiceDraftId;
-                return (
-                  <div key={draft.id} className="inline-flex items-center">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      onClick={() => switchInvoiceDraft(draft.id)}
-                      className={`rounded-l-lg border px-3 py-2 text-xs font-semibold ${
-                        isActive
-                          ? "border-zinc-900 bg-zinc-900 text-white"
-                          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                      }`}
-                    >
-                      {draftLabel(draft, index)}
-                    </button>
-                    {invoiceOrderDrafts.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => removeInvoiceDraft(draft.id)}
-                        className={`rounded-r-lg border-y border-r px-2 py-2 text-xs font-semibold ${
-                          isActive
-                            ? "border-zinc-900 bg-zinc-900 text-white"
-                            : "border-zinc-200 bg-white text-zinc-500 hover:border-rose-300 hover:text-rose-700"
-                        }`}
-                        aria-label={`Remove ${draftLabel(draft, index)}`}
-                      >
-                        X
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={addInvoiceDraft}
-              className="inline-flex items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:border-blue-300 hover:bg-blue-100"
-            >
-              <Plus size={14} aria-hidden="true" />
-              Add order tab
-            </button>
-          </div>
-        </section>
-      ) : null}
+      {!reviewMode && invoiceDraftMode && !isAdminPremadeOrder ? renderInvoiceTabs("top") : null}
       {reviewMode ? (
         <section className="rounded-2xl border border-zinc-900 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1593,18 +1661,62 @@ export function NewOrderForm({
               <p className="mt-1 text-2xl font-semibold text-zinc-900">{formatMoney(reviewTotal)}</p>
             </div>
           </div>
+          <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Customer details</p>
+            <dl className="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <dt className="font-semibold text-zinc-900">Name</dt>
+                <dd>{[sharedFirstName, sharedLastName].filter(Boolean).join(" ") || "-"}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-zinc-900">Email</dt>
+                <dd>{sharedEmail || "-"}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-zinc-900">Phone</dt>
+                <dd>{sharedPhone || "-"}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-zinc-900">Required</dt>
+                <dd>{dueDate || "-"}</dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-zinc-900">Organisation / brand</dt>
+                <dd>{sharedOrganizationName || "-"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="font-semibold text-zinc-900">{deliveryMode === "pickup" ? "Pickup" : "Delivery"}</dt>
+                <dd>
+                  {deliveryMode === "pickup"
+                    ? "Pickup"
+                    : [sharedAddressLine1, sharedAddressLine2, sharedSuburb, sharedState, sharedPostcode].filter(Boolean).join(", ") || "-"}
+                </dd>
+              </div>
+              <div className="lg:col-span-4">
+                <dt className="font-semibold text-zinc-900">Customer note</dt>
+                <dd>{sharedCustomerNote || "-"}</dd>
+              </div>
+            </dl>
+          </div>
           <div className="mt-5 grid gap-3">
             {reviewDrafts.map((draft, index) => {
               const category = categories.find((item) => item.id === draft.fields.category_id);
               const packaging = packagingOptions.find((item) => item.id === draft.fields.packaging_option_id);
               const weightKg = draftNumber(draft.fields.order_weight_g) !== null ? Number(draft.fields.order_weight_g) / 1000 : null;
               const total = draftNumber(draft.fields.total_price);
+              const title =
+                orderTitleFromDetails({
+                  categoryId: draft.fields.category_id ?? "",
+                  designText: draft.fields.design_text ?? "",
+                  organizationName: sharedOrganizationName,
+                  fallback: category?.name ?? "Custom candy order",
+                }) ?? draftLabel(draft, index);
               return (
                 <div key={draft.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-zinc-400">Order {index + 1}</p>
-                      <h4 className="mt-1 text-sm font-semibold text-zinc-900">{draftLabel(draft, index)}</h4>
+                      <h4 className="mt-1 text-sm font-semibold text-zinc-900">{title}</h4>
                       <p className="mt-1 text-xs text-zinc-600">{category?.name ?? draft.fields.category_id ?? "-"}</p>
                     </div>
                     <p className="text-sm font-semibold text-zinc-900">{formatMoney(total ?? 0)}</p>
@@ -1625,10 +1737,6 @@ export function NewOrderForm({
                     <div>
                       <dt className="font-semibold text-zinc-900">Batches</dt>
                       <dd>{draft.batchWeights.length > 0 ? draft.batchWeights.map((weight) => `${weight}kg`).join(" + ") : "-"}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-semibold text-zinc-900">Due</dt>
-                      <dd>{draft.fields.due_date || "-"}</dd>
                     </div>
                     <div>
                       <dt className="font-semibold text-zinc-900">Flavour</dt>
@@ -1692,8 +1800,6 @@ export function NewOrderForm({
           <input type="hidden" name="admin_discount_value" value={isAdminPremadeOrder ? "" : discountValue} />
           <input type="hidden" name="admin_price_override" value={isAdminPremadeOrder ? "" : priceOverride} />
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
-          <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
-          <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
           {isEditMode && initialOrder ? (
             <>
               <input type="hidden" name="id" value={initialOrder.id} />
@@ -1791,7 +1897,7 @@ export function NewOrderForm({
                     required={adminPremadeMode === "flavor"}
                     disabled={adminPremadeMode !== "flavor"}
                     onChange={(event) => setAdminPremadeFlavor(event.target.value)}
-                    className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-400"
                   >
                     <option value="">
                       {adminPremadeMode === "flavor" ? "Select flavor" : "Select order type first"}
@@ -1819,30 +1925,12 @@ export function NewOrderForm({
               </div>
             </>
           ) : (
-            <>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Title
-                <input
-                  name="title"
-                  required
-                  key={`title-${activeInvoiceDraftId}-${orderFieldsKey}`}
-                  defaultValue={draftValue(activeInvoiceDraft, "title", initialOrder?.title ?? "")}
-                  className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  placeholder="Order title"
-                />
-              </label>
-              <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                Date required
-                <input
-                  type="date"
-                  name="due_date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                />
-              </label>
-            </>
+            <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">Calculated title</p>
+              <p className="mt-1 font-semibold text-zinc-900">{derivedOrderTitle || "Complete the design details"}</p>
+            </div>
           )}
+          <input type="hidden" name="title" value={derivedOrderTitle ?? ""} />
           <input type="hidden" name="status" value={isEditMode && initialOrder ? initialOrder.status : "unassigned"} />
         </div>
       </div>
@@ -2237,7 +2325,7 @@ export function NewOrderForm({
                   <select
                     value={discountType}
                     onChange={(event) => setDiscountType(event.target.value as AdminDiscountType)}
-                    className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900"
+                    className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                   >
                     <option value="none">None</option>
                     <option value="percent">Percent</option>
@@ -2450,7 +2538,7 @@ export function NewOrderForm({
                   name="flavor"
                   value={flavor}
                   onChange={(event) => setFlavor(event.target.value)}
-                  className="mt-2 min-h-14 w-full rounded-lg border border-zinc-200 px-4 py-4 text-base text-zinc-900"
+                  className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                 >
                   <option value="">Select flavor</option>
                   {flavors.map((item) => (
@@ -2500,7 +2588,7 @@ export function NewOrderForm({
                 </div>
               )}
               </div>
-              <aside className="flex min-h-[17rem] items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-4 lg:sticky lg:top-40">
+              <aside className="flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40">
                 <CandyPreview
                   designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
                   lineOne={isWedding ? weddingLineOne : undefined}
@@ -2515,8 +2603,8 @@ export function NewOrderForm({
                   heartColor={heartColor || textColor || defaultTextColor}
                   isInitials={isWeddingInitials}
                   customTextVariant={previewCustomTextVariant}
-                  dimensions={{ width: 360, height: 268 }}
-                  zoom={1.18}
+                  dimensions={{ width: 300, height: 223 }}
+                  zoom={1.05}
                 />
               </aside>
             </div>
@@ -2535,6 +2623,7 @@ export function NewOrderForm({
               />
             </label>
           </div>
+          {invoiceDraftMode ? renderInvoiceTabs("bottom") : null}
         </>
       ) : null}
 
