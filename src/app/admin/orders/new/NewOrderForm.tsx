@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Plus, Trash2 } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import AssignmentCalendarModal from "@/app/admin/orders/AssignmentCalendarModal";
 import {
@@ -402,6 +403,7 @@ export function NewOrderForm({
   const formRef = useRef<HTMLFormElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const batchWeightMismatchApprovedInputRef = useRef<HTMLInputElement | null>(null);
   const previousPackagingOptionIdRef = useRef<string | null>(initialOrder?.packaging_option_id ?? null);
   const preserveInitialBatchWeightsRef = useRef(batchWeightsInputValues(initialOrder).length > 0);
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
@@ -526,15 +528,16 @@ export function NewOrderForm({
     [batchWeights],
   );
   const remainingBatchKg = customOrderTotalWeightKg - allocatedBatchKg;
-  const batchAllocationValid =
+  const batchWeightsValid =
     customOrderTotalWeightKg > 0 &&
     batchWeights.length > 0 &&
     batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
-    Math.abs(remainingBatchKg) <= 0.02 &&
     batchWeights.every((value) => {
       const parsed = Number(value);
       return Number.isFinite(parsed) && parsed > 0;
     });
+  const batchAllocationValid = batchWeightsValid && Math.abs(remainingBatchKg) <= 0.02;
+  const batchWeightMismatch = batchWeightsValid && !batchAllocationValid;
   const overweightBatchNumbers = batchWeights
     .map((weight, index) => ({ weight: Number(weight), index }))
     .filter(({ weight }) => Number.isFinite(weight) && Number.isFinite(maxBatchKg) && weight > maxBatchKg + 0.02)
@@ -584,6 +587,12 @@ export function NewOrderForm({
   };
   const updateBatchWeight = (index: number, value: string) => {
     setBatchWeights((prev) => prev.map((item, itemIndex) => (itemIndex === index ? value : item)));
+  };
+  const removeBatchWeight = (index: number) => {
+    setBatchWeights((prev) => (prev.length <= 1 ? prev : prev.filter((_, itemIndex) => itemIndex !== index)));
+  };
+  const addBatchWeight = () => {
+    setBatchWeights((prev) => [...prev, ""].slice(0, MAX_ADMIN_BATCH_COUNT));
   };
   const isWedding = categoryId.startsWith("weddings");
   const isWeddingInitials = categoryId === "weddings-initials";
@@ -959,10 +968,10 @@ export function NewOrderForm({
     setIsPricing(true);
     setPricingError(null);
 
-    if (!batchAllocationValid) {
+    if (!batchWeightsValid) {
       setPriceValue("");
       setWeightValue(customOrderTotalWeightKg > 0 ? (customOrderTotalWeightKg * 1000).toFixed(0) : "");
-      setPricingError("Batch weights must equal the order weight.");
+      setPricingError("Add at least one production batch greater than 0kg.");
       setQuoteItems([]);
       setIsPricing(false);
       return;
@@ -983,6 +992,7 @@ export function NewOrderForm({
         discountType,
         discountValue: discountValue ? Number(discountValue) : null,
         priceOverride: priceOverride ? Number(priceOverride) : null,
+        allowBatchWeightMismatch: batchWeightMismatch,
       }),
     })
       .then(async (res) => {
@@ -1015,7 +1025,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [batchAllocationValid, batchWeights, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
+  }, [batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
   return (
     <form
@@ -1025,6 +1035,28 @@ export function NewOrderForm({
       onSubmit={(event) => {
         if (sendUpdatedInvoiceInputRef.current) {
           sendUpdatedInvoiceInputRef.current.value = "";
+        }
+        if (batchWeightMismatchApprovedInputRef.current) {
+          batchWeightMismatchApprovedInputRef.current.value = "";
+        }
+        if (!isAdminPremadeOrder && batchWeightMismatch) {
+          const confirmed = window.confirm(
+            [
+              "Total batch weight does not match the order weight.",
+              "",
+              `Order weight: ${customOrderTotalWeightKg.toFixed(2)}kg`,
+              `Batch total: ${allocatedBatchKg.toFixed(2)}kg`,
+              "",
+              `${isEditMode ? "Save" : "Create"} this order with the mismatched batch total?`,
+            ].join("\n"),
+          );
+          if (!confirmed) {
+            event.preventDefault();
+            return;
+          }
+          if (batchWeightMismatchApprovedInputRef.current) {
+            batchWeightMismatchApprovedInputRef.current.value = "on";
+          }
         }
         if (shouldOfferUpdatedInvoice) {
           const changeLines = buildUpdatedInvoiceChangeLines();
@@ -1111,6 +1143,7 @@ export function NewOrderForm({
           <input type="hidden" name="admin_price_override" value={isAdminPremadeOrder ? "" : priceOverride} />
           <input type="hidden" name="ingredient_labels_opt_in" value={isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off"} />
           <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
+          <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
           {isEditMode && initialOrder ? (
             <>
               <input type="hidden" name="id" value={initialOrder.id} />
@@ -1533,14 +1566,25 @@ export function NewOrderForm({
                       : "Select packaging and quantity"}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={applyEqualBatchSplit}
-                  disabled={!customOrderTotalWeightKg}
-                  className="min-h-11 rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
-                >
-                  Equal split
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={applyEqualBatchSplit}
+                    disabled={!customOrderTotalWeightKg}
+                    className="min-h-11 rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+                  >
+                    Equal split
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addBatchWeight}
+                    disabled={!customOrderTotalWeightKg || batchWeights.length >= MAX_ADMIN_BATCH_COUNT}
+                    className="inline-flex min-h-11 items-center gap-2 rounded border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                    Add
+                  </button>
+                </div>
               </div>
               {isOverBatchLimit ? (
                 <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
@@ -1555,17 +1599,28 @@ export function NewOrderForm({
               {batchWeights.length > 0 ? (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {batchWeights.map((weight, index) => (
-                    <label key={`visible-batch-${index}`} className="text-xs uppercase tracking-[0.16em] text-zinc-500">
-                      Batch {index + 1} kg
-                      <input
-                        type="number"
-                        min={0.01}
-                        step="0.01"
-                        value={weight}
-                        onChange={(event) => updateBatchWeight(index, event.target.value)}
-                        className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
+                    <div key={`visible-batch-${index}`} className="flex items-end gap-2">
+                      <label className="min-w-0 flex-1 text-xs uppercase tracking-[0.16em] text-zinc-500">
+                        Batch {index + 1} kg
+                        <input
+                          type="number"
+                          min={0.01}
+                          step="0.01"
+                          value={weight}
+                          onChange={(event) => updateBatchWeight(index, event.target.value)}
+                          className="mt-2 min-h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeBatchWeight(index)}
+                        disabled={batchWeights.length <= 1}
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 hover:border-rose-300 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Remove batch ${index + 1}`}
+                      >
+                        <Trash2 size={15} aria-hidden="true" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : null}
@@ -1594,6 +1649,11 @@ export function NewOrderForm({
                         : `Remove: ${Math.abs(remainingBatchKg).toFixed(2)}kg`}
                   </div>
                 </div>
+              ) : null}
+              {batchWeightMismatch ? (
+                <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Batch total does not match the order weight. Admin can continue after confirming on submit.
+                </p>
               ) : null}
             </div>
 
@@ -2299,7 +2359,7 @@ export function NewOrderForm({
           type="submit"
           name="submit_intent"
           value="save"
-          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchAllocationValid || Boolean(pricingError)))}
+          disabled={isSubmittingOrder || (!isAdminPremadeOrder && (!batchWeightsValid || Boolean(pricingError)))}
           className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
         >
           {isSubmittingOrder

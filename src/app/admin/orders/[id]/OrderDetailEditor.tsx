@@ -95,6 +95,7 @@ type QuoteRequest =
         discountType: AdminDiscountType;
         discountValue: number | null;
         priceOverride: number | null;
+        allowBatchWeightMismatch: boolean;
       };
     };
 
@@ -521,6 +522,7 @@ export function OrderDetailEditor({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingLabelImage, setIsUploadingLabelImage] = useState(false);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
+  const batchWeightMismatchApprovedInputRef = useRef<HTMLInputElement | null>(null);
   const redirectScrollYInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -618,10 +620,15 @@ export function OrderDetailEditor({
     const parsed = Number(value);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
   }, 0);
-  const batchAllocationValid =
+  const batchWeightsValid =
     draft.batchWeights.length > 0 &&
     draft.batchWeights.length <= MAX_ADMIN_BATCH_COUNT &&
-    batchWeightsMatchTotal(draft.batchWeights, effectiveTotalWeightKg);
+    draft.batchWeights.every((value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0;
+    });
+  const batchAllocationValid = batchWeightsValid && batchWeightsMatchTotal(draft.batchWeights, effectiveTotalWeightKg);
+  const batchWeightMismatch = batchWeightsValid && !batchAllocationValid;
   const maxBatchKg = Number(settings.max_total_kg);
   const overweightBatchNumbers = draft.batchWeights
     .map((weight, index) => ({ weight: Number(weight), index }))
@@ -710,10 +717,10 @@ export function OrderDetailEditor({
       };
     }
 
-    if (!batchAllocationValid) {
+    if (!batchWeightsValid) {
       return {
         status: "invalid",
-        error: "Batch weights must add up to the total weight before price can be recalculated.",
+        error: "Add at least one production batch greater than 0kg before price can be recalculated.",
       };
     }
 
@@ -729,6 +736,7 @@ export function OrderDetailEditor({
       discountType: draft.discountType,
       discountValue: draft.discountValue ? Number(draft.discountValue) : null,
       priceOverride: draft.priceOverride ? Number(draft.priceOverride) : null,
+      allowBatchWeightMismatch: batchWeightMismatch,
     };
 
     return {
@@ -892,7 +900,7 @@ export function OrderDetailEditor({
     quote ? changedLine("Calculated total", formatMoney(order.total_price), formatMoney(quote.total)) : null,
   ].filter((line): line is string => Boolean(line));
   const saveDisabled =
-    dirtyCount === 0 || isSubmitting || (priceAffectingChanged && (!batchAllocationValid || isQuoteLoading || Boolean(quoteError)));
+    dirtyCount === 0 || isSubmitting || (priceAffectingChanged && (!batchWeightsValid || isQuoteLoading || Boolean(quoteError)));
   const labelMax = Math.min(Number(settings.labels_max_bulk) || BULK_LABEL_COUNT_MAX, BULK_LABEL_COUNT_MAX);
   const shownPaymentMethod = draft.paymentMethod || order.payment_provider || "-";
 
@@ -1105,8 +1113,30 @@ export function OrderDetailEditor({
         if (sendUpdatedInvoiceInputRef.current) {
           sendUpdatedInvoiceInputRef.current.value = "";
         }
+        if (batchWeightMismatchApprovedInputRef.current) {
+          batchWeightMismatchApprovedInputRef.current.value = "";
+        }
         if (redirectScrollYInputRef.current) {
           redirectScrollYInputRef.current.value = String(Math.max(0, Math.round(window.scrollY)));
+        }
+        if (batchWeightMismatch) {
+          const confirmed = window.confirm(
+            [
+              "Total batch weight does not match the order weight.",
+              "",
+              `Order weight: ${effectiveTotalWeightLabel || "0"}kg`,
+              `Batch total: ${formatKgInput(batchTotalKg)}kg`,
+              "",
+              "Save this order with the mismatched batch total?",
+            ].join("\n"),
+          );
+          if (!confirmed) {
+            event.preventDefault();
+            return;
+          }
+          if (batchWeightMismatchApprovedInputRef.current) {
+            batchWeightMismatchApprovedInputRef.current.value = "on";
+          }
         }
         if (replacementInvoiceAllowed && priceAffectingChanged && invoiceChangeLines.length > 0) {
           const confirmed = window.confirm(
@@ -1135,6 +1165,7 @@ export function OrderDetailEditor({
       <input type="hidden" name="toast_success" value="Order updated." />
       <input type="hidden" name="toast_error" value="Failed to update order." />
       <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
+      <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
       <input type="hidden" name="customer_name" value={customerName || order.customer_name || ""} />
       <input type="hidden" name="pickup" value={draft.pickup ? "on" : "off"} />
       <input type="hidden" name="labels_opt_in" value={draft.labelsEnabled ? "on" : "off"} />
@@ -1500,9 +1531,14 @@ export function OrderDetailEditor({
               </div>
             ))}
           </div>
-          {!batchAllocationValid ? (
+          {!batchWeightsValid ? (
             <p className="mt-2 text-xs font-semibold text-amber-700">
-              Batch weights need to equal the order weight before price-affecting changes can be saved.
+              Add at least one production batch greater than 0kg before saving price-affecting changes.
+            </p>
+          ) : null}
+          {batchWeightMismatch ? (
+            <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+              Batch total does not match the order weight. Admin can continue after confirming on submit.
             </p>
           ) : null}
           {batchOverMaxWarning ? (

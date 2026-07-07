@@ -65,6 +65,23 @@ describe("admin large order batching", () => {
     ).not.toThrow();
   });
 
+  it("requires an explicit override when production batch weights do not match order weight", () => {
+    expect(() =>
+      validateAdminBatchWeights({
+        weights: [7.5, 7.5, 7.5, 7.5, 7.5, 7.5],
+        totalWeightKg: 54,
+      }),
+    ).toThrow("must equal");
+
+    expect(() =>
+      validateAdminBatchWeights({
+        weights: [7.5, 7.5, 7.5, 7.5, 7.5, 7.5],
+        totalWeightKg: 54,
+        allowWeightMismatch: true,
+      }),
+    ).not.toThrow();
+  });
+
   it("prices large orders as the sum of selected batch prices", () => {
     const pricing = calculateAdminLargeOrderPricingWithContext(
       {
@@ -80,6 +97,26 @@ describe("admin large order batching", () => {
     expect(pricing.basePrice).toBe(460);
     expect(pricing.packagingPrice).toBe(20);
     expect(pricing.total).toBe(480);
+  });
+
+  it("prices approved mismatched batches from the production batch total while keeping the packaging weight", () => {
+    const pricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "bulk-bag",
+        quantity: 54,
+        batchWeightsKg: [7.5, 7.5, 7.5, 7.5, 7.5, 7.5],
+        allowBatchWeightMismatch: true,
+      },
+      pricingContext,
+    );
+
+    expect(pricing.totalWeightKg).toBe(54);
+    expect(pricing.batchWeightsKg).toEqual([7.5, 7.5, 7.5, 7.5, 7.5, 7.5]);
+    expect(pricing.batchBasePrices.map((item) => item.amount)).toEqual([170, 170, 170, 170, 170, 170]);
+    expect(pricing.basePrice).toBe(1020);
+    expect(pricing.packagingPrice).toBe(54);
+    expect(pricing.total).toBe(1074);
   });
 
   it("uses the configured max weight as the effective final pricing tier max", () => {

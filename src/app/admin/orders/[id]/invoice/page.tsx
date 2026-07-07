@@ -37,6 +37,10 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
   const totalPrice = Number(order.total_price);
   const gstIncluded = Number.isFinite(totalPrice) && totalPrice > 0 ? totalPrice / 11 : null;
   const isAlreadySent = Boolean(order.square_invoice_sent_at || order.square_invoice_status === "UNPAID" || order.square_invoice_status === "PAID");
+  const productionBatchCount = Array.isArray(order.admin_batch_weights_kg)
+    ? order.admin_batch_weights_kg.filter((weight) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
+    : 0;
+  const canSendBankTransferPdf = productionBatchCount > 1 && !isAlreadySent;
 
   return (
     <section className="space-y-6">
@@ -145,6 +149,22 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
                 className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm normal-case tracking-normal text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-500"
               />
             </label>
+            {canSendBankTransferPdf ? (
+              <label className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  name="square_invoice_payment_mode"
+                  value="bank_transfer"
+                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                />
+                <span>
+                  <span className="block font-semibold text-zinc-900">Send as bank transfer PDF</span>
+                  <span className="mt-0.5 block text-xs text-zinc-500">
+                    Sends a Square invoice configured for bank transfer instead of card payment.
+                  </span>
+                </span>
+              </label>
+            ) : null}
           </div>
         </div>
 

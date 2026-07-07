@@ -19,6 +19,7 @@ type AdminQuoteRequest = {
   discountType?: AdminDiscountType | string | null;
   discountValue?: number | null;
   priceOverride?: number | null;
+  allowBatchWeightMismatch?: boolean | null;
 };
 
 export async function POST(request: Request) {
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
         discountType: body.discountType ?? null,
         discountValue: body.discountValue ?? null,
         priceOverride: body.priceOverride ?? null,
+        allowBatchWeightMismatch: true,
       },
       context,
     );

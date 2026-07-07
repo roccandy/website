@@ -25,6 +25,7 @@ type AdminIntegrationOrder = Pick<
   | "total_price"
   | "total_weight_kg"
   | "admin_batch_weights_kg"
+  | "payment_method"
   | "notes"
   | "customer_note"
   | "square_invoice_title"
@@ -63,6 +64,8 @@ type SquareInvoice = {
   updated_at?: string;
 };
 
+export type AdminSquareInvoicePaymentMode = "card" | "bank_transfer";
+
 export type AdminSquareInvoiceDraftResult = {
   customerId: string;
   squareOrderId: string;
@@ -99,6 +102,7 @@ export type AdminSquareInvoiceRemovalResult = {
 const DEFAULT_COUNTRY = "AU";
 const CANCELABLE_INVOICE_STATUSES = new Set(["SCHEDULED", "UNPAID", "PARTIALLY_PAID"]);
 const SKIPPABLE_INVOICE_STATUSES = new Set(["CANCELED", "FAILED", "REFUNDED"]);
+const BANK_TRANSFER_PAYMENT_METHOD_LABEL = "Square bank transfer invoice";
 
 function moneyToCents(value: number | null | undefined) {
   const amount = Number(value);
@@ -147,6 +151,36 @@ function orderTitle(order: AdminIntegrationOrder) {
 
 export function defaultAdminSquareInvoiceTitle(order: Pick<AdminIntegrationOrder, "title" | "organization_name" | "customer_name" | "order_number" | "id">) {
   return `Personalised ${orderTitle(order as AdminIntegrationOrder)} candy ${orderReference(order as AdminIntegrationOrder)}`.trim();
+}
+
+export function squareInvoicePaymentMethodLabel(mode: AdminSquareInvoicePaymentMode) {
+  return mode === "bank_transfer" ? BANK_TRANSFER_PAYMENT_METHOD_LABEL : "Square invoice";
+}
+
+export function isBankTransferSquareInvoicePaymentMethod(value: string | null | undefined) {
+  return value?.trim().toLowerCase() === BANK_TRANSFER_PAYMENT_METHOD_LABEL.toLowerCase();
+}
+
+function squareInvoicePaymentModeFromOrder(order: Pick<AdminIntegrationOrder, "payment_method">): AdminSquareInvoicePaymentMode {
+  return isBankTransferSquareInvoicePaymentMethod(order.payment_method) ? "bank_transfer" : "card";
+}
+
+function acceptedPaymentMethodsForMode(mode: AdminSquareInvoicePaymentMode) {
+  return mode === "bank_transfer"
+    ? {
+        card: false,
+        square_gift_card: false,
+        bank_account: true,
+        buy_now_pay_later: false,
+        cash_app_pay: false,
+      }
+    : {
+        card: true,
+        square_gift_card: false,
+        bank_account: false,
+        buy_now_pay_later: false,
+        cash_app_pay: false,
+      };
 }
 
 function formatQuantityForInvoice(quantity: number | null | undefined) {
@@ -399,6 +433,7 @@ async function createSquareInvoice(
   customerId: string,
   squareOrderId: string,
   idempotencySuffix?: string,
+  paymentMode: AdminSquareInvoicePaymentMode = squareInvoicePaymentModeFromOrder(order),
 ) {
   const config = getSquareConfig();
   const dueDate = invoiceDueDate(order);
@@ -416,9 +451,7 @@ async function createSquareInvoice(
           customer_id: customerId,
         },
         delivery_method: "EMAIL",
-        accepted_payment_methods: {
-          card: true,
-        },
+        accepted_payment_methods: acceptedPaymentMethodsForMode(paymentMode),
         payment_requests: [
           {
             request_type: "BALANCE",
@@ -459,7 +492,12 @@ async function clearSquareInvoiceRecipient(orderId: string, invoiceId: string, i
   return nextVersion;
 }
 
-async function updateSquareInvoiceDraft(order: AdminIntegrationOrder, invoiceId: string, invoiceVersion: number) {
+async function updateSquareInvoiceDraft(
+  order: AdminIntegrationOrder,
+  invoiceId: string,
+  invoiceVersion: number,
+  paymentMode: AdminSquareInvoicePaymentMode = squareInvoicePaymentModeFromOrder(order),
+) {
   const dueDate = invoiceDueDate(order);
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
   const data = await squareRequest<{ invoice?: SquareInvoice }>(`/v2/invoices/${encodeURIComponent(invoiceId)}`, {
@@ -470,6 +508,8 @@ async function updateSquareInvoiceDraft(order: AdminIntegrationOrder, invoiceId:
         version: invoiceVersion,
         title: invoiceTitle,
         description: await invoiceDescription(order),
+        delivery_method: "EMAIL",
+        accepted_payment_methods: acceptedPaymentMethodsForMode(paymentMode),
         primary_recipient: order.square_customer_id
           ? {
               customer_id: order.square_customer_id,
@@ -539,15 +579,17 @@ async function publishSquareInvoice(invoiceId: string, invoiceVersion: number, o
 
 export async function createAdminSquareInvoiceDraft(
   order: AdminIntegrationOrder,
-  options: { idempotencySuffix?: string } = {},
+  options: { idempotencySuffix?: string; paymentMode?: AdminSquareInvoicePaymentMode } = {},
 ): Promise<AdminSquareInvoiceDraftResult> {
   const customerId = await createSquareCustomer(order);
   const squareOrderId = await createSquareOrder(order, customerId, options.idempotencySuffix);
+  const paymentMode = options.paymentMode ?? squareInvoicePaymentModeFromOrder(order);
   const { invoice, dueDate } = await createSquareInvoice(
     order,
     customerId,
     squareOrderId,
     options.idempotencySuffix,
+    paymentMode,
   );
   return {
     customerId,
@@ -612,18 +654,20 @@ export async function removeAdminSquareInvoice(
 
 export async function createAndPublishAdminSquareInvoice(
   order: AdminIntegrationOrder,
-  options: { idempotencySuffix?: string } = {},
+  options: { idempotencySuffix?: string; paymentMode?: AdminSquareInvoicePaymentMode } = {},
 ): Promise<AdminSquareInvoiceReplacementResult> {
   const customerId = order.square_customer_id || (await createSquareCustomer(order));
   if (order.square_customer_id) {
     await updateSquareCustomer(order, order.square_customer_id);
   }
   const squareOrderId = await createSquareOrder(order, customerId, options.idempotencySuffix);
+  const paymentMode = options.paymentMode ?? squareInvoicePaymentModeFromOrder(order);
   const { invoice, dueDate } = await createSquareInvoice(
     order,
     customerId,
     squareOrderId,
     options.idempotencySuffix,
+    paymentMode,
   );
   const invoiceVersion = Number(invoice.version);
   if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
@@ -643,7 +687,10 @@ export async function createAndPublishAdminSquareInvoice(
   };
 }
 
-export async function updateAndPublishAdminSquareInvoice(order: AdminIntegrationOrder): Promise<AdminSquareInvoiceSendResult> {
+export async function updateAndPublishAdminSquareInvoice(
+  order: AdminIntegrationOrder,
+  options: { paymentMode?: AdminSquareInvoicePaymentMode } = {},
+): Promise<AdminSquareInvoiceSendResult> {
   if (!order.square_invoice_id) {
     throw new Error("Square invoice draft is missing.");
   }
@@ -665,6 +712,7 @@ export async function updateAndPublishAdminSquareInvoice(order: AdminIntegration
     order,
     order.square_invoice_id,
     versionAfterRecipientClear,
+    options.paymentMode ?? squareInvoicePaymentModeFromOrder(order),
   );
   const updatedVersion = Number(updated.version);
   if (!Number.isFinite(updatedVersion) || updatedVersion < 0) {

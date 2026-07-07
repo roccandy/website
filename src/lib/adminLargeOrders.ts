@@ -20,6 +20,7 @@ export type AdminLargeOrderPricingInput = {
   discountType?: AdminDiscountType | string | null;
   discountValue?: number | null;
   priceOverride?: number | null;
+  allowBatchWeightMismatch?: boolean | null;
 };
 
 export type AdminLargeOrderPricingBreakdown = PricingBreakdown & {
@@ -126,9 +127,11 @@ export function suggestedAdminBatchWeights(totalWeightKg: number, maxBatchKg: nu
 export function validateAdminBatchWeights({
   weights,
   totalWeightKg,
+  allowWeightMismatch = false,
 }: {
   weights: number[];
   totalWeightKg: number;
+  allowWeightMismatch?: boolean;
 }) {
   if (weights.length === 0) {
     throw new Error("At least one production batch is required.");
@@ -141,7 +144,7 @@ export function validateAdminBatchWeights({
     throw new Error("Every production batch must be greater than zero.");
   }
   const allocated = weights.reduce((sum, weight) => sum + weight, 0);
-  if (Math.abs(allocated - totalWeightKg) > KG_TOLERANCE) {
+  if (!allowWeightMismatch && Math.abs(allocated - totalWeightKg) > KG_TOLERANCE) {
     throw new Error("Production batch weights must equal the order's total weight.");
   }
 }
@@ -182,7 +185,11 @@ export function calculateAdminLargeOrderPricingWithContext(
       : suggestedBatchWeights.length > 0
         ? suggestedBatchWeights
         : [totalWeightKg];
-  validateAdminBatchWeights({ weights: batchWeightsKg, totalWeightKg });
+  validateAdminBatchWeights({
+    weights: batchWeightsKg,
+    totalWeightKg,
+    allowWeightMismatch: Boolean(input.allowBatchWeightMismatch),
+  });
 
   const categoryTiers = sortTiersByRange(context.tiers.filter((tier) => tier.category_id === category.id));
   const batchBasePrices = batchWeightsKg.map((weightKg) => ({

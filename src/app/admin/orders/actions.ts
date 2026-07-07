@@ -24,8 +24,11 @@ import {
   createAndPublishAdminSquareInvoice,
   createAdminSquareInvoiceDraft,
   defaultAdminSquareInvoiceTitle,
+  isBankTransferSquareInvoicePaymentMethod,
   removeAdminSquareInvoice,
+  squareInvoicePaymentMethodLabel,
   updateAndPublishAdminSquareInvoice,
+  type AdminSquareInvoicePaymentMode,
 } from "@/lib/adminOrderIntegrations";
 import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
@@ -197,6 +200,7 @@ async function upsertOrderShared(formData: FormData) {
   const toastSuccess = formData.get("toast_success")?.toString() || null;
   const toastError = formData.get("toast_error")?.toString() || null;
   const sendUpdatedInvoice = formData.get("send_updated_invoice")?.toString() === "on";
+  const batchWeightMismatchApproved = formData.get("batch_weight_mismatch_approved")?.toString() === "on";
   const id = formData.get("id")?.toString() || undefined;
   const order_number_raw = formData.get("order_number")?.toString() || null;
   const order_number = normalizeBaseOrderNumber(order_number_raw);
@@ -388,6 +392,7 @@ async function upsertOrderShared(formData: FormData) {
       : ingredientLabelsCount ?? existing?.ingredient_labels_count ?? null;
     const existingBatchKey = existingBatchWeightsForComparison.map((weight) => weight.toFixed(2)).join("|");
     const submittedBatchKey = submittedBatchWeights.map((weight) => weight.toFixed(2)).join("|");
+    const submittedBatchTotal = submittedBatchWeights.reduce((sum, weight) => sum + weight, 0);
     const sizeAffectingFieldsChanged =
       !existing ||
       Math.abs(Number(existing.total_weight_kg ?? 0) - resolvedWeightKg) > 0.02 ||
@@ -406,6 +411,16 @@ async function upsertOrderShared(formData: FormData) {
       Number(admin_price_override ?? 0) !== Number(existing?.admin_price_override ?? 0);
     const existingBatchWeightsMismatch =
       existingBatchWeights.length > 0 && Math.abs(existingBatchTotal - resolvedWeightKg) > 0.02;
+    const submittedBatchWeightsMismatch =
+      submittedBatchWeights.length > 0 && Math.abs(roundKg(submittedBatchTotal) - roundKg(resolvedWeightKg)) > 0.02;
+    const unchangedExistingBatchMismatch =
+      Boolean(existing) &&
+      existingBatchWeightsMismatch &&
+      submittedBatchKey === existingBatchKey &&
+      Math.abs(Number(existing?.total_weight_kg ?? 0) - resolvedWeightKg) <= 0.02;
+    if (submittedBatchWeightsMismatch && !batchWeightMismatchApproved && !unchangedExistingBatchMismatch) {
+      throw new Error("Batch weights do not match the order weight. Confirm the mismatch before saving.");
+    }
     const shouldRegenerateBatchWeights =
       submittedBatchWeights.length === 0 && (sizeAffectingFieldsChanged || existingBatchWeightsMismatch);
     const batchWeightsForPricing =
@@ -440,6 +455,7 @@ async function upsertOrderShared(formData: FormData) {
               discountType: admin_discount_type,
               discountValue: admin_discount_value,
               priceOverride: admin_price_override,
+              allowBatchWeightMismatch: submittedBatchWeightsMismatch,
             },
             pricingContext,
           )
@@ -565,6 +581,11 @@ async function upsertOrderShared(formData: FormData) {
       if (error) throw new Error(error.message);
       if (shouldReplaceSquareInvoice && existing?.square_invoice_id) {
         const idempotencySuffix = `replace-${Date.now()}`;
+        const replacementPaymentMode: AdminSquareInvoicePaymentMode = isBankTransferSquareInvoicePaymentMethod(
+          existing.payment_method,
+        )
+          ? "bank_transfer"
+          : "card";
         let oldInvoiceRemoved = false;
         try {
           const removal = await removeAdminSquareInvoice(existing, { idempotencySuffix });
@@ -579,6 +600,7 @@ async function upsertOrderShared(formData: FormData) {
           } as Parameters<typeof createAndPublishAdminSquareInvoice>[0];
           const updatedInvoice = await createAndPublishAdminSquareInvoice(integrationOrder, {
             idempotencySuffix,
+            paymentMode: replacementPaymentMode,
           });
           const { error: invoiceUpdateError } = await client
             .from("orders")
@@ -594,7 +616,7 @@ async function upsertOrderShared(formData: FormData) {
               square_invoice_sent_at: updatedInvoice.invoiceSentAt,
               square_invoice_error: null,
               admin_price_locked_at: new Date().toISOString(),
-              payment_method: "Square invoice",
+              payment_method: squareInvoicePaymentMethodLabel(replacementPaymentMode),
               payment_provider: "square_invoice",
             })
             .eq("id", id);
@@ -1041,6 +1063,8 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   const customerName = [firstName, lastName].filter(Boolean).join(" ") || formData.get("customer_name")?.toString().trim() || null;
   const customerEmail = formData.get("customer_email")?.toString().trim() || null;
   const phone = formData.get("phone")?.toString().trim() || null;
+  const invoicePaymentMode: AdminSquareInvoicePaymentMode =
+    formData.get("square_invoice_payment_mode")?.toString() === "bank_transfer" ? "bank_transfer" : "card";
 
   if (!orderId) {
     redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
@@ -1066,6 +1090,17 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     const params = new URLSearchParams({ selected: orderId, toast: "error", message: "This Square invoice has already been sent." });
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
+  const productionBatchCount = Array.isArray(existing.admin_batch_weights_kg)
+    ? existing.admin_batch_weights_kg.filter((weight: unknown) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
+    : 0;
+  if (invoicePaymentMode === "bank_transfer" && productionBatchCount <= 1) {
+    const params = new URLSearchParams({
+      selected: orderId,
+      toast: "error",
+      message: "Bank transfer PDF can only be selected for multiple-batch orders.",
+    });
+    redirect(`${ORDERS_PATH}?${params.toString()}`);
+  }
 
   const localPatch = {
     square_invoice_title: invoiceTitle ?? existing.square_invoice_title ?? defaultAdminSquareInvoiceTitle(existing),
@@ -1077,18 +1112,26 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     phone: phone ?? existing.phone,
     square_invoice_error: null,
   };
+  const paymentPatch = {
+    payment_method: squareInvoicePaymentMethodLabel(invoicePaymentMode),
+    payment_provider: "square_invoice",
+  };
 
   const integrationOrder = {
     ...existing,
     ...localPatch,
+    ...paymentPatch,
   } as Parameters<typeof updateAndPublishAdminSquareInvoice>[0];
 
   try {
-    const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder);
+    const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder, {
+      paymentMode: invoicePaymentMode,
+    });
     const { error: updateError } = await client
       .from("orders")
       .update({
         ...localPatch,
+        ...paymentPatch,
         square_invoice_id: sentInvoice.invoiceId,
         square_invoice_version: sentInvoice.invoiceVersion,
         square_invoice_status: sentInvoice.invoiceStatus,
@@ -1109,7 +1152,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         title: existing.title,
         customerName: localPatch.customer_name,
       }),
-      summary: `Sent Square invoice for ${describeOrderTarget({
+      summary: `Sent ${squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
         orderNumber: existing.order_number,
         title: existing.title,
         customerName: localPatch.customer_name,
@@ -1125,7 +1168,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
       await sendAdminCreatedCustomerOrderEmail({
         ...existing,
         ...localPatch,
-        payment_method: "Square invoice",
+        ...paymentPatch,
       });
     } catch (error) {
       console.error("Admin-created customer order email failed:", error);
@@ -1138,7 +1181,11 @@ export async function sendAdminSquareInvoice(formData: FormData) {
 
   revalidatePath(ORDERS_PATH);
   revalidatePath(`/admin/orders/${orderId}/invoice`);
-  redirect(`${ORDERS_PATH}?selected=${encodeURIComponent(orderId)}&toast=success&message=${encodeURIComponent("Square invoice sent.")}`);
+  redirect(
+    `${ORDERS_PATH}?selected=${encodeURIComponent(orderId)}&toast=success&message=${encodeURIComponent(
+      invoicePaymentMode === "bank_transfer" ? "Square bank transfer invoice sent." : "Square invoice sent.",
+    )}`,
+  );
 }
 
 export async function markOrderAsPaid(formData: FormData) {
