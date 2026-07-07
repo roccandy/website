@@ -827,6 +827,7 @@ async function upsertOrderShared(formData: FormData) {
               discountValue: admin_discount_value,
               priceOverride: admin_price_override,
               allowBatchWeightMismatch: submittedBatchWeightsMismatch,
+              urgencyReferenceDate: existing?.created_at ?? null,
             },
             pricingContext,
           )

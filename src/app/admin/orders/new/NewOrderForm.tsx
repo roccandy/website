@@ -476,6 +476,7 @@ export function NewOrderForm({
   const initialWeddingDesign = splitWeddingDesign(initialOrder?.design_text);
   const customerDefaults = initialOrder;
   const invoiceDraftMode = !isEditMode;
+  const editUrgencyReferenceDate = isEditMode ? initialOrder?.created_at ?? null : null;
   const initialInvoiceDraftIdRef = useRef(`order-${Date.now()}`);
   const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => [
     emptyInvoiceOrderDraft(initialInvoiceDraftIdRef.current),
@@ -1408,6 +1409,7 @@ export function NewOrderForm({
         discountValue: discountValue ? Number(discountValue) : null,
         priceOverride: priceOverride ? Number(priceOverride) : null,
         allowBatchWeightMismatch: batchWeightMismatch,
+        urgencyReferenceDate: editUrgencyReferenceDate,
       }),
     })
       .then(async (res) => {
@@ -1440,7 +1442,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
+  }, [batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
   return (
     <form

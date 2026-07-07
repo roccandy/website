@@ -21,6 +21,7 @@ export type AdminLargeOrderPricingInput = {
   discountValue?: number | null;
   priceOverride?: number | null;
   allowBatchWeightMismatch?: boolean | null;
+  urgencyReferenceDate?: string | Date | null;
 };
 
 export type AdminLargeOrderPricingBreakdown = PricingBreakdown & {
@@ -236,8 +237,8 @@ export function calculateAdminLargeOrderPricingWithContext(
   const urgencyFee = (() => {
     if (!input.dueDate) return 0;
     const due = new Date(input.dueDate);
-    const now = new Date();
-    const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const reference = input.urgencyReferenceDate ? new Date(input.urgencyReferenceDate) : new Date();
+    const diffDays = Math.ceil((due.getTime() - reference.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays > Number(context.settings.lead_time_days)) return 0;
     return subtotalBeforeUrgency * (Number(context.settings.urgency_fee) / 100);
   })();

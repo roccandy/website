@@ -737,6 +737,7 @@ export function OrderDetailEditor({
       discountValue: draft.discountValue ? Number(draft.discountValue) : null,
       priceOverride: draft.priceOverride ? Number(draft.priceOverride) : null,
       allowBatchWeightMismatch: batchWeightMismatch,
+      urgencyReferenceDate: order.created_at ?? null,
     };
 
     return {

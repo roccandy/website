@@ -20,6 +20,7 @@ type AdminQuoteRequest = {
   discountValue?: number | null;
   priceOverride?: number | null;
   allowBatchWeightMismatch?: boolean | null;
+  urgencyReferenceDate?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         discountValue: body.discountValue ?? null,
         priceOverride: body.priceOverride ?? null,
         allowBatchWeightMismatch: true,
+        urgencyReferenceDate: body.urgencyReferenceDate ?? null,
       },
       context,
     );

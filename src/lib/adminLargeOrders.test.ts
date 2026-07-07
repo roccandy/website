@@ -99,6 +99,43 @@ describe("admin large order batching", () => {
     expect(pricing.total).toBe(480);
   });
 
+  it("calculates urgency from the supplied order-time reference date", () => {
+    const context = {
+      ...pricingContext,
+      settings: {
+        ...pricingContext.settings,
+        lead_time_days: 7,
+        urgency_fee: 10,
+      },
+    } as PricingContext;
+
+    const originalOrderTimePricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "bulk-bag",
+        quantity: 1,
+        dueDate: "2026-01-10",
+        urgencyReferenceDate: "2026-01-01T00:00:00.000Z",
+      },
+      context,
+    );
+    const urgentAtOrderTimePricing = calculateAdminLargeOrderPricingWithContext(
+      {
+        categoryId: "custom-1-6",
+        packagingOptionId: "bulk-bag",
+        quantity: 1,
+        dueDate: "2026-01-10",
+        urgencyReferenceDate: "2026-01-05T00:00:00.000Z",
+      },
+      context,
+    );
+
+    expect(originalOrderTimePricing.urgencyFee).toBe(0);
+    expect(originalOrderTimePricing.total).toBe(101);
+    expect(urgentAtOrderTimePricing.urgencyFee).toBe(10.1);
+    expect(urgentAtOrderTimePricing.total).toBe(111.1);
+  });
+
   it("prices approved mismatched batches from the production batch total while keeping the packaging weight", () => {
     const pricing = calculateAdminLargeOrderPricingWithContext(
       {
