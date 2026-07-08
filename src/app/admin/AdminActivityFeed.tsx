@@ -29,6 +29,30 @@ function resolveActorLabel(entry: AdminActivityEntry) {
   return entry.actorName?.trim() || entry.actorEmail?.trim() || "Admin";
 }
 
+type ActivityChangeDetail = {
+  field: string;
+  from: string;
+  to: string;
+};
+
+function isActivityChangeDetail(value: unknown): value is ActivityChangeDetail {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "field" in value &&
+    "from" in value &&
+    "to" in value &&
+    typeof (value as ActivityChangeDetail).field === "string" &&
+    typeof (value as ActivityChangeDetail).from === "string" &&
+    typeof (value as ActivityChangeDetail).to === "string"
+  );
+}
+
+function getActivityChangeDetails(entry: AdminActivityEntry) {
+  const rawChanges = entry.metadata.orderChanges;
+  return Array.isArray(rawChanges) ? rawChanges.filter(isActivityChangeDetail) : [];
+}
+
 export function AdminActivityFeed({
   entries,
   compact = false,
@@ -48,6 +72,9 @@ export function AdminActivityFeed({
     <div className={compact ? "space-y-2" : "space-y-3"}>
       {entries.map((entry) => {
         const changedFields = compact ? entry.changedFields.slice(0, 3) : entry.changedFields;
+        const changeDetails = getActivityChangeDetails(entry);
+        const visibleChangeDetails = compact ? changeDetails.slice(0, 3) : changeDetails.slice(0, 10);
+        const hiddenChangeCount = changeDetails.length - visibleChangeDetails.length;
 
         return (
           <div
@@ -78,6 +105,21 @@ export function AdminActivityFeed({
                         {field}
                       </span>
                     ))}
+                  </div>
+                ) : null}
+                {visibleChangeDetails.length > 0 ? (
+                  <div className="space-y-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-[11px] leading-snug text-zinc-600">
+                    {visibleChangeDetails.map((change, index) => (
+                      <p key={`${entry.id}-change-${index}`}>
+                        <span className="font-semibold text-zinc-800">{change.field}:</span>{" "}
+                        <span>{change.from}</span>
+                        <span className="px-1 text-zinc-400">-&gt;</span>
+                        <span>{change.to}</span>
+                      </p>
+                    ))}
+                    {hiddenChangeCount > 0 ? (
+                      <p className="font-semibold text-zinc-500">+{hiddenChangeCount} more change{hiddenChangeCount === 1 ? "" : "s"}</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

@@ -41,6 +41,7 @@ import {
 } from "@/lib/adminPremadeOrder";
 import { batchWeightsForOrder, findFirstAvailableSlotIndexForDate, productionKgForOrder } from "./productionScheduleShared";
 import { isAdminManagedCustomOrder } from "./scheduleVisibility";
+import { buildOrderActivityChanges } from "./orderActivityChanges";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -1002,6 +1003,7 @@ async function upsertOrderShared(formData: FormData) {
       heart_color: resolvedHeartColor,
       created_at: created_at ?? undefined,
     };
+    const orderChanges = existing ? buildOrderActivityChanges(existing as OrderRow, basePayload) : [];
 
     if (id) {
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
@@ -1112,11 +1114,17 @@ async function upsertOrderShared(formData: FormData) {
           customerName: basePayload.customer_name,
         })}.`,
         path: redirectTo ?? ORDERS_PATH,
-        changedFields: shouldReplaceSquareInvoice ? ["Order details", "Square invoice"] : ["Order details"],
+        changedFields: Array.from(
+          new Set([
+            ...(orderChanges.length > 0 ? orderChanges.map((change) => change.field) : ["Order details"]),
+            ...(shouldReplaceSquareInvoice ? ["Square invoice"] : []),
+          ]),
+        ),
         metadata: {
           status: basePayload.status,
           dueDate: basePayload.due_date,
           replacedSquareInvoice: shouldReplaceSquareInvoice,
+          orderChanges,
         },
       };
     } else {
