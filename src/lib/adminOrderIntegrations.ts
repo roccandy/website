@@ -1,4 +1,5 @@
 import { getPackagingOptions, type OrderRow, type PackagingOption } from "@/lib/data";
+import { defaultSquareInvoiceNumber, squareInvoiceNumberWithSuffix } from "@/lib/squareInvoiceNumbers";
 
 export type AdminIntegrationOrder = Pick<
   OrderRow,
@@ -50,6 +51,17 @@ type SquareRequestOptions = {
   method?: "DELETE" | "GET" | "POST" | "PUT";
   body?: unknown;
 };
+
+class SquareRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly errors: Array<{ detail?: string; code?: string; field?: string }> = [],
+  ) {
+    super(message);
+    this.name = "SquareRequestError";
+  }
+}
 
 type SquareCustomer = {
   id: string;
@@ -312,9 +324,19 @@ async function squareRequest<T>(path: string, options: SquareRequestOptions = {}
   };
   if (!response.ok) {
     const detail = data.errors?.[0]?.detail || data.errors?.[0]?.code || `Square request failed (${response.status}).`;
-    throw new Error(detail);
+    throw new SquareRequestError(detail, response.status, data.errors ?? []);
   }
   return data as T;
+}
+
+function isSquareInvoiceNumberConflict(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const details =
+    error instanceof SquareRequestError
+      ? error.errors.flatMap((item) => [item.detail, item.code, item.field])
+      : [];
+  const text = [error.message, ...details].filter(Boolean).join(" ").toLowerCase();
+  return text.includes("invoice_number") && (text.includes("unique") || text.includes("duplicate") || text.includes("already"));
 }
 
 function formatDateKey(date: Date) {
@@ -478,30 +500,43 @@ async function createSquareInvoice(
   const config = getSquareConfig();
   const dueDate = invoiceDueDate(order);
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
-  const data = await squareRequest<{ invoice?: SquareInvoice }>("/v2/invoices", {
-    method: "POST",
-    body: {
-      idempotency_key: `rc-admin-invoice-${order.id}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
-      invoice: {
-        location_id: config.locationId,
-        order_id: squareOrderId,
-        title: invoiceTitle,
-        description: await invoiceDescription(order),
-        primary_recipient: {
-          customer_id: customerId,
-        },
-        delivery_method: "EMAIL",
-        accepted_payment_methods: acceptedPaymentMethodsForMode(paymentMode),
-        payment_requests: [
-          {
-            request_type: "BALANCE",
-            due_date: dueDate,
-            reminders: paymentReminders(dueDate),
+  const invoiceNumber = defaultSquareInvoiceNumber(order);
+  const description = await invoiceDescription(order);
+  const idempotencyKey = `rc-admin-invoice-${order.id}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`;
+  const createInvoice = (nextInvoiceNumber: string, nextIdempotencyKey: string) =>
+    squareRequest<{ invoice?: SquareInvoice }>("/v2/invoices", {
+      method: "POST",
+      body: {
+        idempotency_key: nextIdempotencyKey,
+        invoice: {
+          location_id: config.locationId,
+          order_id: squareOrderId,
+          invoice_number: nextInvoiceNumber,
+          title: invoiceTitle,
+          description,
+          primary_recipient: {
+            customer_id: customerId,
           },
-        ],
+          delivery_method: "EMAIL",
+          accepted_payment_methods: acceptedPaymentMethodsForMode(paymentMode),
+          payment_requests: [
+            {
+              request_type: "BALANCE",
+              due_date: dueDate,
+              reminders: paymentReminders(dueDate),
+            },
+          ],
+        },
       },
-    },
-  });
+    });
+  let data: { invoice?: SquareInvoice };
+  try {
+    data = await createInvoice(invoiceNumber, idempotencyKey);
+  } catch (error) {
+    if (!isSquareInvoiceNumberConflict(error)) throw error;
+    const fallbackInvoiceNumber = squareInvoiceNumberWithSuffix(invoiceNumber, idempotencySuffix || Date.now().toString(36));
+    data = await createInvoice(fallbackInvoiceNumber, `${idempotencyKey}-number-retry`);
+  }
   if (!data.invoice?.id) {
     throw new Error("Square invoice draft creation failed.");
   }
@@ -540,12 +575,14 @@ async function updateSquareInvoiceDraft(
 ) {
   const dueDate = invoiceDueDate(order);
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
+  const invoiceNumber = defaultSquareInvoiceNumber(order);
   const data = await squareRequest<{ invoice?: SquareInvoice }>(`/v2/invoices/${encodeURIComponent(invoiceId)}`, {
     method: "PUT",
     body: {
       idempotency_key: `rc-admin-invoice-update-${order.id}-${Date.now()}`,
       invoice: {
         version: invoiceVersion,
+        invoice_number: invoiceNumber,
         title: invoiceTitle,
         description: await invoiceDescription(order),
         delivery_method: "EMAIL",

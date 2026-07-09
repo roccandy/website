@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminSession, READ_ONLY_MESSAGE } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
+import { refundSquarePayment, refundSquareInvoicePayment, refundPayPalCapture } from "@/lib/refunds";
 import { sendCustomerRefundEmail } from "@/lib/email";
 import { persistOrderRefund } from "@/lib/orderRefunds";
 
@@ -69,6 +69,9 @@ export async function POST(request: Request) {
 
     if (provider === "square") {
       await refundSquarePayment(transactionId, amountCents, reason);
+    } else if (provider === "square_invoice") {
+      const invoiceId = order.square_invoice_id?.trim() || transactionId;
+      await refundSquareInvoicePayment(invoiceId, amountCents, reason);
     } else if (provider === "paypal") {
       await refundPayPalCapture(transactionId, refundAmount.toFixed(2), reason);
     } else {

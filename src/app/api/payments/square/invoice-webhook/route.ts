@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
+import { resolveSquareInvoicePaymentId } from "@/lib/refunds";
 
 type SquareInvoiceWebhookPayload = {
   type?: string;
@@ -120,9 +121,15 @@ export async function POST(request: Request) {
   }
 
   if (eventType === "invoice.payment_made") {
+    let paymentTransactionId = invoice.id;
+    try {
+      paymentTransactionId = (await resolveSquareInvoicePaymentId(invoice.id, 1)).paymentId;
+    } catch (error) {
+      console.error("Square invoice payment lookup failed:", error);
+    }
     patch.paid_at = payload.created_at ?? new Date().toISOString();
     patch.payment_provider = "square_invoice";
-    patch.payment_transaction_id = invoice.id;
+    patch.payment_transaction_id = paymentTransactionId;
     patch.status = "pending";
   }
 

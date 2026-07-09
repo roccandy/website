@@ -31,7 +31,7 @@ import {
   type AdminInvoiceOrderInput,
   type AdminSquareInvoicePaymentMode,
 } from "@/lib/adminOrderIntegrations";
-import { refundSquarePayment, refundPayPalCapture } from "@/lib/refunds";
+import { refundSquarePayment, refundSquareInvoicePayment, refundPayPalCapture } from "@/lib/refunds";
 import { persistOrderRefund, persistOrderRefunds } from "@/lib/orderRefunds";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import {
@@ -1901,8 +1901,14 @@ export async function refundOrder(formData: FormData) {
   const refundAmountRaw = formData.get("refund_amount")?.toString() || "";
   const redirectCandidate = formData.get("redirect_to")?.toString() || "";
   const redirectBase = redirectCandidate.startsWith("/admin/orders") ? redirectCandidate : ORDERS_PATH;
+  const redirectWithRefundToast = (tone: "success" | "error", message: string): never => {
+    const url = new URL(redirectBase, "https://admin.local");
+    url.searchParams.set("toast", tone);
+    url.searchParams.set("message", message);
+    redirect(`${url.pathname}?${url.searchParams.toString()}`);
+  };
   if (!id) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20order%20id`);
+    redirectWithRefundToast("error", "Refund failed: Missing order id");
   }
   const client = supabaseAdminClient;
   const orderIds = Array.from(new Set(ids.length > 0 ? ids : [id]));
@@ -1913,36 +1919,36 @@ export async function refundOrder(formData: FormData) {
   const { data: orderData, error } = await orderQuery;
   const orders = Array.isArray(orderData) ? orderData : orderData ? [orderData] : [];
   if (error || orders.length === 0) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Order%20not%20found`);
+    redirectWithRefundToast("error", "Refund failed: Order not found");
   }
 
   const provider = orders[0]?.payment_provider;
   const transactionId = orders[0]?.payment_transaction_id;
   if (!provider || !transactionId) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Missing%20payment%20details`);
+    redirectWithRefundToast("error", "Refund failed: Missing payment details");
   }
 
   const samePayment = orders.every(
     (order) => order.payment_provider === provider && order.payment_transaction_id === transactionId,
   );
   if (!samePayment) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Orders%20must%20share%20the%20same%20payment`);
+    redirectWithRefundToast("error", "Refund failed: Orders must share the same payment");
   }
 
   const maxRefundCents = orders.reduce((sum, order) => sum + remainingRefundCentsForOrder(order), 0);
   const maxRefundAmount = maxRefundCents / 100;
   if (!Number.isFinite(maxRefundAmount) || maxRefundCents <= 0) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20No%20refundable%20amount%20remaining`);
+    redirectWithRefundToast("error", "Refund failed: No refundable amount remaining");
   }
 
   const requestedRefundAmount = Number(refundAmountRaw);
   const requestedRefundCents = Number.isFinite(requestedRefundAmount) ? toMoneyCents(requestedRefundAmount) : NaN;
   const amountCents = refundType === "partial" ? requestedRefundCents : maxRefundCents;
   if (!Number.isFinite(amountCents) || amountCents <= 0) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Invalid%20refund%20amount`);
+    redirectWithRefundToast("error", "Refund failed: Invalid refund amount");
   }
   if (amountCents > maxRefundCents) {
-    redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Refund%20amount%20exceeds%20order%20total`);
+    redirectWithRefundToast("error", "Refund failed: Refund amount exceeds order total");
   }
   const amount = amountCents / 100;
   const isPartialRefund = amountCents < maxRefundCents;
@@ -1950,10 +1956,13 @@ export async function refundOrder(formData: FormData) {
   try {
     if (provider === "square") {
       await refundSquarePayment(String(transactionId), amountCents, refundReason);
+    } else if (provider === "square_invoice") {
+      const invoiceId = orders[0]?.square_invoice_id?.trim() || String(transactionId);
+      await refundSquareInvoicePayment(invoiceId, amountCents, refundReason);
     } else if (provider === "paypal") {
       await refundPayPalCapture(String(transactionId), amount.toFixed(2), refundReason);
     } else {
-      redirect(`${redirectBase}?toast_error=Refund%20failed%3A%20Unsupported%20provider`);
+      throw new Error("Refund failed: Unsupported provider");
     }
 
     const refundResult =
@@ -2007,10 +2016,13 @@ export async function refundOrder(formData: FormData) {
         refundType: isPartialRefund ? "partial" : "full",
       },
     });
-    redirect(`${redirectBase}?toast_success=${encodeURIComponent(successMessage)}`);
+    redirectWithRefundToast("success", successMessage);
   } catch (error) {
+    if (isRedirectControlError(error)) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : "Refund failed.";
-    redirect(`${redirectBase}?toast_error=${encodeURIComponent(message)}`);
+    redirectWithRefundToast("error", message);
   }
 }
 
