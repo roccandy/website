@@ -137,9 +137,18 @@ type SquarePayments = {
     }
   >;
   applePay: (request: SquarePaymentRequest) => Promise<SquarePaymentMethod>;
-  googlePay: (request: unknown) => Promise<
+  googlePay: (request: SquarePaymentRequest) => Promise<
     SquarePaymentMethod & {
-      attach: (selector: string) => Promise<void>;
+      attach: (
+        selector: string,
+        options?: {
+          buttonColor?: "black" | "white" | "default";
+          buttonSizeMode?: "static" | "fill";
+          buttonType?: "long" | "short";
+          buttonRadius?: number;
+          buttonBorderType?: "no_border" | "default_border";
+        }
+      ) => Promise<void>;
     }
   >;
   paymentRequest: (options: {
@@ -186,7 +195,7 @@ const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
-type PaymentMethod = "credit_card" | "paypal" | "apple_pay";
+type PaymentMethod = "credit_card" | "paypal" | "apple_pay" | "google_pay";
 type PaymentProcessingState = {
   active: boolean;
   title: string;
@@ -275,8 +284,9 @@ function SquarePayment({
   onError,
   onProcessingChange,
   onApplePayAvailabilityChange,
+  onGooglePayAvailabilityChange,
 }: {
-  paymentMethod: "credit_card" | "apple_pay";
+  paymentMethod: "credit_card" | "apple_pay" | "google_pay";
   amount: number;
   canPay: boolean;
   validationMessage: string;
@@ -285,15 +295,20 @@ function SquarePayment({
   onError: (stage: string, message: string) => void;
   onProcessingChange: (state: PaymentProcessingState) => void;
   onApplePayAvailabilityChange: (available: boolean) => void;
+  onGooglePayAvailabilityChange: (available: boolean) => void;
 }) {
   const [cardReady, setCardReady] = useState(false);
   const [applePayReady, setApplePayReady] = useState(false);
+  const [googlePayReady, setGooglePayReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const paymentsRef = useRef<SquarePayments | null>(null);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
   const applePayRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
+  const googlePayRef = useRef<Awaited<ReturnType<SquarePayments["googlePay"]>> | null>(null);
   const applePaymentRequestRef = useRef<SquarePaymentRequest | null>(null);
+  const googlePaymentRequestRef = useRef<SquarePaymentRequest | null>(null);
+  const googlePayClickRef = useRef<() => void>(() => undefined);
   const initializedRef = useRef(false);
   const initializingRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
@@ -308,6 +323,12 @@ function SquarePayment({
 
   useEffect(() => {
     applePaymentRequestRef.current?.update({
+      total: {
+        amount: Math.max(amount, 0.01).toFixed(2),
+        label: "Roc Candy order",
+      },
+    });
+    googlePaymentRequestRef.current?.update({
       total: {
         amount: Math.max(amount, 0.01).toFixed(2),
         label: "Roc Candy order",
@@ -443,6 +464,38 @@ function SquarePayment({
           onApplePayAvailabilityChange(false);
         }
 
+        try {
+          const paymentRequest = payments.paymentRequest({
+            countryCode: "AU",
+            currencyCode: "AUD",
+            total: {
+              amount: Math.max(amountRef.current, 0.01).toFixed(2),
+              label: "Roc Candy order",
+            },
+          });
+          const googlePay = await payments.googlePay(paymentRequest);
+          const googlePayContainer = document.getElementById("square-google-pay-container");
+          if (!googlePayContainer) throw new Error("Google Pay container is unavailable.");
+          googlePayContainer.innerHTML = "";
+          await googlePay.attach("#square-google-pay-container", {
+            buttonColor: "black",
+            buttonSizeMode: "fill",
+            buttonType: "long",
+            buttonRadius: 999,
+            buttonBorderType: "no_border",
+          });
+          googlePayContainer.onclick = () => googlePayClickRef.current();
+          googlePaymentRequestRef.current = paymentRequest;
+          googlePayRef.current = googlePay;
+          setGooglePayReady(true);
+          onGooglePayAvailabilityChange(true);
+        } catch {
+          googlePaymentRequestRef.current = null;
+          googlePayRef.current = null;
+          setGooglePayReady(false);
+          onGooglePayAvailabilityChange(false);
+        }
+
         initializedRef.current = true;
         initializingRef.current = false;
       } catch (error) {
@@ -452,14 +505,20 @@ function SquarePayment({
         onError("setup", message);
         initializingRef.current = false;
         onApplePayAvailabilityChange(false);
+        onGooglePayAvailabilityChange(false);
       }
     })();
 
-  }, [onApplePayAvailabilityChange, onError]);
+  }, [onApplePayAvailabilityChange, onError, onGooglePayAvailabilityChange]);
 
-  const ready = paymentMethod === "apple_pay" ? applePayReady : cardReady;
+  const ready =
+    paymentMethod === "apple_pay"
+      ? applePayReady
+      : paymentMethod === "google_pay"
+        ? googlePayReady
+        : cardReady;
 
-  const beginPayment = (method: "credit_card" | "apple_pay") => {
+  const beginPayment = (method: "credit_card" | "apple_pay" | "google_pay") => {
     if (!canPayRef.current) {
       onError("validation", validationMessage);
       return;
@@ -473,10 +532,18 @@ function SquarePayment({
       return;
     }
 
+    if (method === "google_pay") {
+      if (!googlePayRef.current) return;
+      const tokenPromise = googlePayRef.current.tokenize();
+      void handleTokenize(tokenPromise, "Square - Google Pay", true);
+      return;
+    }
+
     if (!cardRef.current) return;
     const tokenPromise = cardRef.current.tokenize();
     void handleTokenize(tokenPromise, "Square - Credit Card", false);
   };
+  googlePayClickRef.current = () => beginPayment("google_pay");
 
   return (
     <div className="space-y-4">
@@ -487,6 +554,11 @@ function SquarePayment({
             <div id="square-card-container" />
           </div>
         </div>
+        <div
+          id="square-google-pay-container"
+          className={paymentMethod === "google_pay" ? "min-h-10 w-full" : "hidden"}
+          aria-hidden={paymentMethod !== "google_pay"}
+        />
         {paymentMethod === "apple_pay" ? (
           <button
             type="button"
@@ -495,7 +567,7 @@ function SquarePayment({
             onClick={() => beginPayment("apple_pay")}
             className="apple-pay-button disabled:cursor-not-allowed disabled:opacity-60"
           />
-        ) : (
+        ) : paymentMethod === "credit_card" ? (
           <button
             type="button"
             data-primary-button
@@ -505,7 +577,7 @@ function SquarePayment({
           >
             {loading ? "Processing..." : "Pay with your credit card"}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -1326,6 +1398,7 @@ export function CheckoutClient({
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("credit_card");
   const [applePayAvailable, setApplePayAvailable] = useState<boolean | null>(null);
+  const [googlePayAvailable, setGooglePayAvailable] = useState<boolean | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState<PaymentProcessingState>({
     active: false,
     title: "",
@@ -1352,6 +1425,12 @@ export function CheckoutClient({
     setApplePayAvailable(available);
     if (!available) {
       setSelectedPaymentMethod((current) => (current === "apple_pay" ? "credit_card" : current));
+    }
+  }, []);
+  const handleGooglePayAvailabilityChange = useCallback((available: boolean) => {
+    setGooglePayAvailable(available);
+    if (!available) {
+      setSelectedPaymentMethod((current) => (current === "google_pay" ? "credit_card" : current));
     }
   }, []);
 
@@ -1512,7 +1591,6 @@ export function CheckoutClient({
     });
   }, [analyticsItems, cartPricing.total, items, paymentSuccess]);
 
-  const paypalSelected = selectedPaymentMethod === "paypal";
   const addressDisabled = pickup;
   const addressInputClass = `mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm ${
     addressDisabled ? "bg-zinc-50 text-zinc-400" : "bg-white text-zinc-900"
@@ -1526,12 +1604,12 @@ export function CheckoutClient({
     }
     if (!dueDate) missing.push(hasCustomItems ? "date required" : "delivery or pickup date");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
-    if (!paypalSelected && !firstName.trim()) missing.push("first name");
-    if (!paypalSelected && !lastName.trim()) missing.push("surname");
-    if (!paypalSelected && !email.trim()) missing.push("email address");
+    if (!firstName.trim()) missing.push("first name");
+    if (!lastName.trim()) missing.push("surname");
+    if (!email.trim()) missing.push("email address");
     if (!phone.trim()) missing.push("phone number");
     if (hasBrandedCustomItems && !organizationName.trim()) missing.push("organisation name");
-    if (!paypalSelected && !pickup) {
+    if (!pickup) {
       if (!addressLine1.trim()) missing.push("address line 1");
       if (!suburb.trim()) missing.push("suburb or town");
       if (!postcode.trim()) missing.push("postcode");
@@ -1602,7 +1680,9 @@ export function CheckoutClient({
       ? "Credit Card"
       : selectedPaymentMethod === "apple_pay"
         ? "Apple Pay"
-        : "PayPal";
+        : selectedPaymentMethod === "google_pay"
+          ? "Google Pay"
+          : "PayPal";
 
   const buildSuccessSummary = ({
     adminEmailWarning: warning,
@@ -1761,15 +1841,15 @@ export function CheckoutClient({
         (!dueDate || (hasCustomItems && isDueDateBlocked)
           ? dateSectionRef.current?.querySelector<HTMLButtonElement>("[aria-haspopup='dialog']")
           : null) ||
-        (!paypalSelected && !firstName.trim() ? firstNameRef.current : null) ||
-        (!paypalSelected && !lastName.trim() ? lastNameRef.current : null) ||
-        (!paypalSelected && !email.trim() ? emailRef.current : null) ||
+        (!firstName.trim() ? firstNameRef.current : null) ||
+        (!lastName.trim() ? lastNameRef.current : null) ||
+        (!email.trim() ? emailRef.current : null) ||
         (!phone.trim() ? phoneRef.current : null) ||
         (hasBrandedCustomItems && !organizationName.trim() ? organizationNameRef.current : null) ||
-        (!paypalSelected && !pickup && !addressLine1.trim() ? addressLine1Ref.current : null) ||
-        (!paypalSelected && !pickup && !suburb.trim() ? suburbRef.current : null) ||
-        (!paypalSelected && !pickup && !postcode.trim() ? postcodeRef.current : null) ||
-        (!paypalSelected && !pickup && !stateValue.trim() ? stateRef.current : null);
+        (!pickup && !addressLine1.trim() ? addressLine1Ref.current : null) ||
+        (!pickup && !suburb.trim() ? suburbRef.current : null) ||
+        (!pickup && !postcode.trim() ? postcodeRef.current : null) ||
+        (!pickup && !stateValue.trim() ? stateRef.current : null);
 
       window.requestAnimationFrame(() => {
         const target = firstIncompleteField ?? paymentErrorRef.current;
@@ -1957,134 +2037,45 @@ export function CheckoutClient({
             </div>
           </div>
 
-          {!paymentSuccess ? (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="site-small-title text-zinc-900">Choose how to pay</h3>
-              <p className="mt-2 text-sm text-zinc-600">
-                Select a payment method first. You will complete payment after the order details below.
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  aria-pressed={selectedPaymentMethod === "credit_card"}
-                  onClick={() => {
-                    setSelectedPaymentMethod("credit_card");
-                    setPaymentError(null);
-                  }}
-                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
-                    selectedPaymentMethod === "credit_card"
-                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  <span className="block text-sm font-semibold">Credit card</span>
-                  <span className="mt-1 block text-[11px] text-zinc-500">Visa, Mastercard and more</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={selectedPaymentMethod === "paypal"}
-                  onClick={() => {
-                    setSelectedPaymentMethod("paypal");
-                    setPaymentError(null);
-                  }}
-                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
-                    selectedPaymentMethod === "paypal"
-                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  <span className="block text-sm font-semibold">PayPal</span>
-                  <span className="mt-1 block text-[11px] text-zinc-500">Use saved contact and delivery details</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={applePayAvailable !== true}
-                  aria-pressed={selectedPaymentMethod === "apple_pay"}
-                  onClick={() => {
-                    setSelectedPaymentMethod("apple_pay");
-                    setPaymentError(null);
-                  }}
-                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
-                    selectedPaymentMethod === "apple_pay"
-                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
-                      : applePayAvailable
-                        ? "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                        : "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-                    Apple Pay
-                    {applePayAvailable !== true ? (
-                      <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
-                        {applePayAvailable === null ? "Checking" : "Unavailable here"}
-                      </span>
-                    ) : null}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className="min-h-16 cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-left text-zinc-400"
-                >
-                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-                    Google Pay
-                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
-                      Coming soon
-                    </span>
-                  </span>
-                </button>
-              </div>
-            </div>
-          ) : null}
-
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Your details</h3>
             <div className="mt-3 space-y-3">
-              {paypalSelected ? (
-                <p className="rounded-xl border border-[#f0d9e3] bg-[#fff7fa] p-3 text-sm leading-6 text-zinc-600">
-                  PayPal will provide your name, email address, and selected delivery address securely when
-                  you approve the payment. We still need a phone number for your order.
-                </p>
-              ) : (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                      First name*
-                      <input
-                        ref={firstNameRef}
-                        value={firstName}
-                        onChange={(event) => setFirstName(event.target.value)}
-                        aria-invalid={!firstName.trim()}
-                        autoComplete="given-name"
-                        className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                      Surname*
-                      <input
-                        ref={lastNameRef}
-                        value={lastName}
-                        onChange={(event) => setLastName(event.target.value)}
-                        aria-invalid={!lastName.trim()}
-                        autoComplete="family-name"
-                        className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                      />
-                    </label>
-                  </div>
-                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                    Email address*
-                    <input
-                      ref={emailRef}
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      aria-invalid={!email.trim()}
-                      autoComplete="email"
-                      className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                    />
-                  </label>
-                </>
-              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  First name*
+                  <input
+                    ref={firstNameRef}
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    aria-invalid={!firstName.trim()}
+                    autoComplete="given-name"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  Surname*
+                  <input
+                    ref={lastNameRef}
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    aria-invalid={!lastName.trim()}
+                    autoComplete="family-name"
+                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                  />
+                </label>
+              </div>
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                Email address*
+                <input
+                  ref={emailRef}
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  aria-invalid={!email.trim()}
+                  autoComplete="email"
+                  className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Phone number*
                 <input
@@ -2108,78 +2099,74 @@ export function CheckoutClient({
                   className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
-              {!paypalSelected ? (
-                <>
-                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                    Address line 1*
-                    <input
-                      ref={addressLine1Ref}
-                      value={addressLine1}
-                      onChange={(event) => setAddressLine1(event.target.value)}
-                      aria-invalid={!pickup && !addressLine1.trim()}
-                      autoComplete="address-line1"
-                      className={addressInputClass}
-                      disabled={addressDisabled}
-                    />
-                  </label>
-                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                    Address line 2
-                    <input
-                      value={addressLine2}
-                      onChange={(event) => setAddressLine2(event.target.value)}
-                      autoComplete="address-line2"
-                      className={addressInputClass}
-                      disabled={addressDisabled}
-                    />
-                  </label>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                      Suburb or town*
-                      <input
-                        ref={suburbRef}
-                        value={suburb}
-                        onChange={(event) => setSuburb(event.target.value)}
-                        aria-invalid={!pickup && !suburb.trim()}
-                        autoComplete="address-level2"
-                        className={addressInputClass}
-                        disabled={addressDisabled}
-                      />
-                    </label>
-                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                      Postcode*
-                      <input
-                        ref={postcodeRef}
-                        value={postcode}
-                        onChange={(event) => setPostcode(event.target.value)}
-                        aria-invalid={!pickup && !postcode.trim()}
-                        autoComplete="postal-code"
-                        inputMode="numeric"
-                        className={addressInputClass}
-                        disabled={addressDisabled}
-                      />
-                    </label>
-                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                      State*
-                      <select
-                        ref={stateRef}
-                        value={stateValue}
-                        onChange={(event) => setStateValue(event.target.value)}
-                        aria-invalid={!pickup && !stateValue.trim()}
-                        autoComplete="address-level1"
-                        className={addressInputClass}
-                        disabled={addressDisabled}
-                      >
-                        <option value="">Select state</option>
-                        {AU_STATES.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                </>
-              ) : null}
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                Address line 1*
+                <input
+                  ref={addressLine1Ref}
+                  value={addressLine1}
+                  onChange={(event) => setAddressLine1(event.target.value)}
+                  aria-invalid={!pickup && !addressLine1.trim()}
+                  autoComplete="address-line1"
+                  className={addressInputClass}
+                  disabled={addressDisabled}
+                />
+              </label>
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                Address line 2
+                <input
+                  value={addressLine2}
+                  onChange={(event) => setAddressLine2(event.target.value)}
+                  autoComplete="address-line2"
+                  className={addressInputClass}
+                  disabled={addressDisabled}
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  Suburb or town*
+                  <input
+                    ref={suburbRef}
+                    value={suburb}
+                    onChange={(event) => setSuburb(event.target.value)}
+                    aria-invalid={!pickup && !suburb.trim()}
+                    autoComplete="address-level2"
+                    className={addressInputClass}
+                    disabled={addressDisabled}
+                  />
+                </label>
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  Postcode*
+                  <input
+                    ref={postcodeRef}
+                    value={postcode}
+                    onChange={(event) => setPostcode(event.target.value)}
+                    aria-invalid={!pickup && !postcode.trim()}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
+                    className={addressInputClass}
+                    disabled={addressDisabled}
+                  />
+                </label>
+                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                  State*
+                  <select
+                    ref={stateRef}
+                    value={stateValue}
+                    onChange={(event) => setStateValue(event.target.value)}
+                    aria-invalid={!pickup && !stateValue.trim()}
+                    autoComplete="address-level1"
+                    className={addressInputClass}
+                    disabled={addressDisabled}
+                  >
+                    <option value="">Select state</option>
+                    {AU_STATES.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -2195,13 +2182,114 @@ export function CheckoutClient({
           {!paymentSuccess ? (
             <div id="checkout-payment" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
               <h3 className="site-small-title text-zinc-900">Complete payment</h3>
-              <p className="mt-2 text-sm text-zinc-600">
-                {paypalSelected
-                  ? "Pay securely with PayPal."
-                  : selectedPaymentMethod === "apple_pay"
-                    ? "Pay securely with Apple Pay."
-                    : "Pay securely by credit card."}
-              </p>
+              <div role="radiogroup" aria-label="Payment method" className="mt-4 grid grid-cols-4 gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedPaymentMethod === "credit_card"}
+                  aria-label="Credit card"
+                  title="Credit card"
+                  onClick={() => {
+                    setSelectedPaymentMethod("credit_card");
+                    setPaymentError(null);
+                  }}
+                  className={`flex min-h-14 items-center justify-center rounded-xl border px-1.5 py-2 transition ${
+                    selectedPaymentMethod === "credit_card"
+                      ? "border-[#dba6be] bg-[#fff1f5] ring-1 ring-[#f7e4ec]"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-0.5 sm:gap-1" aria-hidden="true">
+                    <Image src="/payment-logos/visa.svg" alt="" width={20} height={20} />
+                    <Image src="/payment-logos/mastercard.svg" alt="" width={20} height={20} />
+                    <Image src="/payment-logos/american-express.svg" alt="" width={20} height={20} />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedPaymentMethod === "paypal"}
+                  aria-label="PayPal"
+                  title="PayPal"
+                  onClick={() => {
+                    setSelectedPaymentMethod("paypal");
+                    setPaymentError(null);
+                  }}
+                  className={`flex min-h-14 items-center justify-center rounded-xl border px-2 py-2 transition ${
+                    selectedPaymentMethod === "paypal"
+                      ? "border-[#dba6be] bg-[#fff1f5] ring-1 ring-[#f7e4ec]"
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  }`}
+                >
+                  <Image src="/payment-logos/paypal.svg" alt="" width={30} height={30} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  disabled={applePayAvailable !== true}
+                  aria-checked={selectedPaymentMethod === "apple_pay"}
+                  aria-label={
+                    applePayAvailable === null
+                      ? "Apple Pay availability is being checked"
+                      : applePayAvailable
+                        ? "Apple Pay"
+                        : "Apple Pay is unavailable on this device"
+                  }
+                  title={
+                    applePayAvailable === null
+                      ? "Checking Apple Pay availability"
+                      : applePayAvailable
+                        ? "Apple Pay"
+                        : "Apple Pay is unavailable on this device"
+                  }
+                  onClick={() => {
+                    setSelectedPaymentMethod("apple_pay");
+                    setPaymentError(null);
+                  }}
+                  className={`flex min-h-14 items-center justify-center rounded-xl border px-2 py-2 transition ${
+                    selectedPaymentMethod === "apple_pay"
+                      ? "border-[#dba6be] bg-[#fff1f5] ring-1 ring-[#f7e4ec]"
+                      : applePayAvailable
+                        ? "border-zinc-200 bg-white hover:border-zinc-300"
+                        : "cursor-not-allowed border-zinc-200 bg-zinc-100 opacity-50"
+                  }`}
+                >
+                  <Image src="/payment-logos/apple-pay.svg" alt="" width={34} height={34} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  disabled={googlePayAvailable !== true}
+                  aria-checked={selectedPaymentMethod === "google_pay"}
+                  aria-label={
+                    googlePayAvailable === null
+                      ? "Google Pay availability is being checked"
+                      : googlePayAvailable
+                        ? "Google Pay"
+                        : "Google Pay is unavailable on this device"
+                  }
+                  title={
+                    googlePayAvailable === null
+                      ? "Checking Google Pay availability"
+                      : googlePayAvailable
+                        ? "Google Pay"
+                        : "Google Pay is unavailable on this device"
+                  }
+                  onClick={() => {
+                    setSelectedPaymentMethod("google_pay");
+                    setPaymentError(null);
+                  }}
+                  className={`flex min-h-14 items-center justify-center rounded-xl border px-2 py-2 transition ${
+                    selectedPaymentMethod === "google_pay"
+                      ? "border-[#dba6be] bg-[#fff1f5] ring-1 ring-[#f7e4ec]"
+                      : googlePayAvailable
+                        ? "border-zinc-200 bg-white hover:border-zinc-300"
+                        : "cursor-not-allowed border-zinc-200 bg-zinc-100 opacity-50"
+                  }`}
+                >
+                  <Image src="/payment-logos/google-pay.svg" alt="" width={34} height={34} aria-hidden="true" />
+                </button>
+              </div>
               <div className="mt-4">
                 {selectedPaymentMethod === "paypal" ? (
                   <PayPalPayment
@@ -2214,7 +2302,13 @@ export function CheckoutClient({
                   />
                 ) : (
                   <SquarePayment
-                    paymentMethod={selectedPaymentMethod === "apple_pay" ? "apple_pay" : "credit_card"}
+                    paymentMethod={
+                      selectedPaymentMethod === "apple_pay"
+                        ? "apple_pay"
+                        : selectedPaymentMethod === "google_pay"
+                          ? "google_pay"
+                          : "credit_card"
+                    }
                     amount={cartPricing.total}
                     canPay={canPlace}
                     validationMessage={paymentValidationMessage}
@@ -2223,6 +2317,7 @@ export function CheckoutClient({
                     onError={(stage, message) => handlePaymentError("square", stage, message)}
                     onProcessingChange={setPaymentProcessing}
                     onApplePayAvailabilityChange={handleApplePayAvailabilityChange}
+                    onGooglePayAvailabilityChange={handleGooglePayAvailabilityChange}
                   />
                 )}
                 {paymentError ? (

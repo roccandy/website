@@ -126,17 +126,15 @@ function buildBilling(customer: CheckoutOrderPayload["customer"], pickup: boolea
   };
 }
 
-function assertBasePayload(body: CheckoutOrderPayload, customerValidation: "full" | "paypal-create") {
-  if (customerValidation === "full") {
-    if (!body?.customer?.firstName?.trim()) {
-      throw new Error("First name is required.");
-    }
-    if (!body?.customer?.lastName?.trim()) {
-      throw new Error("Last name is required.");
-    }
-    if (!body?.customer?.email?.trim()) {
-      throw new Error("Email address is required.");
-    }
+function assertBasePayload(body: CheckoutOrderPayload) {
+  if (!body?.customer?.firstName?.trim()) {
+    throw new Error("First name is required.");
+  }
+  if (!body?.customer?.lastName?.trim()) {
+    throw new Error("Last name is required.");
+  }
+  if (!body?.customer?.email?.trim()) {
+    throw new Error("Email address is required.");
   }
   if (!body?.customer?.phone?.trim()) {
     throw new Error("Phone number is required.");
@@ -149,7 +147,7 @@ function assertBasePayload(body: CheckoutOrderPayload, customerValidation: "full
   if (!body.dueDate?.trim()) {
     throw new Error("Requested date is required.");
   }
-  if (customerValidation === "full" && !body.pickup) {
+  if (!body.pickup) {
     if (
       !body.customer.addressLine1?.trim() ||
       !body.customer.suburb?.trim() ||
@@ -226,10 +224,9 @@ export async function buildCheckoutOrderContext(
   body: CheckoutOrderPayload,
   options: {
     baseOrderNumber?: string | null;
-    customerValidation?: "full" | "paypal-create";
   } = {},
 ): Promise<CheckoutOrderContext> {
-  assertBasePayload(body, options.customerValidation ?? "full");
+  assertBasePayload(body);
 
   const customItems = body.customItems ?? [];
   const premadeItems = body.premadeItems ?? [];

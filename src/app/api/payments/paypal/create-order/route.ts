@@ -24,13 +24,10 @@ export async function POST(request: Request) {
     if (!body?.order) {
       return NextResponse.json({ error: toPublicPaymentError("Order payload is required.") }, { status: 400 });
     }
-    const { totalAmount, orderNumbers } = await buildCheckoutOrderContext(body.order, {
-      customerValidation: "paypal-create",
-    });
+    const { totalAmount, orderNumbers } = await buildCheckoutOrderContext(body.order);
     const created = await createPayPalOrder(totalAmount, "AUD", {
       customId: orderNumbers.baseOrderNumber,
       description: `Roc Candy order ${orderNumbers.baseOrderNumber}`,
-      pickup: Boolean(body.order.pickup),
     });
     return NextResponse.json({ orderId: created.id, orderNumber: orderNumbers.baseOrderNumber });
   } catch (error) {

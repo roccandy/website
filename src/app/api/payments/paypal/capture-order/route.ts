@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
 import { buildCheckoutOrderContext } from "@/lib/checkoutOrder";
-import { capturePayPalOrder, getPayPalOrder, type PayPalOrderDetails } from "@/lib/paypal";
+import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
 import { toPublicPaymentError } from "@/lib/publicErrorMessages";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
@@ -12,50 +12,6 @@ type PayPalCaptureRequest = {
   order: CheckoutOrderPayload;
   orderNumber?: string | null;
 };
-
-function splitFullName(value?: string) {
-  const parts = (value ?? "").trim().split(/\s+/).filter(Boolean);
-  return {
-    firstName: parts[0] ?? "",
-    lastName: parts.slice(1).join(" "),
-  };
-}
-
-function hydrateOrderWithPayPalCustomer(
-  order: CheckoutOrderPayload,
-  paypalOrder: PayPalOrderDetails,
-): CheckoutOrderPayload {
-  const shipping = paypalOrder.purchase_units?.[0]?.shipping;
-  const shippingName = splitFullName(shipping?.name?.full_name);
-  const payer = paypalOrder.payer;
-  const address = shipping?.address;
-  const pickup = Boolean(order.pickup);
-
-  return {
-    ...order,
-    customer: {
-      ...order.customer,
-      firstName: order.customer.firstName?.trim() || payer?.name?.given_name?.trim() || shippingName.firstName,
-      lastName: order.customer.lastName?.trim() || payer?.name?.surname?.trim() || shippingName.lastName,
-      email: order.customer.email?.trim() || payer?.email_address?.trim() || "",
-      addressLine1: pickup
-        ? order.customer.addressLine1
-        : address?.address_line_1?.trim() || order.customer.addressLine1?.trim() || "",
-      addressLine2: pickup
-        ? order.customer.addressLine2
-        : address?.address_line_2?.trim() || order.customer.addressLine2?.trim() || "",
-      suburb: pickup
-        ? order.customer.suburb
-        : address?.admin_area_2?.trim() || order.customer.suburb?.trim() || "",
-      state: pickup
-        ? order.customer.state
-        : address?.admin_area_1?.trim() || order.customer.state?.trim() || "",
-      postcode: pickup
-        ? order.customer.postcode
-        : address?.postal_code?.trim() || order.customer.postcode?.trim() || "",
-    },
-  };
-}
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -79,16 +35,11 @@ export async function POST(request: Request) {
     if (approvedPayPalOrder.status !== "APPROVED") {
       throw new Error("PayPal order has not been approved.");
     }
-    const hydratedOrder = hydrateOrderWithPayPalCustomer(body.order, approvedPayPalOrder);
-    const validatedContext = await buildCheckoutOrderContext(hydratedOrder, {
+    const validatedContext = await buildCheckoutOrderContext(body.order, {
       baseOrderNumber: body.orderNumber ?? null,
     });
     const approvedAmount = Number(approvedPayPalOrder.purchase_units?.[0]?.amount?.value);
     const approvedCurrency = approvedPayPalOrder.purchase_units?.[0]?.amount?.currency_code;
-    const deliveryCountry = approvedPayPalOrder.purchase_units?.[0]?.shipping?.address?.country_code;
-    if (!hydratedOrder.pickup && deliveryCountry !== "AU") {
-      throw new Error("PayPal delivery address must be in Australia.");
-    }
     if (
       !Number.isFinite(approvedAmount) ||
       Math.abs(approvedAmount - validatedContext.totalAmount) > 0.001 ||
@@ -101,7 +52,7 @@ export async function POST(request: Request) {
     const transactionId = capture.captureId || capture.id;
 
     const result = await finalizePaidCheckoutOrder({
-      order: hydratedOrder,
+      order: body.order,
       paymentProvider: "paypal",
       paymentMethod: "paypal",
       paymentMethodTitle: "PayPal",
@@ -112,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       ...result,
-      customer: hydratedOrder.customer,
+      customer: body.order.customer,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to capture PayPal order.";

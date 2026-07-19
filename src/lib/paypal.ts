@@ -93,7 +93,7 @@ export async function getPayPalAccessToken(): Promise<string> {
 export async function createPayPalOrder(
   totalAmount: number,
   currency = "AUD",
-  meta?: { customId?: string; description?: string; pickup?: boolean }
+  meta?: { customId?: string; description?: string }
 ) {
   const token = await getPayPalAccessToken();
   const response = await fetch(`${getPayPalApiBase()}/v2/checkout/orders`, {
@@ -107,7 +107,7 @@ export async function createPayPalOrder(
       payment_source: {
         paypal: {
           experience_context: {
-            shipping_preference: meta?.pickup ? "NO_SHIPPING" : "GET_FROM_FILE",
+            shipping_preference: "NO_SHIPPING",
             user_action: "PAY_NOW",
           },
         },

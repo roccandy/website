@@ -129,6 +129,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: checkoutContentSecurityPolicy,
           },
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin-allow-popups",
+          },
         ],
       },
       {
