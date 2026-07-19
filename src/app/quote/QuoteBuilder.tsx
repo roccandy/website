@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeftRight } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -26,6 +27,7 @@ import {
   type ImageOptimizationSummary,
 } from "@/lib/clientImageOptimization";
 import { buildDesignerPath, resolveDesignerState } from "@/lib/designUrls";
+import { buildEnquiryHref, type EnquiryInterest } from "@/lib/enquiry";
 import { sortPackagingTypes } from "@/lib/packaging";
 import { toPublicPricingError } from "@/lib/publicErrorMessages";
 import {
@@ -79,7 +81,6 @@ type Props = {
   minBasePrices: Record<string, number>;
   initialOrderType?: OrderTypeId;
   titleHeadingLevel?: "h1" | "h2";
-  enquiriesHref: string;
 };
 
 type Selection = { optionId: string; quantity: number };
@@ -138,7 +139,6 @@ export function QuoteBuilder({
   minBasePrices,
   initialOrderType,
   titleHeadingLevel = "h1",
-  enquiriesHref,
 }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -457,6 +457,13 @@ export function QuoteBuilder({
   const mainTitle = ORDER_TYPE_TITLES[orderType] ?? "Candy";
   const subtitleLabel =
     SUBTITLE_BY_CATEGORY[categoryId] ?? categories.find((category) => category.id === categoryId)?.name ?? "";
+  const enquiryInterest: EnquiryInterest =
+    orderType === "weddings" ? "wedding" : orderType === "branded" ? "branded" : "custom-text";
+  const largeQuantityEnquiryHref = buildEnquiryHref({
+    interest: enquiryInterest,
+    productContext: `${mainTitle}${subtitleLabel ? ` — ${subtitleLabel}` : ""} larger quantity`,
+    sourcePage: "/design",
+  });
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
   const isAwaitingSelection = !result && !hasBasePrice;
@@ -1617,13 +1624,13 @@ export function QuoteBuilder({
                       />
                     </div>
                     <p className="text-xs text-zinc-500">
-                      <a
-                        href={enquiriesHref}
-                        className="font-semibold text-[#ff6f95] underline decoration-[#ffd3df] underline-offset-2 transition hover:text-[#ff4f80]"
+                      Need help or larger quantities?{" "}
+                      <Link
+                        href={largeQuantityEnquiryHref}
+                        className="font-semibold text-[#b83e68] underline decoration-[#e2a0b7] underline-offset-2 transition hover:text-[#942b4f]"
                       >
-                        Email us
-                      </a>{" "}
-                      for larger quantities.
+                        Contact Us
+                      </Link>
                     </p>
                   </div>
                   </div>
