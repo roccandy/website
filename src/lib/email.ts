@@ -1,11 +1,13 @@
 import nodemailer from "nodemailer";
 import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
+import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
 
 type EmailPayload = {
   to: string[];
   subject: string;
   text: string;
   html?: string;
+  replyTo?: string;
   attachments?: nodemailer.SendMailOptions["attachments"];
 };
 
@@ -112,6 +114,7 @@ export async function sendEmail(payload: EmailPayload) {
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
+    replyTo: payload.replyTo,
     attachments: payload.attachments,
   });
 
@@ -637,4 +640,134 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
 
 export function getOrdersRecipients() {
   return parseEmailList(process.env.ORDERS_EMAIL ?? "order@roccandy.com.au");
+}
+
+export function getEnquiriesRecipients() {
+  return parseEmailList(process.env.ENQUIRIES_EMAIL ?? "enquiries@roccandy.com.au");
+}
+
+type WebsiteEnquiryEmailInput = {
+  reference: string;
+  receivedAt: string;
+  enquiry: WebsiteEnquiry;
+};
+
+function enquiryDetailsLines({ reference, receivedAt, enquiry }: WebsiteEnquiryEmailInput) {
+  return [
+    `Reference: ${reference}`,
+    `Received: ${formatDate(receivedAt)}`,
+    `Name: ${enquiry.name}`,
+    `Email: ${enquiry.email}`,
+    `Phone: ${enquiry.phone ?? "-"}`,
+    `Organisation: ${enquiry.organisation ?? "-"}`,
+    `Interested in: ${enquiryInterestLabel(enquiry.interest)}`,
+    `Date required: ${enquiry.requiredDate ? formatDate(enquiry.requiredDate) : "-"}`,
+    `Approximate quantity: ${enquiry.quantity ?? "-"}`,
+    `Product or page context: ${enquiry.productContext ?? "-"}`,
+    `Source page: ${enquiry.sourcePage ?? "-"}`,
+    "",
+    "Message",
+    enquiry.message,
+  ];
+}
+
+function enquiryDetailsHtml({ reference, receivedAt, enquiry }: WebsiteEnquiryEmailInput) {
+  const detailRows = [
+    ["Reference", reference],
+    ["Received", formatDate(receivedAt)],
+    ["Name", enquiry.name],
+    ["Email", enquiry.email],
+    ["Phone", enquiry.phone ?? "-"],
+    ["Organisation", enquiry.organisation ?? "-"],
+    ["Interested in", enquiryInterestLabel(enquiry.interest)],
+    ["Date required", enquiry.requiredDate ? formatDate(enquiry.requiredDate) : "-"],
+    ["Approximate quantity", enquiry.quantity ?? "-"],
+    ["Product or page context", enquiry.productContext ?? "-"],
+    ["Source page", enquiry.sourcePage ?? "-"],
+  ];
+
+  return `
+    <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.55;color:#18181b;max-width:680px;">
+      <h2 style="margin:0 0 18px;color:#ff5f99;">New website enquiry</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+        <tbody>
+          ${detailRows
+            .map(
+              ([label, value]) => `<tr>
+                <th style="width:180px;padding:7px 12px 7px 0;text-align:left;vertical-align:top;color:#52525b;">${escapeHtml(label)}</th>
+                <td style="padding:7px 0;vertical-align:top;">${escapeHtml(value)}</td>
+              </tr>`,
+            )
+            .join("")}
+        </tbody>
+      </table>
+      <h3 style="margin:0 0 8px;">Message</h3>
+      <div style="white-space:pre-wrap;padding:16px;border-radius:12px;background:#faf5f7;border:1px solid #f4dce6;">${escapeHtml(enquiry.message)}</div>
+      <p style="margin:18px 0 0;color:#52525b;">Reply to this email to respond directly to ${escapeHtml(enquiry.name)}.</p>
+    </div>
+  `;
+}
+
+export async function sendWebsiteEnquiryEmails(input: WebsiteEnquiryEmailInput) {
+  const recipients = getEnquiriesRecipients();
+  if (!isEmailConfigured() || recipients.length === 0) {
+    throw new Error("Website enquiry email is not configured.");
+  }
+
+  const interest = enquiryInterestLabel(input.enquiry.interest);
+  const subject = `Website enquiry ${input.reference} — ${interest} — ${input.enquiry.name}`;
+  const adminResult = await sendEmail({
+    to: recipients,
+    subject,
+    replyTo: input.enquiry.email,
+    text: [
+      "New website enquiry",
+      "",
+      ...enquiryDetailsLines(input),
+      "",
+      `Reply to this email to respond directly to ${input.enquiry.name}.`,
+    ].join("\n"),
+    html: enquiryDetailsHtml(input),
+  });
+
+  if ("skipped" in adminResult && adminResult.skipped) {
+    throw new Error("Website enquiry email could not be sent.");
+  }
+
+  try {
+    const customerResult = await sendEmail({
+      to: [input.enquiry.email],
+      subject: `We received your Roc Candy enquiry — ${input.reference}`,
+      replyTo: recipients[0],
+      text: [
+        `Hi ${input.enquiry.name},`,
+        "",
+        "Thanks for contacting Roc Candy. We have received your enquiry and will reply by email as soon as we can.",
+        "",
+        ...enquiryDetailsLines(input),
+        "",
+        "If your enquiry is urgent, call us on 0414 519 211.",
+        "",
+        "Roc Candy",
+      ].join("\n"),
+      html: `
+        <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.55;color:#18181b;max-width:680px;">
+          <h2 style="margin:0 0 14px;color:#ff5f99;">Thanks for contacting Roc Candy</h2>
+          <p>Hi ${escapeHtml(input.enquiry.name)},</p>
+          <p>We have received your enquiry and will reply by email as soon as we can.</p>
+          <p><strong>Reference:</strong> ${escapeHtml(input.reference)}</p>
+          <p style="white-space:pre-wrap;padding:16px;border-radius:12px;background:#faf5f7;border:1px solid #f4dce6;">${escapeHtml(input.enquiry.message)}</p>
+          <p>If your enquiry is urgent, call us on <a href="tel:0414519211" style="color:#ff5f99;">0414 519 211</a>.</p>
+          <p>Roc Candy</p>
+        </div>
+      `,
+    });
+    if ("skipped" in customerResult && customerResult.skipped) {
+      console.error("Customer enquiry acknowledgement was skipped because email is not configured.");
+    }
+  } catch (error) {
+    console.error("Customer enquiry acknowledgement failed:", error);
+  }
+
+  return { reference: input.reference };
 }

@@ -214,7 +214,7 @@ export default async function Home() {
                   </p>
                   <div>
                     <Link
-                      href="/contact"
+                      href="/contact#enquiry-form"
                       className="site-primary-cta site-landing-cta-button inline-flex rounded-full bg-[#ff6f95] text-sm font-semibold text-white shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]"
                     >
                       <span className="site-primary-cta-label">Contact Us</span>

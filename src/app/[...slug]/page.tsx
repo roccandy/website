@@ -25,6 +25,8 @@ import {
 } from "@/lib/sitePages";
 import { buildDesignerPath } from "@/lib/designUrls";
 import { buildLandingGalleryRows } from "@/lib/landingGallery";
+import { EnquiryForm } from "@/components/EnquiryForm";
+import { ENQUIRY_INTERESTS, type EnquiryInterest } from "@/lib/enquiry";
 
 type LandingPageConfig = {
   intro: string;
@@ -116,7 +118,27 @@ type ManagedPageProps = {
     | {
         slug?: string[];
       };
+  searchParams?:
+    | Promise<Record<string, string | string[] | undefined>>
+    | Record<string, string | string[] | undefined>;
 };
+
+function firstSearchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizeEnquirySource(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  try {
+    const parsed = new URL(value, "https://roccandy.com.au");
+    if (parsed.hostname !== "roccandy.com.au" && parsed.hostname !== "www.roccandy.com.au") {
+      return fallback;
+    }
+    return parsed.pathname.slice(0, 300) || fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 async function loadManagedPage(params: ManagedPageProps["params"]) {
   const resolved = await params;
@@ -164,13 +186,26 @@ export async function generateMetadata({ params }: ManagedPageProps): Promise<Me
   return metadata;
 }
 
-export default async function ManagedContentPage({ params }: ManagedPageProps) {
+export default async function ManagedContentPage({ params, searchParams }: ManagedPageProps) {
   const page = await loadManagedPage(params);
   if (!page) notFound();
 
+  const resolvedSearchParams = await searchParams;
+  const requestedInterest = firstSearchValue(resolvedSearchParams?.interest)?.trim().toLowerCase();
+  const initialInterest = ENQUIRY_INTERESTS.includes(requestedInterest as EnquiryInterest)
+    ? (requestedInterest as EnquiryInterest)
+    : "general";
+  const productContext =
+    firstSearchValue(resolvedSearchParams?.product)?.trim().slice(0, 200) ||
+    firstSearchValue(resolvedSearchParams?.context)?.trim().slice(0, 200) ||
+    null;
+  const pageHref = buildManagedSitePageHref(page.slug);
+  const enquirySourcePage = normalizeEnquirySource(
+    firstSearchValue(resolvedSearchParams?.source)?.trim(),
+    pageHref,
+  );
   const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
   const enquiriesHref = `mailto:${enquiriesEmail}`;
-  const pageHref = buildManagedSitePageHref(page.slug);
   const pageDescription =
     page.metaDescription ||
     truncateText(stripHtml(page.bodyHtml), 160) ||
@@ -337,40 +372,47 @@ export default async function ManagedContentPage({ params }: ManagedPageProps) {
             />
           )}
           {page.slug === "contact" ? (
-            <section className="grid gap-4 md:grid-cols-2">
-              <a
-                href={enquiriesHref}
-                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Email</p>
-                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Send an enquiry</h2>
-                <p className="mt-2 text-sm text-zinc-600">{enquiriesEmail}</p>
-              </a>
-              <a
-                href="tel:0414519211"
-                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Phone</p>
-                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Call Roc Candy</h2>
-                <p className="mt-2 text-sm text-zinc-600">0414 519 211</p>
-              </a>
-              <Link
-                href="/design"
-                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Design</p>
-                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Start your candy design</h2>
-                <p className="mt-2 text-sm text-zinc-600">Choose wedding, text, or branded candy and submit your order online.</p>
-              </Link>
-              <Link
-                href="/faqs"
-                className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">FAQs</p>
-                <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Common questions</h2>
-                <p className="mt-2 text-sm text-zinc-600">Lead times, delivery, ingredients, and ordering answers in one place.</p>
-              </Link>
-            </section>
+            <>
+              <EnquiryForm
+                initialInterest={initialInterest}
+                productContext={productContext}
+                sourcePage={enquirySourcePage}
+              />
+              <section className="grid gap-4 md:grid-cols-2">
+                <a
+                  href={enquiriesHref}
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Email</p>
+                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Email us directly</h2>
+                  <p className="mt-2 text-sm text-zinc-600">{enquiriesEmail}</p>
+                </a>
+                <a
+                  href="tel:0414519211"
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Phone</p>
+                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Call Roc Candy</h2>
+                  <p className="mt-2 text-sm text-zinc-600">0414 519 211</p>
+                </a>
+                <Link
+                  href="/design"
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Design</p>
+                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Start your candy design</h2>
+                  <p className="mt-2 text-sm text-zinc-600">Choose wedding, text, or branded candy and submit your order online.</p>
+                </Link>
+                <Link
+                  href="/faqs"
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">FAQs</p>
+                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Common questions</h2>
+                  <p className="mt-2 text-sm text-zinc-600">Lead times, delivery, ingredients, and ordering answers in one place.</p>
+                </Link>
+              </section>
+            </>
           ) : null}
           {faqSection ? (
             <div className={landingConfig ? "site-landing-faq-splash" : ""}>

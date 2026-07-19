@@ -110,4 +110,25 @@ describe("analyticsEvents", () => {
       },
     ]);
   });
+
+  it("pushes lead events without customer-identifying information", async () => {
+    const windowStub = stubWindow();
+    const { trackEnquiryFormStart, trackGenerateLead } = await import("@/lib/analyticsEvents");
+
+    trackEnquiryFormStart({ leadType: "wedding", sourcePage: "/contact" });
+    trackGenerateLead({ leadType: "wedding", sourcePage: "/contact" });
+
+    expect(windowStub.dataLayer).toEqual([
+      {
+        event: "enquiry_form_start",
+        lead_type: "wedding",
+        source_page: "/contact",
+      },
+      {
+        event: "generate_lead",
+        lead_type: "wedding",
+        source_page: "/contact",
+      },
+    ]);
+  });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { Mail, Phone, X } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
 export const CONTACT_PHONE_DISPLAY = "0414 519 211";
@@ -106,6 +107,13 @@ export function ContactUsButton({
           </div>
 
           <div className="mt-3 space-y-2">
+            <Link
+              href="/contact#enquiry-form"
+              onClick={() => setOpen(false)}
+              className="flex min-h-10 items-center justify-center rounded-md bg-[#ff5f99] px-3 text-sm font-semibold text-white transition hover:bg-[#ff4f8d]"
+            >
+              Send an online enquiry
+            </Link>
             <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
               <Mail className="h-4 w-4 text-[#ff5f99]" aria-hidden="true" />
               <div className="min-w-0">

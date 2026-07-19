@@ -71,6 +71,23 @@ function dispatchEvent(name: string, payload: EcommercePayload) {
   }
 }
 
+function dispatchMarketingEvent(name: string, payload: Record<string, string | number | boolean | undefined>) {
+  if (typeof window === "undefined") return;
+  const normalized = stripUndefined(payload);
+
+  if (Array.isArray(window.dataLayer)) {
+    window.dataLayer.push({
+      event: name,
+      ...normalized,
+    });
+    return;
+  }
+
+  if (typeof window.gtag === "function") {
+    window.gtag("event", name, normalized);
+  }
+}
+
 function readTrackedPurchases() {
   if (typeof window === "undefined") return new Set<string>();
   try {
@@ -98,6 +115,20 @@ export function trackViewItem(payload: { currency?: string; value?: number; item
 
 export function trackBeginCheckout(payload: { currency?: string; value?: number; items: AnalyticsItem[] }) {
   dispatchEvent("begin_checkout", payload);
+}
+
+export function trackEnquiryFormStart(payload: { leadType: string; sourcePage: string }) {
+  dispatchMarketingEvent("enquiry_form_start", {
+    lead_type: payload.leadType,
+    source_page: payload.sourcePage,
+  });
+}
+
+export function trackGenerateLead(payload: { leadType: string; sourcePage: string }) {
+  dispatchMarketingEvent("generate_lead", {
+    lead_type: payload.leadType,
+    source_page: payload.sourcePage,
+  });
 }
 
 export function trackPurchaseOnce(payload: {
