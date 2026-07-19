@@ -3,6 +3,7 @@ import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/l
 import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
 
 type EmailPayload = {
+  from?: string;
   to: string[];
   subject: string;
   text: string;
@@ -97,7 +98,7 @@ export async function sendEmail(payload: EmailPayload) {
     return { skipped: true };
   }
   const transporter = getSmtpTransporter();
-  const from = process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "";
+  const from = payload.from ?? process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "";
   if (!transporter || !from) {
     console.warn("Email disabled: missing SMTP configuration.");
     return { skipped: true };
@@ -714,9 +715,11 @@ export async function sendWebsiteEnquiryEmails(input: WebsiteEnquiryEmailInput) 
     throw new Error("Website enquiry email is not configured.");
   }
 
+  const enquiriesFrom = `Roc Candy Enquiries <${recipients[0]}>`;
   const interest = enquiryInterestLabel(input.enquiry.interest);
   const subject = `Website enquiry ${input.reference} — ${interest} — ${input.enquiry.name}`;
   const adminResult = await sendEmail({
+    from: enquiriesFrom,
     to: recipients,
     subject,
     replyTo: input.enquiry.email,
@@ -736,6 +739,7 @@ export async function sendWebsiteEnquiryEmails(input: WebsiteEnquiryEmailInput) 
 
   try {
     const customerResult = await sendEmail({
+      from: enquiriesFrom,
       to: [input.enquiry.email],
       subject: `We received your Roc Candy enquiry — ${input.reference}`,
       replyTo: recipients[0],

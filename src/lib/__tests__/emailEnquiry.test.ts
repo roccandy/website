@@ -67,6 +67,7 @@ describe("sendWebsiteEnquiryEmails", () => {
     expect(sendMail).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
+        from: "Roc Candy Enquiries <enquiries@roccandy.com.au>",
         to: ["enquiries@roccandy.com.au"],
         replyTo: "jane@example.com",
         subject: expect.stringContaining("RCQ-ABC12345"),
@@ -76,6 +77,7 @@ describe("sendWebsiteEnquiryEmails", () => {
     expect(sendMail).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
+        from: "Roc Candy Enquiries <enquiries@roccandy.com.au>",
         to: ["jane@example.com"],
         replyTo: "enquiries@roccandy.com.au",
         subject: expect.stringContaining("RCQ-ABC12345"),

@@ -114,32 +114,30 @@ export function ContactUsButton({
             >
               Send an online enquiry
             </Link>
-            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
+            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
               <Mail className="h-4 w-4 text-[#ff5f99]" aria-hidden="true" />
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-zinc-500">Email</p>
-                <p className="break-words text-sm font-semibold text-zinc-900">{email}</p>
+                <a
+                  href={resolvedEmailHref}
+                  className="break-words text-sm font-semibold text-zinc-900 underline decoration-zinc-300 underline-offset-2 transition hover:text-[#ff5f99] hover:decoration-[#ff5f99]"
+                >
+                  {email}
+                </a>
               </div>
-              <a
-                href={resolvedEmailHref}
-                className="inline-flex h-8 items-center rounded-md bg-[#ff5f99] px-3 text-xs font-semibold text-white transition hover:bg-[#ff4f8d]"
-              >
-                Email
-              </a>
             </div>
 
-            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
+            <div className="grid grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-2 rounded-md border border-zinc-100 bg-zinc-50 p-2">
               <Phone className="h-4 w-4 text-[#ff5f99]" aria-hidden="true" />
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold text-zinc-500">Phone</p>
-                <p className="break-words text-sm font-semibold text-zinc-900">{phone}</p>
+                <a
+                  href={phoneHref}
+                  className="break-words text-sm font-semibold text-zinc-900 underline decoration-zinc-300 underline-offset-2 transition hover:text-[#ff5f99] hover:decoration-[#ff5f99]"
+                >
+                  {phone}
+                </a>
               </div>
-              <a
-                href={phoneHref}
-                className="inline-flex h-8 items-center rounded-md bg-[#ff5f99] px-3 text-xs font-semibold text-white transition hover:bg-[#ff4f8d]"
-              >
-                Call
-              </a>
             </div>
           </div>
         </div>
