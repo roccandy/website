@@ -111,9 +111,64 @@ const AU_STATES = [
   { value: "WA", label: "WA" },
 ];
 
+type SquareTokenResult = {
+  status: string;
+  token?: string;
+  errors?: Array<{ message?: string }>;
+};
+
+type SquarePaymentMethod = {
+  tokenize: () => Promise<SquareTokenResult>;
+};
+
+type SquarePaymentRequest = {
+  update: (options: {
+    total: {
+      amount: string;
+      label: string;
+    };
+  }) => boolean;
+};
+
 type SquarePayments = {
-  card: (options?: Record<string, unknown>) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
-  googlePay: (request: unknown) => Promise<{ attach: (selector: string) => Promise<void>; tokenize: () => Promise<{ status: string; token?: string }> }>;
+  card: (options?: Record<string, unknown>) => Promise<
+    SquarePaymentMethod & {
+      attach: (selector: string) => Promise<void>;
+    }
+  >;
+  applePay: (request: SquarePaymentRequest) => Promise<SquarePaymentMethod>;
+  googlePay: (request: unknown) => Promise<
+    SquarePaymentMethod & {
+      attach: (selector: string) => Promise<void>;
+    }
+  >;
+  paymentRequest: (options: {
+    countryCode: string;
+    currencyCode: string;
+    total: {
+      amount: string;
+      label: string;
+    };
+  }) => SquarePaymentRequest;
+  verifyBuyer: (
+    sourceId: string,
+    details: {
+      amount: string;
+      currencyCode: string;
+      intent: "CHARGE";
+      billingContact: {
+        addressLines?: string[];
+        familyName?: string;
+        givenName?: string;
+        email?: string;
+        countryCode: string;
+        phone?: string;
+        state?: string;
+        city?: string;
+        postalCode?: string;
+      };
+    }
+  ) => Promise<{ token: string } | null>;
 };
 
 declare global {
@@ -131,7 +186,7 @@ const SQUARE_ENV = process.env.NEXT_PUBLIC_SQUARE_ENV || "production";
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 const PAYPAL_ENV = process.env.NEXT_PUBLIC_PAYPAL_ENV || "production";
 const PAYMENTS_SANDBOX_MODE = SQUARE_ENV.toLowerCase() === "sandbox" || PAYPAL_ENV.toLowerCase() === "sandbox";
-type PaymentMethod = "credit_card" | "paypal";
+type PaymentMethod = "credit_card" | "paypal" | "apple_pay";
 type PaymentProcessingState = {
   active: boolean;
   title: string;
@@ -211,44 +266,61 @@ function buildAnalyticsItems(
 }
 
 function SquarePayment({
+  paymentMethod,
+  amount,
   canPay,
   validationMessage,
   getOrderPayload,
   onSuccess,
   onError,
   onProcessingChange,
+  onApplePayAvailabilityChange,
 }: {
+  paymentMethod: "credit_card" | "apple_pay";
+  amount: number;
   canPay: boolean;
   validationMessage: string;
   getOrderPayload: () => CheckoutOrderPayload;
   onSuccess: (result: PaymentSuccessResult) => void;
   onError: (stage: string, message: string) => void;
   onProcessingChange: (state: PaymentProcessingState) => void;
+  onApplePayAvailabilityChange: (available: boolean) => void;
 }) {
-  const [ready, setReady] = useState(false);
+  const [cardReady, setCardReady] = useState(false);
+  const [applePayReady, setApplePayReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const paymentsRef = useRef<SquarePayments | null>(null);
   const cardRef = useRef<Awaited<ReturnType<SquarePayments["card"]>> | null>(null);
+  const applePayRef = useRef<Awaited<ReturnType<SquarePayments["applePay"]>> | null>(null);
+  const applePaymentRequestRef = useRef<SquarePaymentRequest | null>(null);
   const initializedRef = useRef(false);
   const initializingRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
   const canPayRef = useRef(canPay);
+  const amountRef = useRef(amount);
 
   useEffect(() => {
     payloadRef.current = getOrderPayload;
     canPayRef.current = canPay;
-  }, [getOrderPayload, canPay]);
+    amountRef.current = amount;
+  }, [getOrderPayload, canPay, amount]);
+
+  useEffect(() => {
+    applePaymentRequestRef.current?.update({
+      total: {
+        amount: Math.max(amount, 0.01).toFixed(2),
+        label: "Roc Candy order",
+      },
+    });
+  }, [amount]);
 
   const handleTokenize = async (
-    tokenize: () => Promise<{ status: string; token?: string }>,
-    methodTitle: string
+    tokenPromise: Promise<SquareTokenResult>,
+    methodTitle: string,
+    verifyBuyer: boolean
   ) => {
     setSetupError(null);
-    if (!canPayRef.current) {
-      onError("validation", validationMessage);
-      return;
-    }
     onProcessingChange({
       active: true,
       title: "Processing your payment",
@@ -256,16 +328,43 @@ function SquarePayment({
     });
     setLoading(true);
     try {
-      const tokenResult = await tokenize();
+      const tokenResult = await tokenPromise;
       if (tokenResult.status !== "OK" || !tokenResult.token) {
-        throw new Error("Payment token failed.");
+        throw new Error(tokenResult.errors?.[0]?.message || "Payment token failed.");
       }
+
+      let verificationToken: string | undefined;
+      if (verifyBuyer && paymentsRef.current) {
+        const order = payloadRef.current();
+        const customer = order.customer;
+        const verification = await paymentsRef.current.verifyBuyer(tokenResult.token, {
+          amount: Math.max(amountRef.current, 0.01).toFixed(2),
+          currencyCode: "AUD",
+          intent: "CHARGE",
+          billingContact: {
+            addressLines: [customer.addressLine1, customer.addressLine2].filter(
+              (line): line is string => Boolean(line)
+            ),
+            familyName: customer.lastName || undefined,
+            givenName: customer.firstName || undefined,
+            email: customer.email || undefined,
+            countryCode: "AU",
+            phone: customer.phone || undefined,
+            state: customer.state || undefined,
+            city: customer.suburb || undefined,
+            postalCode: customer.postcode || undefined,
+          },
+        });
+        verificationToken = verification?.token;
+      }
+
       const response = await fetch("/api/payments/square", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           order: payloadRef.current(),
           sourceId: tokenResult.token,
+          verificationToken,
           paymentMethodTitle: methodTitle,
         }),
       });
@@ -320,41 +419,93 @@ function SquarePayment({
           const card = await payments.card();
           await card.attach("#square-card-container");
           cardRef.current = card;
+          setCardReady(true);
+        }
+
+        try {
+          const paymentRequest = payments.paymentRequest({
+            countryCode: "AU",
+            currencyCode: "AUD",
+            total: {
+              amount: Math.max(amountRef.current, 0.01).toFixed(2),
+              label: "Roc Candy order",
+            },
+          });
+          const applePay = await payments.applePay(paymentRequest);
+          applePaymentRequestRef.current = paymentRequest;
+          applePayRef.current = applePay;
+          setApplePayReady(true);
+          onApplePayAvailabilityChange(true);
+        } catch {
+          applePaymentRequestRef.current = null;
+          applePayRef.current = null;
+          setApplePayReady(false);
+          onApplePayAvailabilityChange(false);
         }
 
         initializedRef.current = true;
         initializingRef.current = false;
-        setReady(true);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Square setup failed.";
         const friendlyMessage = toPublicPaymentError(message);
         setSetupError(friendlyMessage);
         onError("setup", message);
         initializingRef.current = false;
+        onApplePayAvailabilityChange(false);
       }
     })();
 
-  }, [onError]);
+  }, [onApplePayAvailabilityChange, onError]);
+
+  const ready = paymentMethod === "apple_pay" ? applePayReady : cardReady;
+
+  const beginPayment = (method: "credit_card" | "apple_pay") => {
+    if (!canPayRef.current) {
+      onError("validation", validationMessage);
+      return;
+    }
+
+    if (method === "apple_pay") {
+      if (!applePayRef.current) return;
+      // Apple requires tokenization to start directly inside the click handler.
+      const tokenPromise = applePayRef.current.tokenize();
+      void handleTokenize(tokenPromise, "Square - Apple Pay", true);
+      return;
+    }
+
+    if (!cardRef.current) return;
+    const tokenPromise = cardRef.current.tokenize();
+    void handleTokenize(tokenPromise, "Square - Credit Card", false);
+  };
 
   return (
     <div className="space-y-4">
       {setupError ? <p className="mt-2 text-sm text-red-600">{setupError}</p> : null}
       <div className="space-y-3">
-        <div className="rounded-xl border border-zinc-200 bg-white p-2">
-          <div id="square-card-container" />
+        <div className={paymentMethod === "credit_card" ? "block" : "hidden"}>
+          <div className="rounded-xl border border-zinc-200 bg-white p-2">
+            <div id="square-card-container" />
+          </div>
         </div>
-        <button
-          type="button"
-          data-primary-button
-          disabled={!ready || loading}
-          onClick={() => {
-            if (!cardRef.current) return;
-            void handleTokenize(() => cardRef.current!.tokenize(), "Square - Credit Card");
-          }}
-          className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? "Processing..." : "Pay with your credit card"}
-        </button>
+        {paymentMethod === "apple_pay" ? (
+          <button
+            type="button"
+            aria-label="Pay with Apple Pay"
+            disabled={!ready || loading}
+            onClick={() => beginPayment("apple_pay")}
+            className="apple-pay-button disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        ) : (
+          <button
+            type="button"
+            data-primary-button
+            disabled={!ready || loading}
+            onClick={() => beginPayment("credit_card")}
+            className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? "Processing..." : "Pay with your credit card"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1174,6 +1325,7 @@ export function CheckoutClient({
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [adminEmailWarning, setAdminEmailWarning] = useState<string | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>("credit_card");
+  const [applePayAvailable, setApplePayAvailable] = useState<boolean | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState<PaymentProcessingState>({
     active: false,
     title: "",
@@ -1196,6 +1348,12 @@ export function CheckoutClient({
   const postcodeRef = useRef<HTMLInputElement | null>(null);
   const stateRef = useRef<HTMLSelectElement | null>(null);
   const paymentErrorRef = useRef<HTMLParagraphElement | null>(null);
+  const handleApplePayAvailabilityChange = useCallback((available: boolean) => {
+    setApplePayAvailable(available);
+    if (!available) {
+      setSelectedPaymentMethod((current) => (current === "apple_pay" ? "credit_card" : current));
+    }
+  }, []);
 
   const resolveCustomMaxPackages = useCallback((item: CustomCartItem) => {
     const fromItem = Number(item.maxPackages);
@@ -1439,7 +1597,12 @@ export function CheckoutClient({
     premadeItems: premadeItems.map((item) => ({ premadeId: item.premadeId, quantity: item.quantity })),
   });
 
-  const paymentMethodLabel = selectedPaymentMethod === "credit_card" ? "Credit Card" : "PayPal";
+  const paymentMethodLabel =
+    selectedPaymentMethod === "credit_card"
+      ? "Credit Card"
+      : selectedPaymentMethod === "apple_pay"
+        ? "Apple Pay"
+        : "PayPal";
 
   const buildSuccessSummary = ({
     adminEmailWarning: warning,
@@ -1835,14 +1998,27 @@ export function CheckoutClient({
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="min-h-16 cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-left text-zinc-400"
+                  disabled={applePayAvailable !== true}
+                  aria-pressed={selectedPaymentMethod === "apple_pay"}
+                  onClick={() => {
+                    setSelectedPaymentMethod("apple_pay");
+                    setPaymentError(null);
+                  }}
+                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
+                    selectedPaymentMethod === "apple_pay"
+                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
+                      : applePayAvailable
+                        ? "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                        : "cursor-not-allowed border-zinc-200 bg-zinc-100 text-zinc-400"
+                  }`}
                 >
                   <span className="flex items-center justify-between gap-2 text-sm font-semibold">
                     Apple Pay
-                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
-                      Coming soon
-                    </span>
+                    {applePayAvailable !== true ? (
+                      <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
+                        {applePayAvailable === null ? "Checking" : "Unavailable here"}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
                 <button
@@ -2020,7 +2196,11 @@ export function CheckoutClient({
             <div id="checkout-payment" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
               <h3 className="site-small-title text-zinc-900">Complete payment</h3>
               <p className="mt-2 text-sm text-zinc-600">
-                {paypalSelected ? "Pay securely with PayPal." : "Pay securely by credit card."}
+                {paypalSelected
+                  ? "Pay securely with PayPal."
+                  : selectedPaymentMethod === "apple_pay"
+                    ? "Pay securely with Apple Pay."
+                    : "Pay securely by credit card."}
               </p>
               <div className="mt-4">
                 {selectedPaymentMethod === "paypal" ? (
@@ -2034,12 +2214,15 @@ export function CheckoutClient({
                   />
                 ) : (
                   <SquarePayment
+                    paymentMethod={selectedPaymentMethod === "apple_pay" ? "apple_pay" : "credit_card"}
+                    amount={cartPricing.total}
                     canPay={canPlace}
                     validationMessage={paymentValidationMessage}
                     getOrderPayload={buildOrderPayload}
                     onSuccess={handlePaymentSuccess}
                     onError={(stage, message) => handlePaymentError("square", stage, message)}
                     onProcessingChange={setPaymentProcessing}
+                    onApplePayAvailabilityChange={handleApplePayAvailabilityChange}
                   />
                 )}
                 {paymentError ? (

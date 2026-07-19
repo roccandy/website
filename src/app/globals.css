@@ -1207,3 +1207,14 @@ textarea::placeholder {
 .toast-pop {
   animation: toast-pop 500ms ease-out;
 }
+
+.apple-pay-button {
+  -webkit-appearance: -apple-pay-button;
+  -apple-pay-button-type: plain;
+  -apple-pay-button-style: black;
+  display: block;
+  width: 100%;
+  height: 46px;
+  border: 0;
+  border-radius: 9999px;
+}

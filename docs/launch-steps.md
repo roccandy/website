@@ -282,7 +282,8 @@ Do these in order once you are ready to switch.
 
 ### Square Apple Pay
 
-- [ ] Verify Apple Pay against `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association` if Apple Pay is re-enabled.
+- [x] Verify Apple Pay against `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association`.
+- [ ] Complete one low-value live Apple Pay checkout in Safari and confirm the Square payment, Roc Candy order, and emails.
 
 ### Search Console
 
