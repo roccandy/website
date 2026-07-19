@@ -65,6 +65,30 @@ describe("analyticsEvents", () => {
     ]);
   });
 
+  it("creates the data layer so events are queued before GTM finishes loading", async () => {
+    const windowStub = stubWindow();
+    delete (windowStub as Partial<WindowStub>).dataLayer;
+    const { trackBeginCheckout } = await import("@/lib/analyticsEvents");
+
+    trackBeginCheckout({
+      currency: "AUD",
+      value: 43,
+      items: [{ item_id: "premade-1", item_name: "Premade Candy", price: 43, quantity: 1 }],
+    });
+
+    expect(windowStub.dataLayer).toEqual([
+      { ecommerce: null },
+      {
+        event: "begin_checkout",
+        ecommerce: {
+          currency: "AUD",
+          value: 43,
+          items: [{ item_id: "premade-1", item_name: "Premade Candy", price: 43, quantity: 1 }],
+        },
+      },
+    ]);
+  });
+
   it("pushes purchase once with transaction id, GST, shipping, and rounded item values", async () => {
     const windowStub = stubWindow();
     const { trackPurchaseOnce } = await import("@/lib/analyticsEvents");

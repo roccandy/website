@@ -56,36 +56,22 @@ function normalizeEcommercePayload(payload: EcommercePayload) {
 function dispatchEvent(name: string, payload: EcommercePayload) {
   if (typeof window === "undefined") return;
   const normalized = normalizeEcommercePayload(payload);
-
-  if (Array.isArray(window.dataLayer)) {
-    window.dataLayer.push({ ecommerce: null });
-    window.dataLayer.push({
-      event: name,
-      ecommerce: normalized,
-    });
-    return;
-  }
-
-  if (typeof window.gtag === "function") {
-    window.gtag("event", name, normalized);
-  }
+  window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+  window.dataLayer.push({ ecommerce: null });
+  window.dataLayer.push({
+    event: name,
+    ecommerce: normalized,
+  });
 }
 
 function dispatchMarketingEvent(name: string, payload: Record<string, string | number | boolean | undefined>) {
   if (typeof window === "undefined") return;
   const normalized = stripUndefined(payload);
-
-  if (Array.isArray(window.dataLayer)) {
-    window.dataLayer.push({
-      event: name,
-      ...normalized,
-    });
-    return;
-  }
-
-  if (typeof window.gtag === "function") {
-    window.gtag("event", name, normalized);
-  }
+  window.dataLayer = Array.isArray(window.dataLayer) ? window.dataLayer : [];
+  window.dataLayer.push({
+    event: name,
+    ...normalized,
+  });
 }
 
 function readTrackedPurchases() {

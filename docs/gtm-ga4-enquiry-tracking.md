@@ -1,4 +1,4 @@
-# GTM and GA4 Enquiry Tracking
+# GTM, GA4, Ecommerce, and Enquiry Tracking
 
 Use this setup for the website events already emitted by Roc Candy:
 
@@ -11,6 +11,23 @@ The events include:
 - `source_page`: the internal page that sent the visitor to the form.
 
 Do not mark `enquiry_form_start` as a conversion. Mark only `generate_lead`.
+
+Live status checked 2026-07-19:
+
+- `add_to_cart`: data layer and GA4 collection confirmed.
+- `begin_checkout`: data layer and GA4 collection confirmed.
+- `enquiry_form_start`: present in the data layer, but no GA4 collection request was sent. Complete and publish the lead tag setup below.
+- `generate_lead`: requires one successful test enquiry after the GTM lead tags are configured.
+- `purchase`: requires one controlled test payment.
+
+The shop also emits standard GA4 ecommerce events:
+
+- `view_item`
+- `add_to_cart`
+- `begin_checkout`
+- `purchase`
+
+Each ecommerce event includes an `ecommerce` object with `currency`, `value`, and `items`. `purchase` also includes `transaction_id`, `tax`, and `shipping`. The website clears the previous ecommerce object before each event and prevents the same purchase transaction from being emitted twice in one browser session.
 
 ## 1. Create Data Layer Variables in GTM
 
@@ -40,6 +57,13 @@ Create:
    - Event name: `generate_lead`
    - Fires on: All Custom Events
 
+Also create one exact-match Custom Event trigger for each ecommerce event:
+
+3. `CE - view_item`
+4. `CE - add_to_cart`
+5. `CE - begin_checkout`
+6. `CE - purchase`
+
 Use exact lowercase names.
 
 ## 3. Create GA4 Event Tags
@@ -66,16 +90,24 @@ Create:
   - `source_page` = `{{DLV - source_page}}`
 - Trigger: `CE - generate_lead`
 
+Create equivalent GA4 Event tags for `view_item`, `add_to_cart`, `begin_checkout`, and `purchase`. Use the website event name as the GA4 event name, select the matching custom-event trigger, and send the ecommerce data from the data layer. Do not rebuild product values manually from page elements.
+
+For `purchase`, confirm GA4 receives a non-empty `transaction_id`. This is essential for purchase deduplication and reporting.
+
 ## 4. Test Before Publishing
 
 1. Click **Preview** in GTM.
-2. Connect Tag Assistant to `https://www.roccandy.com.au/contact#enquiry-form`.
-3. Focus a form field.
-4. Confirm an `enquiry_form_start` event appears and its GA4 tag fires once.
-5. Submit one real test enquiry.
-6. Confirm `generate_lead` appears only after the successful form response.
-7. Inspect both events and confirm `lead_type` and `source_page` are populated.
-8. Confirm no name, email, phone, message, or attachment filename is sent to analytics.
+2. Connect Tag Assistant to `https://www.roccandy.com.au`.
+3. Open one pre-made product, add it to the cart, and continue to checkout.
+4. Confirm `view_item`, `add_to_cart`, and `begin_checkout` appear and the matching GA4 tag fires once for each.
+5. Inspect each event and confirm `ecommerce.items`, `ecommerce.value`, and `ecommerce.currency` are populated.
+6. Use an approved test payment and confirm `purchase` fires once with `transaction_id`. Do not test a live charge unless the payment environment and refund process are confirmed.
+7. Open `https://www.roccandy.com.au/contact#enquiry-form` and focus a form field.
+8. Confirm an `enquiry_form_start` event appears and its GA4 tag fires once.
+9. Submit one real test enquiry.
+10. Confirm `generate_lead` appears only after the successful form response.
+11. Inspect both lead events and confirm `lead_type` and `source_page` are populated.
+12. Confirm no name, email, phone, message, or attachment filename is sent to analytics.
 
 If the tags do not fire, do not publish. Check the event spelling and trigger attached to each tag.
 
@@ -89,7 +121,13 @@ If the tags do not fire, do not publish. Check the event spelling and trigger at
 
 ## 6. Google Ads
 
-After GA4 is receiving `generate_lead`, create or import a Google Ads conversion based on that GA4 key event. Use one primary lead conversion for bidding to avoid counting the same enquiry twice.
+After GA4 is receiving `generate_lead` and `purchase`:
+
+- Mark `generate_lead` and `purchase` as GA4 key events.
+- Import or create the corresponding Google Ads conversions.
+- Use one primary enquiry conversion and one primary purchase conversion for bidding.
+- Leave `view_item`, `add_to_cart`, `begin_checkout`, and `enquiry_form_start` as secondary/observational events.
+- Avoid a second purchase tag on the success-page page view; use the transaction-based `purchase` event so refreshes are not counted as new sales.
 
 Official references:
 

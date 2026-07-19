@@ -961,6 +961,7 @@ function CheckoutDatePicker({
   urgencyFeePercent,
   urgencyPeriodDays,
   showUrgencyNotice,
+  accessibleLabel,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -968,6 +969,7 @@ function CheckoutDatePicker({
   urgencyFeePercent: number;
   urgencyPeriodDays: number;
   showUrgencyNotice: boolean;
+  accessibleLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -1001,7 +1003,7 @@ function CheckoutDatePicker({
           className="w-full max-w-[220px] rounded border border-zinc-200 px-3 py-2 text-left text-sm text-zinc-900 hover:border-zinc-300"
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-label="Select required date"
+          aria-label={accessibleLabel}
         >
           {value || "Select date"}
         </button>
@@ -1180,6 +1182,17 @@ export function CheckoutClient({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const trackedBeginCheckoutRef = useRef(false);
+  const dateSectionRef = useRef<HTMLDivElement | null>(null);
+  const firstNameRef = useRef<HTMLInputElement | null>(null);
+  const lastNameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const phoneRef = useRef<HTMLInputElement | null>(null);
+  const organizationNameRef = useRef<HTMLInputElement | null>(null);
+  const addressLine1Ref = useRef<HTMLInputElement | null>(null);
+  const suburbRef = useRef<HTMLInputElement | null>(null);
+  const postcodeRef = useRef<HTMLInputElement | null>(null);
+  const stateRef = useRef<HTMLSelectElement | null>(null);
+  const paymentErrorRef = useRef<HTMLParagraphElement | null>(null);
 
   const resolveCustomMaxPackages = useCallback((item: CustomCartItem) => {
     const fromItem = Number(item.maxPackages);
@@ -1349,7 +1362,7 @@ export function CheckoutClient({
       missing.push("items");
       return missing;
     }
-    if (!dueDate) missing.push("date required");
+    if (!dueDate) missing.push(hasCustomItems ? "date required" : "delivery or pickup date");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
     if (!firstName.trim()) missing.push("first name");
     if (!lastName.trim()) missing.push("surname");
@@ -1566,6 +1579,27 @@ export function CheckoutClient({
     setPaymentProcessing({ active: false, title: "", message: "" });
     setPaymentError(stage === "validation" ? message : toPublicPaymentError(message));
     setAdminEmailWarning(null);
+    if (stage === "validation") {
+      const firstIncompleteField =
+        (!dueDate || (hasCustomItems && isDueDateBlocked)
+          ? dateSectionRef.current?.querySelector<HTMLButtonElement>("[aria-haspopup='dialog']")
+          : null) ||
+        (!firstName.trim() ? firstNameRef.current : null) ||
+        (!lastName.trim() ? lastNameRef.current : null) ||
+        (!email.trim() ? emailRef.current : null) ||
+        (!phone.trim() ? phoneRef.current : null) ||
+        (hasBrandedCustomItems && !organizationName.trim() ? organizationNameRef.current : null) ||
+        (!pickup && !addressLine1.trim() ? addressLine1Ref.current : null) ||
+        (!pickup && !suburb.trim() ? suburbRef.current : null) ||
+        (!pickup && !postcode.trim() ? postcodeRef.current : null) ||
+        (!pickup && !stateValue.trim() ? stateRef.current : null);
+
+      window.requestAnimationFrame(() => {
+        const target = firstIncompleteField ?? paymentErrorRef.current;
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+      });
+    }
     void logPaymentFailure(provider, stage, message);
   };
 
@@ -1596,7 +1630,7 @@ export function CheckoutClient({
         </div>
       ) : null}
       <section className="grid min-w-0 gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-4 pb-20 lg:pb-0">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="site-small-title text-zinc-900">Your cart</h2>
@@ -1652,16 +1686,25 @@ export function CheckoutClient({
             )}
           </div>
 
-          <section className="min-w-0 space-y-4">
-            <div className="text-center">
-              <p className="text-xs font-semibold normal-case tracking-[0.08em] text-[#ff6f95]">
-                Before you check out, you may also like...
-              </p>
+          {!paymentSuccess && hasItems ? (
+            <div className="sticky bottom-3 z-20 flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-lg backdrop-blur lg:hidden">
+              <div>
+                <p className="text-[11px] normal-case tracking-[0.08em] text-zinc-500">Order total</p>
+                <p className="text-sm font-semibold text-zinc-900">
+                  {pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}
+                </p>
+              </div>
+              <a
+                href="#checkout-payment"
+                data-primary-button
+                className="rounded-full px-4 py-2 text-sm font-semibold"
+              >
+                Continue to payment
+              </a>
             </div>
-            <PremadeCarousel items={suggestions} />
-          </section>
+          ) : null}
 
-          <div className="flex justify-center">
+          <div ref={dateSectionRef} className="flex justify-center">
             <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
             {productionBlockoutMessage ? (
@@ -1702,7 +1745,7 @@ export function CheckoutClient({
                   ) : null}
                 </div>
                 <div className="min-w-[280px] flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  <p>Date required</p>
+                  <p>{hasCustomItems ? "Date required" : "Delivery or pickup date"}</p>
                   <div className="mt-2">
                     <CheckoutDatePicker
                       value={dueDate}
@@ -1711,8 +1754,16 @@ export function CheckoutClient({
                       urgencyFeePercent={urgencyFeePercent}
                       urgencyPeriodDays={urgencyPeriodDays}
                       showUrgencyNotice={hasCustomItems}
+                      accessibleLabel={
+                        hasCustomItems ? "Select required date" : "Select delivery or pickup date"
+                      }
                     />
                   </div>
+                  {!hasCustomItems && hasPremadeItems ? (
+                    <p className="mt-2 leading-5">
+                      Choose when you would like your order delivered or ready for pickup.
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="text-xs normal-case tracking-[0.08em] text-zinc-500">
@@ -1740,16 +1791,22 @@ export function CheckoutClient({
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   First name*
                   <input
+                    ref={firstNameRef}
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
+                    aria-invalid={!firstName.trim()}
+                    autoComplete="given-name"
                     className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Surname*
                   <input
+                    ref={lastNameRef}
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
+                    aria-invalid={!lastName.trim()}
+                    autoComplete="family-name"
                     className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1758,18 +1815,24 @@ export function CheckoutClient({
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Email address*
                   <input
+                    ref={emailRef}
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
+                    aria-invalid={!email.trim()}
+                    autoComplete="email"
                     className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Phone number*
                   <input
+                    ref={phoneRef}
                     type="tel"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
+                    aria-invalid={!phone.trim()}
+                    autoComplete="tel"
                     className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                   />
                 </label>
@@ -1777,16 +1840,22 @@ export function CheckoutClient({
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Organisation name{hasBrandedCustomItems ? "*" : ""}
                 <input
+                  ref={organizationNameRef}
                   value={organizationName}
                   onChange={(event) => setOrganizationName(event.target.value)}
+                  aria-invalid={hasBrandedCustomItems && !organizationName.trim()}
+                  autoComplete="organization"
                   className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Address line 1*
                 <input
+                  ref={addressLine1Ref}
                   value={addressLine1}
                   onChange={(event) => setAddressLine1(event.target.value)}
+                  aria-invalid={!pickup && !addressLine1.trim()}
+                  autoComplete="address-line1"
                   className={addressInputClass}
                   disabled={addressDisabled}
                 />
@@ -1796,6 +1865,7 @@ export function CheckoutClient({
                 <input
                   value={addressLine2}
                   onChange={(event) => setAddressLine2(event.target.value)}
+                  autoComplete="address-line2"
                   className={addressInputClass}
                   disabled={addressDisabled}
                 />
@@ -1804,8 +1874,11 @@ export function CheckoutClient({
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Suburb or town*
                   <input
+                    ref={suburbRef}
                     value={suburb}
                     onChange={(event) => setSuburb(event.target.value)}
+                    aria-invalid={!pickup && !suburb.trim()}
+                    autoComplete="address-level2"
                     className={addressInputClass}
                     disabled={addressDisabled}
                   />
@@ -1813,8 +1886,12 @@ export function CheckoutClient({
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   Postcode*
                   <input
+                    ref={postcodeRef}
                     value={postcode}
                     onChange={(event) => setPostcode(event.target.value)}
+                    aria-invalid={!pickup && !postcode.trim()}
+                    autoComplete="postal-code"
+                    inputMode="numeric"
                     className={addressInputClass}
                     disabled={addressDisabled}
                   />
@@ -1822,8 +1899,11 @@ export function CheckoutClient({
                 <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                   State*
                   <select
+                    ref={stateRef}
                     value={stateValue}
                     onChange={(event) => setStateValue(event.target.value)}
+                    aria-invalid={!pickup && !stateValue.trim()}
+                    autoComplete="address-level1"
                     className={addressInputClass}
                     disabled={addressDisabled}
                   >
@@ -1840,7 +1920,7 @@ export function CheckoutClient({
           </div>
 
           {!paymentSuccess ? (
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div id="checkout-payment" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
               <h3 className="site-small-title text-zinc-900">Payment method</h3>
               <label className="mt-3 block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Select payment method
@@ -1874,13 +1954,22 @@ export function CheckoutClient({
                     onProcessingChange={setPaymentProcessing}
                   />
                 )}
-                {paymentError ? <p className="mt-2 text-sm text-red-600">{paymentError}</p> : null}
+                {paymentError ? (
+                  <p
+                    ref={paymentErrorRef}
+                    role="alert"
+                    tabIndex={-1}
+                    className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 outline-none"
+                  >
+                    {paymentError}
+                  </p>
+                ) : null}
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="h-fit rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-28">
           <h2 className="site-small-title text-zinc-900">Order summary</h2>
           <div className="mt-4 space-y-2 text-sm text-zinc-600">
             <div className="flex items-center justify-between">
@@ -1957,6 +2046,19 @@ export function CheckoutClient({
           ) : null}
         </div>
       </section>
+      {suggestions.length > 0 ? (
+        <details className="group rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <summary className="cursor-pointer list-none text-center text-sm font-semibold text-[#ff6f95] marker:hidden">
+            Add more candy
+            <span className="ml-2 inline-block transition group-open:rotate-180" aria-hidden="true">
+              ↓
+            </span>
+          </summary>
+          <div className="mt-5 min-w-0">
+            <PremadeCarousel items={suggestions} />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
