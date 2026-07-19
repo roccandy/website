@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ChevronUp } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import { SiteUsps } from "@/components/SiteUsps";
 import type {
@@ -216,6 +216,7 @@ export function QuoteBuilder({
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [mobileStepError, setMobileStepError] = useState<string | null>(null);
+  const [packagingFieldError, setPackagingFieldError] = useState<string | null>(null);
   const [initialOne, setInitialOne] = useState("");
   const [initialTwo, setInitialTwo] = useState("");
   const [nameOne, setNameOne] = useState("");
@@ -250,6 +251,8 @@ export function QuoteBuilder({
   const hasManualSubtypeRef = useRef(false);
   const [mobileStep, setMobileStep] = useState<1 | 2 | 3>(1);
   const packagingSectionRef = useRef<HTMLDivElement | null>(null);
+  const desktopQuantityInputRef = useRef<HTMLInputElement | null>(null);
+  const quantityInputRef = useRef<HTMLInputElement | null>(null);
   const flavorSectionRef = useRef<HTMLDivElement | null>(null);
   const reviewSectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -930,10 +933,33 @@ export function QuoteBuilder({
     labelTypeValid &&
     (!labelsOptIn || Boolean(labelImageUrl));
 
+  const showPackagingError = () => {
+    const missingPackaging = !selectedOptionId;
+    setMobileStepError(null);
+    setPackagingFieldError(
+      missingPackaging
+        ? "Choose a packaging type and size."
+        : "Enter the packaging quantity before continuing.",
+    );
+    setMobileStep(1);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
+        const target = missingPackaging
+          ? packagingSectionRef.current?.querySelector<HTMLElement>("button:not([disabled])")
+          : isMobileViewport
+            ? quantityInputRef.current
+            : desktopQuantityInputRef.current;
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+      });
+    });
+  };
+
   const showFirstMissingField = () => {
     const firstMissing = missingFields[0] ?? "";
     if (firstMissing === "Packaging & quantity") {
-      focusMobileSection(1, packagingSectionRef);
+      showPackagingError();
       return;
     }
     if (firstMissing === "Candy flavor") {
@@ -1318,10 +1344,6 @@ export function QuoteBuilder({
     };
 
     const update = () => {
-      if (mobileStep === 3 && window.matchMedia("(max-width: 767px)").matches) {
-        reset();
-        return;
-      }
       const containerRect = container.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
       const scrollY = window.scrollY;
@@ -1398,7 +1420,6 @@ export function QuoteBuilder({
     error,
     loading,
     minimumPriceBubbleWidth,
-    mobileStep,
     needsSubtypeSelection,
     result?.items.length,
     result?.total,
@@ -1416,72 +1437,131 @@ export function QuoteBuilder({
         {subtitle && <p className="mt-2 text-[24px] font-medium text-[rgb(146,146,177)]">{subtitle}</p>}
       </section>
 
-      <nav
-        className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden"
-        aria-label="Candy designer progress"
-      >
-        <ol className="grid grid-cols-3 gap-2">
-          {[
-            { step: 1 as const, label: "Package", complete: packagingComplete },
-            { step: 2 as const, label: "Design", complete: designStepComplete },
-            { step: 3 as const, label: "Review", complete: canPlace },
-          ].map((item) => {
-            const isCurrent = mobileStep === item.step;
-            const canOpen =
-              item.step === 1 ||
-              (item.step === 2 && packagingComplete) ||
-              (item.step === 3 && packagingComplete && designStepComplete);
-            return (
-              <li key={item.step}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!canOpen) return;
-                    setMobileStepError(null);
-                    const sectionRef =
-                      item.step === 1
-                        ? packagingSectionRef
-                        : item.step === 2
-                          ? designSectionRef
-                          : reviewSectionRef;
-                    focusMobileSection(item.step, sectionRef, false);
-                  }}
-                  disabled={!canOpen}
-                  aria-current={isCurrent ? "step" : undefined}
-                  className={`flex min-h-14 w-full flex-col items-center justify-center rounded-xl px-2 py-2 text-xs font-semibold transition ${
-                    isCurrent
-                      ? "bg-[#fff1f5] text-[#b6456b] ring-1 ring-[#f2b8ca]"
-                      : canOpen
-                        ? "bg-zinc-50 text-zinc-700"
-                        : "bg-zinc-50 text-zinc-400"
-                  }`}
-                >
-                  <span className="text-[10px] uppercase tracking-[0.12em]">
-                    {item.complete && !isCurrent ? "Done" : `Step ${item.step}`}
-                  </span>
-                  <span>{item.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-        <p className="mt-2 text-center text-xs text-zinc-500" aria-live="polite">
-          Step {mobileStep} of 3
-        </p>
-      </nav>
-
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">
         {/* Price sidebar */}
         <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
           <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
             <div
-              className={`relative border border-zinc-200 bg-white p-3 shadow-sm shadow-lg lg:shadow-lg ${
+              className={`relative w-[calc(100vw-16px)] max-w-[350px] border border-zinc-200 bg-white p-2.5 shadow-sm shadow-lg md:w-auto md:max-w-none md:p-3 lg:shadow-lg ${
                 shouldUseCompactPriceBubble || isAwaitingSelection ? "min-w-0" : "min-w-[320px] lg:min-w-[420px]"
               } ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
-              <div className="space-y-3">
+              <nav className="mb-2 md:hidden" aria-label="Candy designer progress">
+                <ol className="grid grid-cols-3 gap-1">
+                  {[
+                    { step: 1 as const, label: "Package", complete: packagingComplete },
+                    { step: 2 as const, label: "Design", complete: designStepComplete },
+                    { step: 3 as const, label: "Review", complete: canPlace },
+                  ].map((item) => {
+                    const isCurrent = mobileStep === item.step;
+                    const canOpen =
+                      item.step === 1 ||
+                      (item.step === 2 && packagingComplete) ||
+                      (item.step === 3 && packagingComplete && designStepComplete);
+                    return (
+                      <li key={item.step}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canOpen) return;
+                            setMobileStepError(null);
+                            const sectionRef =
+                              item.step === 1
+                                ? packagingSectionRef
+                                : item.step === 2
+                                  ? designSectionRef
+                                  : reviewSectionRef;
+                            focusMobileSection(item.step, sectionRef, false);
+                          }}
+                          disabled={!canOpen}
+                          aria-current={isCurrent ? "step" : undefined}
+                          className={`inline-flex h-7 w-full items-center justify-center rounded-lg px-1 text-[10px] font-semibold transition ${
+                            isCurrent
+                              ? "bg-[#fff1f5] text-[#b6456b] ring-1 ring-[#f2b8ca]"
+                              : canOpen
+                                ? "bg-zinc-50 text-zinc-600"
+                                : "bg-zinc-50 text-zinc-400"
+                          }`}
+                        >
+                          <span className="mr-1" aria-hidden="true">
+                            {item.complete && !isCurrent ? "✓" : item.step}
+                          </span>
+                          {item.label}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <span className="sr-only" aria-live="polite">
+                  Step {mobileStep} of 3
+                </span>
+              </nav>
+
+              <div className="flex min-h-8 items-center justify-between gap-1.5 md:hidden">
+                <div className="flex shrink-0 items-center gap-1">
+                  <p
+                    className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
+                    style={{ fontFamily: "var(--font-heading), sans-serif" }}
+                  >
+                    {result ? formatMoney(result.total) : hasBasePrice ? formatMoney(basePrice) : "—"}
+                  </p>
+                  {loading ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700">
+                      <span className="sr-only">Updating price</span>
+                    </span>
+                  ) : null}
+                </div>
+
+                {showSubtype ? (
+                  <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
+                    {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                      const isActive = categoryId === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => handleSubtypeChange(sub.id)}
+                          className="inline-flex h-7 min-w-0 items-center justify-center whitespace-nowrap rounded-full px-2 text-[9px] font-semibold normal-case leading-none tracking-[0.02em]"
+                          style={{
+                            backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(255,255,255)",
+                            borderColor: isActive ? "rgb(219,166,190)" : "rgb(239,232,239)",
+                            borderWidth: "0.5px",
+                            borderStyle: "solid",
+                            color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                            fontFamily: "var(--font-body), sans-serif",
+                          }}
+                        >
+                          {toTitleCase(sub.label)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-center text-[10px] font-semibold text-zinc-500">
+                    {mainTitle}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowBreakdown((prev) => !prev)}
+                  disabled={!result}
+                  aria-expanded={showBreakdown}
+                  aria-label={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
+                  title={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 disabled:opacity-35"
+                >
+                  {showBreakdown ? (
+                    <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
+              <div className="hidden space-y-3 md:block">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
@@ -1592,7 +1672,7 @@ export function QuoteBuilder({
           {/* Step 2: Packaging (single selection) */}
           <div
             ref={packagingSectionRef}
-            className={`scroll-mt-40 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 ${
+            className={`scroll-mt-72 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 md:scroll-mt-40 ${
               mobileStep === 1 ? "" : "hidden md:block"
             }`}
           >
@@ -1606,7 +1686,7 @@ export function QuoteBuilder({
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Packaging Type</p>
-                      <div className="flex w-full flex-wrap gap-2">
+                      <div className="grid w-full grid-cols-5 gap-1 sm:flex sm:flex-wrap sm:gap-2">
                         {packagingTypes.length > 0 ? (
                           packagingTypes.map((type) => {
                             const isActive = selectionType === type;
@@ -1618,10 +1698,11 @@ export function QuoteBuilder({
                                   if (selectionType !== type) {
                                     setSelectionQtyInput("");
                                   }
+                                  setPackagingFieldError(null);
                                   setSelectionType(type);
                                   setSelectionSize("");
                                 }}
-                                className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                                className="min-w-0 rounded-full px-1 py-2 text-[10px] font-semibold normal-case tracking-normal transition sm:px-4 sm:text-xs sm:tracking-[0.08em]"
                                 style={{
                                   backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
                                   borderColor: "rgb(239,232,239)",
@@ -1654,7 +1735,10 @@ export function QuoteBuilder({
                                 <button
                                   key={opt.id}
                                   type="button"
-                                  onClick={() => setSelectionSize(opt.size)}
+                                  onClick={() => {
+                                    setPackagingFieldError(null);
+                                    setSelectionSize(opt.size);
+                                  }}
                                   className="rounded-full px-3 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
                                 style={{
                                   backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
@@ -1718,22 +1802,37 @@ export function QuoteBuilder({
                     </div>
                   )}
 
-                  <div className="space-y-2">
+                  <div className="hidden space-y-2 md:block">
                     <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">
                       Quantity{selectedOption ? ` (Max ${selectedOption.max_packages})` : ""}
                     </p>
-                    <div className="flex w-full overflow-hidden rounded-full border border-zinc-200 bg-white">
+                    <div
+                      className={`flex w-full overflow-hidden rounded-full border bg-white ${
+                        packagingFieldError ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+                      }`}
+                    >
                       <input
+                        ref={desktopQuantityInputRef}
                         type="number"
                         min={0}
                         max={selectedOption?.max_packages}
                         value={selectionQtyInput}
-                        onChange={(e) => setSelectionQtyInput(e.target.value)}
+                        onChange={(e) => {
+                          setPackagingFieldError(null);
+                          setSelectionQtyInput(e.target.value);
+                        }}
                         placeholder="Enter quantity"
                         aria-label="Quantity"
+                        aria-invalid={Boolean(packagingFieldError)}
+                        aria-describedby={packagingFieldError ? "packaging-quantity-error-desktop" : undefined}
                         className="w-full bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />
                     </div>
+                    {packagingFieldError ? (
+                      <p id="packaging-quantity-error-desktop" className="text-xs font-semibold text-red-600" role="alert">
+                        {packagingFieldError}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-zinc-500">
                       Need help or larger quantities?{" "}
                       <Link
@@ -1770,6 +1869,48 @@ export function QuoteBuilder({
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-2 md:hidden">
+                <label htmlFor="mobile-packaging-quantity" className="text-xs font-semibold text-zinc-600">
+                  Quantity{selectedOption ? ` (Max ${selectedOption.max_packages})` : ""}
+                </label>
+                <div
+                  className={`flex w-full overflow-hidden rounded-full border bg-white ${
+                    packagingFieldError ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+                  }`}
+                >
+                  <input
+                    ref={quantityInputRef}
+                    id="mobile-packaging-quantity"
+                    type="number"
+                    min={0}
+                    max={selectedOption?.max_packages}
+                    value={selectionQtyInput}
+                    onChange={(event) => {
+                      setPackagingFieldError(null);
+                      setSelectionQtyInput(event.target.value);
+                    }}
+                    placeholder="Enter quantity"
+                    aria-invalid={Boolean(packagingFieldError)}
+                    aria-describedby={packagingFieldError ? "mobile-packaging-quantity-error" : undefined}
+                    className="w-full bg-white px-4 py-3 text-center text-base font-semibold text-zinc-900 outline-none"
+                  />
+                </div>
+                {packagingFieldError ? (
+                  <p id="mobile-packaging-quantity-error" className="text-sm font-semibold text-red-600" role="alert">
+                    {packagingFieldError}
+                  </p>
+                ) : null}
+                <p className="text-xs text-zinc-500">
+                  Need help or larger quantities?{" "}
+                  <Link
+                    href={largeQuantityEnquiryHref}
+                    className="font-semibold text-[#b83e68] underline decoration-[#e2a0b7] underline-offset-2 transition hover:text-[#942b4f]"
+                  >
+                    Contact Us
+                  </Link>
+                </p>
               </div>
             </div>
 
@@ -2032,8 +2173,7 @@ export function QuoteBuilder({
               type="button"
               onClick={() => {
                 if (!packagingComplete) {
-                  setMobileStepError("Choose a packaging type, size, and quantity before continuing.");
-                  focusMobileSection(1, packagingSectionRef);
+                  showPackagingError();
                   return;
                 }
                 setMobileStepError(null);
@@ -2043,17 +2183,12 @@ export function QuoteBuilder({
             >
               Continue to design
             </button>
-            {mobileStepError ? (
-              <p className="mt-2 text-sm text-red-600" role="alert">
-                {mobileStepError}
-              </p>
-            ) : null}
           </div>
 
           {/* Step 4: Design */}
           <div
             ref={designSectionRef}
-            className={`scroll-mt-40 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible ${
+            className={`scroll-mt-72 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible md:scroll-mt-40 ${
               mobileStep === 2 ? "" : "hidden md:block"
             }`}
           >
@@ -2355,7 +2490,7 @@ export function QuoteBuilder({
         </div>
           <div
             ref={flavorSectionRef}
-            className={`scroll-mt-40 relative mt-4 w-full border-t border-zinc-200 py-8 ${
+            className={`scroll-mt-72 relative mt-4 w-full border-t border-zinc-200 py-8 md:scroll-mt-40 ${
               mobileStep === 2 ? "" : "hidden md:block"
             }`}
           >
@@ -2433,7 +2568,7 @@ export function QuoteBuilder({
 
           <div
             ref={reviewSectionRef}
-            className={`scroll-mt-40 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm ${
+            className={`scroll-mt-72 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:scroll-mt-40 ${
               mobileStep === 3 ? "" : "hidden md:block"
             }`}
           >
