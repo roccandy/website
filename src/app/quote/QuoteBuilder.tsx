@@ -1300,7 +1300,6 @@ export function QuoteBuilder({
 
     const headerEl = document.querySelector<HTMLElement>("[data-quote-header]");
     const bannerEl = document.querySelector<HTMLElement>("[data-production-blockout-banner]");
-    const topGap = 16;
     let raf = 0;
     let lockedWidth = 0;
 
@@ -1352,6 +1351,7 @@ export function QuoteBuilder({
       const wrapTop = scrollY + wrapRect.top;
       const stickyHeight = stickyEl.offsetHeight;
       const bannerHeight = bannerEl?.getBoundingClientRect().height ?? 0;
+      const topGap = window.matchMedia("(max-width: 767px)").matches ? 4 : 16;
       const topOffset = (headerEl?.getBoundingClientRect().height ?? 0) + bannerHeight + topGap;
 
       const start = wrapTop - topOffset;
@@ -1442,13 +1442,15 @@ export function QuoteBuilder({
         <div ref={priceWrapRef} className="relative mx-auto w-fit max-w-full overflow-visible">
           <div ref={priceStickyRef} className="w-fit max-w-full overflow-visible">
             <div
-              className={`relative w-[calc(100vw-16px)] max-w-[350px] border border-zinc-200 bg-white p-2.5 shadow-sm shadow-lg md:w-auto md:max-w-none md:p-3 lg:shadow-lg ${
-                shouldUseCompactPriceBubble || isAwaitingSelection ? "min-w-0" : "min-w-[320px] lg:min-w-[420px]"
+              className={`relative w-[calc(100vw-40px)] max-w-[350px] border border-zinc-200 bg-white p-2 shadow-sm shadow-lg md:w-auto md:max-w-none md:p-3 lg:shadow-lg ${
+                shouldUseCompactPriceBubble || isAwaitingSelection
+                  ? "min-w-0"
+                  : "min-w-0 md:min-w-[320px] lg:min-w-[420px]"
               } ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
-              <nav className="mb-2 md:hidden" aria-label="Candy designer progress">
+              <nav className="mb-1 md:hidden" aria-label="Candy designer progress">
                 <ol className="grid grid-cols-3 gap-1">
                   {[
                     { step: 1 as const, label: "Package", complete: packagingComplete },
@@ -1477,7 +1479,7 @@ export function QuoteBuilder({
                           }}
                           disabled={!canOpen}
                           aria-current={isCurrent ? "step" : undefined}
-                          className={`inline-flex h-7 w-full items-center justify-center rounded-lg px-1 text-[10px] font-semibold transition ${
+                          className={`inline-flex h-6 w-full items-center justify-center rounded-lg px-1 text-[10px] font-semibold transition ${
                             isCurrent
                               ? "bg-[#fff1f5] text-[#b6456b] ring-1 ring-[#f2b8ca]"
                               : canOpen
@@ -1499,7 +1501,7 @@ export function QuoteBuilder({
                 </span>
               </nav>
 
-              <div className="flex min-h-8 items-center justify-between gap-1.5 md:hidden">
+              <div className="flex min-h-7 items-center justify-between gap-1 md:hidden">
                 <div className="flex shrink-0 items-center gap-1">
                   <p
                     className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
@@ -1515,26 +1517,34 @@ export function QuoteBuilder({
                 </div>
 
                 {showSubtype ? (
-                  <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
-                    {ORDER_SUBTYPES[orderType]?.map((sub) => {
+                  <div className="flex w-0 min-w-0 flex-1 items-center justify-center gap-1">
+                    {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                       const isActive = categoryId === sub.id;
                       return (
-                        <button
-                          key={sub.id}
-                          type="button"
-                          onClick={() => handleSubtypeChange(sub.id)}
-                          className="inline-flex h-7 min-w-0 items-center justify-center whitespace-nowrap rounded-full px-2 text-[9px] font-semibold normal-case leading-none tracking-[0.02em]"
-                          style={{
-                            backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(255,255,255)",
-                            borderColor: isActive ? "rgb(219,166,190)" : "rgb(239,232,239)",
-                            borderWidth: "0.5px",
-                            borderStyle: "solid",
-                            color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
-                            fontFamily: "var(--font-body), sans-serif",
-                          }}
-                        >
-                          {toTitleCase(sub.label)}
-                        </button>
+                        <Fragment key={sub.id}>
+                          {index > 0 ? (
+                            <ArrowLeftRight
+                              className="h-3.5 w-3.5 shrink-0 text-[#c87093]"
+                              strokeWidth={2.4}
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => handleSubtypeChange(sub.id)}
+                            className="inline-flex h-6 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-full px-1 text-[10px] font-semibold normal-case leading-none tracking-[0.01em]"
+                            style={{
+                              backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(255,255,255)",
+                              borderColor: isActive ? "rgb(219,166,190)" : "rgb(239,232,239)",
+                              borderWidth: "0.5px",
+                              borderStyle: "solid",
+                              color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
+                              fontFamily: "var(--font-body), sans-serif",
+                            }}
+                          >
+                            {toTitleCase(sub.label)}
+                          </button>
+                        </Fragment>
                       );
                     })}
                   </div>
@@ -1551,7 +1561,7 @@ export function QuoteBuilder({
                   aria-expanded={showBreakdown}
                   aria-label={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
                   title={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 disabled:opacity-35"
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 disabled:opacity-35"
                 >
                   {showBreakdown ? (
                     <ChevronUp className="h-4 w-4" aria-hidden="true" />
@@ -1672,7 +1682,7 @@ export function QuoteBuilder({
           {/* Step 2: Packaging (single selection) */}
           <div
             ref={packagingSectionRef}
-            className={`scroll-mt-72 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 md:scroll-mt-40 ${
+            className={`scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 md:scroll-mt-40 ${
               mobileStep === 1 ? "" : "hidden md:block"
             }`}
           >
@@ -2188,7 +2198,7 @@ export function QuoteBuilder({
           {/* Step 4: Design */}
           <div
             ref={designSectionRef}
-            className={`scroll-mt-72 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible md:scroll-mt-40 ${
+            className={`scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible md:scroll-mt-40 ${
               mobileStep === 2 ? "" : "hidden md:block"
             }`}
           >
@@ -2490,7 +2500,7 @@ export function QuoteBuilder({
         </div>
           <div
             ref={flavorSectionRef}
-            className={`scroll-mt-72 relative mt-4 w-full border-t border-zinc-200 py-8 md:scroll-mt-40 ${
+            className={`scroll-mt-52 relative mt-4 w-full border-t border-zinc-200 py-8 md:scroll-mt-40 ${
               mobileStep === 2 ? "" : "hidden md:block"
             }`}
           >
@@ -2568,7 +2578,7 @@ export function QuoteBuilder({
 
           <div
             ref={reviewSectionRef}
-            className={`scroll-mt-72 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:scroll-mt-40 ${
+            className={`scroll-mt-52 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:scroll-mt-40 ${
               mobileStep === 3 ? "" : "hidden md:block"
             }`}
           >

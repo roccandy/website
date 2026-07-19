@@ -22,9 +22,9 @@ export const MOBILE_SPACING_CONTROLS = {
   },
 
   headerAndBanner: {
-    headerRowGap: "1rem",
+    headerRowGap: "0.25rem",
     headerActionsGap: "0.5rem",
-    headerPaddingY: "0.75rem",
+    headerPaddingY: "0.25rem",
     topLinksGap: "1.5rem",
     topLinksPaddingY: "0.25rem",
     bannerPaddingY: "0.4rem",
