@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { parseEnquiryRequest } from "@/lib/enquiry";
+import { buildEnquiryHref, parseEnquiryRequest } from "@/lib/enquiry";
 
 const now = Date.parse("2026-07-19T05:00:00.000Z");
+
+describe("buildEnquiryHref", () => {
+  it("builds a prefilled contact link with internal source context", () => {
+    expect(
+      buildEnquiryHref({
+        interest: "branded",
+        productContext: "Branded or logo candy",
+        sourcePage: "/design/branded-logo-candy",
+      }),
+    ).toBe(
+      "/contact?interest=branded&product=Branded+or+logo+candy&source=%2Fdesign%2Fbranded-logo-candy#enquiry-form",
+    );
+  });
+});
 
 describe("parseEnquiryRequest", () => {
   it("normalizes a valid website enquiry and keeps optional context", () => {

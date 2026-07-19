@@ -82,6 +82,23 @@ export function enquiryInterestLabel(interest: EnquiryInterest) {
   return labels[interest];
 }
 
+export function buildEnquiryHref({
+  interest,
+  productContext,
+  sourcePage,
+}: {
+  interest: EnquiryInterest;
+  productContext: string;
+  sourcePage: string;
+}) {
+  const params = new URLSearchParams({
+    interest,
+    product: productContext,
+    source: sourcePage,
+  });
+  return `/contact?${params.toString()}#enquiry-form`;
+}
+
 export function parseEnquiryRequest(body: EnquiryRequestBody, now = Date.now()): EnquiryParseResult {
   const honeypot = cleanSingleLine(body.website, 200);
   if (honeypot) {
@@ -132,4 +149,3 @@ export function parseEnquiryRequest(body: EnquiryRequestBody, now = Date.now()):
     },
   };
 }
-

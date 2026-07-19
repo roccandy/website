@@ -26,13 +26,25 @@ import {
 import { buildDesignerPath } from "@/lib/designUrls";
 import { buildLandingGalleryRows } from "@/lib/landingGallery";
 import { EnquiryForm } from "@/components/EnquiryForm";
-import { ENQUIRY_INTERESTS, type EnquiryInterest } from "@/lib/enquiry";
+import { ContextualEnquiryCta } from "@/components/ContextualEnquiryCta";
+import {
+  buildEnquiryHref,
+  ENQUIRY_INTERESTS,
+  type EnquiryInterest,
+} from "@/lib/enquiry";
 
 type LandingPageConfig = {
   intro: string;
   detail: string;
   defaultGalleryImageUrls?: string[];
   primaryCta?: { label: string; href: string } | null;
+  enquiryCta?: {
+    interest: EnquiryInterest;
+    productContext: string;
+    linkLabel: string;
+    heading: string;
+    description: string;
+  };
 };
 
 const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
@@ -51,6 +63,14 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "weddings" }),
     },
+    enquiryCta: {
+      interest: "wedding",
+      productContext: "Personalised wedding candy",
+      linkLabel: "Ask about wedding candy",
+      heading: "Need help planning your wedding candy?",
+      description:
+        "Tell us your date, guest numbers, colours, and packaging ideas. We can help with quantities, timing, and the best way to get started.",
+    },
   },
   "design/branded-logo-candy": {
     intro: "Create branded rock candy",
@@ -67,6 +87,14 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }),
     },
+    enquiryCta: {
+      interest: "branded",
+      productContext: "Branded or logo candy",
+      linkLabel: "Ask about branded candy",
+      heading: "Want to check your logo or campaign requirements?",
+      description:
+        "Send us your logo, required date, approximate quantity, and event details. We can review the artwork and help you choose the right format.",
+    },
   },
   "design/custom-text-candy": {
     intro: "Create text rock candy",
@@ -82,6 +110,14 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
     primaryCta: {
       label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "text" }),
+    },
+    enquiryCta: {
+      interest: "custom-text",
+      productContext: "Personalised custom text candy",
+      linkLabel: "Ask about custom text candy",
+      heading: "Not sure what text, quantity, or packaging will work?",
+      description:
+        "Tell us the wording, occasion, timing, and approximate quantity. We can help shape the idea before you begin your design.",
     },
   },
   contact: {
@@ -212,6 +248,14 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
     page.title;
   const faqSection = await getManagedSitePageFaqSection(page);
   const landingConfig = LANDING_PAGE_CONFIG[page.slug] ?? null;
+  const landingEnquiryHref =
+    landingConfig?.enquiryCta
+      ? buildEnquiryHref({
+          interest: landingConfig.enquiryCta.interest,
+          productContext: landingConfig.enquiryCta.productContext,
+          sourcePage: pageHref,
+        })
+      : null;
   const landingHeroSubheading = landingConfig
     ? page.heroSubheading || landingConfig.intro
     : null;
@@ -292,6 +336,14 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                         </span>
                       </Link>
                     </StickyLandingCta>
+                    {landingConfig.enquiryCta && landingEnquiryHref ? (
+                      <Link
+                        href={landingEnquiryHref}
+                        className="mt-3 inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[#c74e78] underline decoration-[#e9a4bb] underline-offset-4 transition hover:text-[#a83b61] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
+                      >
+                        Prefer some help first? {landingConfig.enquiryCta.linkLabel}
+                      </Link>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -371,6 +423,16 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
               dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
             />
           )}
+          {landingConfig?.enquiryCta ? (
+            <ContextualEnquiryCta
+              interest={landingConfig.enquiryCta.interest}
+              productContext={landingConfig.enquiryCta.productContext}
+              sourcePage={pageHref}
+              heading={landingConfig.enquiryCta.heading}
+              description={landingConfig.enquiryCta.description}
+              buttonLabel={landingConfig.enquiryCta.linkLabel}
+            />
+          ) : null}
           {page.slug === "contact" ? (
             <>
               <EnquiryForm

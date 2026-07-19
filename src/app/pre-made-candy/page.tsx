@@ -1,4 +1,5 @@
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
+import { ContextualEnquiryCta } from "@/components/ContextualEnquiryCta";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { JsonLd } from "@/components/JsonLd";
@@ -208,6 +209,15 @@ export default async function PremadePage() {
                 </div>
               </section>
             )}
+
+            <ContextualEnquiryCta
+              interest="pre-made"
+              productContext="Pre-made candy or a larger bulk order"
+              sourcePage="/pre-made-candy"
+              heading="Planning a larger order or need help choosing?"
+              description="Tell us the occasion, timing, and approximate quantity. We can help you choose from available pre-made candy or discuss a custom alternative."
+              buttonLabel="Ask about pre-made candy"
+            />
 
             {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
           </div>

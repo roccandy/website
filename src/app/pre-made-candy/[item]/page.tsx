@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { AddPremadeToCartButton } from "@/components/AddPremadeToCartButton";
+import { ContextualEnquiryCta } from "@/components/ContextualEnquiryCta";
 import { JsonLd } from "@/components/JsonLd";
 import { PremadeItemAnalytics } from "@/components/PremadeItemAnalytics";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
@@ -250,6 +251,15 @@ export default async function PremadeItemPage({ params }: PageProps) {
                   weight_g: Number(item.weight_g),
                   imageUrl,
                 }}
+              />
+              <ContextualEnquiryCta
+                compact
+                interest="pre-made"
+                productContext={item.name}
+                sourcePage={buildPremadeItemPath(item)}
+                heading="Need a larger quantity or help with timing?"
+                description="Send us the quantity and date you need, and we’ll confirm the best option."
+                buttonLabel={`Ask about ${item.short_name?.trim() || item.name}`}
               />
             </div>
           </section>
