@@ -32,13 +32,13 @@ export default function LandingTopLinksBar() {
       }`}
       aria-hidden={hidden}
     >
-      <div className="site-top-links-row mx-auto flex max-w-6xl items-center justify-center px-6 text-[11px] font-semibold tracking-[0.16em] text-[#b83e68] md:text-xs">
+      <div className="site-top-links-row mx-auto flex max-w-6xl items-center justify-center px-6 text-[11px] font-semibold tracking-[0.16em] text-[#ff6f95] md:text-xs">
         {LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
             tabIndex={hidden ? -1 : undefined}
-            className="inline-flex min-h-10 items-center transition-colors hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+            className="inline-flex min-h-10 items-center transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
           >
             {link.label}
           </Link>

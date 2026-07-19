@@ -102,7 +102,7 @@ export default function SiteFooter() {
               <Link
                 key={`category-${link.label}`}
                 href={link.href}
-                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#b83e68] transition hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#ff6f95] transition hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
               >
                 {link.label}
               </Link>
@@ -118,7 +118,7 @@ export default function SiteFooter() {
               <Link
                 key={`info-${link.label}`}
                 href={link.href}
-                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#b83e68] transition hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#ff6f95] transition hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
               >
                 {link.label}
               </Link>
@@ -147,7 +147,7 @@ export default function SiteFooter() {
               <Link
                 key={`legal-${link.label}`}
                 href={link.href}
-                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#b83e68] transition hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+                className="inline-flex min-h-10 items-center normal-case text-[14px] font-medium text-[#ff6f95] transition hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
               >
                 {link.label}
               </Link>

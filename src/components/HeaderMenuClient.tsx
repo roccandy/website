@@ -145,7 +145,7 @@ export default function HeaderMenuClient() {
               >
                 <div className="flex h-full flex-col p-4">
                   <div className="flex items-center justify-between">
-                    <p id="cart-preview-title" className="text-lg font-semibold text-[#b83e68]">
+                    <p id="cart-preview-title" className="text-lg font-semibold text-[#ff6f95]">
                       Cart Preview
                     </p>
                     <button
@@ -153,7 +153,7 @@ export default function HeaderMenuClient() {
                       type="button"
                       aria-label="Close cart preview"
                       onClick={closeDrawer}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-md text-[#b83e68] hover:bg-[#fff2f6] hover:text-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-md text-[#ff6f95] hover:bg-[#fff2f6] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
                     >
                       <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
                         <path
@@ -340,14 +340,14 @@ export default function HeaderMenuClient() {
                       <button
                         type="button"
                         onClick={clearCart}
-                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#b83e68] px-3 py-2 text-sm font-semibold text-[#b83e68] hover:border-[#942b4f] hover:text-[#942b4f]"
+                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#ff6f95] px-3 py-2 text-sm font-semibold text-[#ff6f95] hover:border-[#ff4f80] hover:text-[#ff4f80]"
                       >
                         Empty cart
                       </button>
                       <Link
                         href="/checkout"
                         onClick={closeDrawer}
-                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#b83e68] bg-[#b83e68] px-3 py-2 text-center text-sm font-semibold text-white hover:border-[#942b4f] hover:bg-[#942b4f]"
+                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#ff6f95] bg-[#ff6f95] px-3 py-2 text-center text-sm font-semibold text-white hover:border-[#ff4f80] hover:bg-[#ff4f80]"
                       >
                         Checkout
                       </Link>

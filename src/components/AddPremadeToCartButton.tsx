@@ -53,8 +53,8 @@ export function AddPremadeToCartButton({ item, className = "", variant = "icon" 
       <span
         className={
           variant === "labelled"
-            ? "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-[#b83e68] bg-[#b83e68] px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:border-[#942b4f] hover:bg-[#942b4f]"
-            : "inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#b83e68] bg-[#b83e68] text-white shadow-sm transition hover:border-[#942b4f] hover:bg-[#942b4f]"
+            ? "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-[#ff6f95] bg-[#ff6f95] px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:border-[#ff4f80] hover:bg-[#ff4f80]"
+            : "inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#ff6f95] bg-[#ff6f95] text-white shadow-sm transition hover:border-[#ff4f80] hover:bg-[#ff4f80]"
         }
       >
         <svg

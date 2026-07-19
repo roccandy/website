@@ -52,7 +52,7 @@ export const MOBILE_SPACING_CONTROLS = {
     belowH2: "1rem",
     belowParagraph: "1rem",
     belowUsp: "1.1rem",
-    belowCta: "0rem",
+    belowCta: "0.5rem",
     ctaPaddingX: "1.25rem",
     ctaPaddingY: "0.75rem",
     gallerySideInset: "0.25rem",
