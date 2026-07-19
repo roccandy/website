@@ -1456,19 +1456,22 @@ export function QuoteBuilder({
             >
               <div className="flex flex-col md:block">
               <nav className="order-2 mt-1 md:hidden" aria-label="Candy designer progress">
-                <ol className="grid grid-cols-3 gap-1">
+                <ol className="grid grid-cols-3 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
                   {[
                     { step: 1 as const, label: "Design", complete: designStepComplete },
                     { step: 2 as const, label: "Packaging", complete: packagingStepComplete },
                     { step: 3 as const, label: "Review", complete: canPlace },
-                  ].map((item) => {
+                  ].map((item, index) => {
                     const isCurrent = mobileStep === item.step;
                     const canOpen =
                       item.step === 1 ||
                       (item.step === 2 && designStepComplete) ||
                       (item.step === 3 && packagingComplete && designStepComplete);
                     return (
-                      <li key={item.step}>
+                      <li
+                        key={item.step}
+                        className={index > 0 ? "border-l border-zinc-200" : undefined}
+                      >
                         <button
                           type="button"
                           onClick={() => {
@@ -1484,11 +1487,11 @@ export function QuoteBuilder({
                           }}
                           disabled={!canOpen}
                           aria-current={isCurrent ? "step" : undefined}
-                          className={`inline-flex h-6 w-full items-center justify-center rounded-lg px-1 text-[10px] font-semibold transition ${
+                          className={`inline-flex h-6 w-full items-center justify-center px-1 text-[10px] font-semibold transition ${
                             isCurrent
-                              ? "bg-[#fff1f5] text-[#b6456b] ring-1 ring-[#f2b8ca]"
+                              ? "bg-[#fff1f5] text-[#b6456b]"
                               : canOpen
-                                ? "bg-zinc-50 text-zinc-600"
+                                ? "bg-white text-zinc-600"
                                 : "bg-zinc-50 text-zinc-400"
                           }`}
                         >
