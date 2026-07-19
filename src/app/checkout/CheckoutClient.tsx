@@ -1600,7 +1600,9 @@ export function CheckoutClient({
         window.requestAnimationFrame(() => target?.focus({ preventScroll: true }));
       });
     }
-    void logPaymentFailure(provider, stage, message);
+    if (stage !== "validation") {
+      void logPaymentFailure(provider, stage, message);
+    }
   };
 
   return (

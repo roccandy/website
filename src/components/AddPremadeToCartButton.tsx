@@ -47,7 +47,7 @@ export function AddPremadeToCartButton({ item, className = "", variant = "icon" 
       type="button"
       data-plain-button
       onClick={handleClick}
-      aria-label={`Add ${item.name} to cart`}
+      aria-label={variant === "icon" ? `Add ${item.name} to cart` : undefined}
       className={className}
     >
       <span

@@ -9,13 +9,30 @@ type Bucket = {
 };
 
 const buckets = new Map<string, Bucket>();
+const MAX_BUCKETS = 5_000;
+let lastCleanupAt = 0;
+
+function cleanupExpiredBuckets(now: number) {
+  if (now - lastCleanupAt < 60_000 && buckets.size < MAX_BUCKETS) return;
+  lastCleanupAt = now;
+  for (const [key, bucket] of buckets) {
+    if (now > bucket.resetAt) buckets.delete(key);
+  }
+  if (buckets.size < MAX_BUCKETS) return;
+  const overflow = buckets.size - MAX_BUCKETS + 1;
+  Array.from(buckets.keys())
+    .slice(0, overflow)
+    .forEach((key) => buckets.delete(key));
+}
 
 export function rateLimit(key: string, options: RateLimitOptions) {
   const now = Date.now();
-  const existing = buckets.get(key);
+  cleanupExpiredBuckets(now);
+  const normalizedKey = key.slice(0, 300);
+  const existing = buckets.get(normalizedKey);
   if (!existing || now > existing.resetAt) {
     const resetAt = now + options.windowMs;
-    buckets.set(key, { count: 1, resetAt });
+    buckets.set(normalizedKey, { count: 1, resetAt });
     return { ok: true, retryAfterSeconds: Math.ceil(options.windowMs / 1000) };
   }
   if (existing.count >= options.max) {

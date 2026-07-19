@@ -64,7 +64,14 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-6xl px-6 py-7">
         <div className="flex flex-col items-center gap-3 text-center">
           <Link href="/" aria-label="Roc Candy home">
-            <Image src="/branding/logo-gold.svg" alt="Roc Candy" width={160} height={64} className="h-16 w-40" />
+            <Image
+              src="/branding/logo-gold.svg"
+              alt="Roc Candy"
+              width={160}
+              height={64}
+              className="h-16 w-40"
+              style={{ width: "160px", height: "64px" }}
+            />
           </Link>
           <p className="max-w-4xl normal-case text-[14px] text-[#5f5f5b]">
             53 View St, North Perth (not open to the public)
@@ -138,6 +145,7 @@ export default function SiteFooter() {
                     width={48}
                     height={12}
                     className={`h-3 w-auto object-contain ${badge.iconClassName ?? ""}`}
+                    style={{ width: "auto" }}
                   />
                 </span>
               ))}

@@ -308,8 +308,6 @@ SEO/system routes:
 | --- | --- |
 | `/api/auth/[...nextauth]` | NextAuth auth/session endpoints. |
 | `/api/quote` | Calculate custom order pricing from Supabase pricing/config tables. |
-| `/api/orders` | Direct order insert path for order payloads; skips email for Woo payment methods. |
-| `/api/orders/number` | Generate next display order number from existing Supabase `orders`. |
 | `/api/payments/square` | Square charge then shared paid-order finalization. |
 | `/api/payments/paypal/create-order` | Create PayPal order for the cart total. |
 | `/api/payments/paypal/capture-order` | Capture PayPal order then shared paid-order finalization. |

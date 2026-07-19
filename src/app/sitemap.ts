@@ -31,11 +31,9 @@ function toDate(value: string | null | undefined) {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteBaseUrl();
-  const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((route) => ({
     url: `${baseUrl}${route.path}`,
-    lastModified: now,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }));
@@ -46,13 +44,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((item) => item.is_active)
       .map((item) => ({
         url: `${baseUrl}${buildPremadeItemPath(item)}`,
-        lastModified: toDate(item.created_at) ?? now,
+        lastModified: toDate(item.created_at),
         changeFrequency: "weekly",
         priority: 0.8,
       }));
     const blogEntries: MetadataRoute.Sitemap = blogPosts.map((post) => ({
       url: `${baseUrl}/blog/${post.slug}`,
-      lastModified: toDate(post.updatedAt) ?? toDate(post.publishedAt) ?? now,
+      lastModified: toDate(post.updatedAt) ?? toDate(post.publishedAt),
       changeFrequency: "monthly",
       priority: 0.7,
     }));

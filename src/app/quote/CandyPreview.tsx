@@ -52,6 +52,7 @@ export function CandyPreview({
   const pinOpacity = showPinstripe || mode === "pinstripe" ? 1 : 0;
   const pinFill = "#ffffff";
   const gradientPrefix = useId().replace(/:/g, "");
+  const previewTitleId = `${gradientPrefix}-title`;
 
   const gradStops = useMemo(() => {
     type Grad = {
@@ -203,7 +204,9 @@ export function CandyPreview({
           xmlns="http://www.w3.org/2000/svg"
           style={{ width: "100%", height: "100%", display: "block", ...zoomStyle }}
           role="img"
+          aria-labelledby={previewTitleId}
         >
+          <title id={previewTitleId}>Personalised candy design preview</title>
           <defs>
             {gradStops.map((stop) => (
               <linearGradient

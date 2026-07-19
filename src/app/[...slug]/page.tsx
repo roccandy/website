@@ -264,6 +264,7 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
     : null;
   const showLandingBackdrop = landingConfig !== null && page.slug !== "contact";
   const showWatercolourTopBackdrop = page.slug === "contact";
+  const isContactPage = page.slug === "contact";
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls ?? [])
     : [];
@@ -312,12 +313,16 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                   >
                     {page.title}
                   </h1>
-                  <h2 className="site-landing-hero-subtitle text-[rgb(130,130,140)]">
-                    {landingHeroSubheading}
-                  </h2>
-                  <p className="site-landing-hero-supporting-line text-[rgb(130,130,140)]">
-                    {landingHeroSupportingLine}
-                  </p>
+                  {!isContactPage ? (
+                    <>
+                      <h2 className="site-landing-hero-subtitle text-[rgb(130,130,140)]">
+                        {landingHeroSubheading}
+                      </h2>
+                      <p className="site-landing-hero-supporting-line text-[rgb(130,130,140)]">
+                        {landingHeroSupportingLine}
+                      </p>
+                    </>
+                  ) : null}
                 </div>
 
                 <div className="site-landing-usp-wrap">
@@ -412,7 +417,7 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
             </section>
           )}
           {landingConfig ? (
-            page.bodyHtml ? (
+            page.bodyHtml && !isContactPage ? (
               <>
                 {/* Landing-page body content between gallery and FAQs. Full-width, no card treatment. */}
                 <section className="site-landing-body-content text-left">
@@ -437,47 +442,11 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
             />
           ) : null}
           {page.slug === "contact" ? (
-            <>
-              <EnquiryForm
-                initialInterest={initialInterest}
-                productContext={productContext}
-                sourcePage={enquirySourcePage}
-              />
-              <section className="grid gap-4 md:grid-cols-2">
-                <a
-                  href={enquiriesHref}
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Email</p>
-                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Email us directly</h2>
-                  <p className="mt-2 text-sm text-zinc-600">{enquiriesEmail}</p>
-                </a>
-                <a
-                  href="tel:0414519211"
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Phone</p>
-                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Call Roc Candy</h2>
-                  <p className="mt-2 text-sm text-zinc-600">0414 519 211</p>
-                </a>
-                <Link
-                  href="/design"
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Design</p>
-                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Start your candy design</h2>
-                  <p className="mt-2 text-sm text-zinc-600">Choose wedding, text, or branded candy and submit your order online.</p>
-                </Link>
-                <Link
-                  href="/faqs"
-                  className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">FAQs</p>
-                  <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Common questions</h2>
-                  <p className="mt-2 text-sm text-zinc-600">Lead times, delivery, ingredients, and ordering answers in one place.</p>
-                </Link>
-              </section>
-            </>
+            <EnquiryForm
+              initialInterest={initialInterest}
+              productContext={productContext}
+              sourcePage={enquirySourcePage}
+            />
           ) : null}
           {faqSection ? (
             <div className={landingConfig ? "site-landing-faq-splash" : ""}>

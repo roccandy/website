@@ -45,6 +45,7 @@ export default async function PublicSiteHeader({
               width={240}
               height={96}
               className="h-20 w-auto md:h-24"
+              style={{ width: "auto" }}
               data-header-logo
               priority={logoPriority}
             />

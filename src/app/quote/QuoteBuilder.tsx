@@ -215,6 +215,7 @@ export function QuoteBuilder({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [mobileStepError, setMobileStepError] = useState<string | null>(null);
   const [initialOne, setInitialOne] = useState("");
   const [initialTwo, setInitialTwo] = useState("");
   const [nameOne, setNameOne] = useState("");
@@ -247,6 +248,10 @@ export function QuoteBuilder({
   const priceWrapRef = useRef<HTMLDivElement | null>(null);
   const priceStickyRef = useRef<HTMLDivElement | null>(null);
   const hasManualSubtypeRef = useRef(false);
+  const [mobileStep, setMobileStep] = useState<1 | 2 | 3>(1);
+  const packagingSectionRef = useRef<HTMLDivElement | null>(null);
+  const flavorSectionRef = useRef<HTMLDivElement | null>(null);
+  const reviewSectionRef = useRef<HTMLDivElement | null>(null);
 
   const capturePreviewSvg = async () => {
     if (typeof window === "undefined") return null;
@@ -394,6 +399,7 @@ export function QuoteBuilder({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!designerState && !hasManualSubtypeRef.current && !editItemId) return;
 
     const nextPath = buildDesignerPath({
       orderType,
@@ -403,7 +409,7 @@ export function QuoteBuilder({
     const current = `${window.location.pathname}${window.location.search}`;
     if (current === nextPath) return;
     router.replace(nextPath, { scroll: false });
-  }, [router, orderType, categoryId, searchParams]);
+  }, [router, orderType, categoryId, searchParams, designerState, editItemId]);
   const rainbowDisabled = pinstripeJacket || twoColourJacket;
   const pinstripeDisabled = rainbowJacket;
   const twoColourDisabled = rainbowJacket;
@@ -896,6 +902,47 @@ export function QuoteBuilder({
     textColor,
   ]);
 
+  const focusMobileSection = (
+    step: 1 | 2 | 3,
+    sectionRef: { current: HTMLDivElement | null },
+    focusFirstControl = true,
+  ) => {
+    setMobileStep(step);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const section = sectionRef.current;
+        if (!section) return;
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (!focusFirstControl) return;
+        const target = section.querySelector<HTMLElement>(
+          "input:not([disabled]), select:not([disabled]), button:not([disabled]), textarea:not([disabled])",
+        );
+        target?.focus({ preventScroll: true });
+      });
+    });
+  };
+
+  const packagingComplete = Boolean(selectedOptionId && selectionQty > 0);
+  const designStepComplete =
+    designValid &&
+    colorsValid &&
+    flavorValid &&
+    labelTypeValid &&
+    (!labelsOptIn || Boolean(labelImageUrl));
+
+  const showFirstMissingField = () => {
+    const firstMissing = missingFields[0] ?? "";
+    if (firstMissing === "Packaging & quantity") {
+      focusMobileSection(1, packagingSectionRef);
+      return;
+    }
+    if (firstMissing === "Candy flavor") {
+      focusMobileSection(2, flavorSectionRef);
+      return;
+    }
+    focusMobileSection(2, designSectionRef);
+  };
+
   useEffect(() => {
     if (!hasBulkSelection) {
       setLabelCountOverride(0);
@@ -1271,6 +1318,10 @@ export function QuoteBuilder({
     };
 
     const update = () => {
+      if (mobileStep === 3 && window.matchMedia("(max-width: 767px)").matches) {
+        reset();
+        return;
+      }
       const containerRect = container.getBoundingClientRect();
       const wrapRect = wrap.getBoundingClientRect();
       const scrollY = window.scrollY;
@@ -1347,6 +1398,7 @@ export function QuoteBuilder({
     error,
     loading,
     minimumPriceBubbleWidth,
+    mobileStep,
     needsSubtypeSelection,
     result?.items.length,
     result?.total,
@@ -1363,6 +1415,60 @@ export function QuoteBuilder({
         <SiteUsps className="mt-3" />
         {subtitle && <p className="mt-2 text-[24px] font-medium text-[rgb(146,146,177)]">{subtitle}</p>}
       </section>
+
+      <nav
+        className="mx-auto max-w-md rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden"
+        aria-label="Candy designer progress"
+      >
+        <ol className="grid grid-cols-3 gap-2">
+          {[
+            { step: 1 as const, label: "Package", complete: packagingComplete },
+            { step: 2 as const, label: "Design", complete: designStepComplete },
+            { step: 3 as const, label: "Review", complete: canPlace },
+          ].map((item) => {
+            const isCurrent = mobileStep === item.step;
+            const canOpen =
+              item.step === 1 ||
+              (item.step === 2 && packagingComplete) ||
+              (item.step === 3 && packagingComplete && designStepComplete);
+            return (
+              <li key={item.step}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canOpen) return;
+                    setMobileStepError(null);
+                    const sectionRef =
+                      item.step === 1
+                        ? packagingSectionRef
+                        : item.step === 2
+                          ? designSectionRef
+                          : reviewSectionRef;
+                    focusMobileSection(item.step, sectionRef, false);
+                  }}
+                  disabled={!canOpen}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`flex min-h-14 w-full flex-col items-center justify-center rounded-xl px-2 py-2 text-xs font-semibold transition ${
+                    isCurrent
+                      ? "bg-[#fff1f5] text-[#b6456b] ring-1 ring-[#f2b8ca]"
+                      : canOpen
+                        ? "bg-zinc-50 text-zinc-700"
+                        : "bg-zinc-50 text-zinc-400"
+                  }`}
+                >
+                  <span className="text-[10px] uppercase tracking-[0.12em]">
+                    {item.complete && !isCurrent ? "Done" : `Step ${item.step}`}
+                  </span>
+                  <span>{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="mt-2 text-center text-xs text-zinc-500" aria-live="polite">
+          Step {mobileStep} of 3
+        </p>
+      </nav>
 
       <div ref={priceSectionRef} className="relative min-w-0 space-y-6 lg:mx-auto lg:max-w-5xl">
         {/* Price sidebar */}
@@ -1484,7 +1590,12 @@ export function QuoteBuilder({
 
         <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
-          <div className="mt-4 w-full border-t border-zinc-200 pt-4 space-y-3">
+          <div
+            ref={packagingSectionRef}
+            className={`scroll-mt-40 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 ${
+              mobileStep === 1 ? "" : "hidden md:block"
+            }`}
+          >
             <div className="grid items-start gap-4 lg:grid-cols-2">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -1916,10 +2027,35 @@ export function QuoteBuilder({
             </div>
           </div>
 
+          <div className={`${mobileStep === 1 ? "block" : "hidden"} md:hidden`}>
+            <button
+              type="button"
+              onClick={() => {
+                if (!packagingComplete) {
+                  setMobileStepError("Choose a packaging type, size, and quantity before continuing.");
+                  focusMobileSection(1, packagingSectionRef);
+                  return;
+                }
+                setMobileStepError(null);
+                focusMobileSection(2, designSectionRef);
+              }}
+              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white"
+            >
+              Continue to design
+            </button>
+            {mobileStepError ? (
+              <p className="mt-2 text-sm text-red-600" role="alert">
+                {mobileStepError}
+              </p>
+            ) : null}
+          </div>
+
           {/* Step 4: Design */}
           <div
             ref={designSectionRef}
-            className="mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible"
+            className={`scroll-mt-40 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible ${
+              mobileStep === 2 ? "" : "hidden md:block"
+            }`}
           >
             <div className="relative z-10">
               <div>
@@ -2217,7 +2353,12 @@ export function QuoteBuilder({
           </div>
           </div>
         </div>
-          <div className="relative mt-4 w-full border-t border-zinc-200 py-8">
+          <div
+            ref={flavorSectionRef}
+            className={`scroll-mt-40 relative mt-4 w-full border-t border-zinc-200 py-8 ${
+              mobileStep === 2 ? "" : "hidden md:block"
+            }`}
+          >
             <div className="relative z-10">
             <h2 className="site-small-title text-zinc-900">Flavour</h2>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -2254,12 +2395,87 @@ export function QuoteBuilder({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className={`${mobileStep === 2 ? "block" : "hidden"} space-y-2 md:hidden`}>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileStepError(null);
+                  focusMobileSection(1, packagingSectionRef, false);
+                }}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!designStepComplete) {
+                    const missingText = missingFields.filter((field) => field !== "Packaging & quantity").join(", ");
+                    setMobileStepError(`Please complete: ${missingText || "design and flavour"}.`);
+                    showFirstMissingField();
+                    return;
+                  }
+                  setMobileStepError(null);
+                  focusMobileSection(3, reviewSectionRef, false);
+                }}
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-white"
+              >
+                Review design
+              </button>
+            </div>
+            {mobileStepError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {mobileStepError}
+              </p>
+            ) : null}
+          </div>
+
+          <div
+            ref={reviewSectionRef}
+            className={`scroll-mt-40 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm ${
+              mobileStep === 3 ? "" : "hidden md:block"
+            }`}
+          >
               <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
               <p className="mt-2 text-sm text-zinc-600">
                 You can add delivery, payment, and contact details in the cart.
               </p>
+              <dl className="mt-4 grid gap-2 rounded-xl bg-zinc-50 p-3 text-sm md:hidden">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Packaging</dt>
+                  <dd className="text-right font-semibold text-zinc-800">
+                    {selectedOption ? `${toTitleCase(selectedOption.type)} — ${toTitleCase(selectedOption.size)}` : "Not selected"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Quantity</dt>
+                  <dd className="font-semibold text-zinc-800">{selectionQty || "Not selected"}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Design</dt>
+                  <dd className="text-right font-semibold text-zinc-800">{designTitle || mainTitle}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-zinc-500">Flavour</dt>
+                  <dd className="font-semibold text-zinc-800">{flavor || "Not selected"}</dd>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-zinc-200 pt-2">
+                  <dt className="text-zinc-500">Total</dt>
+                  <dd className="font-semibold text-zinc-900">{result ? formatMoney(result.total) : "Calculating"}</dd>
+                </div>
+              </dl>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setPlaceError(null);
+                  focusMobileSection(2, designSectionRef, false);
+                }}
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 md:hidden"
+              >
+                Back to design
+              </button>
               <button
                 type="button"
                 onClick={async () => {
@@ -2267,6 +2483,7 @@ export function QuoteBuilder({
                   if (!canPlace) {
                     const missingText = missingFields.length ? missingFields.join(", ") : "required fields";
                     setPlaceError(`Please complete: ${missingText}.`);
+                    showFirstMissingField();
                     return;
                   }
                   setPlacing(true);
