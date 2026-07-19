@@ -29,7 +29,7 @@ function buttonClass(variant: "header" | "footer") {
     return "inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#b83e68] px-4 text-sm font-semibold text-white transition hover:bg-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68] focus-visible:ring-offset-2";
   }
 
-  return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d78aa5] bg-white px-3 text-sm font-semibold text-[#b83e68] shadow-sm transition hover:border-[#b83e68] hover:text-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]";
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-3 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";
 }
 
 function panelClass(placement: "bottom" | "top", align: "right" | "center") {

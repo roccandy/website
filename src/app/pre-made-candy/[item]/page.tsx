@@ -242,7 +242,8 @@ export default async function PremadeItemPage({ params }: PageProps) {
               {item.description ? <p className="text-base text-zinc-700">{item.description}</p> : null}
               <p className="text-sm font-semibold text-zinc-600">Free Shipping Australia Wide</p>
               <AddPremadeToCartButton
-                className="inline-block"
+                className="w-full sm:w-auto"
+                variant="labelled"
                 item={{
                   premadeId: item.id,
                   name: item.name,

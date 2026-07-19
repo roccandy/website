@@ -61,6 +61,20 @@ export default async function Home() {
   const homeDescription = resolveHomeDescription(homePage.metaDescription, homePage.bodyHtml);
   return (
     <main className="min-h-screen bg-white text-zinc-900">
+      <link
+        rel="preload"
+        as="image"
+        href="/about-carousel/watercolour-home-middle.webp"
+        media="(max-width: 767px)"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="/landing/watercolour-hero-Homepage_2.webp"
+        media="(min-width: 768px)"
+        fetchPriority="high"
+      />
       <JsonLd
         data={buildSchemaGraph([
           buildWebPageSchema({

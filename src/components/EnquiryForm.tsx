@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ENQUIRY_INTERESTS,
   enquiryInterestLabel,
@@ -70,6 +70,11 @@ export function EnquiryForm({
   const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
   const startedAtRef = useRef(Date.now());
   const trackedStartRef = useRef(false);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   const trackStartOnce = () => {
     if (trackedStartRef.current) return;
@@ -315,7 +320,12 @@ export function EnquiryForm({
         </div>
 
         {error ? (
-          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div
+            ref={errorRef}
+            role="alert"
+            tabIndex={-1}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+          >
             {error}
           </div>
         ) : null}

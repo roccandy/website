@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useCart } from "./CartProvider";
 import { buildDesignerEditPath } from "@/lib/designUrls";
+import { OPEN_CART_DRAWER_EVENT } from "@/lib/cartDrawer";
 
 function formatWeight(weight_g: number) {
   if (!Number.isFinite(weight_g) || weight_g <= 0) return "";
@@ -47,18 +48,24 @@ export default function HeaderMenuClient() {
   const { items, clearCart, updateQuantity, removeItem } = useCart();
   const [open, setOpen] = useState(false);
   const [renderDrawer, setRenderDrawer] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
   const hasItems = items.length > 0;
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
 
-  const openDrawer = () => {
+  const openDrawer = useCallback(() => {
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setRenderDrawer(true);
     requestAnimationFrame(() => setOpen(true));
-  };
+  }, []);
 
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     setOpen(false);
-    window.setTimeout(() => setRenderDrawer(false), 300);
-  };
+    window.setTimeout(() => {
+      setRenderDrawer(false);
+      openerRef.current?.focus();
+    }, 300);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +74,21 @@ export default function HeaderMenuClient() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [closeDrawer, open]);
+
+  useEffect(() => {
+    window.addEventListener(OPEN_CART_DRAWER_EVENT, openDrawer);
+    return () => window.removeEventListener(OPEN_CART_DRAWER_EVENT, openDrawer);
+  }, [openDrawer]);
+
+  useEffect(() => {
+    if (!open) return;
+    closeButtonRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -88,7 +110,7 @@ export default function HeaderMenuClient() {
         aria-label="View cart"
         aria-expanded={open}
         onClick={openDrawer}
-        className="inline-flex h-11 w-11 items-center justify-center text-[#b83e68] transition-colors hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
+        className="inline-flex h-11 w-11 items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
       >
         <svg viewBox="0 0 24 24" className="h-9 w-9" aria-hidden="true">
           <path
@@ -106,28 +128,34 @@ export default function HeaderMenuClient() {
       {renderDrawer && typeof document !== "undefined"
         ? createPortal(
             <div className="fixed inset-0 z-[60]">
-              <button
-                type="button"
-                aria-label="Close cart preview"
+              <div
+                aria-hidden="true"
                 className={`absolute inset-0 bg-zinc-900/45 transition-opacity duration-300 ${
                   open ? "opacity-100" : "opacity-0"
                 }`}
                 onClick={closeDrawer}
               />
               <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cart-preview-title"
                 className={`absolute right-0 top-0 h-full w-[420px] max-w-[96vw] border-l border-zinc-200 bg-white shadow-2xl transition-transform duration-300 ${
                   open ? "translate-x-0" : "translate-x-full"
                 }`}
               >
                 <div className="flex h-full flex-col p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-semibold text-[#ff6f95]">Cart Preview</p>
+                    <p id="cart-preview-title" className="text-lg font-semibold text-[#b83e68]">
+                      Cart Preview
+                    </p>
                     <button
+                      ref={closeButtonRef}
                       type="button"
+                      aria-label="Close cart preview"
                       onClick={closeDrawer}
-                      className="inline-flex h-7 w-7 items-center justify-center text-[#ff6f95] hover:text-[#ff4f80]"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-md text-[#b83e68] hover:bg-[#fff2f6] hover:text-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
                     >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
                         <path
                           fill="currentColor"
                           d="M18.3 5.71 12 12.01l-6.29-6.3-1.42 1.42 6.3 6.29-6.3 6.29 1.42 1.42 6.29-6.3 6.3 6.3 1.42-1.42-6.3-6.29 6.3-6.29-1.42-1.42Z"
@@ -197,8 +225,9 @@ export default function HeaderMenuClient() {
                                   <>
                                     <button
                                       type="button"
+                                      aria-label={`Decrease quantity for ${title}`}
                                       onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300"
+                                      className="h-11 w-11 rounded border border-zinc-200 text-sm font-semibold text-zinc-600 hover:border-zinc-300"
                                     >
                                       -
                                     </button>
@@ -206,17 +235,19 @@ export default function HeaderMenuClient() {
                                       type="number"
                                       min={1}
                                       value={item.quantity}
+                                      aria-label={`Quantity for ${title}`}
                                       onChange={(event) => {
                                         const next = Number(event.target.value);
                                         if (Number.isNaN(next)) return;
                                         updateQuantity(item.id, Math.max(1, next));
                                       }}
-                                      className="h-7 w-12 rounded border border-zinc-200 text-center text-xs font-semibold text-zinc-700"
+                                      className="h-11 w-12 rounded border border-zinc-200 text-center text-sm font-semibold text-zinc-700"
                                     />
                                     <button
                                       type="button"
+                                      aria-label={`Increase quantity for ${title}`}
                                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300"
+                                      className="h-11 w-11 rounded border border-zinc-200 text-sm font-semibold text-zinc-600 hover:border-zinc-300"
                                     >
                                       +
                                     </button>
@@ -225,8 +256,9 @@ export default function HeaderMenuClient() {
                                   <>
                                     <button
                                       type="button"
+                                      aria-label={`Decrease package quantity for ${title || "custom order"}`}
                                       onClick={() => updateQuantity(item.id, clampCustomQty(item.quantity - 1))}
-                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300"
+                                      className="h-11 w-11 rounded border border-zinc-200 text-sm font-semibold text-zinc-600 hover:border-zinc-300"
                                     >
                                       -
                                     </button>
@@ -240,14 +272,15 @@ export default function HeaderMenuClient() {
                                         if (Number.isNaN(next)) return;
                                         updateQuantity(item.id, clampCustomQty(next));
                                       }}
-                                      className="h-7 w-14 rounded border border-zinc-200 text-center text-xs font-semibold text-zinc-700"
+                                      className="h-11 w-14 rounded border border-zinc-200 text-center text-sm font-semibold text-zinc-700"
                                       aria-label={`Package quantity for ${title || "custom order"}`}
                                     />
                                     <button
                                       type="button"
+                                      aria-label={`Increase package quantity for ${title || "custom order"}`}
                                       onClick={() => updateQuantity(item.id, clampCustomQty(item.quantity + 1))}
                                       disabled={Boolean(customMaxPackages && item.quantity >= customMaxPackages)}
-                                      className="h-7 w-7 rounded border border-zinc-200 text-xs font-semibold text-zinc-600 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
+                                      className="h-11 w-11 rounded border border-zinc-200 text-sm font-semibold text-zinc-600 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40"
                                     >
                                       +
                                     </button>
@@ -261,7 +294,7 @@ export default function HeaderMenuClient() {
                                       designType: item.designType,
                                     })}
                                     onClick={closeDrawer}
-                                    className="rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
+                                    className="inline-flex min-h-11 items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
                                   >
                                     Edit
                                   </a>
@@ -276,7 +309,7 @@ export default function HeaderMenuClient() {
                                     removeItem(item.id);
                                   }}
                                   aria-label="Remove item"
-                                  className="inline-flex h-7 w-7 items-center justify-center text-zinc-400 hover:text-zinc-600"
+                                  className="inline-flex h-11 w-11 items-center justify-center rounded text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
                                 >
                                   <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
                                     <path
@@ -295,21 +328,30 @@ export default function HeaderMenuClient() {
                     )}
                   </div>
 
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-4 space-y-2">
                     <button
                       type="button"
-                      onClick={clearCart}
-                      className="flex-1 rounded-md border border-[#ff6f95] px-3 py-2 text-xs font-semibold text-[#ff6f95] hover:border-[#ff4f80] hover:text-[#ff4f80]"
-                    >
-                      Empty cart
-                    </button>
-                    <Link
-                      href="/checkout"
                       onClick={closeDrawer}
-                      className="flex-1 rounded-md border border-[#ff6f95] bg-[#ff6f95] px-3 py-2 text-center text-xs font-semibold text-white hover:border-[#ff4f80] hover:bg-[#ff4f80]"
+                      className="flex min-h-12 w-full items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
                     >
-                      Checkout
-                    </Link>
+                      Continue shopping
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={clearCart}
+                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#b83e68] px-3 py-2 text-sm font-semibold text-[#b83e68] hover:border-[#942b4f] hover:text-[#942b4f]"
+                      >
+                        Empty cart
+                      </button>
+                      <Link
+                        href="/checkout"
+                        onClick={closeDrawer}
+                        className="flex min-h-12 flex-1 items-center justify-center rounded-md border border-[#b83e68] bg-[#b83e68] px-3 py-2 text-center text-sm font-semibold text-white hover:border-[#942b4f] hover:bg-[#942b4f]"
+                      >
+                        Checkout
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>

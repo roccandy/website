@@ -14,9 +14,25 @@ Started: 2026-07-19
 - [x] Collapsed homepage design options removed from keyboard focus and mobile layout overflow.
 - [x] Decorative full-bleed artwork prevented from creating horizontal page scrolling.
 - [x] Browser-verified the first M1 batch at 360 × 800 and 390 × 844.
-- [ ] Capture post-change mobile Lighthouse results after deployment.
-- [ ] Complete remaining Phase M1 enquiry validation and sticky-control checks.
-- [ ] Begin Phase M2 product/cart improvements.
+- [x] Captured the first post-change mobile Lighthouse result on the deployed homepage.
+- [x] Enquiry validation now focuses native and custom errors on mobile.
+- [ ] Complete the remaining sticky-control checks in the design and checkout journeys.
+- [x] Began Phase M2 product/cart improvements.
+- [x] Product-page Add to Cart is labelled and full-width on mobile.
+- [x] Adding pre-made candy now opens an accessible cart drawer with Checkout and Continue shopping actions.
+- [x] Cart controls increased to 44 px and browser-verified at 390 × 844.
+
+### First post-change homepage measurement
+
+Run against the deployed homepage on 2026-07-19:
+
+- Lighthouse mobile performance: 59 (lab variability remains high).
+- Lighthouse accessibility: 96, up from 91 in the earlier audit.
+- Total transfer: approximately 1.08 MB, down from approximately 4.2 MB.
+- LCP: 9.8 seconds in this run; the CSS-loaded watercolour hero was identified as the main remaining bottleneck.
+- CLS: 0.186, improved from 0.213 but still above target.
+
+The next local release preloads the responsive hero artwork and corrects the remaining footer contrast and image-size findings. Re-measure after deployment before drawing conclusions from the LCP score.
 
 ## Outcome
 

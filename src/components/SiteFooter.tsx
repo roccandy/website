@@ -64,9 +64,9 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-6xl px-6 py-7">
         <div className="flex flex-col items-center gap-3 text-center">
           <Link href="/" aria-label="Roc Candy home">
-            <Image src="/branding/logo-gold.svg" alt="Roc Candy" width={160} height={64} className="h-16 w-auto" />
+            <Image src="/branding/logo-gold.svg" alt="Roc Candy" width={160} height={64} className="h-16 w-40" />
           </Link>
-          <p className="max-w-4xl normal-case text-[14px] text-[#9f9f99]">
+          <p className="max-w-4xl normal-case text-[14px] text-[#5f5f5b]">
             53 View St, North Perth (not open to the public)
           </p>
 
@@ -154,7 +154,7 @@ export default function SiteFooter() {
             ))}
           </div>
 
-          <p className="mt-2 text-center normal-case text-[13px] text-[#6f6f6f]">© roccandy.com.au</p>
+          <p className="mt-2 text-center normal-case text-[13px] text-[#5f5f5f]">© roccandy.com.au</p>
         </div>
       </div>
     </footer>
