@@ -804,7 +804,7 @@ function CartItemRow({
           </button>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-4">
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2 text-xs text-zinc-600">
           {detailRows.map((detail) => (
             <div key={detail.label} className="flex items-start justify-between gap-3">
@@ -1689,20 +1689,13 @@ export function CheckoutClient({
           </div>
 
           {!paymentSuccess && hasItems ? (
-            <div className="sticky bottom-3 z-20 flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-3 shadow-lg backdrop-blur lg:hidden">
+            <div className="sticky bottom-3 z-20 flex justify-center rounded-2xl border border-zinc-200 bg-white/95 p-3 text-center shadow-lg backdrop-blur lg:hidden">
               <div>
                 <p className="text-[11px] normal-case tracking-[0.08em] text-zinc-500">Order total</p>
                 <p className="text-sm font-semibold text-zinc-900">
                   {pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}
                 </p>
               </div>
-              <a
-                href="#checkout-payment"
-                data-primary-button
-                className="rounded-full px-4 py-2 text-sm font-semibold"
-              >
-                Continue to payment
-              </a>
             </div>
           ) : null}
 
