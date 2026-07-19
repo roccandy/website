@@ -109,7 +109,7 @@ export const SPACING_CONTROLS = {
     // Space below the landing-page USP strip and above the CTA.
     belowUsp: "4.5rem",
     // Space below the landing-page CTA and above the gallery rows.
-    belowCta: "0.5rem",
+    belowCta: "1rem",
 
     // Horizontal padding inside the pink CTA button.
     ctaPaddingX: "1.5rem",
