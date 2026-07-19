@@ -1509,12 +1509,19 @@ export function QuoteBuilder({
 
               <div className="order-1 flex min-h-7 items-center justify-between gap-1 md:hidden">
                 <div className="order-2 flex shrink-0 items-center gap-1">
-                  <p
-                    className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
-                    style={{ fontFamily: "var(--font-heading), sans-serif" }}
-                  >
-                    {result ? formatMoney(result.total) : hasBasePrice ? formatMoney(basePrice) : "—"}
-                  </p>
+                  <div className="flex flex-col items-end">
+                    {result || hasBasePrice ? (
+                      <span className="text-[8px] font-medium leading-none text-zinc-400">
+                        {result ? "Total" : "Base price"}
+                      </span>
+                    ) : null}
+                    <p
+                      className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
+                      style={{ fontFamily: "var(--font-heading), sans-serif" }}
+                    >
+                      {result ? formatMoney(result.total) : hasBasePrice ? formatMoney(basePrice) : "—"}
+                    </p>
+                  </div>
                   {loading ? (
                     <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-700">
                       <span className="sr-only">Updating price</span>
