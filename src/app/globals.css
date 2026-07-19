@@ -19,10 +19,15 @@
   }
 }
 
+html {
+  overflow-x: clip;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
+  overflow-x: clip;
   --space-page-inline-padding: var(--space-page-inline-padding-mobile);
   --space-page-block-padding: var(--space-page-block-padding-mobile);
   --space-page-stack-gap: var(--space-page-stack-gap-mobile);

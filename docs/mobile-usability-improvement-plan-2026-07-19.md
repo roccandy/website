@@ -2,6 +2,22 @@
 
 Date: 2026-07-19
 
+## Progress
+
+Started: 2026-07-19
+
+- [x] Contextual enquiry routes added to custom-candy and pre-made pages.
+- [x] Homepage below-fold feature video changed from eager loading to proximity-based loading.
+- [x] Global header and footer navigation contrast improved to WCAG AA.
+- [x] Primary header controls increased to at least 44 px.
+- [x] Hidden top utility links removed from keyboard focus order.
+- [x] Collapsed homepage design options removed from keyboard focus and mobile layout overflow.
+- [x] Decorative full-bleed artwork prevented from creating horizontal page scrolling.
+- [x] Browser-verified the first M1 batch at 360 × 800 and 390 × 844.
+- [ ] Capture post-change mobile Lighthouse results after deployment.
+- [ ] Complete remaining Phase M1 enquiry validation and sticky-control checks.
+- [ ] Begin Phase M2 product/cart improvements.
+
 ## Outcome
 
 Make the public website faster and easier to use on phones, with particular focus on reaching an enquiry or completing a pre-made purchase.

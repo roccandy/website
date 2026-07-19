@@ -245,6 +245,7 @@ export function DesignCtaModal() {
               onClick={() => setExpanded(true)}
               aria-expanded={expanded}
               aria-controls="design-options"
+              tabIndex={expanded ? -1 : undefined}
               className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_18px_38px_rgba(114,112,111,0.24)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
                 expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
               }`}
@@ -261,16 +262,16 @@ export function DesignCtaModal() {
           <div
             id="design-options"
             aria-hidden={!expanded}
-            className={`flex items-center justify-center transition-all duration-300 ease-out ${
-              expanded ? "relative scale-100 opacity-100" : "pointer-events-none absolute inset-0 scale-90 opacity-0"
-            }`}
+            hidden={!expanded}
+            className="relative flex items-center justify-center"
           >
             <div className="inline-flex overflow-hidden rounded-full border border-zinc-200 bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)]">
               {OPTIONS.map((option, index) => (
                 <Link
                   key={option.href}
                   href={option.href}
-                  className={`inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-[13px] font-semibold normal-case tracking-normal leading-none text-[#ff6f95] transition-colors duration-200 ease-out hover:bg-[#fff1f5] hover:text-[#ff4f80] sm:px-6 sm:py-3.5 sm:text-sm ${
+                  tabIndex={expanded ? undefined : -1}
+                  className={`inline-flex items-center justify-center whitespace-nowrap px-4 py-3 text-[13px] font-semibold normal-case tracking-normal leading-none text-[#b83e68] transition-colors duration-200 ease-out hover:bg-[#fff1f5] hover:text-[#942b4f] sm:px-6 sm:py-3.5 sm:text-sm ${
                     index > 0 ? "border-l border-zinc-200" : ""
                   }`}
                 >

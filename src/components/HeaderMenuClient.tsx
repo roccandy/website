@@ -88,7 +88,7 @@ export default function HeaderMenuClient() {
         aria-label="View cart"
         aria-expanded={open}
         onClick={openDrawer}
-        className="inline-flex h-10 w-10 items-center justify-center text-[#ff6f95] transition-colors hover:text-[#ff4f80]"
+        className="inline-flex h-11 w-11 items-center justify-center text-[#b83e68] transition-colors hover:text-[#942b4f] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]"
       >
         <svg viewBox="0 0 24 24" className="h-9 w-9" aria-hidden="true">
           <path

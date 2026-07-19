@@ -13,6 +13,7 @@ export default function AutoplayOnViewVideo({ src, poster, className, eager = fa
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const isVisibleRef = useRef(false);
   const hasPreloadedRef = useRef(false);
+  const [shouldLoadSource, setShouldLoadSource] = useState(eager);
   const [isInView, setIsInView] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -25,7 +26,7 @@ export default function AutoplayOnViewVideo({ src, poster, className, eager = fa
     node.muted = true;
     node.defaultMuted = true;
     node.playsInline = true;
-    node.preload = "auto";
+    node.preload = eager ? "auto" : "metadata";
 
     const tryPlay = () => {
       const playPromise = node.play();
@@ -53,16 +54,18 @@ export default function AutoplayOnViewVideo({ src, poster, className, eager = fa
       { threshold: [0, 0.1], rootMargin: eager ? "320px 0px 320px 0px" : "120px 0px 120px 0px" }
     );
 
+    const preloadRootMargin = window.matchMedia("(max-width: 767px)").matches
+      ? "0px"
+      : "480px 0px";
     const preloadObserver = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry || !entry.isIntersecting || hasPreloadedRef.current) return;
         hasPreloadedRef.current = true;
-        node.preload = "auto";
-        node.load();
+        setShouldLoadSource(true);
         preloadObserver.disconnect();
       },
-      { threshold: 0.01, rootMargin: "900px 0px" }
+      { threshold: 0.01, rootMargin: preloadRootMargin }
     );
 
     const handleCanPlay = () => {
@@ -119,6 +122,13 @@ export default function AutoplayOnViewVideo({ src, poster, className, eager = fa
     };
   }, [eager]);
 
+  useEffect(() => {
+    const node = videoRef.current;
+    if (!node || !shouldLoadSource) return;
+    node.preload = "auto";
+    node.load();
+  }, [shouldLoadSource]);
+
   const showLoader = isInView && !hasStartedPlayback && (!isReady || !isPlaying);
 
   return (
@@ -130,13 +140,13 @@ export default function AutoplayOnViewVideo({ src, poster, className, eager = fa
         muted
         loop
         playsInline
-        preload="auto"
+        preload={eager ? "auto" : "metadata"}
         poster={poster}
         controls={false}
         disablePictureInPicture
         aria-label="Roc Candy feature video"
       >
-        <source src={src} type="video/mp4" />
+        {shouldLoadSource ? <source src={src} type="video/mp4" /> : null}
       </video>
       {showLoader ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/12">

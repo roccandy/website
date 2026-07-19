@@ -142,7 +142,6 @@ export default async function Home() {
                 src="/landing/home-feature-web.mp4"
                 poster="/landing/home-feature-poster.jpg"
                 className="h-full w-full object-cover"
-                eager
               />
             </div>
 

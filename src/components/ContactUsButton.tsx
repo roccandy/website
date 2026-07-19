@@ -26,10 +26,10 @@ function getEmailHref(email: string, emailHref?: string) {
 
 function buttonClass(variant: "header" | "footer") {
   if (variant === "footer") {
-    return "inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#ff5f99] px-4 text-sm font-semibold text-white transition hover:bg-[#ff4f8d]";
+    return "inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#b83e68] px-4 text-sm font-semibold text-white transition hover:bg-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68] focus-visible:ring-offset-2";
   }
 
-  return "inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-3 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80]";
+  return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#d78aa5] bg-white px-3 text-sm font-semibold text-[#b83e68] shadow-sm transition hover:border-[#b83e68] hover:text-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68]";
 }
 
 function panelClass(placement: "bottom" | "top", align: "right" | "center") {
@@ -95,7 +95,7 @@ export function ContactUsButton({
       {open ? (
         <div id={panelId} role="dialog" aria-label="Roc Candy contact details" className={panelClass(placement, align)}>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[#ff5f99]">Contact Roc Candy</p>
+            <p className="text-sm font-semibold text-[#b83e68]">Contact Roc Candy</p>
             <button
               type="button"
               aria-label="Close contact details"
@@ -110,7 +110,7 @@ export function ContactUsButton({
             <Link
               href="/contact#enquiry-form"
               onClick={() => setOpen(false)}
-              className="flex min-h-10 items-center justify-center rounded-md bg-[#ff5f99] px-3 text-sm font-semibold text-white transition hover:bg-[#ff4f8d]"
+              className="flex min-h-11 items-center justify-center rounded-md bg-[#b83e68] px-3 text-sm font-semibold text-white transition hover:bg-[#942b4f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b83e68] focus-visible:ring-offset-2"
             >
               Send an online enquiry
             </Link>
