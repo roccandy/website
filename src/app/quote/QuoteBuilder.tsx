@@ -926,10 +926,9 @@ export function QuoteBuilder({
   };
 
   const packagingComplete = Boolean(selectedOptionId && selectionQty > 0);
-  const designStepComplete =
-    designValid &&
-    colorsValid &&
-    flavorValid &&
+  const designStepComplete = designValid && colorsValid && flavorValid;
+  const packagingStepComplete =
+    packagingComplete &&
     labelTypeValid &&
     (!labelsOptIn || Boolean(labelImageUrl));
 
@@ -941,7 +940,7 @@ export function QuoteBuilder({
         ? "Choose a packaging type and size."
         : "Enter the packaging quantity before continuing.",
     );
-    setMobileStep(1);
+    setMobileStep(2);
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
@@ -962,11 +961,15 @@ export function QuoteBuilder({
       showPackagingError();
       return;
     }
-    if (firstMissing === "Candy flavor") {
-      focusMobileSection(2, flavorSectionRef);
+    if (firstMissing === "Label artwork" || firstMissing === "Custom Label type") {
+      focusMobileSection(2, packagingSectionRef);
       return;
     }
-    focusMobileSection(2, designSectionRef);
+    if (firstMissing === "Candy flavor") {
+      focusMobileSection(1, flavorSectionRef);
+      return;
+    }
+    focusMobileSection(1, designSectionRef);
   };
 
   useEffect(() => {
@@ -1372,7 +1375,8 @@ export function QuoteBuilder({
       const currentWrapRect = wrap.getBoundingClientRect();
       const left = Math.min(Math.max(Math.round(currentWrapRect.left), 8), Math.max(8, window.innerWidth - width - 8));
 
-      if (scrollY <= end) {
+      const isMobileViewport = window.matchMedia("(max-width: 767px)").matches;
+      if (isMobileViewport || scrollY <= end) {
         stickyEl.style.position = "fixed";
         stickyEl.style.top = `${topOffset}px`;
         stickyEl.style.left = `${left}px`;
@@ -1450,17 +1454,18 @@ export function QuoteBuilder({
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
-              <nav className="mb-1 md:hidden" aria-label="Candy designer progress">
+              <div className="flex flex-col md:block">
+              <nav className="order-2 mt-1 md:hidden" aria-label="Candy designer progress">
                 <ol className="grid grid-cols-3 gap-1">
                   {[
-                    { step: 1 as const, label: "Package", complete: packagingComplete },
-                    { step: 2 as const, label: "Design", complete: designStepComplete },
+                    { step: 1 as const, label: "Design", complete: designStepComplete },
+                    { step: 2 as const, label: "Packaging", complete: packagingStepComplete },
                     { step: 3 as const, label: "Review", complete: canPlace },
                   ].map((item) => {
                     const isCurrent = mobileStep === item.step;
                     const canOpen =
                       item.step === 1 ||
-                      (item.step === 2 && packagingComplete) ||
+                      (item.step === 2 && designStepComplete) ||
                       (item.step === 3 && packagingComplete && designStepComplete);
                     return (
                       <li key={item.step}>
@@ -1471,9 +1476,9 @@ export function QuoteBuilder({
                             setMobileStepError(null);
                             const sectionRef =
                               item.step === 1
-                                ? packagingSectionRef
+                                ? designSectionRef
                                 : item.step === 2
-                                  ? designSectionRef
+                                  ? packagingSectionRef
                                   : reviewSectionRef;
                             focusMobileSection(item.step, sectionRef, false);
                           }}
@@ -1501,8 +1506,8 @@ export function QuoteBuilder({
                 </span>
               </nav>
 
-              <div className="flex min-h-7 items-center justify-between gap-1 md:hidden">
-                <div className="flex shrink-0 items-center gap-1">
+              <div className="order-1 flex min-h-7 items-center justify-between gap-1 md:hidden">
+                <div className="order-2 flex shrink-0 items-center gap-1">
                   <p
                     className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
                     style={{ fontFamily: "var(--font-heading), sans-serif" }}
@@ -1517,7 +1522,7 @@ export function QuoteBuilder({
                 </div>
 
                 {showSubtype ? (
-                  <div className="flex w-0 min-w-0 flex-1 items-center justify-center gap-1">
+                  <div className="order-1 flex w-0 min-w-0 flex-1 items-center justify-center gap-1">
                     {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                       const isActive = categoryId === sub.id;
                       return (
@@ -1549,7 +1554,7 @@ export function QuoteBuilder({
                     })}
                   </div>
                 ) : (
-                  <span className="min-w-0 flex-1 truncate text-center text-[10px] font-semibold text-zinc-500">
+                  <span className="order-1 min-w-0 flex-1 truncate text-left text-[10px] font-semibold text-zinc-500">
                     {mainTitle}
                   </span>
                 )}
@@ -1561,7 +1566,7 @@ export function QuoteBuilder({
                   aria-expanded={showBreakdown}
                   aria-label={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
                   title={showBreakdown ? "Hide price breakdown" : "Show price breakdown"}
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 disabled:opacity-35"
+                  className="order-3 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 disabled:opacity-35"
                 >
                   {showBreakdown ? (
                     <ChevronUp className="h-4 w-4" aria-hidden="true" />
@@ -1654,6 +1659,7 @@ export function QuoteBuilder({
                   </div>
                 </div>
               </div>
+              </div>
               {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
             </div>
             {result && showBreakdown && (
@@ -1678,12 +1684,12 @@ export function QuoteBuilder({
           </div>
         </div>
 
-        <div className={`space-y-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
+        <div className={`flex flex-col gap-6 ${needsSubtypeSelection ? "opacity-40 pointer-events-none" : ""}`}>
           {/* Step 2: Packaging (single selection) */}
           <div
             ref={packagingSectionRef}
-            className={`scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 md:scroll-mt-40 ${
-              mobileStep === 1 ? "" : "hidden md:block"
+            className={`order-4 scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 space-y-3 md:scroll-mt-40 ${
+              mobileStep === 2 ? "" : "hidden md:block"
             }`}
           >
             <div className="grid items-start gap-4 lg:grid-cols-2">
@@ -2178,28 +2184,53 @@ export function QuoteBuilder({
             </div>
           </div>
 
-          <div className={`${mobileStep === 1 ? "block" : "hidden"} md:hidden`}>
-            <button
-              type="button"
-              onClick={() => {
-                if (!packagingComplete) {
-                  showPackagingError();
-                  return;
-                }
-                setMobileStepError(null);
-                focusMobileSection(2, designSectionRef);
-              }}
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-zinc-900 px-5 py-3 text-sm font-semibold text-white"
-            >
-              Continue to design
-            </button>
+          <div className={`${mobileStep === 2 ? "block" : "hidden"} order-5 space-y-2 md:hidden`}>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileStepError(null);
+                  focusMobileSection(1, designSectionRef, false);
+                }}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!packagingComplete) {
+                    showPackagingError();
+                    return;
+                  }
+                  if (!packagingStepComplete) {
+                    const missingText = missingFields
+                      .filter((field) => field === "Label artwork" || field === "Custom Label type")
+                      .join(", ");
+                    setMobileStepError(`Please complete: ${missingText || "packaging details"}.`);
+                    focusMobileSection(2, packagingSectionRef);
+                    return;
+                  }
+                  setMobileStepError(null);
+                  focusMobileSection(3, reviewSectionRef, false);
+                }}
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-white"
+              >
+                Review design
+              </button>
+            </div>
+            {mobileStepError ? (
+              <p className="text-sm text-red-600" role="alert">
+                {mobileStepError}
+              </p>
+            ) : null}
           </div>
 
           {/* Step 4: Design */}
           <div
             ref={designSectionRef}
-            className={`scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible md:scroll-mt-40 ${
-              mobileStep === 2 ? "" : "hidden md:block"
+            className={`order-1 scroll-mt-52 mt-4 w-full border-t border-zinc-200 pt-4 relative overflow-visible md:scroll-mt-40 ${
+              mobileStep === 1 ? "" : "hidden md:block"
             }`}
           >
             <div className="relative z-10">
@@ -2500,8 +2531,8 @@ export function QuoteBuilder({
         </div>
           <div
             ref={flavorSectionRef}
-            className={`scroll-mt-52 relative mt-4 w-full border-t border-zinc-200 py-8 md:scroll-mt-40 ${
-              mobileStep === 2 ? "" : "hidden md:block"
+            className={`order-2 scroll-mt-52 relative mt-4 w-full border-t border-zinc-200 py-8 md:scroll-mt-40 ${
+              mobileStep === 1 ? "" : "hidden md:block"
             }`}
           >
             <div className="relative z-10">
@@ -2540,35 +2571,27 @@ export function QuoteBuilder({
             </div>
           </div>
 
-          <div className={`${mobileStep === 2 ? "block" : "hidden"} space-y-2 md:hidden`}>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileStepError(null);
-                  focusMobileSection(1, packagingSectionRef, false);
-                }}
-                className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
-              >
-                Back
-              </button>
+          <div className={`${mobileStep === 1 ? "block" : "hidden"} order-3 space-y-2 md:hidden`}>
               <button
                 type="button"
                 onClick={() => {
                   if (!designStepComplete) {
                     const missingText = missingFields.filter((field) => field !== "Packaging & quantity").join(", ");
                     setMobileStepError(`Please complete: ${missingText || "design and flavour"}.`);
-                    showFirstMissingField();
+                    if (missingFields.includes("Candy flavor")) {
+                      focusMobileSection(1, flavorSectionRef);
+                    } else {
+                      focusMobileSection(1, designSectionRef);
+                    }
                     return;
                   }
                   setMobileStepError(null);
-                  focusMobileSection(3, reviewSectionRef, false);
+                  focusMobileSection(2, packagingSectionRef, false);
                 }}
-                className="inline-flex min-h-12 items-center justify-center rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-white"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-zinc-900 px-4 py-3 text-sm font-semibold text-white"
               >
-                Review design
+                Continue to packaging
               </button>
-            </div>
             {mobileStepError ? (
               <p className="text-sm text-red-600" role="alert">
                 {mobileStepError}
@@ -2578,7 +2601,7 @@ export function QuoteBuilder({
 
           <div
             ref={reviewSectionRef}
-            className={`scroll-mt-52 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:scroll-mt-40 ${
+            className={`order-6 scroll-mt-52 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:scroll-mt-40 ${
               mobileStep === 3 ? "" : "hidden md:block"
             }`}
           >
@@ -2615,11 +2638,11 @@ export function QuoteBuilder({
                 type="button"
                 onClick={() => {
                   setPlaceError(null);
-                  focusMobileSection(2, designSectionRef, false);
+                  focusMobileSection(2, packagingSectionRef, false);
                 }}
                 className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 md:hidden"
               >
-                Back to design
+                Back to packaging
               </button>
               <button
                 type="button"

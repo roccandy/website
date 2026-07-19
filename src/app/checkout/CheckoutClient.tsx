@@ -1688,17 +1688,6 @@ export function CheckoutClient({
             )}
           </div>
 
-          {!paymentSuccess && hasItems ? (
-            <div className="sticky bottom-3 z-20 flex justify-center rounded-2xl border border-zinc-200 bg-white/95 p-3 text-center shadow-lg backdrop-blur lg:hidden">
-              <div>
-                <p className="text-[11px] normal-case tracking-[0.08em] text-zinc-500">Order total</p>
-                <p className="text-sm font-semibold text-zinc-900">
-                  {pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
           <div ref={dateSectionRef} className="flex justify-center">
             <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
@@ -1913,6 +1902,15 @@ export function CheckoutClient({
               </div>
             </div>
           </div>
+
+          {!paymentSuccess && hasItems ? (
+            <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm lg:hidden">
+              <p className="text-sm font-semibold text-zinc-700">Order total</p>
+              <p className="text-lg font-semibold text-zinc-900">
+                {pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}
+              </p>
+            </div>
+          ) : null}
 
           {!paymentSuccess ? (
             <div id="checkout-payment" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
