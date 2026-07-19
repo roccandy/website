@@ -846,7 +846,7 @@ function CartItemRow({
 }
 
 function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
-  const desktopPages = useMemo(() => chunkSuggestions(items, 4), [items]);
+  const desktopPages = useMemo(() => chunkSuggestions(items, 2), [items]);
   const [page, setPage] = useState(0);
   const [mobilePage, setMobilePage] = useState(0);
 
@@ -930,7 +930,7 @@ function PremadeCarousel({ items }: { items: PremadeSuggestion[] }) {
             style={{ transform: `translateX(-${page * 100}%)` }}
           >
             {desktopPages.map((pageItems, index) => (
-              <div key={`page-${index}`} className="min-w-full grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <div key={`page-${index}`} className="min-w-full grid gap-4 sm:grid-cols-2">
                 {pageItems.map((item) => (
                   <PremadeSuggestionCard
                     key={item.id}
@@ -1622,7 +1622,7 @@ export function CheckoutClient({
   return (
     <div className="space-y-8">
       {PAYMENTS_SANDBOX_MODE ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
           Sandbox Mode: Test payments only. No real customer charges should be made from this environment.
         </div>
       ) : null}
@@ -1641,12 +1641,12 @@ export function CheckoutClient({
         </div>
       ) : null}
       {paymentSuccess && adminEmailWarning ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center text-sm font-semibold text-rose-700">
+        <div className="mx-auto w-full max-w-xl rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center text-sm font-semibold text-rose-700">
           {adminEmailWarning} Please contact us if you need help.
         </div>
       ) : null}
-      <section className="grid min-w-0 gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-        <div className="min-w-0 space-y-4 pb-20 lg:pb-0">
+      <section className="min-w-0 space-y-4">
+        <div className="mx-auto w-full max-w-xl min-w-0 space-y-4">
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="site-small-title text-zinc-900">Your cart</h2>
@@ -1700,6 +1700,98 @@ export function CheckoutClient({
                 ))}
               </div>
             )}
+          </div>
+
+          {suggestions.length > 0 ? (
+            <details className="group rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <summary className="cursor-pointer list-none text-center text-sm font-semibold text-[#ff6f95] marker:hidden">
+                Add more candy
+                <span className="ml-2 inline-block transition group-open:rotate-180" aria-hidden="true">
+                  ↓
+                </span>
+              </summary>
+              <div className="mt-5 min-w-0">
+                <PremadeCarousel items={suggestions} />
+              </div>
+            </details>
+          ) : null}
+
+          <div ref={dateSectionRef} className="w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
+            {productionBlockoutMessage ? (
+              <p className="mt-2 text-sm font-semibold normal-case text-[#b23b67]">{productionBlockoutMessage}</p>
+            ) : null}
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="text-xs text-zinc-500">
+                  <p className="mb-2 normal-case tracking-[0.08em]">Delivery method</p>
+                  <div className="inline-flex rounded-full border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setPickup(false)}
+                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                      style={{
+                        backgroundColor: !pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        color: "rgb(124,121,131)",
+                        fontFamily: "var(--font-body), sans-serif",
+                      }}
+                    >
+                      Delivery
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickup(true)}
+                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
+                      style={{
+                        backgroundColor: pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        color: "rgb(124,121,131)",
+                        fontFamily: "var(--font-body), sans-serif",
+                      }}
+                    >
+                      Pickup
+                    </button>
+                  </div>
+                  {pickup ? (
+                    <p className="mt-2 normal-case tracking-[0.08em] text-zinc-500">Pickup in North Perth</p>
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500 sm:min-w-[280px]">
+                  <p>{hasCustomItems ? "Date required" : "Delivery or pickup date"}</p>
+                  <div className="mt-2">
+                    <CheckoutDatePicker
+                      value={dueDate}
+                      onChange={setDueDate}
+                      blocks={quoteBlocks}
+                      urgencyFeePercent={urgencyFeePercent}
+                      urgencyPeriodDays={urgencyPeriodDays}
+                      showUrgencyNotice={hasCustomItems}
+                      accessibleLabel={
+                        hasCustomItems ? "Select required date" : "Select delivery or pickup date"
+                      }
+                    />
+                  </div>
+                  {!hasCustomItems && hasPremadeItems ? (
+                    <p className="mt-2 leading-5">
+                      Choose when you would like your order delivered or ready for pickup.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <div className="text-xs normal-case tracking-[0.08em] text-zinc-500">
+                {dueDate && isUrgencyWindow && !isDueDateBlocked && (
+                  <span className="mt-1 block text-xs text-amber-600">
+                    {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge if needed within ${urgencyPeriodDays} day${
+                      urgencyPeriodDays === 1 ? "" : "s"
+                    }.`}
+                  </span>
+                )}
+                {isDueDateBlocked && (
+                  <span className="mt-1 block text-xs text-red-600">
+                    This date is unavailable. Please choose another.
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {!paymentSuccess ? (
@@ -1768,86 +1860,6 @@ export function CheckoutClient({
               </div>
             </div>
           ) : null}
-
-          <div ref={dateSectionRef} className="flex justify-center">
-            <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
-            {productionBlockoutMessage ? (
-              <p className="mt-2 text-sm font-semibold normal-case text-[#b23b67]">{productionBlockoutMessage}</p>
-            ) : null}
-            <div className="mt-3 space-y-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="text-xs text-zinc-500">
-                  <p className="mb-2 normal-case tracking-[0.08em]">Delivery method</p>
-                  <div className="inline-flex rounded-full border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setPickup(false)}
-                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
-                      style={{
-                        backgroundColor: !pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                        color: "rgb(124,121,131)",
-                        fontFamily: "var(--font-body), sans-serif",
-                      }}
-                    >
-                      Delivery
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPickup(true)}
-                      className="rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
-                      style={{
-                        backgroundColor: pickup ? "rgb(247,228,236)" : "rgb(250,243,247)",
-                        color: "rgb(124,121,131)",
-                        fontFamily: "var(--font-body), sans-serif",
-                      }}
-                    >
-                      Pickup
-                    </button>
-                  </div>
-                  {pickup ? (
-                    <p className="mt-2 normal-case tracking-[0.08em] text-zinc-500">Pickup in North Perth</p>
-                  ) : null}
-                </div>
-                <div className="min-w-[280px] flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  <p>{hasCustomItems ? "Date required" : "Delivery or pickup date"}</p>
-                  <div className="mt-2">
-                    <CheckoutDatePicker
-                      value={dueDate}
-                      onChange={setDueDate}
-                      blocks={quoteBlocks}
-                      urgencyFeePercent={urgencyFeePercent}
-                      urgencyPeriodDays={urgencyPeriodDays}
-                      showUrgencyNotice={hasCustomItems}
-                      accessibleLabel={
-                        hasCustomItems ? "Select required date" : "Select delivery or pickup date"
-                      }
-                    />
-                  </div>
-                  {!hasCustomItems && hasPremadeItems ? (
-                    <p className="mt-2 leading-5">
-                      Choose when you would like your order delivered or ready for pickup.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="text-xs normal-case tracking-[0.08em] text-zinc-500">
-                {dueDate && isUrgencyWindow && !isDueDateBlocked && (
-                  <span className="mt-1 block text-xs text-amber-600">
-                    {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge if needed within ${urgencyPeriodDays} day${
-                      urgencyPeriodDays === 1 ? "" : "s"
-                    }.`}
-                  </span>
-                )}
-                {isDueDateBlocked && (
-                  <span className="mt-1 block text-xs text-red-600">
-                    This date is unavailable. Please choose another.
-                  </span>
-                )}
-              </div>
-            </div>
-            </div>
-          </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Your details</h3>
@@ -2045,7 +2057,7 @@ export function CheckoutClient({
           ) : null}
         </div>
 
-        <div className="h-fit rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm lg:sticky lg:top-28">
+        <div className="mx-auto h-fit w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <h2 className="site-small-title text-zinc-900">Order summary</h2>
           <div className="mt-4 space-y-2 text-sm text-zinc-600">
             <div className="flex items-center justify-between">
@@ -2122,19 +2134,6 @@ export function CheckoutClient({
           ) : null}
         </div>
       </section>
-      {suggestions.length > 0 ? (
-        <details className="group rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-          <summary className="cursor-pointer list-none text-center text-sm font-semibold text-[#ff6f95] marker:hidden">
-            Add more candy
-            <span className="ml-2 inline-block transition group-open:rotate-180" aria-hidden="true">
-              ↓
-            </span>
-          </summary>
-          <div className="mt-5 min-w-0">
-            <PremadeCarousel items={suggestions} />
-          </div>
-        </details>
-      ) : null}
     </div>
   );
 }
