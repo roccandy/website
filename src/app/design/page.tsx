@@ -256,7 +256,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
           dataQuoteHeader
         />
 
-        <div className="relative pb-16">
+        <div className="site-watercolour-top-bg pb-16">
           <div className="site-page-frame relative z-10 mx-auto max-w-7xl">
             {!initialOrderType ? (
               <section className="site-page-header mx-auto mb-8 max-w-4xl rounded-3xl border border-zinc-200 bg-white/90 p-6 text-center shadow-sm">

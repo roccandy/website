@@ -85,33 +85,34 @@ export default async function BlogPage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className="site-page-frame site-page-stack mx-auto max-w-6xl">
-          <section className="site-page-header-tight text-center">
-            <h1 className="site-page-title text-[rgb(114,112,111)]">{blogPage.title || "Roc Candy Blog"}</h1>
-            {(blogPage.heroSubheading || blogPage.heroSupportingLine) ? (
-              <div className="site-hero-copy mx-auto max-w-3xl text-center text-[rgb(130,130,140)]">
-                {blogPage.heroSubheading ? <h2>{blogPage.heroSubheading}</h2> : null}
-                {blogPage.heroSupportingLine ? <p>{blogPage.heroSupportingLine}</p> : null}
-              </div>
+        <div className="site-watercolour-top-bg">
+          <div className="site-page-frame site-page-stack mx-auto max-w-6xl">
+            <section className="site-page-header-tight text-center">
+              <h1 className="site-page-title text-[rgb(114,112,111)]">{blogPage.title || "Roc Candy Blog"}</h1>
+              {(blogPage.heroSubheading || blogPage.heroSupportingLine) ? (
+                <div className="site-hero-copy mx-auto max-w-3xl text-center text-[rgb(130,130,140)]">
+                  {blogPage.heroSubheading ? <h2>{blogPage.heroSubheading}</h2> : null}
+                  {blogPage.heroSupportingLine ? <p>{blogPage.heroSupportingLine}</p> : null}
+                </div>
+              ) : null}
+              <SiteUsps className="site-usp-offset" />
+            </section>
+
+            {blogPage.bodyHtml ? (
+              <article className="site-rich-content text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: blogPage.bodyHtml }} />
             ) : null}
-            <SiteUsps className="site-usp-offset" />
-          </section>
 
-          {blogPage.bodyHtml ? (
-            <article className="site-rich-content text-base leading-relaxed" dangerouslySetInnerHTML={{ __html: blogPage.bodyHtml }} />
-          ) : null}
-
-          <section className="space-y-6">
-            {posts.length === 0 ? (
-              <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-                <h2 className="site-section-title text-[rgb(114,112,111)]">Articles coming soon</h2>
-                <p className="mt-3 text-sm text-zinc-600">
-                  The blog system is live, but no posts are published yet.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {featuredPost ? (
+            <section className="space-y-6">
+              {posts.length === 0 ? (
+                <div className="rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+                  <h2 className="site-section-title text-[rgb(114,112,111)]">Articles coming soon</h2>
+                  <p className="mt-3 text-sm text-zinc-600">
+                    The blog system is live, but no posts are published yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {featuredPost ? (
                   <article className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md">
                     <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
                       {featuredPost.coverImageUrl ? (
@@ -157,8 +158,8 @@ export default async function BlogPage() {
                       </div>
                     </div>
                   </article>
-                ) : null}
-                {remainingPosts.length > 0 ? (
+                  ) : null}
+                  {remainingPosts.length > 0 ? (
                   <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     {remainingPosts.map((post) => (
                       <article
@@ -201,12 +202,13 @@ export default async function BlogPage() {
                       </article>
                     ))}
                   </div>
-                ) : null}
-              </div>
-            )}
-          </section>
+                  ) : null}
+                </div>
+              )}
+            </section>
 
-          {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
+            {faqSection ? <PageFaqSection heading={faqSection.heading} items={faqSection.items} /> : null}
+          </div>
         </div>
       </div>
     </main>

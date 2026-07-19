@@ -73,25 +73,27 @@ export default async function FaqsPage() {
       <div className="relative">
         <PublicSiteHeader enquiriesHref={enquiriesHref} />
 
-        <div className="site-page-frame site-page-stack mx-auto max-w-4xl">
-          <section className="site-page-header-tight">
-            <h1
-              className="site-page-title text-[rgb(114,112,111)]"
-            >
-              {faqPage.title || "Frequently Asked Questions"}
-            </h1>
-            <SiteUsps className="site-usp-offset" />
-          </section>
-          {faqPage.bodyHtml ? (
-            <article
-              className="site-rich-content text-base leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: faqPage.bodyHtml }}
-            />
-          ) : null}
-          <section className="site-faq-stack">
-            <h2 className="site-section-title text-[rgb(114,112,111)]">Common Questions</h2>
-            <FaqAccordion items={faqItems} />
-          </section>
+        <div className="site-watercolour-top-bg">
+          <div className="site-page-frame site-page-stack mx-auto max-w-4xl">
+            <section className="site-page-header-tight">
+              <h1
+                className="site-page-title text-[rgb(114,112,111)]"
+              >
+                {faqPage.title || "Frequently Asked Questions"}
+              </h1>
+              <SiteUsps className="site-usp-offset" />
+            </section>
+            {faqPage.bodyHtml ? (
+              <article
+                className="site-rich-content text-base leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: faqPage.bodyHtml }}
+              />
+            ) : null}
+            <section className="site-faq-stack">
+              <h2 className="site-section-title text-[rgb(114,112,111)]">Common Questions</h2>
+              <FaqAccordion items={faqItems} />
+            </section>
+          </div>
         </div>
       </div>
     </main>

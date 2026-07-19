@@ -263,6 +263,7 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
     ? page.heroSupportingLine || landingConfig.detail
     : null;
   const showLandingBackdrop = landingConfig !== null && page.slug !== "contact";
+  const showWatercolourTopBackdrop = page.slug === "contact";
   const landingGalleryImages = landingConfig
     ? resolveGalleryImages(page.galleryImageUrls, landingConfig.defaultGalleryImageUrls ?? [])
     : [];
@@ -295,6 +296,8 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
           className={
             showLandingBackdrop
               ? "landing-bg landing-bg-faded site-watercolour-hero-mobile-offset site-about-mobile-bg -mt-8 pt-8"
+              : showWatercolourTopBackdrop
+                ? "site-watercolour-top-bg -mt-8 pt-8"
               : "-mt-8 pt-8"
           }
         >
@@ -339,7 +342,7 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                     {landingConfig.enquiryCta && landingEnquiryHref ? (
                       <Link
                         href={landingEnquiryHref}
-                        className="mt-3 inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[#c74e78] underline decoration-[#e9a4bb] underline-offset-4 transition hover:text-[#a83b61] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
+                        className="mt-1 inline-flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[#c74e78] underline decoration-[#e9a4bb] underline-offset-4 transition hover:text-[#a83b61] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]"
                       >
                         Prefer some help first? {landingConfig.enquiryCta.linkLabel}
                       </Link>

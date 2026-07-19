@@ -389,6 +389,27 @@ body {
   mask-image: linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
 }
 
+:root .site-watercolour-top-bg {
+  position: relative;
+  isolation: isolate;
+  background-color: #ffffff;
+}
+
+:root .site-watercolour-top-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/landing/design-top.webp");
+  background-repeat: no-repeat;
+  background-size: 1400px auto;
+  background-position: center top;
+  opacity: 0.95;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
 .site-page-frame {
   padding-inline: var(--space-page-inline-padding);
   padding-block: var(--space-page-block-padding);
@@ -699,7 +720,6 @@ body {
 }
 
 .site-landing-gallery-shell {
-  padding-top: var(--space-landing-hero-cta-to-gallery);
   padding-inline: var(--space-landing-gallery-inset-x);
 }
 

@@ -185,7 +185,7 @@ const resolveSortKey = (value: string | string[] | undefined): SortKey => {
 
 const resolveSortDirection = (value: string | string[] | undefined): SortDirection => {
   const firstValue = Array.isArray(value) ? value[0] : value;
-  return firstValue === "desc" ? "desc" : "asc";
+  return firstValue === "asc" ? "asc" : "desc";
 };
 
 const resolveSearchQuery = (value: string | string[] | undefined) => {
@@ -196,10 +196,10 @@ const resolveSearchQuery = (value: string | string[] | undefined) => {
 const normalizedIncludes = (value: string | number | null | undefined, query: string) =>
   String(value ?? "").toLowerCase().includes(query);
 
-const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "asc", searchQuery = "") => {
+const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "desc", searchQuery = "") => {
   const params = new URLSearchParams();
   if (view !== "all") params.set("view", view);
-  if (sort !== "order" || direction !== "asc") {
+  if (sort !== "order" || direction !== "desc") {
     params.set("sort", sort);
     params.set("dir", direction);
   }
@@ -524,7 +524,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
         <div className="flex flex-wrap items-center gap-3">
           <form action="/admin/orders/archived" className="flex items-center gap-2">
             {activeView !== "all" ? <input type="hidden" name="view" value={activeView} /> : null}
-            {activeSort !== "order" || activeDirection !== "asc" ? (
+            {activeSort !== "order" || activeDirection !== "desc" ? (
               <>
                 <input type="hidden" name="sort" value={activeSort} />
                 <input type="hidden" name="dir" value={activeDirection} />
