@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ENQUIRY_INTERESTS,
   enquiryInterestLabel,
@@ -20,6 +20,36 @@ type EnquiryResponse = {
   error?: string;
 };
 
+const MAX_ATTACHMENT_COUNT = 3;
+const MAX_ATTACHMENT_BYTES = 4_000_000;
+const ALLOWED_ATTACHMENT_EXTENSIONS = new Set([
+  "pdf",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "heic",
+  "ai",
+  "eps",
+]);
+
+function attachmentExtension(filename: string) {
+  return filename.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function validateAttachments(files: File[]) {
+  if (files.length > MAX_ATTACHMENT_COUNT) {
+    return `Please choose no more than ${MAX_ATTACHMENT_COUNT} files.`;
+  }
+  if (files.some((file) => !ALLOWED_ATTACHMENT_EXTENSIONS.has(attachmentExtension(file.name)))) {
+    return "Attachments must be PDF, PNG, JPG, WEBP, HEIC, AI, or EPS files.";
+  }
+  if (files.reduce((total, file) => total + file.size, 0) > MAX_ATTACHMENT_BYTES) {
+    return "Attachments must be no more than 4 MB combined.";
+  }
+  return null;
+}
+
 function localToday() {
   const today = new Date();
   const year = today.getFullYear();
@@ -37,6 +67,7 @@ export function EnquiryForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
   const startedAtRef = useRef(Date.now());
   const trackedStartRef = useRef(false);
 
@@ -51,31 +82,28 @@ export function EnquiryForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const payload = {
-      name: formData.get("name"),
-      email: formData.get("email"),
-      phone: formData.get("phone"),
-      organisation: formData.get("organisation"),
-      interest: formData.get("interest"),
-      requiredDate: formData.get("requiredDate"),
-      quantity: formData.get("quantity"),
-      message: formData.get("message"),
-      website: formData.get("website"),
-      productContext,
-      sourcePage,
-      startedAt: startedAtRef.current,
-    };
+    const attachments = formData
+      .getAll("attachments")
+      .filter((value): value is File => typeof value !== "string" && value.size > 0);
+    const attachmentError = validateAttachments(attachments);
+    if (attachmentError) {
+      setError(attachmentError);
+      return;
+    }
+
+    setSubmitting(true);
+    if (productContext) formData.set("productContext", productContext);
+    if (sourcePage) formData.set("sourcePage", sourcePage);
+    formData.set("startedAt", String(startedAtRef.current));
 
     try {
       const response = await fetch("/api/enquiries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
       const result = (await response.json().catch(() => ({}))) as EnquiryResponse;
       if (!response.ok || !result.ok || !result.reference) {
@@ -97,6 +125,19 @@ export function EnquiryForm({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleAttachmentsChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.currentTarget.files ?? []);
+    const attachmentError = validateAttachments(files);
+    if (attachmentError) {
+      event.currentTarget.value = "";
+      setAttachmentNames([]);
+      setError(attachmentError);
+      return;
+    }
+    setError(null);
+    setAttachmentNames(files.map((file) => file.name));
   };
 
   if (reference) {
@@ -138,6 +179,7 @@ export function EnquiryForm({
 
       <form
         className="mt-7 space-y-5"
+        encType="multipart/form-data"
         onFocusCapture={trackStartOnce}
         onSubmit={handleSubmit}
         noValidate={false}
@@ -248,6 +290,29 @@ export function EnquiryForm({
             className="mt-2 w-full resize-y rounded-xl border border-zinc-200 bg-white px-4 py-3 text-base font-normal text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-[#ff6f95] focus:ring-2 focus:ring-[#ff6f95]/20"
           />
         </label>
+
+        <div>
+          <label className="block text-sm font-semibold text-zinc-700" htmlFor="enquiry-attachments">
+            Attach files <span className="font-normal text-zinc-400">(optional)</span>
+          </label>
+          <input
+            id="enquiry-attachments"
+            name="attachments"
+            type="file"
+            multiple
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.ai,.eps"
+            onChange={handleAttachmentsChange}
+            className="mt-2 block w-full cursor-pointer rounded-xl border border-zinc-200 bg-white text-sm font-normal text-zinc-600 file:mr-4 file:cursor-pointer file:border-0 file:bg-[#fff2f6] file:px-4 file:py-3 file:font-semibold file:text-[#b6456b] hover:file:bg-[#fce4ec] focus:outline-none focus:ring-2 focus:ring-[#ff6f95]/20"
+          />
+          <p className="mt-2 text-xs leading-5 text-zinc-500">
+            Up to 3 PDF, PNG, JPG, WEBP, HEIC, AI, or EPS files; 4 MB combined.
+          </p>
+          {attachmentNames.length > 0 ? (
+            <p className="mt-1 break-words text-xs font-medium text-zinc-600">
+              Selected: {attachmentNames.join(", ")}
+            </p>
+          ) : null}
+        </div>
 
         {error ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

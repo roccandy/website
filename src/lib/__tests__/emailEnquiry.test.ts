@@ -61,6 +61,13 @@ describe("sendWebsiteEnquiryEmails", () => {
         productContext: "Branded logo candy",
         sourcePage: "/design/branded-logo-candy",
       },
+      attachments: [
+        {
+          filename: "logo.pdf",
+          contentType: "application/pdf",
+          content: Buffer.from("%PDF-test"),
+        },
+      ],
     });
 
     expect(sendMail).toHaveBeenCalledTimes(2);
@@ -72,6 +79,13 @@ describe("sendWebsiteEnquiryEmails", () => {
         replyTo: "jane@example.com",
         subject: expect.stringContaining("RCQ-ABC12345"),
         text: expect.stringContaining("Product or page context: Branded logo candy"),
+        attachments: [
+          expect.objectContaining({
+            filename: "logo.pdf",
+            contentType: "application/pdf",
+            contentDisposition: "attachment",
+          }),
+        ],
       }),
     );
     expect(sendMail).toHaveBeenNthCalledWith(
@@ -81,6 +95,8 @@ describe("sendWebsiteEnquiryEmails", () => {
         to: ["jane@example.com"],
         replyTo: "enquiries@roccandy.com.au",
         subject: expect.stringContaining("RCQ-ABC12345"),
+        attachments: undefined,
+        html: expect.stringContaining("logo.pdf"),
       }),
     );
   });

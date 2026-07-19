@@ -651,9 +651,18 @@ type WebsiteEnquiryEmailInput = {
   reference: string;
   receivedAt: string;
   enquiry: WebsiteEnquiry;
+  attachments?: {
+    filename: string;
+    contentType: string;
+    content: Buffer;
+  }[];
 };
 
-function enquiryDetailsLines({ reference, receivedAt, enquiry }: WebsiteEnquiryEmailInput) {
+function attachmentNames(attachments: WebsiteEnquiryEmailInput["attachments"]) {
+  return attachments?.map((attachment) => attachment.filename).join(", ") || "None";
+}
+
+function enquiryDetailsLines({ reference, receivedAt, enquiry, attachments }: WebsiteEnquiryEmailInput) {
   return [
     `Reference: ${reference}`,
     `Received: ${formatDate(receivedAt)}`,
@@ -666,13 +675,14 @@ function enquiryDetailsLines({ reference, receivedAt, enquiry }: WebsiteEnquiryE
     `Approximate quantity: ${enquiry.quantity ?? "-"}`,
     `Product or page context: ${enquiry.productContext ?? "-"}`,
     `Source page: ${enquiry.sourcePage ?? "-"}`,
+    `Attachments: ${attachmentNames(attachments)}`,
     "",
     "Message",
     enquiry.message,
   ];
 }
 
-function enquiryDetailsHtml({ reference, receivedAt, enquiry }: WebsiteEnquiryEmailInput) {
+function enquiryDetailsHtml({ reference, receivedAt, enquiry, attachments }: WebsiteEnquiryEmailInput) {
   const detailRows = [
     ["Reference", reference],
     ["Received", formatDate(receivedAt)],
@@ -685,6 +695,7 @@ function enquiryDetailsHtml({ reference, receivedAt, enquiry }: WebsiteEnquiryEm
     ["Approximate quantity", enquiry.quantity ?? "-"],
     ["Product or page context", enquiry.productContext ?? "-"],
     ["Source page", enquiry.sourcePage ?? "-"],
+    ["Attachments", attachmentNames(attachments)],
   ];
 
   return `
@@ -731,6 +742,12 @@ export async function sendWebsiteEnquiryEmails(input: WebsiteEnquiryEmailInput) 
       `Reply to this email to respond directly to ${input.enquiry.name}.`,
     ].join("\n"),
     html: enquiryDetailsHtml(input),
+    attachments: input.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      contentType: attachment.contentType,
+      content: attachment.content,
+      contentDisposition: "attachment",
+    })),
   });
 
   if ("skipped" in adminResult && adminResult.skipped) {
@@ -760,6 +777,11 @@ export async function sendWebsiteEnquiryEmails(input: WebsiteEnquiryEmailInput) 
           <p>Hi ${escapeHtml(input.enquiry.name)},</p>
           <p>We have received your enquiry and will reply by email as soon as we can.</p>
           <p><strong>Reference:</strong> ${escapeHtml(input.reference)}</p>
+          ${
+            input.attachments?.length
+              ? `<p><strong>Files included with your enquiry:</strong> ${escapeHtml(attachmentNames(input.attachments))}</p>`
+              : ""
+          }
           <p style="white-space:pre-wrap;padding:16px;border-radius:12px;background:#faf5f7;border:1px solid #f4dce6;">${escapeHtml(input.enquiry.message)}</p>
           <p>If your enquiry is urgent, call us on <a href="tel:0414519211" style="color:#ff5f99;">0414 519 211</a>.</p>
           <p>Roc Candy</p>

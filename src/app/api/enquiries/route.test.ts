@@ -22,6 +22,24 @@ function makeRequest(body: Record<string, unknown>, ip = "203.0.113.10") {
   });
 }
 
+function makeMultipartRequest(
+  fields: Record<string, string>,
+  files: File[],
+  ip = "203.0.113.20",
+) {
+  const formData = new FormData();
+  Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
+  files.forEach((file) => formData.append("attachments", file));
+  return new Request("https://roccandy.com.au/api/enquiries", {
+    method: "POST",
+    headers: {
+      Origin: "https://roccandy.com.au",
+      "x-forwarded-for": ip,
+    },
+    body: formData,
+  });
+}
+
 describe("POST /api/enquiries", () => {
   beforeEach(() => {
     sendWebsiteEnquiryEmails.mockReset();
@@ -107,6 +125,57 @@ describe("POST /api/enquiries", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(403);
+    expect(sendWebsiteEnquiryEmails).not.toHaveBeenCalled();
+  });
+
+  it("validates and sends uploaded attachments to the email handler", async () => {
+    const response = await POST(
+      makeMultipartRequest(
+        {
+          name: "Jane Smith",
+          email: "jane@example.com",
+          interest: "branded",
+          message: "Please use our attached logo for the candy.",
+        },
+        [
+          new File(
+            [Buffer.concat([Buffer.from("89504e470d0a1a0a", "hex"), Buffer.from("logo")])],
+            "our-logo.png",
+            { type: "image/png" },
+          ),
+        ],
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(sendWebsiteEnquiryEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: [
+          expect.objectContaining({
+            filename: "our-logo.png",
+            contentType: "image/png",
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("rejects a renamed file whose contents do not match its extension", async () => {
+    const response = await POST(
+      makeMultipartRequest(
+        {
+          name: "Jane Smith",
+          email: "jane@example.com",
+          message: "Please review the attached design file.",
+        },
+        [new File(["not really a PDF"], "design.pdf", { type: "application/pdf" })],
+        "203.0.113.21",
+      ),
+    );
+    const payload = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(400);
+    expect(payload.error).toContain("does not appear to be a valid PDF");
     expect(sendWebsiteEnquiryEmails).not.toHaveBeenCalled();
   });
 });
