@@ -159,6 +159,15 @@ export function QuoteBuilder({
   const isEditing = Boolean(editItemId && editItem);
   const appliedEditRef = useRef<string | null>(null);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
+  const reviewPaletteLabelByHex = useMemo(
+    () =>
+      new Map(
+        paletteGroups
+          .flatMap((group) => group.options)
+          .map((option) => [option.hex.toLowerCase(), option.label]),
+      ),
+    [paletteGroups],
+  );
   const labelTypeById = useMemo(() => new Map(labelTypes.map((labelType) => [labelType.id, labelType])), [labelTypes]);
   const ingredientLabelType = useMemo(() => {
     const id = settings.ingredient_label_type_id;
@@ -711,6 +720,20 @@ export function QuoteBuilder({
     const opt = packagingOptions.find((p) => p.id === selectedOptionId);
     return !!opt && opt.type.toLowerCase() === "bulk" && selectionQty > 0;
   }, [packagingOptions, selectedOptionId, selectionQty]);
+  const selectedCustomLabelCount = labelsOptIn
+    ? hasBulkSelection
+      ? labelCountOverride > 0
+        ? Math.min(labelCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+        : 0
+      : totalPackages
+    : null;
+  const selectedIngredientLabelCount = ingredientLabelsOptIn
+    ? hasBulkSelection
+      ? ingredientLabelsCountOverride > 0
+        ? Math.min(ingredientLabelsCountOverride, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+        : 0
+      : totalPackages
+    : null;
   const maxCustomLabelCountForPricing = useMemo(() => {
     if (!selectedOption) return 0;
     const maxPackages = Number(selectedOption.max_packages ?? 0);
@@ -848,6 +871,54 @@ export function QuoteBuilder({
     colorsValid &&
     labelTypeValid &&
     (!labelsOptIn || !!labelImageUrl);
+  const formatReviewColour = (value: string) => {
+    if (!value) return "Not selected";
+    return reviewPaletteLabelByHex.get(value.toLowerCase()) ?? `Custom (${value.toUpperCase()})`;
+  };
+  const jacketTypeSummary = rainbowJacket
+    ? "Rainbow"
+    : twoColourJacket && pinstripeJacket
+      ? "Two colour + pinstripe"
+      : twoColourJacket
+        ? "Two colour"
+        : pinstripeJacket
+          ? "Pinstripe"
+          : "Single colour";
+  const jacketColourSummary = rainbowJacket
+    ? "Rainbow"
+    : [formatReviewColour(jacketColorOne), showColourTwo ? formatReviewColour(jacketColorTwo) : null]
+        .filter(Boolean)
+        .join(" / ");
+  const selectedLabelType = labelTypeId ? labelTypeById.get(labelTypeId) : null;
+  const selectedLabelTypeSummary = selectedLabelType ? formatLabelTypeLabel(selectedLabelType) : "";
+  const mobileReviewDetails = [
+    { label: "Order type", value: `${mainTitle}${subtitleLabel ? ` — ${subtitleLabel}` : ""}` },
+    { label: "Design", value: designTitle || mainTitle },
+    {
+      label: "Packaging",
+      value: selectedOption
+        ? `${toTitleCase(selectedOption.type)} — ${toTitleCase(selectedOption.size)}`
+        : "Not selected",
+    },
+    { label: "Lid colour", value: isJarOption && jarLidColor ? toTitleCase(jarLidColor) : "" },
+    { label: "Quantity", value: selectionQty ? `${selectionQty}` : "Not selected" },
+    { label: "Flavour", value: flavor || "Not selected" },
+    { label: "Jacket type", value: jacketTypeSummary },
+    { label: "Jacket colours", value: jacketColourSummary },
+    { label: "Text colour", value: isBranded ? "" : formatReviewColour(textColor) },
+    { label: "Heart colour", value: isWedding ? formatReviewColour(heartColor) : "" },
+    { label: "Design upload", value: isBranded ? (logoUrl ? "Added" : "Not added") : "" },
+    { label: "Custom labels", value: labelsOptIn ? `${selectedCustomLabelCount ?? 0}` : "No" },
+    { label: "Label type", value: labelsOptIn ? selectedLabelTypeSummary : "" },
+    {
+      label: "Label artwork",
+      value: labelsOptIn ? labelFileName || (labelImageUrl ? "Added" : "Not added") : "",
+    },
+    {
+      label: "Ingredient labels",
+      value: ingredientLabelsOptIn ? `${selectedIngredientLabelCount ?? 0}` : "No",
+    },
+  ].filter((detail) => detail.value);
 
   useEffect(() => {
     if (!isText) {
@@ -2613,29 +2684,26 @@ export function QuoteBuilder({
               mobileStep === 3 ? "" : "hidden md:block"
             }`}
           >
+              <div className="mb-3 overflow-hidden rounded-xl bg-zinc-50 md:hidden">
+                <p className="sr-only">Candy design preview</p>
+                <div className="flex justify-center">
+                  {renderCandyPreview({ width: 260, height: 193 }, 1.05)}
+                </div>
+              </div>
               <h2 className="site-small-title text-zinc-900">Ready to continue?</h2>
               <p className="mt-2 text-sm text-zinc-600">
                 You can add delivery, payment, and contact details in the cart.
               </p>
-              <dl className="mt-4 grid gap-2 rounded-xl bg-zinc-50 p-3 text-sm md:hidden">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Packaging</dt>
-                  <dd className="text-right font-semibold text-zinc-800">
-                    {selectedOption ? `${toTitleCase(selectedOption.type)} — ${toTitleCase(selectedOption.size)}` : "Not selected"}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Quantity</dt>
-                  <dd className="font-semibold text-zinc-800">{selectionQty || "Not selected"}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Design</dt>
-                  <dd className="text-right font-semibold text-zinc-800">{designTitle || mainTitle}</dd>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-zinc-500">Flavour</dt>
-                  <dd className="font-semibold text-zinc-800">{flavor || "Not selected"}</dd>
-                </div>
+              <dl className="mt-4 grid gap-1.5 rounded-xl bg-zinc-50 p-3 text-xs md:hidden">
+                {mobileReviewDetails.map((detail) => (
+                  <div
+                    key={detail.label}
+                    className="flex justify-between gap-3 border-b border-zinc-200/70 pb-1.5"
+                  >
+                    <dt className="shrink-0 text-zinc-500">{detail.label}</dt>
+                    <dd className="min-w-0 text-right font-semibold text-zinc-800">{detail.value}</dd>
+                  </div>
+                ))}
                 <div className="flex justify-between gap-4 border-t border-zinc-200 pt-2">
                   <dt className="text-zinc-500">Total</dt>
                   <dd className="font-semibold text-zinc-900">{result ? formatMoney(result.total) : "Calculating"}</dd>

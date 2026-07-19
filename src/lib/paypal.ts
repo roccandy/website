@@ -8,6 +8,37 @@ type PayPalOrderResponse = {
   id: string;
 };
 
+export type PayPalOrderDetails = {
+  id: string;
+  status: string;
+  payer?: {
+    name?: {
+      given_name?: string;
+      surname?: string;
+    };
+    email_address?: string;
+  };
+  purchase_units?: Array<{
+    amount?: {
+      currency_code?: string;
+      value?: string;
+    };
+    shipping?: {
+      name?: {
+        full_name?: string;
+      };
+      address?: {
+        address_line_1?: string;
+        address_line_2?: string;
+        admin_area_2?: string;
+        admin_area_1?: string;
+        postal_code?: string;
+        country_code?: string;
+      };
+    };
+  }>;
+};
+
 type PayPalCaptureResponse = {
   id: string;
   status: string;
@@ -62,7 +93,7 @@ export async function getPayPalAccessToken(): Promise<string> {
 export async function createPayPalOrder(
   totalAmount: number,
   currency = "AUD",
-  meta?: { customId?: string; description?: string }
+  meta?: { customId?: string; description?: string; pickup?: boolean }
 ) {
   const token = await getPayPalAccessToken();
   const response = await fetch(`${getPayPalApiBase()}/v2/checkout/orders`, {
@@ -73,6 +104,14 @@ export async function createPayPalOrder(
     },
     body: JSON.stringify({
       intent: "CAPTURE",
+      payment_source: {
+        paypal: {
+          experience_context: {
+            shipping_preference: meta?.pickup ? "NO_SHIPPING" : "GET_FROM_FILE",
+            user_action: "PAY_NOW",
+          },
+        },
+      },
       purchase_units: [
         {
           amount: {
@@ -88,6 +127,22 @@ export async function createPayPalOrder(
   const data = (await response.json().catch(() => ({}))) as PayPalOrderResponse;
   if (!response.ok || !data.id) {
     throw new Error("Unable to create PayPal order.");
+  }
+  return data;
+}
+
+export async function getPayPalOrder(orderId: string): Promise<PayPalOrderDetails> {
+  const token = await getPayPalAccessToken();
+  const response = await fetch(`${getPayPalApiBase()}/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = (await response.json().catch(() => ({}))) as PayPalOrderDetails;
+  if (!response.ok || !data.id) {
+    throw new Error("Unable to verify PayPal order details.");
   }
   return data;
 }

@@ -145,6 +145,7 @@ type PaymentSuccessResult = {
   orderTotal?: number | null;
   tax?: number | null;
   shipping?: number | null;
+  customer?: CheckoutOrderPayload["customer"] | null;
 };
 
 function formatMoney(value: number) {
@@ -481,6 +482,7 @@ function PayPalPayment({
                   orderTotal?: number | null;
                   tax?: number | null;
                   shipping?: number | null;
+                  customer?: CheckoutOrderPayload["customer"] | null;
                 };
                 if (!response.ok || !payload.ok) {
                   throw new Error(payload.error || "PayPal capture failed.");
@@ -492,6 +494,7 @@ function PayPalPayment({
                   orderTotal: payload.orderTotal ?? null,
                   tax: payload.tax ?? null,
                   shipping: payload.shipping ?? null,
+                  customer: payload.customer ?? null,
                 });
               } finally {
                 onProcessingChange({ active: false, title: "", message: "" });
@@ -1351,6 +1354,7 @@ export function CheckoutClient({
     });
   }, [analyticsItems, cartPricing.total, items, paymentSuccess]);
 
+  const paypalSelected = selectedPaymentMethod === "paypal";
   const addressDisabled = pickup;
   const addressInputClass = `mt-1 w-full rounded border border-zinc-200 px-3 py-2 text-sm ${
     addressDisabled ? "bg-zinc-50 text-zinc-400" : "bg-white text-zinc-900"
@@ -1364,12 +1368,12 @@ export function CheckoutClient({
     }
     if (!dueDate) missing.push(hasCustomItems ? "date required" : "delivery or pickup date");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
-    if (!firstName.trim()) missing.push("first name");
-    if (!lastName.trim()) missing.push("surname");
-    if (!email.trim()) missing.push("email address");
+    if (!paypalSelected && !firstName.trim()) missing.push("first name");
+    if (!paypalSelected && !lastName.trim()) missing.push("surname");
+    if (!paypalSelected && !email.trim()) missing.push("email address");
     if (!phone.trim()) missing.push("phone number");
     if (hasBrandedCustomItems && !organizationName.trim()) missing.push("organisation name");
-    if (!pickup) {
+    if (!paypalSelected && !pickup) {
       if (!addressLine1.trim()) missing.push("address line 1");
       if (!suburb.trim()) missing.push("suburb or town");
       if (!postcode.trim()) missing.push("postcode");
@@ -1390,7 +1394,7 @@ export function CheckoutClient({
   const buildOrderPayload = (): CheckoutOrderPayload => ({
     dueDate: dueDate || undefined,
     pickup,
-    paymentPreference: null,
+    paymentPreference: selectedPaymentMethod,
     promoCode: promoCode.trim() || null,
     customer: {
       firstName: firstName.trim(),
@@ -1437,19 +1441,27 @@ export function CheckoutClient({
 
   const paymentMethodLabel = selectedPaymentMethod === "credit_card" ? "Credit Card" : "PayPal";
 
-  const deliveryAddress = pickup
-    ? "Pickup in North Perth"
-    : [addressLine1.trim(), addressLine2.trim(), suburb.trim(), stateValue.trim(), postcode.trim()]
-        .filter(Boolean)
-        .join(", ") || "-";
-
   const buildSuccessSummary = ({
     adminEmailWarning: warning,
     orderNumber,
+    customer: paidCustomer,
   }: {
     adminEmailWarning?: string | null;
     orderNumber?: string | null;
+    customer?: CheckoutOrderPayload["customer"] | null;
   }) => {
+    const resolvedCustomer = paidCustomer ?? buildOrderPayload().customer;
+    const resolvedDeliveryAddress = pickup
+      ? "Pickup in North Perth"
+      : [
+          resolvedCustomer.addressLine1?.trim(),
+          resolvedCustomer.addressLine2?.trim(),
+          resolvedCustomer.suburb?.trim(),
+          resolvedCustomer.state?.trim(),
+          resolvedCustomer.postcode?.trim(),
+        ]
+          .filter(Boolean)
+          .join(", ") || "-";
     const summaryItems = items.map((item) => {
       if (item.type === "premade") {
         const subtitleParts = [formatWeight(item.weight_g), item.flavor].filter(Boolean);
@@ -1513,11 +1525,11 @@ export function CheckoutClient({
       paymentMethod: paymentMethodLabel,
       requestedDate: dueDate || null,
       pickup,
-      deliveryAddress,
+      deliveryAddress: resolvedDeliveryAddress,
       customer: {
-        name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
+        name: `${resolvedCustomer.firstName.trim()} ${resolvedCustomer.lastName.trim()}`.trim(),
+        email: resolvedCustomer.email.trim(),
+        phone: resolvedCustomer.phone.trim(),
         organizationName: organizationName.trim() || null,
       },
       items: successItems,
@@ -1535,6 +1547,7 @@ export function CheckoutClient({
     orderTotal,
     tax,
     shipping,
+    customer,
   }: PaymentSuccessResult) => {
     if (trackingTransactionId || orderNumber) {
       trackPurchaseOnce({
@@ -1549,6 +1562,7 @@ export function CheckoutClient({
     buildSuccessSummary({
       adminEmailWarning: warning,
       orderNumber,
+      customer,
     });
     setPaymentSuccess(true);
     setPaymentError(null);
@@ -1584,15 +1598,15 @@ export function CheckoutClient({
         (!dueDate || (hasCustomItems && isDueDateBlocked)
           ? dateSectionRef.current?.querySelector<HTMLButtonElement>("[aria-haspopup='dialog']")
           : null) ||
-        (!firstName.trim() ? firstNameRef.current : null) ||
-        (!lastName.trim() ? lastNameRef.current : null) ||
-        (!email.trim() ? emailRef.current : null) ||
+        (!paypalSelected && !firstName.trim() ? firstNameRef.current : null) ||
+        (!paypalSelected && !lastName.trim() ? lastNameRef.current : null) ||
+        (!paypalSelected && !email.trim() ? emailRef.current : null) ||
         (!phone.trim() ? phoneRef.current : null) ||
         (hasBrandedCustomItems && !organizationName.trim() ? organizationNameRef.current : null) ||
-        (!pickup && !addressLine1.trim() ? addressLine1Ref.current : null) ||
-        (!pickup && !suburb.trim() ? suburbRef.current : null) ||
-        (!pickup && !postcode.trim() ? postcodeRef.current : null) ||
-        (!pickup && !stateValue.trim() ? stateRef.current : null);
+        (!paypalSelected && !pickup && !addressLine1.trim() ? addressLine1Ref.current : null) ||
+        (!paypalSelected && !pickup && !suburb.trim() ? suburbRef.current : null) ||
+        (!paypalSelected && !pickup && !postcode.trim() ? postcodeRef.current : null) ||
+        (!paypalSelected && !pickup && !stateValue.trim() ? stateRef.current : null);
 
       window.requestAnimationFrame(() => {
         const target = firstIncompleteField ?? paymentErrorRef.current;
@@ -1688,6 +1702,73 @@ export function CheckoutClient({
             )}
           </div>
 
+          {!paymentSuccess ? (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <h3 className="site-small-title text-zinc-900">Choose how to pay</h3>
+              <p className="mt-2 text-sm text-zinc-600">
+                Select a payment method first. You will complete payment after the order details below.
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={selectedPaymentMethod === "credit_card"}
+                  onClick={() => {
+                    setSelectedPaymentMethod("credit_card");
+                    setPaymentError(null);
+                  }}
+                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
+                    selectedPaymentMethod === "credit_card"
+                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">Credit card</span>
+                  <span className="mt-1 block text-[11px] text-zinc-500">Visa, Mastercard and more</span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={selectedPaymentMethod === "paypal"}
+                  onClick={() => {
+                    setSelectedPaymentMethod("paypal");
+                    setPaymentError(null);
+                  }}
+                  className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
+                    selectedPaymentMethod === "paypal"
+                      ? "border-[#dba6be] bg-[#fff1f5] text-zinc-900 ring-1 ring-[#f7e4ec]"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                  }`}
+                >
+                  <span className="block text-sm font-semibold">PayPal</span>
+                  <span className="mt-1 block text-[11px] text-zinc-500">Use saved contact and delivery details</span>
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="min-h-16 cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-left text-zinc-400"
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                    Apple Pay
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
+                      Coming soon
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="min-h-16 cursor-not-allowed rounded-xl border border-zinc-200 bg-zinc-100 px-3 py-2 text-left text-zinc-400"
+                >
+                  <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                    Google Pay
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[9px] uppercase tracking-wide text-zinc-500">
+                      Coming soon
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div ref={dateSectionRef} className="flex justify-center">
             <div className="w-fit max-w-full rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Date & delivery</h3>
@@ -1771,56 +1852,63 @@ export function CheckoutClient({
           <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
             <h3 className="site-small-title text-zinc-900">Your details</h3>
             <div className="mt-3 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  First name*
-                  <input
-                    ref={firstNameRef}
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    aria-invalid={!firstName.trim()}
-                    autoComplete="given-name"
-                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  Surname*
-                  <input
-                    ref={lastNameRef}
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    aria-invalid={!lastName.trim()}
-                    autoComplete="family-name"
-                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  Email address*
-                  <input
-                    ref={emailRef}
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    aria-invalid={!email.trim()}
-                    autoComplete="email"
-                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  Phone number*
-                  <input
-                    ref={phoneRef}
-                    type="tel"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    aria-invalid={!phone.trim()}
-                    autoComplete="tel"
-                    className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                  />
-                </label>
-              </div>
+              {paypalSelected ? (
+                <p className="rounded-xl border border-[#f0d9e3] bg-[#fff7fa] p-3 text-sm leading-6 text-zinc-600">
+                  PayPal will provide your name, email address, and selected delivery address securely when
+                  you approve the payment. We still need a phone number for your order.
+                </p>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                      First name*
+                      <input
+                        ref={firstNameRef}
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        aria-invalid={!firstName.trim()}
+                        autoComplete="given-name"
+                        className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                      Surname*
+                      <input
+                        ref={lastNameRef}
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        aria-invalid={!lastName.trim()}
+                        autoComplete="family-name"
+                        className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                      />
+                    </label>
+                  </div>
+                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                    Email address*
+                    <input
+                      ref={emailRef}
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      aria-invalid={!email.trim()}
+                      autoComplete="email"
+                      className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                    />
+                  </label>
+                </>
+              )}
+              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                Phone number*
+                <input
+                  ref={phoneRef}
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  aria-invalid={!phone.trim()}
+                  autoComplete="tel"
+                  className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                />
+              </label>
               <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
                 Organisation name{hasBrandedCustomItems ? "*" : ""}
                 <input
@@ -1832,74 +1920,78 @@ export function CheckoutClient({
                   className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
                 />
               </label>
-              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                Address line 1*
-                <input
-                  ref={addressLine1Ref}
-                  value={addressLine1}
-                  onChange={(event) => setAddressLine1(event.target.value)}
-                  aria-invalid={!pickup && !addressLine1.trim()}
-                  autoComplete="address-line1"
-                  className={addressInputClass}
-                  disabled={addressDisabled}
-                />
-              </label>
-              <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                Address line 2
-                <input
-                  value={addressLine2}
-                  onChange={(event) => setAddressLine2(event.target.value)}
-                  autoComplete="address-line2"
-                  className={addressInputClass}
-                  disabled={addressDisabled}
-                />
-              </label>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  Suburb or town*
-                  <input
-                    ref={suburbRef}
-                    value={suburb}
-                    onChange={(event) => setSuburb(event.target.value)}
-                    aria-invalid={!pickup && !suburb.trim()}
-                    autoComplete="address-level2"
-                    className={addressInputClass}
-                    disabled={addressDisabled}
-                  />
-                </label>
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  Postcode*
-                  <input
-                    ref={postcodeRef}
-                    value={postcode}
-                    onChange={(event) => setPostcode(event.target.value)}
-                    aria-invalid={!pickup && !postcode.trim()}
-                    autoComplete="postal-code"
-                    inputMode="numeric"
-                    className={addressInputClass}
-                    disabled={addressDisabled}
-                  />
-                </label>
-                <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                  State*
-                  <select
-                    ref={stateRef}
-                    value={stateValue}
-                    onChange={(event) => setStateValue(event.target.value)}
-                    aria-invalid={!pickup && !stateValue.trim()}
-                    autoComplete="address-level1"
-                    className={addressInputClass}
-                    disabled={addressDisabled}
-                  >
-                    <option value="">Select state</option>
-                    {AU_STATES.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              {!paypalSelected ? (
+                <>
+                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                    Address line 1*
+                    <input
+                      ref={addressLine1Ref}
+                      value={addressLine1}
+                      onChange={(event) => setAddressLine1(event.target.value)}
+                      aria-invalid={!pickup && !addressLine1.trim()}
+                      autoComplete="address-line1"
+                      className={addressInputClass}
+                      disabled={addressDisabled}
+                    />
+                  </label>
+                  <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                    Address line 2
+                    <input
+                      value={addressLine2}
+                      onChange={(event) => setAddressLine2(event.target.value)}
+                      autoComplete="address-line2"
+                      className={addressInputClass}
+                      disabled={addressDisabled}
+                    />
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                      Suburb or town*
+                      <input
+                        ref={suburbRef}
+                        value={suburb}
+                        onChange={(event) => setSuburb(event.target.value)}
+                        aria-invalid={!pickup && !suburb.trim()}
+                        autoComplete="address-level2"
+                        className={addressInputClass}
+                        disabled={addressDisabled}
+                      />
+                    </label>
+                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                      Postcode*
+                      <input
+                        ref={postcodeRef}
+                        value={postcode}
+                        onChange={(event) => setPostcode(event.target.value)}
+                        aria-invalid={!pickup && !postcode.trim()}
+                        autoComplete="postal-code"
+                        inputMode="numeric"
+                        className={addressInputClass}
+                        disabled={addressDisabled}
+                      />
+                    </label>
+                    <label className="block text-xs normal-case tracking-[0.08em] text-zinc-500">
+                      State*
+                      <select
+                        ref={stateRef}
+                        value={stateValue}
+                        onChange={(event) => setStateValue(event.target.value)}
+                        aria-invalid={!pickup && !stateValue.trim()}
+                        autoComplete="address-level1"
+                        className={addressInputClass}
+                        disabled={addressDisabled}
+                      >
+                        <option value="">Select state</option>
+                        {AU_STATES.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -1914,19 +2006,10 @@ export function CheckoutClient({
 
           {!paymentSuccess ? (
             <div id="checkout-payment" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="site-small-title text-zinc-900">Payment method</h3>
-              <label className="mt-3 block text-xs normal-case tracking-[0.08em] text-zinc-500">
-                Select payment method
-                <select
-                  value={selectedPaymentMethod}
-                  onChange={(event) => setSelectedPaymentMethod(event.target.value as PaymentMethod)}
-                  className="mt-2 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-                >
-                  <option value="credit_card">Credit Card</option>
-                  <option value="paypal">PayPal</option>
-                </select>
-              </label>
-
+              <h3 className="site-small-title text-zinc-900">Complete payment</h3>
+              <p className="mt-2 text-sm text-zinc-600">
+                {paypalSelected ? "Pay securely with PayPal." : "Pay securely by credit card."}
+              </p>
               <div className="mt-4">
                 {selectedPaymentMethod === "paypal" ? (
                   <PayPalPayment
@@ -1993,7 +2076,7 @@ export function CheckoutClient({
             onClick={() => setShowBreakdown((current) => !current)}
             className="mt-3 text-xs font-semibold normal-case tracking-[0.08em] text-zinc-500"
           >
-            {showBreakdown ? "Hide price breakdown" : "View price breakdown"}
+            {showBreakdown ? "Hide cart breakdown" : "View cart breakdown"}
           </button>
           {showBreakdown && (
             <div className="mt-3 space-y-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
