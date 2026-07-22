@@ -355,7 +355,9 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                     ) : null}
                   </div>
                 ) : null}
-                {page.slug === "design/branded-logo-candy" ? <GoogleReviews className="w-full" /> : null}
+                {["design/wedding-candy", "design/custom-text-candy", "design/branded-logo-candy"].includes(page.slug) ? (
+                  <GoogleReviews className="-mb-2 mt-10 w-full" />
+                ) : null}
               </div>
 
               {/* Landing-page scrolling gallery. Edit `landingGallery*` values in spacing.ts. */}
