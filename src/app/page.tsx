@@ -7,6 +7,7 @@ import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { SiteUsps } from "@/components/SiteUsps";
+import { GoogleReviews } from "@/components/GoogleReviews";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { DesignCtaModal } from "./DesignCtaModal";
@@ -147,6 +148,8 @@ export default async function Home() {
               ))}
             </div>
           </section>
+
+          <GoogleReviews className="mt-6" />
 
           <div className="site-home-below-hero-stack site-page-stack-large">
           <ScrollReveal delayMs={40}>

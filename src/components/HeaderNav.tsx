@@ -12,6 +12,9 @@ export default function HeaderNav() {
       <Link href="/design/branded-logo-candy" className="inline-flex min-h-8 items-center px-1 leading-none transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] md:min-h-11">
         Branded
       </Link>
+      <Link href="/custom-orders" className="inline-flex min-h-8 items-center px-1 leading-none transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] md:min-h-11">
+        Custom Orders
+      </Link>
       <Link href="/pre-made-candy" className="inline-flex min-h-8 items-center px-1 leading-none transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] md:min-h-11">
         Pre-Made
       </Link>

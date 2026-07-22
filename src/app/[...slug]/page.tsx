@@ -27,6 +27,7 @@ import { buildDesignerPath } from "@/lib/designUrls";
 import { buildLandingGalleryRows } from "@/lib/landingGallery";
 import { EnquiryForm } from "@/components/EnquiryForm";
 import { ContextualEnquiryCta } from "@/components/ContextualEnquiryCta";
+import { GoogleReviews } from "@/components/GoogleReviews";
 import {
   buildEnquiryHref,
   ENQUIRY_INTERESTS,
@@ -354,6 +355,7 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                     ) : null}
                   </div>
                 ) : null}
+                {page.slug === "design/branded-logo-candy" ? <GoogleReviews className="w-full" /> : null}
               </div>
 
               {/* Landing-page scrolling gallery. Edit `landingGallery*` values in spacing.ts. */}
