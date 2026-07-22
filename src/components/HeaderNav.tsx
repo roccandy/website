@@ -13,7 +13,8 @@ export default function HeaderNav() {
         Branded
       </Link>
       <Link href="/custom-orders" className="inline-flex min-h-8 items-center px-1 leading-none transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] md:min-h-11">
-        Custom Orders
+        <span className="md:hidden">Custom</span>
+        <span className="hidden md:inline">Custom Orders</span>
       </Link>
       <Link href="/pre-made-candy" className="inline-flex min-h-8 items-center px-1 leading-none transition-colors hover:text-[#ff4f80] focus-visible:rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] md:min-h-11">
         Pre-Made
