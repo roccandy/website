@@ -72,6 +72,7 @@ export const LANDING_GALLERY_PAGE_SLUGS = [
 export const HERO_INTRO_SITE_PAGE_SLUGS = [
   ...LANDING_GALLERY_PAGE_SLUGS,
   "contact",
+  "custom-orders",
   "pre-made-candy",
 ] as const;
 
@@ -88,6 +89,7 @@ export const EDITABLE_SITE_PAGE_SLUGS = [
   "design/branded-logo-candy",
   "pre-made-candy",
   "contact",
+  "custom-orders",
   "privacy",
   "terms-and-conditions",
 ] as const;
@@ -349,6 +351,32 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     seoTitle: "Contact Roc Candy | Personalised Rock Candy Australia",
     metaDescription:
       "Contact Roc Candy for personalised rock candy orders, wedding candy, branded candy, delivery questions, and lead time advice.",
+    ogImageUrl: "/landing/home-feature-poster.jpg",
+    canonicalUrl: null,
+    galleryImageUrls: [],
+  },
+  "custom-orders": {
+    slug: "custom-orders",
+    title: "Custom Candy Orders",
+    heroSubheading: "Have an idea? We'll help bring it to life.",
+    heroSupportingLine: null,
+    bodyHtml: `
+<p>We will help:</p>
+<ul>
+  <li>Explore an idea</li>
+  <li>Work with your deadline</li>
+  <li>Packaging and quantity guidance</li>
+  <li>Colours and styling to suit your theme</li>
+  <li>Which is best? Names, initials or text?</li>
+  <li>Delivery times and urgent orders advice</li>
+  <li>All other enquiries.</li>
+</ul>
+    `,
+    faqHeading: null,
+    faqItemIds: [],
+    seoTitle: "Custom Candy Orders Australia | Personalised Rock Candy Help | Roc Candy",
+    metaDescription:
+      "Have an idea for personalised rock candy? Tell Roc Candy about your event, colours, packaging or timing and we will help shape the right custom order.",
     ogImageUrl: "/landing/home-feature-poster.jpg",
     canonicalUrl: null,
     galleryImageUrls: [],

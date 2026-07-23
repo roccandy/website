@@ -897,7 +897,7 @@ export default async function AdminManagedPagesPage() {
     ["home", "about", "faq", "blog", "design", "pre-made-candy"].includes(page.slug),
   );
   const landingPages = pages.filter((page) =>
-    ["design/wedding-candy", "design/custom-text-candy", "design/branded-logo-candy", "contact"].includes(page.slug),
+    ["design/wedding-candy", "design/custom-text-candy", "design/branded-logo-candy", "contact", "custom-orders"].includes(page.slug),
   );
   const policyPages = pages.filter((page) =>
     ["privacy", "terms-and-conditions"].includes(page.slug),

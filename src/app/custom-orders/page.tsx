@@ -1,46 +1,59 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DesignCtaModal } from "@/app/DesignCtaModal";
 import { EnquiryForm } from "@/components/EnquiryForm";
+import { GoogleReviews } from "@/components/GoogleReviews";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { SiteUsps } from "@/components/SiteUsps";
-import { GoogleReviews } from "@/components/GoogleReviews";
-import { buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema } from "@/lib/seo";
+import { getManagedSitePage } from "@/lib/sitePages";
 
 const PAGE_PATH = "/custom-orders";
-const PAGE_TITLE = "Custom Candy Orders";
-const PAGE_DESCRIPTION =
+const DEFAULT_PAGE_TITLE = "Custom Candy Orders";
+const DEFAULT_PAGE_DESCRIPTION =
   "Have an idea for personalised rock candy? Tell Roc Candy about your event, colours, packaging or timing and we will help shape the right custom order.";
 
-export const metadata: Metadata = buildMetadata({
-  title: "Custom Candy Orders Australia | Personalised Rock Candy Help | Roc Candy",
-  description: PAGE_DESCRIPTION,
-  path: PAGE_PATH,
-  imagePath: "/landing/home-feature-poster.jpg",
-  imageAlt: "Custom candy orders from Roc Candy",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getManagedSitePage("custom-orders");
 
-const helpItems = [
-  "Candy for a celebration, event, campaign or gift",
-  "Colours and styling to suit your theme",
-  "Branded candy and logo artwork questions",
-  "Names, initials or custom text",
-  "Packaging and quantity guidance",
-  "Delivery timing and urgent-order advice",
-];
+  const metadata = buildMetadata({
+    title: page.seoTitle || "Custom Candy Orders Australia | Personalised Rock Candy Help | Roc Candy",
+    description: page.metaDescription || DEFAULT_PAGE_DESCRIPTION,
+    path: PAGE_PATH,
+    imagePath: page.ogImageUrl || "/landing/home-feature-poster.jpg",
+    imageAlt: page.title || "Custom candy orders from Roc Candy",
+  });
 
-export default function CustomOrdersPage() {
-  const enquiriesEmail = process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au";
+  if (page.canonicalUrl) {
+    return {
+      ...metadata,
+      alternates: {
+        canonical: /^https?:\/\//i.test(page.canonicalUrl) ? page.canonicalUrl : buildAbsoluteUrl(page.canonicalUrl),
+      },
+    };
+  }
+
+  return metadata;
+}
+
+export default async function CustomOrdersPage() {
+  const [page, enquiriesEmail] = await Promise.all([
+    getManagedSitePage("custom-orders"),
+    Promise.resolve(process.env.ENQUIRIES_EMAIL?.trim() || "enquiries@roccandy.com.au"),
+  ]);
+  const title = page.title || DEFAULT_PAGE_TITLE;
+  const description = page.metaDescription || DEFAULT_PAGE_DESCRIPTION;
 
   return (
     <main className="min-h-screen bg-white text-zinc-900">
       <JsonLd
         data={buildSchemaGraph([
-          buildWebPageSchema({ path: PAGE_PATH, name: PAGE_TITLE, description: PAGE_DESCRIPTION }),
+          buildWebPageSchema({ path: PAGE_PATH, name: title, description }),
           {
             "@type": "Service",
-            name: PAGE_TITLE,
-            description: PAGE_DESCRIPTION,
+            name: title,
+            description,
             areaServed: { "@type": "Country", name: "Australia" },
             provider: { "@id": "https://roccandy.com.au/#organization" },
             url: "https://roccandy.com.au/custom-orders",
@@ -51,52 +64,43 @@ export default function CustomOrdersPage() {
       <div className="site-watercolour-top-bg -mt-8 pt-8">
         <div className="site-page-frame mx-auto max-w-5xl space-y-12 pb-16">
           <section className="mx-auto max-w-4xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500">Roc Candy</p>
-            <h1 className="site-page-title mt-3 text-[rgb(114,112,111)]">Custom Candy Orders</h1>
-            <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-zinc-600">Have an idea? We&apos;ll help bring it to life.</p>
-            <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-zinc-600">
-              Not every custom candy order starts with a finished design. If you have an event coming up, a colour theme to match, a branding idea, a packaging question, or simply need help deciding what will work, tell us what you have in mind.
-            </p>
+            <h1 className="site-page-title text-[rgb(114,112,111)]">{title}</h1>
+            {page.heroSubheading ? (
+              <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-zinc-600">{page.heroSubheading}</p>
+            ) : null}
+            {page.heroSupportingLine ? (
+              <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-zinc-600">{page.heroSupportingLine}</p>
+            ) : null}
             <SiteUsps className="mt-7" />
+            <GoogleReviews showBorders={false} className="mt-2" />
           </section>
-
-          <GoogleReviews />
 
           <section className="grid gap-5 md:grid-cols-2">
             <div className="rounded-3xl border border-zinc-200 bg-white p-7 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e85f8c]">Ready to create?</p>
               <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Design your candy online</h2>
               <p className="mt-3 leading-7 text-zinc-600">If you know the style you would like, use our designer to choose your candy type, colours, flavours and packaging.</p>
-              <Link href="/design" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-[#ff6f95] px-5 text-sm font-semibold text-white transition hover:bg-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] focus-visible:ring-offset-2">
-                Design Your Candy
-              </Link>
+              <div className="mt-6">
+                <DesignCtaModal />
+              </div>
             </div>
             <div className="rounded-3xl border border-[#f3d4df] bg-[#fff8fa] p-7 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e85f8c]">Need a hand?</p>
-              <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Talk through a custom order</h2>
-              <p className="mt-3 leading-7 text-zinc-600">If you are exploring an idea, working to a deadline, or need advice before you begin, send us an enquiry below. We&apos;ll help you find the right direction.</p>
+              <div
+                className="prose mt-3 max-w-none text-zinc-600 prose-p:my-0 prose-p:leading-7 prose-ul:my-3 prose-ul:space-y-2 prose-li:leading-6 prose-li::marker:text-[#ff6f95]"
+                dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
+              />
               <a href="#enquiry-form" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full border border-[#ff6f95] bg-white px-5 text-sm font-semibold text-[#c74e78] transition hover:bg-[#fff2f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] focus-visible:ring-offset-2">
                 Ask About a Custom Order
               </a>
             </div>
           </section>
 
-          <section className="grid gap-8 rounded-3xl border border-zinc-200 bg-white p-7 shadow-sm md:grid-cols-[1fr_1.1fr] md:p-9">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">How we can help</p>
-              <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">A helpful starting point for your idea</h2>
-              <p className="mt-3 leading-7 text-zinc-600">This page is for orders that need a little more guidance. If you already know exactly what you need, the design pages remain the quickest way to get started.</p>
-            </div>
-            <ul className="grid gap-3 text-sm leading-6 text-zinc-700 sm:grid-cols-2">
-              {helpItems.map((item) => <li key={item} className="flex gap-2"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#ff6f95]" aria-hidden="true" />{item}</li>)}
-            </ul>
-          </section>
-
           <section className="rounded-3xl bg-[#f6f5f2] p-7 md:p-9">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">How it works</p>
             <ol className="mt-5 grid gap-6 md:grid-cols-3">
               {[
-                ["1", "Tell us about your idea", "Include your event date, approximate quantity and anything you already know."],
+                ["1", "Tell us about your idea", "Include your event date, approx quantities and any relevant artwork. The more detail, the better we can guide you."],
                 ["2", "We help shape the right option", "We will review the details and help you choose a suitable candy direction."],
                 ["3", "Order with confidence", "Once the direction is clear, you can complete your order knowing it fits your needs."],
               ].map(([number, heading, copy]) => <li key={number} className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ff6f95] text-sm font-bold text-white">{number}</span><div><h2 className="font-semibold text-zinc-800">{heading}</h2><p className="mt-1 text-sm leading-6 text-zinc-600">{copy}</p></div></li>)}
@@ -104,7 +108,6 @@ export default function CustomOrdersPage() {
           </section>
 
           <section>
-            <div className="mb-6 max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e85f8c]">Custom order enquiry</p><h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Tell us what you have in mind</h2><p className="mt-3 leading-7 text-zinc-600">Reference images, logos and artwork can be attached. The more detail you can share, the better we can guide you.</p></div>
             <EnquiryForm productContext="Custom candy order" sourcePage={PAGE_PATH} />
           </section>
 
