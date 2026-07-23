@@ -75,7 +75,7 @@ export default async function CustomOrdersPage() {
             <GoogleReviews showBorders={false} transparent className="mt-2" />
           </section>
 
-          <section className="grid gap-5 md:grid-cols-2">
+          <section className="-mt-5 grid gap-5 md:grid-cols-2">
             <div className="rounded-3xl border border-zinc-200 bg-white p-7 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e85f8c]">Ready to create?</p>
               <h2 className="site-subsection-title mt-2 text-[rgb(114,112,111)]">Design your candy online</h2>
@@ -87,7 +87,7 @@ export default async function CustomOrdersPage() {
             <div className="rounded-3xl border border-[#f3d4df] bg-[#fff8fa] p-7 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#e85f8c]">Need a hand?</p>
               <div
-                className="prose mt-3 max-w-none text-zinc-600 prose-p:my-0 prose-p:leading-7 prose-ul:my-3 prose-ul:space-y-2 prose-li:leading-6 prose-li::marker:text-[#ff6f95]"
+                className="mt-3 max-w-none text-zinc-600 [&_p]:my-0 [&_p]:leading-7 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_li]:leading-6 [&_li::marker]:text-[#ff6f95]"
                 dangerouslySetInnerHTML={{ __html: page.bodyHtml }}
               />
               <a href="#enquiry-form" className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full border border-[#ff6f95] bg-white px-5 text-sm font-semibold text-[#c74e78] transition hover:bg-[#fff2f6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] focus-visible:ring-offset-2">
