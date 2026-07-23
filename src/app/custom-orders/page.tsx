@@ -72,7 +72,7 @@ export default async function CustomOrdersPage() {
               <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-zinc-600">{page.heroSupportingLine}</p>
             ) : null}
             <SiteUsps className="mt-7" />
-            <GoogleReviews showBorders={false} className="mt-2" />
+            <GoogleReviews showBorders={false} transparent className="mt-2" />
           </section>
 
           <section className="grid gap-5 md:grid-cols-2">

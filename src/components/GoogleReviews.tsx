@@ -1,16 +1,17 @@
 type GoogleReviewsProps = {
   className?: string;
   showBorders?: boolean;
+  transparent?: boolean;
 };
 
 const GOOGLE_REVIEWS_URL = "https://www.google.com/maps/search/?api=1&query=Roc%20Candy%20North%20Perth";
 
 /** A quiet, in-flow trust marker. It never floats or obscures the page. */
-export function GoogleReviews({ className = "", showBorders = true }: GoogleReviewsProps) {
+export function GoogleReviews({ className = "", showBorders = true, transparent = false }: GoogleReviewsProps) {
   return (
     <aside
       aria-label="Roc Candy Google reviews"
-      className={`${showBorders ? "border-y border-zinc-200" : ""} bg-white/80 px-1 py-3 text-center ${className}`}
+      className={`${showBorders ? "border-y border-zinc-200" : ""} ${transparent ? "bg-transparent" : "bg-white/80"} px-1 py-3 text-center ${className}`}
     >
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2">
