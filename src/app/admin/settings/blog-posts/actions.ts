@@ -11,6 +11,10 @@ import { renderTextContentToHtml } from "@/lib/textContentEditor";
 
 const BLOG_ADMIN_PATH = "/admin/settings/blog-posts";
 
+export type BlogPostActionState = {
+  error: string | null;
+};
+
 function normalizeField(value: FormDataEntryValue | null) {
   return (value?.toString() ?? "").replace(/\r\n/g, "\n").trim();
 }
@@ -24,7 +28,10 @@ function revalidateBlogPaths(paths: string[]) {
   revalidatePath("/sitemap.xml");
 }
 
-export async function saveBlogPostAction(formData: FormData) {
+export async function saveBlogPostAction(
+  _previousState: BlogPostActionState,
+  formData: FormData,
+): Promise<BlogPostActionState> {
   await requireAdminSeoWriteAccess({ onDenied: "redirect", redirectTo: BLOG_ADMIN_PATH });
 
   const id = normalizeField(formData.get("id"));
@@ -37,25 +44,24 @@ export async function saveBlogPostAction(formData: FormData) {
   const publishedAt = normalizeField(formData.get("publishedAt")) || null;
 
   if (!title) {
-    redirect(appendAdminToast(BLOG_ADMIN_PATH, "error", "Blog title is required."));
+    return { error: "Enter a blog title before saving." };
   }
   if (!excerpt) {
-    redirect(appendAdminToast(BLOG_ADMIN_PATH, "error", "Blog excerpt is required."));
+    return { error: "Enter a short excerpt before saving." };
   }
 
-  const existingPost = id ? await getBlogPostById(id) : null;
+  let existingPost = null;
+  try {
+    existingPost = id ? await getBlogPostById(id) : null;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to load the blog post before saving." };
+  }
   const renderedBody = hasBodyText
     ? renderTextContentToHtml(bodyText ?? "")
     : { html: existingPost?.bodyHtml ?? "", issues: [] };
   if (hasBodyText && renderedBody.issues.length > 0) {
     const issue = renderedBody.issues[0];
-    redirect(
-      appendAdminToast(
-        BLOG_ADMIN_PATH,
-        "error",
-        `Blog content issue on line ${issue.line}: ${issue.message}`,
-      ),
-    );
+    return { error: `Blog content issue on line ${issue.line}: ${issue.message}` };
   }
 
   let resolvedSlug = "";
@@ -63,34 +69,35 @@ export async function saveBlogPostAction(formData: FormData) {
     resolvedSlug = await resolveUniqueBlogSlug(slugInput || title, id || null, !slugInput);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to resolve blog slug.";
-    redirect(appendAdminToast(BLOG_ADMIN_PATH, "error", message));
+    return { error: message };
   }
 
-  const coverImageFile = formData.get("coverImageFile");
-  let uploadedCoverImageUrl: string | null = null;
-  if (coverImageFile instanceof File && coverImageFile.size > 0) {
-    const uploaded = await uploadSeoImage(coverImageFile, `blog-${resolvedSlug}`);
-    uploadedCoverImageUrl = uploaded?.publicUrl ?? null;
-  }
+  try {
+    const coverImageFile = formData.get("coverImageFile");
+    let uploadedCoverImageUrl: string | null = null;
+    if (coverImageFile instanceof File && coverImageFile.size > 0) {
+      const uploaded = await uploadSeoImage(coverImageFile, `blog-${resolvedSlug}`);
+      uploadedCoverImageUrl = uploaded?.publicUrl ?? null;
+    }
 
-  const savedPost = await upsertBlogPost({
-    id: id || undefined,
-    slug: resolvedSlug,
-    title,
-    excerpt,
-    coverImageUrl: uploadedCoverImageUrl || normalizeField(formData.get("coverImageUrl")) || existingPost?.coverImageUrl || null,
-    coverImageAlt: normalizeField(formData.get("coverImageAlt")) || title,
-    bodyHtml: renderedBody.html,
-    seoTitle: normalizeField(formData.get("seoTitle")) || null,
-    metaDescription: normalizeField(formData.get("metaDescription")) || null,
-    canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
-    status,
-    publishedAt,
-    authorName: normalizeField(formData.get("authorName")) || "Roc Candy",
-  });
+    const savedPost = await upsertBlogPost({
+      id: id || undefined,
+      slug: resolvedSlug,
+      title,
+      excerpt,
+      coverImageUrl: uploadedCoverImageUrl || normalizeField(formData.get("coverImageUrl")) || existingPost?.coverImageUrl || null,
+      coverImageAlt: normalizeField(formData.get("coverImageAlt")) || title,
+      bodyHtml: renderedBody.html,
+      seoTitle: normalizeField(formData.get("seoTitle")) || null,
+      metaDescription: normalizeField(formData.get("metaDescription")) || null,
+      canonicalUrl: normalizeField(formData.get("canonicalUrl")) || null,
+      status,
+      publishedAt,
+      authorName: normalizeField(formData.get("authorName")) || "Roc Candy",
+    });
 
-  const changedFields = existingPost
-    ? getChangedFieldLabels(
+    const changedFields = existingPost
+      ? getChangedFieldLabels(
         {
           title: existingPost.title,
           slug: existingPost.slug,
@@ -133,36 +140,40 @@ export async function saveBlogPostAction(formData: FormData) {
           publishedAt: "Published date",
           authorName: "Author",
         },
-      )
-    : ["Title", "Body", "Status"];
+        )
+      : ["Title", "Body", "Status"];
 
-  if (existingPost && existingPost.slug !== savedPost.slug) {
-    await saveSiteRedirect({
-      sourcePath: `/blog/${existingPost.slug}`,
-      destinationPath: `/blog/${savedPost.slug}`,
-      statusCode: 301,
-      isActive: true,
+    if (existingPost && existingPost.slug !== savedPost.slug) {
+      await saveSiteRedirect({
+        sourcePath: `/blog/${existingPost.slug}`,
+        destinationPath: `/blog/${savedPost.slug}`,
+        statusCode: 301,
+        isActive: true,
+      });
+    }
+
+    revalidateBlogPaths([
+      existingPost ? `/blog/${existingPost.slug}` : "",
+      `/blog/${savedPost.slug}`,
+    ]);
+    await logAdminActivity({
+      area: "content-seo",
+      action: existingPost ? "updated" : "created",
+      entityType: "blog-post",
+      entityId: savedPost.id,
+      entityLabel: savedPost.title,
+      summary: `${existingPost ? "Updated" : "Created"} blog post "${savedPost.title}".`,
+      path: BLOG_ADMIN_PATH,
+      changedFields,
+      metadata: {
+        slug: savedPost.slug,
+        status: savedPost.status,
+      },
     });
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to save the blog post. Please try again." };
   }
 
-  revalidateBlogPaths([
-    existingPost ? `/blog/${existingPost.slug}` : "",
-    `/blog/${savedPost.slug}`,
-  ]);
-  await logAdminActivity({
-    area: "content-seo",
-    action: existingPost ? "updated" : "created",
-    entityType: "blog-post",
-    entityId: savedPost.id,
-    entityLabel: savedPost.title,
-    summary: `${existingPost ? "Updated" : "Created"} blog post "${savedPost.title}".`,
-    path: BLOG_ADMIN_PATH,
-    changedFields,
-    metadata: {
-      slug: savedPost.slug,
-      status: savedPost.status,
-    },
-  });
   redirect(appendAdminToast(BLOG_ADMIN_PATH, "success", "Blog post saved."));
 }
 

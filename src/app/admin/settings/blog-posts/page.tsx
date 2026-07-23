@@ -5,8 +5,9 @@ import { authOptions } from "@/lib/auth";
 import { listAllBlogPosts } from "@/lib/blog";
 import { OptimizedImageFileInput } from "@/components/OptimizedImageFileInput";
 import { TextContentEditorField } from "@/app/admin/settings/pages/TextContentEditorField";
-import { deleteBlogPostAction, saveBlogPostAction } from "./actions";
+import { deleteBlogPostAction } from "./actions";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
+import { BlogPostForm } from "./BlogPostForm";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -65,7 +66,7 @@ function BlogPostCard({
       </summary>
 
       <div className="border-t border-zinc-200 px-5 py-5">
-        <form action={saveBlogPostAction} className="space-y-4">
+        <BlogPostForm className="space-y-4">
           <input type="hidden" name="id" value={post.id} />
           <input type="hidden" name="coverImageUrl" value={post.coverImageUrl ?? ""} />
 
@@ -76,6 +77,7 @@ function BlogPostCard({
                 type="text"
                 name="title"
                 defaultValue={post.title}
+                required
                 readOnly={!canWriteSeo}
                 className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
               />
@@ -99,6 +101,7 @@ function BlogPostCard({
                 name="excerpt"
                 defaultValue={post.excerpt}
                 rows={3}
+                required
                 readOnly={!canWriteSeo}
                 className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
               />
@@ -231,7 +234,7 @@ function BlogPostCard({
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</span>
             )}
           </div>
-        </form>
+        </BlogPostForm>
       </div>
     </details>
   );
@@ -260,11 +263,11 @@ export default async function AdminBlogPostsPage() {
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="admin-section-title text-zinc-900">New Post</h2>
-        <form action={saveBlogPostAction} className="mt-4 space-y-4">
+        <BlogPostForm className="mt-4 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Blog title</span>
-              <input type="text" name="title" readOnly={!canWriteSeo} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
+              <input type="text" name="title" required readOnly={!canWriteSeo} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
             </label>
             <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Article URL</span>
@@ -275,7 +278,7 @@ export default async function AdminBlogPostsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-zinc-700">
               <span className="text-xs text-zinc-500">Excerpt</span>
-              <textarea name="excerpt" rows={3} readOnly={!canWriteSeo} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
+              <textarea name="excerpt" rows={3} required readOnly={!canWriteSeo} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
             </label>
             <div className="space-y-3">
               {canWriteSeo ? (
@@ -353,7 +356,7 @@ export default async function AdminBlogPostsPage() {
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Read-only view</span>
             )}
           </div>
-        </form>
+        </BlogPostForm>
       </div>
 
       <div className="space-y-3">
