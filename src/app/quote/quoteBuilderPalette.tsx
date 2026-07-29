@@ -180,11 +180,11 @@ export function PalettePicker({
   };
 
   return (
-    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-3 py-2">
-      <summary className="flex cursor-pointer list-none items-center gap-3 text-xs font-semibold text-zinc-700">
-        <span className="normal-case tracking-[0.04em] text-zinc-500">{label}</span>
-        <span className="ml-auto flex items-center gap-2 text-[11px] font-medium text-zinc-600">
-          <span>{selectedLabel}</span>
+    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-2 py-2 sm:px-3">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-zinc-700 sm:gap-3">
+        <span className="whitespace-nowrap normal-case tracking-[0.04em] text-zinc-500">{label}</span>
+        <span className="ml-auto flex items-center gap-1 whitespace-nowrap text-[10px] font-medium text-zinc-600 sm:gap-2 sm:text-[11px]">
+          <span className="whitespace-nowrap">{selectedLabel}</span>
           <span
             style={{
               width: 20,
