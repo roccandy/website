@@ -199,11 +199,11 @@ export function PalettePicker({
           />
         </span>
       </summary>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:gap-4 sm:grid-cols-2">
         {groups.map((group) => (
           <div key={group.title}>
             <p className="sr-only">{group.title}</p>
-            <div className="mt grid grid-cols-6 gap-2 sm:grid-cols-3">
+            <div className="mt grid grid-cols-3 gap-1.5 sm:gap-2">
               {group.options.map((option) => {
                 const isActive = option.hex.toLowerCase() === value.toLowerCase();
                 return (
@@ -211,7 +211,7 @@ export function PalettePicker({
                     key={option.id}
                     type="button"
                     onClick={() => handleSelect(option.hex)}
-                    className={`palette-swatch h-8 w-full rounded-full border ${
+                    className={`palette-swatch h-7 w-full rounded-full border sm:h-8 ${
                       isActive ? "ring-2 ring-zinc-900 ring-offset-1" : ""
                     }`}
                     style={
