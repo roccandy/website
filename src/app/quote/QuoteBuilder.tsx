@@ -484,7 +484,13 @@ export function QuoteBuilder({
   });
   const basePrice = minBasePrices[categoryId];
   const hasBasePrice = typeof basePrice === "number" && Number.isFinite(basePrice);
-  const isAwaitingSelection = !result && !hasBasePrice;
+  const selectedJacketExtrasPrice =
+    (rainbowJacket ? Number(settings.jacket_rainbow) || 0 : 0) +
+    (twoColourJacket ? Number(settings.jacket_two_colour) || 0 : 0) +
+    (pinstripeJacket ? Number(settings.jacket_pinstripe) || 0 : 0);
+  const prePackagingPrice = (hasBasePrice ? basePrice : 0) + selectedJacketExtrasPrice;
+  const hasPrePackagingPrice = hasBasePrice || selectedJacketExtrasPrice > 0;
+  const isAwaitingSelection = !result && !hasPrePackagingPrice;
   const shouldUseCompactPriceBubble = !result && !showSubtype;
   const minimumPriceBubbleWidth = shouldUseCompactPriceBubble ? 0 : 220;
   const minimumPriceBubbleWidthRef = useRef(minimumPriceBubbleWidth);
@@ -1581,16 +1587,16 @@ export function QuoteBuilder({
               <div className="order-1 flex min-h-7 items-center justify-between gap-1 md:hidden">
                 <div className="order-2 flex shrink-0 items-center gap-1">
                   <div className="flex flex-col items-end">
-                    {result || hasBasePrice ? (
+                    {result || hasPrePackagingPrice ? (
                       <span className="text-[8px] font-medium leading-none text-zinc-400">
-                        {result ? "Total" : "Base price"}
+                        {result ? "Total" : "From"}
                       </span>
                     ) : null}
                     <p
                       className="whitespace-nowrap text-lg font-semibold leading-none text-zinc-800"
                       style={{ fontFamily: "var(--font-heading), sans-serif" }}
                     >
-                      {result ? formatMoney(result.total) : hasBasePrice ? formatMoney(basePrice) : "—"}
+                      {result ? formatMoney(result.total) : hasPrePackagingPrice ? formatMoney(prePackagingPrice) : "—"}
                     </p>
                   </div>
                   {loading ? (
@@ -1656,7 +1662,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="hidden space-y-3 md:block">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
                       <div className="flex items-center justify-center gap-2 sm:justify-start">
@@ -1682,27 +1688,27 @@ export function QuoteBuilder({
                         </button>
                       </div>
                     </div>
-                  ) : hasBasePrice ? (
+                  ) : hasPrePackagingPrice ? (
                     <div className="flex items-center justify-center gap-2 text-center sm:justify-start sm:text-left">
                       <p
                         className="text-2xl font-semibold leading-none"
                         style={{ fontFamily: "var(--font-heading), sans-serif", color: "rgb(63,63,70)" }}
                       >
-                        {formatMoney(basePrice)}
+                        {formatMoney(prePackagingPrice)}
                       </p>
                       <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
-                        {loading ? "Calculating..." : "Base Price"}
+                        {loading ? "Calculating..." : selectedJacketExtrasPrice > 0 ? "Includes extras" : "From"}
                       </span>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-center gap-2 sm:justify-end sm:gap-2">
-                    {!result && !hasBasePrice ? (
+                  <div className="flex items-center justify-center gap-2 sm:justify-start sm:gap-2">
+                    {!result && !hasPrePackagingPrice ? (
                       <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
                         {loading ? "Calculating..." : "Select order type"}
                       </span>
                     ) : null}
                     {showSubtype && (
-                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:flex-nowrap sm:justify-end">
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
                         {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                           const isActive = categoryId === sub.id;
                           return (
