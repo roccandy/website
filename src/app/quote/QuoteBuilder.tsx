@@ -2482,7 +2482,7 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="absolute inset-y-0 left-0 inline-flex w-6 items-center justify-center rounded-l-md border-r border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5 md:rounded md:border"
+                      className="absolute left-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:translate-y-0"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
@@ -2509,7 +2509,7 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="absolute inset-y-0 left-0 inline-flex w-6 items-center justify-center rounded-l-md border-r border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5 md:rounded md:border"
+                      className="absolute left-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:translate-y-0"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
@@ -2536,7 +2536,7 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="absolute inset-y-0 left-0 inline-flex w-6 items-center justify-center rounded-l-md border-r border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5 md:rounded md:border"
+                      className="absolute left-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:translate-y-0"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
@@ -2550,20 +2550,22 @@ export function QuoteBuilder({
                   {!rainbowJacket && (
                     <div className={`order-4 col-span-3 mt-1 mb-3 ${showColourTwo ? "grid grid-cols-2 gap-2 md:block md:space-y-3" : "space-y-3"} md:mb-0`}>
                       <PalettePicker
-                        label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
+                        label={showColourTwo ? "Colour A" : "Jacket Colour"}
                         value={jacketColorOne}
                         onChange={setJacketColorOne}
                         groups={paletteGroups}
                         onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
+                        placeholderLabel={showColourTwo ? "Select" : undefined}
                         placeholderSwatch={defaultJacketColor}
                       />
                       {showColourTwo && (
                         <PalettePicker
-                          label="Jacket Colour 2"
+                          label="Colour B"
                           value={jacketColorTwo}
                           onChange={setJacketColorTwo}
                           groups={paletteGroups}
                           onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
+                          placeholderLabel="Select"
                           placeholderSwatch={defaultJacketColor}
                         />
                       )}
@@ -2644,11 +2646,11 @@ export function QuoteBuilder({
                     <span
                       className="inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
                       style={{
-                        backgroundColor: isActive ? "rgb(247,228,236)" : "rgb(250,243,247)",
+                        backgroundColor: isActive ? "rgb(242,215,227)" : "rgb(250,243,247)",
                         borderColor: "rgb(239,232,239)",
                         borderWidth: "0.5px",
                         borderStyle: "solid",
-                        color: "rgb(124,121,131)",
+                        color: isActive ? "rgb(102,85,95)" : "rgb(124,121,131)",
                         fontFamily: "var(--font-body), sans-serif",
                       }}
                     >
