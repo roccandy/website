@@ -2334,7 +2334,7 @@ export function QuoteBuilder({
               </div>
             </div>
             <div className="order-1">
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-2">
               {isWedding && (
                 <>
                     <label className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-900">
@@ -2378,7 +2378,7 @@ export function QuoteBuilder({
                 </>
               )}
               {isText && (
-                <label className="text-xs normal-case tracking-[0.04em] text-zinc-500 md:col-span-2">
+                <label className="col-span-2 text-xs normal-case tracking-[0.04em] text-zinc-500">
                   Custom text
                   <input
                     type="text"
@@ -2438,7 +2438,7 @@ export function QuoteBuilder({
                 </label>
               )}
               {!isBranded && (
-                <div className="md:col-span-2">
+                <div className={isWedding ? "col-span-1 md:col-span-2" : "col-span-2"}>
                   <PalettePicker
                     label="Text colour"
                     value={textColor}
@@ -2450,7 +2450,7 @@ export function QuoteBuilder({
                 </div>
               )}
                 {isWedding && (
-                  <div className="md:col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <PalettePicker
                       label="Heart colour"
                       value={heartColor}
@@ -2461,13 +2461,13 @@ export function QuoteBuilder({
                     />
                   </div>
                 )}
-              <div className="md:col-span-2">
+              <div className="col-span-2">
                   <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-900">
                     Jacket type & colors
                   </p>
-                <div className="mt-2 flex flex-col gap-2 text-sm">
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-sm md:flex md:flex-col md:gap-2">
                   <label
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
+                    className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 text-center text-[10px] leading-tight md:flex-row md:justify-start md:gap-2 md:px-3 md:text-left md:text-sm ${
                       rainbowDisabled && !rainbowJacket
                         ? "bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed"
                         : "bg-white text-zinc-700 border-zinc-200"
@@ -2482,18 +2482,19 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                      className="absolute left-1.5 top-1.5 inline-flex h-4 w-4 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
                       </svg>
                     </span>
-                    <span>
-                      Rainbow Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_rainbow)}</span>
+                    <span className="font-semibold md:font-normal">
+                      <span className="md:hidden">Rainbow</span><span className="hidden md:inline">Rainbow Jacket</span>
+                      <span className="mt-0.5 block text-zinc-500 md:ml-1 md:mt-0 md:inline">+{formatMoney(settings.jacket_rainbow)}</span>
                     </span>
                   </label>
                   <label
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
+                    className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 text-center text-[10px] leading-tight md:flex-row md:justify-start md:gap-2 md:px-3 md:text-left md:text-sm ${
                       pinstripeDisabled && !pinstripeJacket
                         ? "bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed"
                         : "bg-white text-zinc-700 border-zinc-200"
@@ -2508,18 +2509,19 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                      className="absolute left-1.5 top-1.5 inline-flex h-4 w-4 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
                       </svg>
                     </span>
-                    <span>
-                      Pin Stripe Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_pinstripe)}</span>
+                    <span className="font-semibold md:font-normal">
+                      <span className="md:hidden">Pin stripe</span><span className="hidden md:inline">Pin Stripe Jacket</span>
+                      <span className="mt-0.5 block text-zinc-500 md:ml-1 md:mt-0 md:inline">+{formatMoney(settings.jacket_pinstripe)}</span>
                     </span>
                   </label>
                   <label
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2 ${
+                    className={`relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md border px-1.5 py-2 text-center text-[10px] leading-tight md:flex-row md:justify-start md:gap-2 md:px-3 md:text-left md:text-sm ${
                       twoColourDisabled && !twoColourJacket
                         ? "bg-zinc-100 text-zinc-400 border-zinc-200 cursor-not-allowed"
                         : "bg-white text-zinc-700 border-zinc-200"
@@ -2534,18 +2536,19 @@ export function QuoteBuilder({
                     />
                     <span
                       aria-hidden="true"
-                      className="inline-flex h-5 w-5 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60"
+                      className="absolute left-1.5 top-1.5 inline-flex h-4 w-4 items-center justify-center rounded border border-[rgb(239,232,239)] bg-[rgb(250,243,247)] text-transparent transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[rgb(247,228,236)] peer-checked:border-[rgb(247,228,236)] peer-checked:bg-[rgb(247,228,236)] peer-checked:text-[rgb(124,121,131)] peer-disabled:opacity-60 md:static md:h-5 md:w-5"
                     >
                       <svg viewBox="0 0 20 20" className="h-3 w-3" aria-hidden="true">
                         <path d="M7.7 13.2 4.8 10.3l-1 1 3.9 3.9 8.5-8.5-1-1z" fill="currentColor" />
                       </svg>
                     </span>
-                    <span>
-                      2 Colour Jacket <span className="text-zinc-500">+{formatMoney(settings.jacket_two_colour)}</span>
+                    <span className="font-semibold md:font-normal">
+                      <span className="md:hidden">2 colour</span><span className="hidden md:inline">2 Colour Jacket</span>
+                      <span className="mt-0.5 block text-zinc-500 md:ml-1 md:mt-0 md:inline">+{formatMoney(settings.jacket_two_colour)}</span>
                     </span>
                   </label>
                   {!rainbowJacket && (
-                    <div className="mt-1 space-y-3">
+                    <div className="col-span-3 mt-1 mb-3 space-y-3 md:mb-0">
                       <PalettePicker
                         label={showColourTwo ? "Jacket Colour 1" : "Jacket Colour"}
                         value={jacketColorOne}
@@ -2568,13 +2571,13 @@ export function QuoteBuilder({
                   )}
                 </div>
               </div>
-              <div className="md:hidden">
+              <div className="col-span-2 mt-2 md:hidden">
                 <div ref={mobilePreviewRef} className="flex justify-center">
                   {renderCandyPreview({ width: 300, height: 223 }, 1.2)}
                 </div>
               </div>
               {isBranded && (
-                <div>
+                <div className="order-first col-span-2">
                   <label htmlFor="logo-upload" className="text-xs normal-case tracking-[0.04em] text-zinc-500">
                     Upload Your Design
                   </label>

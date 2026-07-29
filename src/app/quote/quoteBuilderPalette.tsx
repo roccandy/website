@@ -203,7 +203,7 @@ export function PalettePicker({
         {groups.map((group) => (
           <div key={group.title}>
             <p className="sr-only">{group.title}</p>
-            <div className="mt grid grid-cols-3 gap-2 gap-2">
+            <div className="mt grid grid-cols-6 gap-2 sm:grid-cols-3">
               {group.options.map((option) => {
                 const isActive = option.hex.toLowerCase() === value.toLowerCase();
                 return (
