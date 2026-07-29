@@ -1526,6 +1526,8 @@ export function QuoteBuilder({
                   ? "min-w-0"
                   : "min-w-0 md:min-w-[320px] lg:min-w-[420px]"
               } ${
+                showSubtype ? "md:min-w-[480px] lg:min-w-[480px]" : ""
+              } ${
                 showBreakdown ? "rounded-t-2xl rounded-b-none" : "rounded-2xl"
               }`}
             >
@@ -1662,7 +1664,7 @@ export function QuoteBuilder({
               </div>
 
               <div className="hidden space-y-3 md:block">
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   {result ? (
                     <div className="space-y-2 text-center sm:text-left">
                       <div className="flex items-center justify-center gap-2 sm:justify-start">
@@ -1701,14 +1703,14 @@ export function QuoteBuilder({
                       </span>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-center gap-2 sm:justify-start sm:gap-2">
+                  <div className="flex items-center justify-center gap-2 sm:justify-end sm:gap-2">
                     {!result && !hasPrePackagingPrice ? (
                       <span className="inline-flex whitespace-nowrap rounded px-2 py-1 text-xs font-semibold text-zinc-500">
                         {loading ? "Calculating..." : "Select order type"}
                       </span>
                     ) : null}
                     {showSubtype && (
-                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 sm:flex-nowrap sm:justify-end">
                         {ORDER_SUBTYPES[orderType]?.map((sub, index) => {
                           const isActive = categoryId === sub.id;
                           return (
