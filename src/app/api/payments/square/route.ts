@@ -12,6 +12,7 @@ type SquarePaymentRequest = {
   sourceId: string;
   verificationToken?: string;
   paymentMethodTitle?: string;
+  checkoutAttemptId?: string;
 };
 
 type SquarePaymentResponse = {
@@ -39,6 +40,13 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const requestedAttemptId = body.checkoutAttemptId?.trim();
+    if (requestedAttemptId && !/^[a-zA-Z0-9_-]{16,128}$/.test(requestedAttemptId)) {
+      return NextResponse.json({ error: toPublicPaymentError("Invalid checkout attempt.") }, { status: 400 });
+    }
+    // Keep a checkout page already open during deployment working; current clients
+    // always send a stable attempt ID and therefore receive retry idempotency.
+    const checkoutAttemptId = requestedAttemptId || randomUUID();
 
     const accessToken = process.env.SQUARE_ACCESS_TOKEN?.trim();
     const locationId = process.env.SQUARE_LOCATION_ID?.trim();
@@ -70,7 +78,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         source_id: body.sourceId,
-        idempotency_key: randomUUID(),
+        idempotency_key: checkoutAttemptId,
         amount_money: { amount: amountCents, currency: "AUD" },
         location_id: locationId,
         verification_token: body.verificationToken || undefined,

@@ -23,6 +23,7 @@ export type PayPalOrderDetails = {
       currency_code?: string;
       value?: string;
     };
+    custom_id?: string;
     shipping?: {
       name?: {
         full_name?: string;
@@ -35,6 +36,9 @@ export type PayPalOrderDetails = {
         postal_code?: string;
         country_code?: string;
       };
+    };
+    payments?: {
+      captures?: Array<{ id?: string; status?: string }>;
     };
   }>;
 };

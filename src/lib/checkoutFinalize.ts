@@ -4,6 +4,8 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
+import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
+import { logPaymentFailure } from "@/lib/paymentFailures";
 
 const EMAIL_WAIT_MS = 4000;
 const ORDER_INSERT_ATTEMPTS = 3;
@@ -27,9 +29,6 @@ export type FinalizePaidCheckoutResult = {
   adminEmailWarning: string | null;
 };
 
-const INTERNAL_ORDER_SAVE_WARNING =
-  "Your payment was received, but we had trouble finalising the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.";
-
 function isOrderNumberConflict(error: unknown) {
   const message =
     typeof error === "object" && error && "message" in error
@@ -44,6 +43,16 @@ function buildTrackingTransactionId(orderNumber: string, transactionId: string) 
   return normalizedTransactionId
     ? `${normalizedOrderNumber}-${normalizedTransactionId}`
     : normalizedOrderNumber;
+}
+
+async function findExistingPaymentOrder(paymentProvider: string, transactionId: string) {
+  const { data, error } = await supabaseAdminClient
+    .from("orders")
+    .select("order_number")
+    .eq("payment_provider", paymentProvider)
+    .eq("payment_transaction_id", transactionId);
+  if (error) throw new Error("Unable to verify an existing payment order.");
+  return data ?? [];
 }
 
 function buildPaidOrderPayloads({
@@ -88,7 +97,21 @@ export async function finalizePaidCheckoutOrder({
   const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
   const paidAt = new Date().toISOString();
 
+  const existingOrders = await findExistingPaymentOrder(paymentProvider, transactionId);
+  if (existingOrders?.length) {
+    const existingOrderNumber = normalizeBaseOrderNumber(existingOrders[0]?.order_number) ?? context.orderNumbers.baseOrderNumber;
+    return {
+      orderNumber: existingOrderNumber,
+      trackingTransactionId: buildTrackingTransactionId(existingOrderNumber, transactionId),
+      orderTotal: context.totalAmount,
+      tax: context.taxAmount,
+      shipping: context.shippingAmount,
+      adminEmailWarning: null,
+    };
+  }
+
   let adminEmailWarning: string | null = null;
+  let orderSaved = false;
   for (let attempt = 1; attempt <= ORDER_INSERT_ATTEMPTS; attempt += 1) {
     const enrichedPayloads = buildPaidOrderPayloads({
       context,
@@ -100,15 +123,39 @@ export async function finalizePaidCheckoutOrder({
     });
     const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
     if (!insertError) {
+      orderSaved = true;
       break;
     }
     if (attempt < ORDER_INSERT_ATTEMPTS && isOrderNumberConflict(insertError)) {
       context = await buildCheckoutOrderContext(order);
       continue;
     }
+    const concurrentOrders = await findExistingPaymentOrder(paymentProvider, transactionId);
+    if (concurrentOrders.length) {
+      const existingOrderNumber =
+        normalizeBaseOrderNumber(concurrentOrders[0]?.order_number) ?? context.orderNumbers.baseOrderNumber;
+      return {
+        orderNumber: existingOrderNumber,
+        trackingTransactionId: buildTrackingTransactionId(existingOrderNumber, transactionId),
+        orderTotal: context.totalAmount,
+        tax: context.taxAmount,
+        shipping: context.shippingAmount,
+        adminEmailWarning: null,
+      };
+    }
     console.error("Supabase order insert failed:", insertError);
-    adminEmailWarning = INTERNAL_ORDER_SAVE_WARNING;
     break;
+  }
+
+  if (!orderSaved) {
+    await logPaymentFailure({
+      provider: paymentProvider === "paypal" ? "paypal" : "square",
+      stage: "order_finalization",
+      message: "Payment succeeded but the order record could not be saved.",
+      customerEmail,
+      orderTotal: context.totalAmount,
+    });
+    throw new Error("Order record could not be saved after payment.");
   }
 
   const recipients = getOrdersRecipients();

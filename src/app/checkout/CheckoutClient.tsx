@@ -314,6 +314,11 @@ function SquarePayment({
   const payloadRef = useRef(getOrderPayload);
   const canPayRef = useRef(canPay);
   const amountRef = useRef(amount);
+  const checkoutAttemptIdRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `checkout-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  );
 
   useEffect(() => {
     payloadRef.current = getOrderPayload;
@@ -385,6 +390,7 @@ function SquarePayment({
         body: JSON.stringify({
           order: payloadRef.current(),
           sourceId: tokenResult.token,
+          checkoutAttemptId: checkoutAttemptIdRef.current,
           verificationToken,
           paymentMethodTitle: methodTitle,
         }),
@@ -602,7 +608,7 @@ function PayPalPayment({
   const renderedRef = useRef(false);
   const payloadRef = useRef(getOrderPayload);
   const canPayRef = useRef(canPay);
-  const reservedOrderNumbersRef = useRef(new Map<string, string>());
+  const reservedCheckoutStateRef = useRef(new Map<string, { orderNumber: string; checkoutState: string }>());
   const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -660,6 +666,7 @@ function PayPalPayment({
                 const data = (await response.json().catch(() => ({}))) as {
                   orderId?: string;
                   orderNumber?: string | null;
+                  checkoutState?: string | null;
                   error?: string;
                 };
                 if (!response.ok || !data.orderId) {
@@ -667,8 +674,11 @@ function PayPalPayment({
                   setSetupError(toPublicPaymentError(message));
                   throw new Error(message);
                 }
-                if (data.orderNumber) {
-                  reservedOrderNumbersRef.current.set(data.orderId, data.orderNumber);
+                if (data.orderNumber && data.checkoutState) {
+                  reservedCheckoutStateRef.current.set(data.orderId, {
+                    orderNumber: data.orderNumber,
+                    checkoutState: data.checkoutState,
+                  });
                 }
                 return data.orderId;
               } catch (error) {
@@ -687,12 +697,14 @@ function PayPalPayment({
               });
               try {
                 if (!data.orderID) throw new Error("PayPal order missing.");
+                const checkoutState = reservedCheckoutStateRef.current.get(data.orderID);
                 const response = await fetch("/api/payments/paypal/capture-order", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     orderId: data.orderID,
-                    orderNumber: reservedOrderNumbersRef.current.get(data.orderID) ?? null,
+                    orderNumber: checkoutState?.orderNumber ?? null,
+                    checkoutState: checkoutState?.checkoutState ?? null,
                     order: payloadRef.current(),
                   }),
                 });
@@ -1619,9 +1631,13 @@ export function CheckoutClient({
   };
 
   const missingFields = getMissingFields();
-  const canPlace = hasItems && missingFields.length === 0;
+  const canPlace = hasItems && missingFields.length === 0 && !pricingLoading && !pricingError && !cartPricing.hasPending;
   const paymentValidationMessage =
-    missingFields.length === 0
+    pricingLoading || cartPricing.hasPending
+      ? "Please wait for the latest pricing to finish updating before paying."
+      : pricingError
+        ? "Please resolve the pricing issue in your cart before paying."
+        : missingFields.length === 0
       ? "Please complete all required fields before paying."
       : `Please complete: ${missingFields
           .map((field) => field.charAt(0).toUpperCase() + field.slice(1))

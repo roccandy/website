@@ -92,7 +92,7 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     if (!option.allowed_categories.includes(category.id)) {
       throw new Error("Packaging not allowed for this category");
     }
-    if (sel.quantity < 0 || sel.quantity > option.max_packages) {
+    if (!Number.isInteger(sel.quantity) || sel.quantity <= 0 || sel.quantity > option.max_packages) {
       throw new Error("Packaging quantity out of range");
     }
     return { option, quantity: sel.quantity };
@@ -134,7 +134,10 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
     0
   );
 
-  const labelsCount = input.labelsCount ?? 0;
+  const labelsCount = Number(input.labelsCount ?? 0);
+  if (!Number.isInteger(labelsCount) || labelsCount < 0) {
+    throw new Error("Label count must be a whole number.");
+  }
   if (labelsCount > Number(settings.labels_max_bulk)) {
     throw new Error("Label count exceeds maximum");
   }
@@ -151,9 +154,10 @@ export function calculatePricingWithContext(input: PricingInput, context: Pricin
   }
 
   const ingredientLabelsCountRaw = Number(input.ingredientLabelsCount ?? 0);
-  const ingredientLabelsCount = Number.isFinite(ingredientLabelsCountRaw)
-    ? Math.max(0, Math.floor(ingredientLabelsCountRaw))
-    : 0;
+  if (!Number.isInteger(ingredientLabelsCountRaw) || ingredientLabelsCountRaw < 0) {
+    throw new Error("Ingredient label count must be a whole number.");
+  }
+  const ingredientLabelsCount = ingredientLabelsCountRaw;
   if (ingredientLabelsCount > Number(settings.labels_max_bulk)) {
     throw new Error("Ingredient label count exceeds maximum");
   }

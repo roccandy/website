@@ -51,15 +51,17 @@ export function buildCustomPricingInput(source: CustomPricingSource): CustomPric
   const packagingOptionId = source.packagingOptionId?.trim();
   const quantity = Number(source.quantity);
 
-  if (!categoryId || !packagingOptionId || !Number.isFinite(quantity) || quantity <= 0) {
+  if (!categoryId || !packagingOptionId || !Number.isInteger(quantity) || quantity <= 0) {
     return null;
   }
 
   const extras = source.jacketExtras?.length ? source.jacketExtras : buildJacketExtras(source.jacket);
-  const ingredientLabelsCountRaw = Number(source.ingredientLabelsCount ?? 0);
+  const ingredientLabelsCountRaw = hasIngredientLabelsRequested(source)
+    ? Number(source.ingredientLabelsCount ?? 0)
+    : 0;
   const ingredientLabelsCount =
-    Number.isFinite(ingredientLabelsCountRaw) && ingredientLabelsCountRaw > 0
-      ? Math.floor(ingredientLabelsCountRaw)
+    Number.isInteger(ingredientLabelsCountRaw) && ingredientLabelsCountRaw > 0
+      ? ingredientLabelsCountRaw
       : 0;
 
   return {

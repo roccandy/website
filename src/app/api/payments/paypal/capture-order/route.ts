@@ -5,12 +5,14 @@ import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
 import { toPublicPaymentError } from "@/lib/publicErrorMessages";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { verifyCheckoutFingerprint } from "@/lib/checkoutFingerprint";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PayPalCaptureRequest = {
   orderId: string;
   order: CheckoutOrderPayload;
   orderNumber?: string | null;
+  checkoutState?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -32,8 +34,15 @@ export async function POST(request: Request) {
     }
 
     const approvedPayPalOrder = await getPayPalOrder(body.orderId);
-    if (approvedPayPalOrder.status !== "APPROVED") {
+    if (approvedPayPalOrder.status !== "APPROVED" && approvedPayPalOrder.status !== "COMPLETED") {
       throw new Error("PayPal order has not been approved.");
+    }
+    const paypalOrderNumber = approvedPayPalOrder.purchase_units?.[0]?.custom_id?.trim() || null;
+    if (
+      paypalOrderNumber !== body.orderNumber?.trim() ||
+      !verifyCheckoutFingerprint(body.checkoutState, body.order, paypalOrderNumber)
+    ) {
+      throw new Error("PayPal checkout details could not be verified.");
     }
     const validatedContext = await buildCheckoutOrderContext(body.order, {
       baseOrderNumber: body.orderNumber ?? null,
@@ -48,15 +57,22 @@ export async function POST(request: Request) {
       throw new Error("PayPal order amount could not be verified.");
     }
 
-    const capture = await capturePayPalOrder(body.orderId);
-    const transactionId = capture.captureId || capture.id;
+    const transactionId =
+      approvedPayPalOrder.status === "COMPLETED"
+        ? approvedPayPalOrder.purchase_units?.[0]?.payments?.captures?.[0]?.id
+        : null;
+    const capture = transactionId ? null : await capturePayPalOrder(body.orderId);
+    const resolvedTransactionId = transactionId || capture?.captureId || capture?.id;
+    if (!resolvedTransactionId) {
+      throw new Error("PayPal payment transaction could not be verified.");
+    }
 
     const result = await finalizePaidCheckoutOrder({
       order: body.order,
       paymentProvider: "paypal",
       paymentMethod: "paypal",
       paymentMethodTitle: "PayPal",
-      transactionId,
+      transactionId: resolvedTransactionId,
       baseOrderNumber: body.orderNumber ?? null,
     });
 

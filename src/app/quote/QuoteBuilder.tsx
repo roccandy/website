@@ -606,7 +606,7 @@ export function QuoteBuilder({
 
   const selectionQty = useMemo(() => {
     const parsed = Number(selectionQtyInput);
-    return Number.isFinite(parsed) ? parsed : 0;
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 0;
   }, [selectionQtyInput]);
   const totalPackages = useMemo(() => selectionQty, [selectionQty]);
 
@@ -860,6 +860,9 @@ export function QuoteBuilder({
   const heartColorValid = isWedding ? Boolean(heartColor) : true;
   const colorsValid = jacketColorsValid && textColorValid && heartColorValid;
   const labelTypeValid = !labelsOptIn || (hasLabelTypes && Boolean(labelTypeId));
+  const customLabelCountValid = !labelsOptIn || !hasBulkSelection || (selectedCustomLabelCount ?? 0) > 0;
+  const ingredientLabelCountValid =
+    !ingredientLabelsOptIn || !hasBulkSelection || (selectedIngredientLabelCount ?? 0) > 0;
   const designRequirementLabel = isWedding
     ? isWeddingInitials
       ? "Initials"
@@ -876,6 +879,8 @@ export function QuoteBuilder({
     flavorValid &&
     colorsValid &&
     labelTypeValid &&
+    customLabelCountValid &&
+    ingredientLabelCountValid &&
     (!labelsOptIn || !!labelImageUrl);
   const formatReviewColour = (value: string) => {
     if (!value) return "Not selected";
@@ -964,6 +969,12 @@ export function QuoteBuilder({
     if (labelsOptIn && !labelTypeValid) {
       missing.push("Custom Label type");
     }
+    if (!customLabelCountValid) {
+      missing.push("Custom Labels Count");
+    }
+    if (!ingredientLabelCountValid) {
+      missing.push("Ingredient Labels Count");
+    }
     return missing;
   }, [
     designRequirementLabel,
@@ -977,6 +988,8 @@ export function QuoteBuilder({
     labelImageUrl,
     labelTypeValid,
     labelsOptIn,
+    customLabelCountValid,
+    ingredientLabelCountValid,
     rainbowJacket,
     selectedOptionId,
     selectionQty,
@@ -1009,6 +1022,8 @@ export function QuoteBuilder({
   const packagingStepComplete =
     packagingComplete &&
     labelTypeValid &&
+    customLabelCountValid &&
+    ingredientLabelCountValid &&
     (!labelsOptIn || Boolean(labelImageUrl));
 
   const showPackagingError = () => {
@@ -1040,7 +1055,12 @@ export function QuoteBuilder({
       showPackagingError();
       return;
     }
-    if (firstMissing === "Label artwork" || firstMissing === "Custom Label type") {
+    if (
+      firstMissing === "Label artwork" ||
+      firstMissing === "Custom Label type" ||
+      firstMissing === "Custom Labels Count" ||
+      firstMissing === "Ingredient Labels Count"
+    ) {
       focusMobileSection(2, packagingSectionRef);
       return;
     }
@@ -1917,7 +1937,8 @@ export function QuoteBuilder({
                       <input
                         ref={desktopQuantityInputRef}
                         type="number"
-                        min={0}
+                        min={1}
+                        step={1}
                         max={selectedOption?.max_packages}
                         value={selectionQtyInput}
                         onChange={(e) => {
@@ -1987,7 +2008,8 @@ export function QuoteBuilder({
                     ref={quantityInputRef}
                     id="mobile-packaging-quantity"
                     type="number"
-                    min={0}
+                    min={1}
+                    step={1}
                     max={selectedOption?.max_packages}
                     value={selectionQtyInput}
                     onChange={(event) => {
@@ -2094,13 +2116,14 @@ export function QuoteBuilder({
                           Custom Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
                           <input
                             type="number"
-                            min={0}
+                            min={1}
+                            step={1}
                             max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                             value={labelCountOverride > 0 ? labelCountOverride : ""}
                             onChange={(e) =>
                               setLabelCountOverride(
                                 Math.min(
-                                  Math.max(0, Number(e.target.value) || 0),
+                                  Math.max(0, Math.floor(Number(e.target.value) || 0)),
                                   settings.labels_max_bulk,
                                   BULK_LABEL_COUNT_MAX,
                                 )
@@ -2236,13 +2259,14 @@ export function QuoteBuilder({
                       Ingredient Labels Count (Max {Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)})
                       <input
                         type="number"
-                        min={0}
+                        min={1}
+                        step={1}
                         max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
                         value={ingredientLabelsCountOverride > 0 ? ingredientLabelsCountOverride : ""}
                         onChange={(e) =>
                           setIngredientLabelsCountOverride(
                             Math.min(
-                              Math.max(0, Number(e.target.value) || 0),
+                              Math.max(0, Math.floor(Number(e.target.value) || 0)),
                               settings.labels_max_bulk,
                               BULK_LABEL_COUNT_MAX,
                             )
@@ -2292,7 +2316,13 @@ export function QuoteBuilder({
                   }
                   if (!packagingStepComplete) {
                     const missingText = missingFields
-                      .filter((field) => field === "Label artwork" || field === "Custom Label type")
+                      .filter(
+                        (field) =>
+                          field === "Label artwork" ||
+                          field === "Custom Label type" ||
+                          field === "Custom Labels Count" ||
+                          field === "Ingredient Labels Count",
+                      )
                       .join(", ");
                     setMobileStepError(`Please complete: ${missingText || "packaging details"}.`);
                     focusMobileSection(2, packagingSectionRef);
@@ -2796,7 +2826,7 @@ export function QuoteBuilder({
                       jacket: jacketValue,
                       jacketType: previewJacketMode || null,
                       jacketColorOne,
-                      jacketColorTwo,
+                      jacketColorTwo: twoColourJacket ? jacketColorTwo || null : null,
                       textColor: isBranded ? null : textColor,
                       heartColor: isWedding ? heartColor : null,
                       flavor,

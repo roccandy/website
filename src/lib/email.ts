@@ -438,7 +438,9 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 
   const productsText = order.items
     .map((item) => {
-      const labelsText = Number.isFinite(item.labelsCount ?? NaN) ? ` | Custom labels to print: ${item.labelsCount}` : "";
+      const labelsText = Number.isFinite(item.labelsCount ?? NaN) && Number(item.labelsCount) > 0
+        ? ` | Custom labels to print: ${item.labelsCount}`
+        : "";
       const flavorText = item.flavor ? ` | Flavour: ${item.flavor}` : "";
       const lineTotal = Number.isFinite(item.totalPrice ?? NaN) ? ` ($${Number(item.totalPrice).toFixed(2)})` : "";
       return `- ${item.quantity} x ${item.title}${flavorText}${labelsText}${lineTotal}`;

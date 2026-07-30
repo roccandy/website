@@ -5,6 +5,8 @@ const calculatePricing = vi.fn();
 const buildCustomPricingInput = vi.fn();
 const getSettings = vi.fn();
 const getQuoteBlocks = vi.fn();
+const getPackagingOptions = vi.fn();
+const getFlavors = vi.fn();
 const from = vi.fn();
 
 let premadeRows: Array<{
@@ -23,6 +25,8 @@ vi.mock("@/lib/pricing", () => ({
 vi.mock("@/lib/data", () => ({
   getSettings,
   getQuoteBlocks,
+  getPackagingOptions,
+  getFlavors,
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -47,12 +51,13 @@ const customItem = (title: string, quantity = 10) => ({
   categoryId: "custom-1-6",
   packagingOptionId: "pack-1",
   quantity,
+  flavor: "Lemon",
   designType: "text",
   designText: title,
 });
 
 const buildOrder = (input: Partial<CheckoutOrderPayload>): CheckoutOrderPayload => ({
-  dueDate: "2026-05-20",
+  dueDate: "2099-05-20",
   pickup: false,
   customer,
   customItems: [],
@@ -70,6 +75,15 @@ describe("buildCheckoutOrderContext", () => {
     calculatePricing.mockResolvedValue({ total: 100, totalWeightKg: 1 });
     getSettings.mockResolvedValue({ max_total_kg: 100 });
     getQuoteBlocks.mockResolvedValue([]);
+    getPackagingOptions.mockResolvedValue([
+      {
+        id: "pack-1",
+        allowed_categories: ["custom-1-6"],
+        lid_colors: [],
+        label_type_ids: ["label-1"],
+      },
+    ]);
+    getFlavors.mockResolvedValue([{ name: "Lemon", is_active: true }]);
     from.mockImplementation((table: string) => {
       if (table === "orders") {
         return {
@@ -265,5 +279,73 @@ describe("buildCheckoutOrderContext", () => {
     expect(context.totalAmount).toBe(100);
     expect(context.lineItems.map((item) => item.total)).toEqual(["100.00"]);
     expect(context.orderPayloads.map((payload) => payload.total_price)).toEqual([100]);
+  });
+
+  it("rejects custom label artwork with a zero label count", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildCheckoutOrderContext(
+        buildOrder({
+          customItems: [
+            {
+              ...customItem("ONE"),
+              labelsCount: 0,
+              labelTypeId: "label-1",
+              labelImageUrl: "https://cdn.test/label.png",
+            },
+          ],
+        })
+      )
+    ).rejects.toThrow("Custom label count must be at least 1");
+  });
+
+  it("does not persist a second jacket colour for a single-colour jacket", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    const context = await buildCheckoutOrderContext(
+      buildOrder({
+        customItems: [
+          {
+            ...customItem("ONE"),
+            jacket: "pinstripe",
+            jacketColorOne: "#ff0000",
+            jacketColorTwo: "#ffffff",
+          },
+        ],
+      })
+    );
+
+    expect(context.orderPayloads[0]?.jacket_color_two).toBeNull();
+  });
+
+  it("rejects a past requested date and fractional quantities", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildCheckoutOrderContext(buildOrder({ dueDate: "2020-01-01", customItems: [customItem("ONE")] })),
+    ).rejects.toThrow("Requested date must be after today");
+
+    await expect(
+      buildCheckoutOrderContext(buildOrder({ customItems: [customItem("ONE", 1.5)] })),
+    ).rejects.toThrow("Custom item quantity must be a whole number");
+  });
+
+  it("rejects zero-count ingredient labels and retired custom selections", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildCheckoutOrderContext(
+        buildOrder({
+          customItems: [{ ...customItem("ONE"), ingredientLabelsOptIn: true, ingredientLabelsCount: 0 }],
+        }),
+      ),
+    ).rejects.toThrow("Ingredient label count must be at least 1");
+
+    await expect(
+      buildCheckoutOrderContext(
+        buildOrder({ customItems: [{ ...customItem("ONE"), flavor: "Retired flavour" }] }),
+      ),
+    ).rejects.toThrow("Selected flavor is no longer available");
   });
 });

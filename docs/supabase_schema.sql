@@ -156,12 +156,19 @@ create table if not exists orders (
   due_date date,
   total_weight_kg numeric not null check (total_weight_kg > 0),
   total_price numeric,
+  payment_provider text,
+  payment_transaction_id text,
   refunded_amount numeric,
   status text not null default 'pending',
   notes text,
   created_at timestamptz not null default now()
 );
 create unique index if not exists orders_order_number_unique_idx on public.orders (order_number) where order_number is not null;
+create unique index if not exists orders_provider_transaction_order_unique_idx
+  on public.orders (payment_provider, payment_transaction_id, order_number)
+  where payment_provider is not null
+    and payment_transaction_id is not null
+    and order_number is not null;
 
 create or replace function set_order_number() returns trigger as $$
 begin

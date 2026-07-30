@@ -1,7 +1,15 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildCustomPricingInput, calculatePricing } from "@/lib/pricing";
 import { buildSplitOrderNumber, generateOrderNumber } from "@/lib/orderNumbers";
-import { getQuoteBlocks, getSettings, type QuoteBlock } from "@/lib/data";
+import {
+  getFlavors,
+  getPackagingOptions,
+  getQuoteBlocks,
+  getSettings,
+  type Flavor,
+  type PackagingOption,
+  type QuoteBlock,
+} from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
 import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 
@@ -58,6 +66,26 @@ export type CheckoutOrderContext = {
 const isDateBlocked = (dateKey: string, blocks: QuoteBlock[]) =>
   blocks.some((block) => dateKey >= block.start_date && dateKey <= block.end_date);
 
+function perthDateKey(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Perth",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+function assertFutureDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(new Date(`${value}T00:00:00Z`).getTime())) {
+    throw new Error("Requested date is invalid.");
+  }
+  if (value <= perthDateKey()) {
+    throw new Error("Requested date must be after today.");
+  }
+}
+
 function buildOrderNumbers(customCount: number, hasPremade: boolean, base: string): OrderNumberBundle {
   const splitCount = customCount + (hasPremade ? 1 : 0);
   const shouldSplit = splitCount > 1;
@@ -84,6 +112,40 @@ function assertWeightWithinLimit(weightKg: number, maxTotalKg: number) {
   }
   if (weightKg > maxTotalKg) {
     throw new Error(`Max total kg is ${maxTotalKg}.`);
+  }
+}
+
+function assertWholePositiveQuantity(value: number, label: string) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${label} quantity must be a whole number greater than zero.`);
+  }
+}
+
+function assertCustomItemSelections(
+  item: CustomCartItemPayload,
+  packagingOptions: PackagingOption[],
+  flavors: Flavor[],
+) {
+  assertWholePositiveQuantity(item.quantity, "Custom item");
+  const packaging = packagingOptions.find((option) => option.id === item.packagingOptionId);
+  if (!packaging || !item.categoryId || !packaging.allowed_categories.includes(item.categoryId)) {
+    throw new Error("Custom packaging is no longer available.");
+  }
+  if (item.jarLidColor && !(packaging.lid_colors ?? []).includes(item.jarLidColor)) {
+    throw new Error("Selected jar lid colour is no longer available.");
+  }
+  if (!item.flavor?.trim() || !flavors.some((flavor) => flavor.is_active !== false && flavor.name === item.flavor)) {
+    throw new Error("Selected flavor is no longer available.");
+  }
+
+  const labelCount = Number(item.labelsCount ?? 0);
+  if (labelCount > 0) {
+    if (!item.labelImageUrl?.trim() || !item.labelTypeId?.trim()) {
+      throw new Error("Custom label artwork and type are required.");
+    }
+    if (!(packaging.label_type_ids ?? []).includes(item.labelTypeId)) {
+      throw new Error("Selected custom label type is no longer available for this packaging.");
+    }
   }
 }
 
@@ -147,6 +209,7 @@ function assertBasePayload(body: CheckoutOrderPayload) {
   if (!body.dueDate?.trim()) {
     throw new Error("Requested date is required.");
   }
+  assertFutureDate(body.dueDate.trim());
   if (!body.pickup) {
     if (
       !body.customer.addressLine1?.trim() ||
@@ -168,6 +231,13 @@ async function buildCustomItemLine(
   item: CustomCartItemPayload,
   dueDate: string | null
 ) {
+  const hasCustomLabelDetails = Boolean(item.labelImageUrl?.trim() || item.labelTypeId?.trim());
+  if (hasCustomLabelDetails && !hasPositiveCustomLabelCount(item.labelsCount)) {
+    throw new Error("Custom label count must be at least 1 when custom labels are selected.");
+  }
+  if (item.ingredientLabelsOptIn && !hasPositiveCustomLabelCount(item.ingredientLabelsCount)) {
+    throw new Error("Ingredient label count must be at least 1 when ingredient labels are selected.");
+  }
   const pricingInput = buildCustomPricingInput({
     categoryId: item.categoryId,
     packagingOptionId: item.packagingOptionId,
@@ -176,7 +246,7 @@ async function buildCustomItemLine(
     ingredientLabelsCount: item.ingredientLabelsCount ?? undefined,
     ingredientLabelsOptIn: item.ingredientLabelsOptIn ?? false,
     dueDate: dueDate ?? undefined,
-    jacketExtras: item.jacketExtras ?? undefined,
+    jacketExtras: undefined,
     jacket: item.jacket ?? null,
   });
   if (!pricingInput) {
@@ -215,6 +285,15 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function hasPositiveCustomLabelCount(value: number | null | undefined) {
+  return Number.isInteger(value) && (value as number) > 0;
+}
+
+function usesTwoJacketColours(item: CustomCartItemPayload) {
+  const jacket = `${item.jacket ?? ""} ${item.jacketType ?? ""}`.toLowerCase();
+  return jacket.includes("two_colour") || jacket.includes("two colour");
+}
+
 export function calculateIncludedGst(totalAmount: number) {
   if (!Number.isFinite(totalAmount) || totalAmount <= 0) return 0;
   return roundMoney(totalAmount / 11);
@@ -233,11 +312,15 @@ export async function buildCheckoutOrderContext(
   const hasCustom = customItems.length > 0;
   const hasPremade = premadeItems.length > 0;
 
-  const premadeById = await loadPremadeItems(premadeItems);
+  const [premadeById, settings, packagingOptions, flavors] = await Promise.all([
+    loadPremadeItems(premadeItems),
+    getSettings(),
+    getPackagingOptions(),
+    getFlavors(),
+  ]);
   const dueDate = body.dueDate?.trim() ?? null;
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
-  const settings = await getSettings();
   const maxTotalKg = Number(settings.max_total_kg);
   if (hasCustom && dueDate) {
     const quoteBlocks = await getQuoteBlocks();
@@ -255,12 +338,15 @@ export async function buildCheckoutOrderContext(
   const orderNumbers = buildOrderNumbers(customItems.length, hasPremade, baseOrderNumber);
 
   for (const [index, item] of customItems.entries()) {
+    assertCustomItemSelections(item, packagingOptions, flavors);
     const { lineItem, totalPrice, totalWeightKg } = await buildCustomItemLine(
       item,
       dueDate
     );
     assertWeightWithinLimit(totalWeightKg, maxTotalKg);
     lineItems.push(lineItem);
+    const hasCustomLabels = hasPositiveCustomLabelCount(item.labelsCount);
+    const hasIngredientLabels = item.ingredientLabelsOptIn && hasPositiveCustomLabelCount(item.ingredientLabelsCount);
     orderPayloads.push({
       order_number: orderNumbers.customOrderNumbers[index] ?? orderNumbers.customOrderNumber,
       title: item.categoryId === "branded" || item.designType === "branded" ? organizationName : item.title?.trim() || null,
@@ -282,22 +368,22 @@ export async function buildCheckoutOrderContext(
       packaging_option_id: item.packagingOptionId,
       quantity: item.quantity,
       jar_lid_color: item.jarLidColor ?? null,
-      labels_count: item.labelsCount ?? null,
-      ingredient_labels_count: item.ingredientLabelsCount ?? null,
+      labels_count: hasCustomLabels ? Math.floor(item.labelsCount as number) : null,
+      ingredient_labels_count: hasIngredientLabels ? Math.floor(item.ingredientLabelsCount as number) : null,
       jacket: item.jacket ?? null,
       design_type: item.designType ?? null,
       design_text: item.designText ?? null,
       jacket_type: item.jacketType ?? null,
       jacket_color_one: item.jacketColorOne ?? null,
-      jacket_color_two: item.jacketColorTwo ?? null,
+      jacket_color_two: usesTwoJacketColours(item) ? item.jacketColorTwo ?? null : null,
       text_color: item.textColor ?? null,
       heart_color: item.heartColor ?? null,
       flavor: item.flavor ?? null,
       payment_method: paymentPreference ?? null,
       logo_url: item.logoUrl ?? null,
-      label_image_url: item.labelImageUrl ?? null,
-      label_type_id: item.labelTypeId ?? null,
-      notes: item.ingredientLabelsOptIn ? "Ingredient labels requested." : null,
+      label_image_url: hasCustomLabels ? item.labelImageUrl ?? null : null,
+      label_type_id: hasCustomLabels ? item.labelTypeId ?? null : null,
+      notes: hasIngredientLabels ? "Ingredient labels requested." : null,
       due_date: dueDate,
       total_weight_kg: totalWeightKg,
       total_price: totalPrice,
@@ -307,6 +393,7 @@ export async function buildCheckoutOrderContext(
   }
 
   for (const item of premadeItems) {
+    assertWholePositiveQuantity(item.quantity, "Premade item");
     const premade = premadeById.get(item.premadeId);
     if (!premade) {
       throw new Error("Premade item not found.");

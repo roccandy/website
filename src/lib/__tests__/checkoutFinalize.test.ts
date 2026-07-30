@@ -8,7 +8,12 @@ const sendAdminOrderSummaryEmail = vi.fn();
 const getOrdersRecipients = vi.fn();
 const isEmailConfigured = vi.fn();
 const insert = vi.fn();
-const from = vi.fn(() => ({ insert }));
+const select = vi.fn(() => ({
+  eq: vi.fn(() => ({
+    eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+  })),
+}));
+const from = vi.fn(() => ({ insert, select }));
 
 vi.mock("@/lib/checkoutOrder", () => ({
   buildCheckoutOrderContext,
@@ -123,7 +128,7 @@ describe("finalizePaidCheckoutOrder", () => {
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
 
-  it("returns a warning when the Supabase insert fails", async () => {
+  it("does not report success or send emails when the order insert fails", async () => {
     insert.mockResolvedValue({ error: { message: "insert failed" } });
 
     const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
@@ -136,18 +141,10 @@ describe("finalizePaidCheckoutOrder", () => {
         paymentMethodTitle: "Credit Card",
         transactionId: "txn_789",
       }),
-    ).resolves.toEqual({
-      orderNumber: "000123",
-      trackingTransactionId: "000123-txn_789",
-      orderTotal: 149.5,
-      tax: 13.59,
-      shipping: 0,
-      adminEmailWarning:
-        "Your payment was received, but we had trouble finalising the order record. Please keep your order number and contact us if you do not receive a confirmation email shortly.",
-    });
+    ).rejects.toThrow("Order record could not be saved after payment.");
 
-    expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
-    expect(sendAdminOrderSummaryEmail).toHaveBeenCalledTimes(1);
+    expect(sendCustomerOrderSummaryEmail).not.toHaveBeenCalled();
+    expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
 
   it("stores test promo orders without creating a Woo order", async () => {
@@ -233,5 +230,30 @@ describe("finalizePaidCheckoutOrder", () => {
 
     expect(buildCheckoutOrderContext).toHaveBeenCalledTimes(2);
     expect(insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the existing result without duplicating a captured payment", async () => {
+    select.mockReturnValueOnce({
+      eq: vi.fn(() => ({
+        eq: vi.fn().mockResolvedValue({ data: [{ order_number: "000123-a" }], error: null }),
+      })),
+    });
+    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+
+    await expect(
+      finalizePaidCheckoutOrder({
+        order: baseOrder,
+        paymentProvider: "square",
+        paymentMethod: "square",
+        paymentMethodTitle: "Credit Card",
+        transactionId: "txn_existing",
+      }),
+    ).resolves.toMatchObject({
+      orderNumber: "000123",
+      trackingTransactionId: "000123-txn_existing",
+    });
+
+    expect(insert).not.toHaveBeenCalled();
+    expect(sendCustomerOrderSummaryEmail).not.toHaveBeenCalled();
   });
 });

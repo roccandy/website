@@ -189,4 +189,37 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     expect(brandedPreview.searchParams.get("logoUrl")).toBe("https://cdn.test/logo.png");
     expect(summary.customDetails?.imageDataUrl).toBeNull();
   });
+
+  it("omits zero-count label artwork and a stale second jacket colour", async () => {
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [
+        {
+          order_number: "0013",
+          title: "Single colour",
+          quantity: 10,
+          packaging_option_id: "pack-1",
+          total_weight_kg: 1,
+          total_price: 100,
+          jacket: "pinstripe",
+          jacket_color_one: "#ff0000",
+          jacket_color_two: "#ffffff",
+          labels_count: 0,
+          label_type_id: "label-1",
+          label_image_url: "https://cdn.test/label.png",
+        },
+      ],
+      orderNumber: "0013",
+      requestedDate: "2026-05-20",
+      billing: {},
+      pickup: true,
+      paymentMethod: "Credit Card",
+      paymentAmount: 100,
+    });
+
+    expect(summary.customDetails?.outerColours).toBe("Red");
+    expect(summary.customDetails?.labels).toBe("No");
+    expect(summary.customDetails?.labelImageUrl).toBeNull();
+  });
 });

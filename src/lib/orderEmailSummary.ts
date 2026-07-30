@@ -332,7 +332,11 @@ export async function buildAdminOrderSummaryEmailPayload({
     const pinstripe = jacketCombined.includes("pinstripe");
     const colourOne = formatColour(customItem.jacket_color_one);
     const colourTwoRaw = formatColour(customItem.jacket_color_two);
-    const hasSecondColour = typeof customItem.jacket_color_two === "string" && customItem.jacket_color_two.trim().length > 0;
+    const usesTwoColours = jacketCombined.includes("two_colour") || jacketCombined.includes("two colour");
+    const hasSecondColour =
+      usesTwoColours &&
+      typeof customItem.jacket_color_two === "string" &&
+      customItem.jacket_color_two.trim().length > 0;
     const outerColours = rainbow
       ? "Rainbow"
       : hasSecondColour
@@ -353,9 +357,13 @@ export async function buildAdminOrderSummaryEmailPayload({
       : notesRaw.includes("ingredient labels requested")
         ? "Yes"
         : "No";
-    const labelType = labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? "No label selected";
+    const labelsCount = toNumber(customItem.labels_count);
+    const hasCustomLabels = Number.isFinite(labelsCount) && (labelsCount ?? 0) > 0;
+    const labelType = hasCustomLabels
+      ? labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? "No label selected"
+      : "No";
     const labelImageUrl =
-      typeof customItem.label_image_url === "string" && customItem.label_image_url.trim()
+      hasCustomLabels && typeof customItem.label_image_url === "string" && customItem.label_image_url.trim()
         ? customItem.label_image_url
         : null;
     const previewPngDataUrl =

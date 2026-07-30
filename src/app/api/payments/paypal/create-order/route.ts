@@ -4,6 +4,7 @@ import { createPayPalOrder } from "@/lib/paypal";
 import { logPaymentFailure } from "@/lib/paymentFailures";
 import { toPublicPaymentError } from "@/lib/publicErrorMessages";
 import { rateLimit, getClientIp } from "@/lib/rateLimit";
+import { createCheckoutFingerprint } from "@/lib/checkoutFingerprint";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 type PayPalCreateRequest = {
@@ -29,7 +30,11 @@ export async function POST(request: Request) {
       customId: orderNumbers.baseOrderNumber,
       description: `Roc Candy order ${orderNumbers.baseOrderNumber}`,
     });
-    return NextResponse.json({ orderId: created.id, orderNumber: orderNumbers.baseOrderNumber });
+    return NextResponse.json({
+      orderId: created.id,
+      orderNumber: orderNumbers.baseOrderNumber,
+      checkoutState: createCheckoutFingerprint(body.order, orderNumbers.baseOrderNumber),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create PayPal order.";
     await logPaymentFailure({

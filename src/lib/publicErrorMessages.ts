@@ -90,6 +90,10 @@ export function toPublicCheckoutError(message?: string | null) {
     return "That requested date is no longer available. Please choose another date.";
   }
 
+  if (includesAny(normalized, ["requested date is invalid", "requested date must be after today"])) {
+    return "Please choose a future requested date.";
+  }
+
   if (normalized.includes("delivery address is incomplete")) {
     return "Please complete the delivery address before continuing.";
   }
@@ -129,6 +133,26 @@ export function toPublicCheckoutError(message?: string | null) {
 
   if (normalized.includes("ingredient label count exceeds maximum")) {
     return "The selected ingredient label quantity is too high for this order. Please reduce it and try again.";
+  }
+
+  if (normalized.includes("ingredient label count must be at least 1")) {
+    return "Please enter at least one ingredient label or turn ingredient labels off.";
+  }
+
+  if (normalized.includes("custom label count must be at least 1")) {
+    return "Please enter at least one custom label or turn custom labels off.";
+  }
+
+  if (
+    includesAny(normalized, [
+      "custom packaging is no longer available",
+      "selected jar lid colour is no longer available",
+      "selected flavor is no longer available",
+      "selected custom label type is no longer available",
+      "custom label artwork and type are required",
+    ])
+  ) {
+    return "One or more custom order selections are no longer available. Please review your cart and try again.";
   }
 
   if (
