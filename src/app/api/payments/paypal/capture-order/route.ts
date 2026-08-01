@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       paymentMethod: "paypal",
       paymentMethodTitle: "PayPal",
       transactionId: resolvedTransactionId,
+      checkoutContext: validatedContext,
       baseOrderNumber: body.orderNumber ?? null,
     });
 

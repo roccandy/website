@@ -1,5 +1,11 @@
 import { buildCheckoutOrderContext, type CheckoutOrderContext } from "@/lib/checkoutOrder";
-import { getOrdersRecipients, isEmailConfigured, sendAdminOrderSummaryEmail, sendCustomerOrderSummaryEmail } from "@/lib/email";
+import {
+  getOrdersRecipients,
+  isEmailConfigured,
+  sendAdminOrderSummaryEmail,
+  sendCustomerOrderSummaryEmail,
+  sendPaidOrderSaveFailureEmail,
+} from "@/lib/email";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
@@ -73,7 +79,7 @@ function buildPaidOrderPayloads({
   transactionId: string;
   isTestOrder: boolean;
   paidAt: string;
-}) {
+}): Array<Record<string, unknown>> {
   return context.orderPayloads.map((payload) => ({
     ...payload,
     payment_method: paymentMethodTitle,
@@ -126,7 +132,15 @@ export async function finalizePaidCheckoutOrder({
       isTestOrder,
       paidAt,
     });
-    const { error: insertError } = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
+    let insertError: { message?: string } | null = null;
+    try {
+      const result = await supabaseAdminClient.from("orders").insert(enrichedPayloads);
+      insertError = result.error;
+    } catch (error) {
+      insertError = {
+        message: error instanceof Error ? error.message : String(error),
+      };
+    }
     if (!insertError) {
       orderSaved = true;
       break;
@@ -159,6 +173,14 @@ export async function finalizePaidCheckoutOrder({
   }
 
   if (!orderSaved) {
+    const recoveryPayloads = buildPaidOrderPayloads({
+      context,
+      paymentProvider,
+      paymentMethodTitle,
+      transactionId,
+      isTestOrder,
+      paidAt,
+    });
     await logPaymentFailure({
       provider: paymentProvider === "paypal" ? "paypal" : "square",
       stage: "order_finalization",
@@ -173,20 +195,62 @@ export async function finalizePaidCheckoutOrder({
       transactionId,
       orderNumber: context.orderNumbers.baseOrderNumber,
       checkoutSnapshot: {
-        orderPayloads: buildPaidOrderPayloads({
-          context,
-          paymentProvider,
-          paymentMethodTitle,
-          transactionId,
-          isTestOrder,
-          paidAt,
-        }),
+        orderPayloads: recoveryPayloads,
         billing: context.billing,
         dueDate: context.dueDate,
         pickup: context.pickup,
         totalAmount: context.totalAmount,
       },
     });
+    const alertRecipients = getOrdersRecipients();
+    if (isEmailConfigured() && alertRecipients.length > 0) {
+      const deliveryAddress = context.pickup
+        ? "Pickup"
+        : [
+            context.billing.address_1,
+            context.billing.address_2,
+            context.billing.city,
+            context.billing.state,
+            context.billing.postcode,
+          ]
+            .filter((part) => part?.trim())
+            .join(", ") || "Delivery address missing";
+      try {
+        await sendPaidOrderSaveFailureEmail(alertRecipients, {
+          orderNumber: context.orderNumbers.baseOrderNumber,
+          paymentProvider,
+          paymentMethod: paymentMethodTitle,
+          transactionId,
+          paidAt,
+          orderTotal: context.totalAmount,
+          saveError: lastInsertError,
+          customerName: `${context.billing.first_name} ${context.billing.last_name}`.trim(),
+          customerEmail,
+          customerPhone: context.billing.phone || null,
+          requestedDate: context.dueDate,
+          deliveryAddress,
+          items: recoveryPayloads.map((payload) => {
+            const quantity = Number(payload.quantity ?? 1);
+            const totalPrice = Number(payload.total_price);
+            return {
+              orderNumber: String(payload.order_number ?? context.orderNumbers.baseOrderNumber),
+              title: String(payload.title ?? "Order item"),
+              description:
+                typeof payload.order_description === "string" && payload.order_description.trim()
+                  ? payload.order_description.trim()
+                  : null,
+              flavor: typeof payload.flavor === "string" && payload.flavor.trim() ? payload.flavor.trim() : null,
+              quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+              totalPrice: Number.isFinite(totalPrice) ? totalPrice : null,
+            };
+          }),
+        });
+      } catch (alertError) {
+        console.error("Paid order recovery alert email failed:", alertError);
+      }
+    } else {
+      console.error("Paid order recovery alert email is not configured.");
+    }
     throw new Error("Order record could not be saved after payment.");
   }
 

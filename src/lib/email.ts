@@ -52,6 +52,29 @@ type CustomerRefundEmailPayload = {
   reason?: string | null;
 };
 
+export type PaidOrderSaveFailureEmailPayload = {
+  orderNumber: string;
+  paymentProvider: string;
+  paymentMethod: string;
+  transactionId: string;
+  paidAt: string;
+  orderTotal: number;
+  saveError: string | null;
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  requestedDate: string | null;
+  deliveryAddress: string;
+  items: Array<{
+    orderNumber: string;
+    title: string;
+    description: string | null;
+    flavor: string | null;
+    quantity: number;
+    totalPrice: number | null;
+  }>;
+};
+
 const CUSTOMER_WEBSITE_FEEDBACK_NOTE =
   "Our website is new. If you notice any issues or have feedback, please contact enquiries@roccandy.com.au.";
 
@@ -256,6 +279,112 @@ function formatDate(value: string | null | undefined) {
     year: "numeric",
     month: "short",
     day: "2-digit",
+  });
+}
+
+function formatPerthDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Perth",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+export async function sendPaidOrderSaveFailureEmail(
+  to: string[],
+  order: PaidOrderSaveFailureEmailPayload,
+) {
+  const orderNumber = `#${order.orderNumber}`;
+  const paymentAmount = Number.isFinite(order.orderTotal) ? `$${order.orderTotal.toFixed(2)}` : "-";
+  const productsText = order.items
+    .map((item) => {
+      const flavor = item.flavor ? ` | Flavour: ${item.flavor}` : "";
+      const description = item.description ? ` | ${item.description}` : "";
+      const total = Number.isFinite(item.totalPrice ?? NaN) ? ` | $${Number(item.totalPrice).toFixed(2)}` : "";
+      return `- ${item.quantity} x ${item.title}${flavor}${description}${total} (${item.orderNumber})`;
+    })
+    .join("\n");
+  const lines = [
+    "URGENT: A customer payment succeeded, but no order record was created.",
+    "Do not charge the customer again. Verify the payment and recreate the order from these details.",
+    "",
+    `Intended order number: ${orderNumber}`,
+    `Payment received: ${formatPerthDateTime(order.paidAt)}`,
+    `Payment provider: ${order.paymentProvider}`,
+    `Payment method: ${order.paymentMethod}`,
+    `Payment transaction: ${order.transactionId}`,
+    `Payment amount: ${paymentAmount}`,
+    `Save error: ${order.saveError ?? "Unknown database error"}`,
+    "",
+    `Customer: ${order.customerName || "-"}`,
+    `Email: ${order.customerEmail ?? "-"}`,
+    `Phone: ${order.customerPhone ?? "-"}`,
+    `Requested date: ${formatDate(order.requestedDate)}`,
+    `Delivery: ${order.deliveryAddress}`,
+    "",
+    "Products that were not saved",
+    productsText || "-",
+  ];
+  const productsHtml = order.items
+    .map((item) => {
+      const total = Number.isFinite(item.totalPrice ?? NaN) ? `$${Number(item.totalPrice).toFixed(2)}` : "-";
+      return `<tr>
+        <td style="padding:8px;border-bottom:1px solid #fecaca;">${escapeHtml(item.orderNumber)}</td>
+        <td style="padding:8px;border-bottom:1px solid #fecaca;">${escapeHtml(item.title)}</td>
+        <td style="padding:8px;border-bottom:1px solid #fecaca;">${escapeHtml(item.flavor ?? "-")}</td>
+        <td style="padding:8px;border-bottom:1px solid #fecaca;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px;border-bottom:1px solid #fecaca;text-align:right;">${escapeHtml(total)}</td>
+      </tr>`;
+    })
+    .join("");
+
+  return sendEmail({
+    to,
+    subject: `URGENT: Paid order not saved ${orderNumber}`,
+    text: lines.join("\n"),
+    html: `
+      <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:760px;">
+        <div style="padding:16px;border:2px solid #dc2626;border-radius:12px;background:#fef2f2;margin-bottom:20px;">
+          <h2 style="margin:0 0 8px;color:#b91c1c;">Paid order was not saved</h2>
+          <p style="margin:0 0 6px;font-weight:700;">Do not charge the customer again.</p>
+          <p style="margin:0;">Verify the payment and recreate the order using the details below.</p>
+        </div>
+        <h3 style="margin:0 0 8px;">Payment</h3>
+        <div><strong>Intended order:</strong> ${escapeHtml(orderNumber)}</div>
+        <div><strong>Received:</strong> ${escapeHtml(formatPerthDateTime(order.paidAt))}</div>
+        <div><strong>Provider:</strong> ${escapeHtml(order.paymentProvider)}</div>
+        <div><strong>Method:</strong> ${escapeHtml(order.paymentMethod)}</div>
+        <div><strong>Transaction:</strong> ${escapeHtml(order.transactionId)}</div>
+        <div><strong>Amount:</strong> ${escapeHtml(paymentAmount)}</div>
+        <div><strong>Save error:</strong> ${escapeHtml(order.saveError ?? "Unknown database error")}</div>
+        <hr style="border:none;border-top:1px solid #fecaca;margin:20px 0;" />
+        <h3 style="margin:0 0 8px;">Customer and delivery</h3>
+        <div><strong>Customer:</strong> ${escapeHtml(order.customerName || "-")}</div>
+        <div><strong>Email:</strong> ${escapeHtml(order.customerEmail ?? "-")}</div>
+        <div><strong>Phone:</strong> ${escapeHtml(order.customerPhone ?? "-")}</div>
+        <div><strong>Requested date:</strong> ${escapeHtml(formatDate(order.requestedDate))}</div>
+        <div><strong>Delivery:</strong> ${escapeHtml(order.deliveryAddress)}</div>
+        <hr style="border:none;border-top:1px solid #fecaca;margin:20px 0;" />
+        <h3 style="margin:0 0 8px;">Products that were not saved</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #fca5a5;">Order</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #fca5a5;">Product</th>
+            <th style="padding:8px;text-align:left;border-bottom:2px solid #fca5a5;">Flavour</th>
+            <th style="padding:8px;text-align:center;border-bottom:2px solid #fca5a5;">Qty</th>
+            <th style="padding:8px;text-align:right;border-bottom:2px solid #fca5a5;">Total</th>
+          </tr></thead>
+          <tbody>${productsHtml}</tbody>
+        </table>
+      </div>
+    `,
   });
 }
 

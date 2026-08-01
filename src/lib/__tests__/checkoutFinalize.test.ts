@@ -5,6 +5,7 @@ const buildCheckoutOrderContext = vi.fn();
 const buildAdminOrderSummaryEmailPayload = vi.fn();
 const sendCustomerOrderSummaryEmail = vi.fn();
 const sendAdminOrderSummaryEmail = vi.fn();
+const sendPaidOrderSaveFailureEmail = vi.fn();
 const getOrdersRecipients = vi.fn();
 const isEmailConfigured = vi.fn();
 const insert = vi.fn();
@@ -26,6 +27,7 @@ vi.mock("@/lib/orderEmailSummary", () => ({
 vi.mock("@/lib/email", () => ({
   sendCustomerOrderSummaryEmail,
   sendAdminOrderSummaryEmail,
+  sendPaidOrderSaveFailureEmail,
   getOrdersRecipients,
   isEmailConfigured,
 }));
@@ -62,6 +64,7 @@ describe("finalizePaidCheckoutOrder", () => {
     buildAdminOrderSummaryEmailPayload.mockResolvedValue({ subject: "Order 000123" });
     sendCustomerOrderSummaryEmail.mockResolvedValue(undefined);
     sendAdminOrderSummaryEmail.mockResolvedValue(undefined);
+    sendPaidOrderSaveFailureEmail.mockResolvedValue({ success: true });
     getOrdersRecipients.mockReturnValue(["orders@roccandy.com.au"]);
     isEmailConfigured.mockReturnValue(true);
     insert.mockResolvedValue({ error: null });
@@ -145,6 +148,18 @@ describe("finalizePaidCheckoutOrder", () => {
 
     expect(sendCustomerOrderSummaryEmail).not.toHaveBeenCalled();
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
+    expect(sendPaidOrderSaveFailureEmail).toHaveBeenCalledWith(
+      ["orders@roccandy.com.au"],
+      expect.objectContaining({
+        orderNumber: "000123",
+        paymentProvider: "square",
+        transactionId: "txn_789",
+        orderTotal: 149.5,
+        customerEmail: "customer@example.com",
+        saveError: "insert failed",
+        items: [expect.objectContaining({ title: "Custom Order" })],
+      }),
+    );
     expect(from).toHaveBeenCalledWith("payment_failures");
     expect(insert).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -155,6 +170,34 @@ describe("finalizePaidCheckoutOrder", () => {
         checkout_snapshot: expect.objectContaining({ totalAmount: 149.5 }),
       }),
     );
+  });
+
+  it("alerts admin when the order insert throws a network error", async () => {
+    insert.mockRejectedValue(new Error("database network unavailable"));
+
+    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+
+    await expect(
+      finalizePaidCheckoutOrder({
+        order: baseOrder,
+        paymentProvider: "paypal",
+        paymentMethod: "paypal",
+        paymentMethodTitle: "PayPal",
+        transactionId: "capture_network_failure",
+      }),
+    ).rejects.toThrow("Order record could not be saved after payment.");
+
+    expect(insert).toHaveBeenCalledTimes(4);
+    expect(sendPaidOrderSaveFailureEmail).toHaveBeenCalledWith(
+      ["orders@roccandy.com.au"],
+      expect.objectContaining({
+        paymentProvider: "paypal",
+        transactionId: "capture_network_failure",
+        saveError: "database network unavailable",
+      }),
+    );
+    expect(sendCustomerOrderSummaryEmail).not.toHaveBeenCalled();
+    expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
 
   it("stores test promo orders without creating a Woo order", async () => {
