@@ -163,9 +163,9 @@ create table if not exists orders (
   notes text,
   created_at timestamptz not null default now()
 );
-create unique index if not exists orders_order_number_unique_idx on public.orders (order_number) where order_number is not null;
+create index if not exists idx_orders_order_number on public.orders (order_number);
 create unique index if not exists orders_provider_transaction_order_unique_idx
-  on public.orders (payment_provider, payment_transaction_id, order_number)
+  on public.orders (payment_provider, payment_transaction_id, order_number, coalesce(title, ''))
   where payment_provider is not null
     and payment_transaction_id is not null
     and order_number is not null;

@@ -143,6 +143,40 @@ describe("buildCheckoutOrderContext", () => {
     expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008-a", "0008-b"]);
   });
 
+  it("keeps different premade products under one order number", async () => {
+    premadeRows = [
+      {
+        id: "passionfruit",
+        name: "Passionfruit",
+        price: 43,
+        weight_g: 100,
+        description: "Passionfruit premade candy",
+      },
+      {
+        id: "watermelon",
+        name: "Watermelon",
+        price: 43,
+        weight_g: 100,
+        description: "Watermelon premade candy",
+      },
+    ];
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    const context = await buildCheckoutOrderContext(
+      buildOrder({
+        customItems: [],
+        premadeItems: [
+          { premadeId: "passionfruit", quantity: 1 },
+          { premadeId: "watermelon", quantity: 1 },
+        ],
+      }),
+    );
+
+    expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008", "0008"]);
+    expect(context.orderPayloads.map((payload) => payload.title)).toEqual(["Passionfruit", "Watermelon"]);
+    expect(context.totalAmount).toBe(86);
+  });
+
   it("allows multiple order lines when each line stays under the weight cap", async () => {
     premadeRows = [
       {

@@ -55,6 +55,10 @@ async function findExistingPaymentOrder(paymentProvider: string, transactionId: 
   return data ?? [];
 }
 
+function waitForRetry(attempt: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, attempt * 150));
+}
+
 function buildPaidOrderPayloads({
   context,
   paymentProvider,
@@ -97,7 +101,7 @@ export async function finalizePaidCheckoutOrder({
   const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
   const paidAt = new Date().toISOString();
 
-  const existingOrders = await findExistingPaymentOrder(paymentProvider, transactionId);
+  const existingOrders = await findExistingPaymentOrder(paymentProvider, transactionId).catch(() => []);
   if (existingOrders?.length) {
     const existingOrderNumber = normalizeBaseOrderNumber(existingOrders[0]?.order_number) ?? context.orderNumbers.baseOrderNumber;
     return {
@@ -112,6 +116,7 @@ export async function finalizePaidCheckoutOrder({
 
   let adminEmailWarning: string | null = null;
   let orderSaved = false;
+  let lastInsertError: string | null = null;
   for (let attempt = 1; attempt <= ORDER_INSERT_ATTEMPTS; attempt += 1) {
     const enrichedPayloads = buildPaidOrderPayloads({
       context,
@@ -126,11 +131,8 @@ export async function finalizePaidCheckoutOrder({
       orderSaved = true;
       break;
     }
-    if (attempt < ORDER_INSERT_ATTEMPTS && isOrderNumberConflict(insertError)) {
-      context = await buildCheckoutOrderContext(order);
-      continue;
-    }
-    const concurrentOrders = await findExistingPaymentOrder(paymentProvider, transactionId);
+    lastInsertError = insertError.message || String(insertError);
+    const concurrentOrders = await findExistingPaymentOrder(paymentProvider, transactionId).catch(() => []);
     if (concurrentOrders.length) {
       const existingOrderNumber =
         normalizeBaseOrderNumber(concurrentOrders[0]?.order_number) ?? context.orderNumbers.baseOrderNumber;
@@ -143,6 +145,15 @@ export async function finalizePaidCheckoutOrder({
         adminEmailWarning: null,
       };
     }
+    if (attempt < ORDER_INSERT_ATTEMPTS && isOrderNumberConflict(insertError)) {
+      context = await buildCheckoutOrderContext(order);
+      await waitForRetry(attempt);
+      continue;
+    }
+    if (attempt < ORDER_INSERT_ATTEMPTS) {
+      await waitForRetry(attempt);
+      continue;
+    }
     console.error("Supabase order insert failed:", insertError);
     break;
   }
@@ -151,9 +162,30 @@ export async function finalizePaidCheckoutOrder({
     await logPaymentFailure({
       provider: paymentProvider === "paypal" ? "paypal" : "square",
       stage: "order_finalization",
-      message: "Payment succeeded but the order record could not be saved.",
+      message: [
+        `Payment ${transactionId} succeeded for order ${context.orderNumbers.baseOrderNumber}, but the order record could not be saved.`,
+        lastInsertError,
+      ]
+        .filter(Boolean)
+        .join(" "),
       customerEmail,
       orderTotal: context.totalAmount,
+      transactionId,
+      orderNumber: context.orderNumbers.baseOrderNumber,
+      checkoutSnapshot: {
+        orderPayloads: buildPaidOrderPayloads({
+          context,
+          paymentProvider,
+          paymentMethodTitle,
+          transactionId,
+          isTestOrder,
+          paidAt,
+        }),
+        billing: context.billing,
+        dueDate: context.dueDate,
+        pickup: context.pickup,
+        totalAmount: context.totalAmount,
+      },
     });
     throw new Error("Order record could not be saved after payment.");
   }

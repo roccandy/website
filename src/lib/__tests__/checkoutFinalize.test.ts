@@ -145,6 +145,16 @@ describe("finalizePaidCheckoutOrder", () => {
 
     expect(sendCustomerOrderSummaryEmail).not.toHaveBeenCalled();
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
+    expect(from).toHaveBeenCalledWith("payment_failures");
+    expect(insert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        provider: "square",
+        stage: "order_finalization",
+        payment_transaction_id: "txn_789",
+        order_number: "000123",
+        checkout_snapshot: expect.objectContaining({ totalAmount: 149.5 }),
+      }),
+    );
   });
 
   it("stores test promo orders without creating a Woo order", async () => {
