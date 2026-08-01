@@ -4,10 +4,34 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 const ABOUT_IMAGES = [
-  "/about-carousel/about-1.jpg",
-  "/about-carousel/about-2.jpg",
-  "/about-carousel/about-3.jpg",
-  "/about-carousel/about-4.jpg",
+  {
+    src: "/about-carousel/about-1.jpg",
+    alt: "Andy and Sylvi from Roc Candy",
+  },
+  {
+    src: "/about-carousel/about-2.png",
+    alt: "Roc Candy confectioner ready to make handmade candy",
+  },
+  {
+    src: "/about-carousel/about-3.png",
+    alt: "Personalised Roc Candy made for Kye and Melissa",
+  },
+  {
+    src: "/about-carousel/about-4.png",
+    alt: "Roc Candy confectioners with colourful handmade lollipops",
+  },
+  {
+    src: "/about-carousel/about-5.png",
+    alt: "Roc Candy confectioner hand-pulling green candy",
+  },
+  {
+    src: "/about-carousel/about-6.png",
+    alt: "Roc Candy team celebrating a special day in the original shop",
+  },
+  {
+    src: "/about-carousel/about-7.png",
+    alt: "Roc Candy confectioner hand-pulling red candy",
+  },
 ];
 
 const AUTOPLAY_MS = 3500;
@@ -16,7 +40,7 @@ const FALLBACK_IMAGE = "/landing/watercolour-hero-Homepage_2.webp";
 export default function AboutPhotoCarousel() {
   const [index, setIndex] = useState(0);
   const [animated, setAnimated] = useState(true);
-  const [brokenSlides, setBrokenSlides] = useState<Record<number, boolean>>({});
+  const [brokenSlides, setBrokenSlides] = useState<Record<string, boolean>>({});
 
   const slides = useMemo(() => [...ABOUT_IMAGES, ...ABOUT_IMAGES.slice(0, 2)], []);
 
@@ -52,19 +76,20 @@ export default function AboutPhotoCarousel() {
           }}
           onTransitionEnd={handleTransitionEnd}
         >
-          {slides.map((src, slideIndex) => (
-            <div key={`${src}-${slideIndex}`} className="w-1/2 shrink-0 p-1">
-              <div className="relative h-60 w-full overflow-hidden rounded-xl md:h-72">
+          {slides.map((slide, slideIndex) => (
+            <div key={`${slide.src}-${slideIndex}`} className="w-1/2 shrink-0 p-1">
+              <div className="relative h-60 w-full overflow-hidden rounded-xl bg-zinc-100 md:h-96">
                 <Image
-                  src={brokenSlides[slideIndex] ? FALLBACK_IMAGE : src}
-                  alt={`Roc Candy gallery image ${((slideIndex % ABOUT_IMAGES.length) + 1).toString()}`}
+                  src={brokenSlides[slide.src] ? FALLBACK_IMAGE : slide.src}
+                  alt={slide.alt}
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   sizes="(max-width: 768px) 50vw, 33vw"
+                  quality={90}
                   priority={slideIndex < 2}
                   onError={() => {
                     setBrokenSlides((current) =>
-                      current[slideIndex] ? current : { ...current, [slideIndex]: true },
+                      current[slide.src] ? current : { ...current, [slide.src]: true },
                     );
                   }}
                 />
