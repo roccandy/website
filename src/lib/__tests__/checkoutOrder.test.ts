@@ -15,6 +15,7 @@ let premadeRows: Array<{
   price: number;
   weight_g: number;
   description: string;
+  flavors?: string[] | null;
 }> = [];
 
 vi.mock("@/lib/pricing", () => ({
@@ -151,6 +152,7 @@ describe("buildCheckoutOrderContext", () => {
         price: 43,
         weight_g: 100,
         description: "Passionfruit premade candy",
+        flavors: ["Passionfruit"],
       },
       {
         id: "watermelon",
@@ -158,6 +160,7 @@ describe("buildCheckoutOrderContext", () => {
         price: 43,
         weight_g: 100,
         description: "Watermelon premade candy",
+        flavors: ["Watermelon"],
       },
     ];
     const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
@@ -174,6 +177,7 @@ describe("buildCheckoutOrderContext", () => {
 
     expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008", "0008"]);
     expect(context.orderPayloads.map((payload) => payload.title)).toEqual(["Passionfruit", "Watermelon"]);
+    expect(context.orderPayloads.map((payload) => payload.flavor)).toEqual(["Passionfruit", "Watermelon"]);
     expect(context.totalAmount).toBe(86);
   });
 

@@ -12,6 +12,7 @@ import {
 } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
 import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
+import { formatPremadeFlavors } from "@/lib/premadeCatalog";
 
 const DEFAULT_COUNTRY = "AU";
 
@@ -28,6 +29,7 @@ type PremadeRow = {
   price: number;
   weight_g: number;
   description: string;
+  flavors: string[] | null;
 };
 
 type CheckoutLineItem = {
@@ -156,7 +158,7 @@ async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
   const premadeIds = premadeItems.map((item) => item.premadeId);
   const { data, error } = await supabaseAdminClient
     .from("premade_candies")
-    .select("id,name,price,weight_g,description")
+    .select("id,name,price,weight_g,description,flavors")
     .in("id", premadeIds);
   if (error) {
     throw new Error(error.message);
@@ -168,6 +170,7 @@ async function loadPremadeItems(premadeItems: PremadeCartItemPayload[]) {
       price: Number(row.price),
       weight_g: Number(row.weight_g),
       description: row.description ?? "",
+      flavors: Array.isArray(row.flavors) ? row.flavors : null,
     })
   );
   return premadeById;
@@ -429,6 +432,7 @@ export async function buildCheckoutOrderContext(
       pickup,
       design_type: "premade",
       design_text: premade.name,
+      flavor: formatPremadeFlavors(premade.flavors) || null,
       payment_method: paymentPreference ?? null,
       due_date: dueDate,
       quantity: item.quantity,
