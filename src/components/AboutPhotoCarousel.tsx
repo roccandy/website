@@ -9,8 +9,12 @@ const ABOUT_IMAGES = [
     alt: "Andy and Sylvi from Roc Candy",
   },
   {
-    src: "/about-carousel/about-2.png",
-    alt: "Roc Candy confectioner ready to make handmade candy",
+    src: "/about-carousel/about-5.png",
+    alt: "Roc Candy confectioner hand-pulling green candy",
+  },
+  {
+    src: "/about-carousel/about-7.png",
+    alt: "Roc Candy confectioner hand-pulling red candy",
   },
   {
     src: "/about-carousel/about-3.png",
@@ -21,16 +25,12 @@ const ABOUT_IMAGES = [
     alt: "Roc Candy confectioners with colourful handmade lollipops",
   },
   {
-    src: "/about-carousel/about-5.png",
-    alt: "Roc Candy confectioner hand-pulling green candy",
-  },
-  {
     src: "/about-carousel/about-6.png",
     alt: "Roc Candy team celebrating a special day in the original shop",
   },
   {
-    src: "/about-carousel/about-7.png",
-    alt: "Roc Candy confectioner hand-pulling red candy",
+    src: "/about-carousel/about-2.png",
+    alt: "Roc Candy confectioner ready to make handmade candy",
   },
 ];
 
