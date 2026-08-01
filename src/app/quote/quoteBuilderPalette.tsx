@@ -157,6 +157,7 @@ export function PalettePicker({
   onCustom,
   placeholderLabel = "Select colour",
   placeholderSwatch,
+  invalid = false,
 }: {
   label: string;
   value: string;
@@ -165,6 +166,7 @@ export function PalettePicker({
   onCustom: () => void;
   placeholderLabel?: string;
   placeholderSwatch?: string;
+  invalid?: boolean;
 }) {
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
   const flat = groups.flatMap((group) => group.options);
@@ -180,7 +182,12 @@ export function PalettePicker({
   };
 
   return (
-    <details ref={detailsRef} className="rounded-lg border border-zinc-200 bg-white px-2 py-2 sm:px-3">
+    <details
+      ref={detailsRef}
+      className={`rounded-lg border bg-white px-2 py-2 sm:px-3 ${
+        invalid ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+      }`}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-zinc-700 sm:gap-3">
         <span className="whitespace-nowrap normal-case tracking-[0.04em] text-zinc-500">{label}</span>
         <span className="ml-auto flex items-center gap-1 whitespace-nowrap text-[10px] font-medium text-zinc-600 sm:gap-2 sm:text-[11px]">

@@ -224,6 +224,7 @@ export function QuoteBuilder({
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
   const [mobileStepError, setMobileStepError] = useState<string | null>(null);
   const [packagingFieldError, setPackagingFieldError] = useState<string | null>(null);
   const [initialOne, setInitialOne] = useState("");
@@ -1809,7 +1810,11 @@ export function QuoteBuilder({
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Packaging Type</p>
-                      <div className="grid w-full grid-cols-5 gap-1 sm:flex sm:flex-wrap sm:gap-2">
+                      <div
+                        className={`grid w-full grid-cols-5 gap-1 rounded-lg sm:flex sm:flex-wrap sm:gap-2 ${
+                          showFieldErrors && !selectionType ? "ring-2 ring-red-100" : ""
+                        }`}
+                      >
                         {packagingTypes.length > 0 ? (
                           packagingTypes.map((type) => {
                             const isActive = selectionType === type;
@@ -1849,7 +1854,11 @@ export function QuoteBuilder({
 
                   <div className="space-y-2">
                     <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Packaging Size</p>
-                      <div className="flex w-full flex-wrap gap-2">
+                      <div
+                        className={`flex w-full flex-wrap gap-2 rounded-lg ${
+                          showFieldErrors && Boolean(selectionType) && !selectionSize ? "ring-2 ring-red-100" : ""
+                        }`}
+                      >
                         {selectionType ? (
                           <>
                             {sizesForType.map((opt) => {
@@ -1931,7 +1940,9 @@ export function QuoteBuilder({
                     </p>
                     <div
                       className={`flex w-full overflow-hidden rounded-full border bg-white ${
-                        packagingFieldError ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+                        packagingFieldError || (showFieldErrors && selectionQty <= 0)
+                          ? "border-red-500 ring-2 ring-red-100"
+                          : "border-zinc-200"
                       }`}
                     >
                       <input
@@ -1947,7 +1958,7 @@ export function QuoteBuilder({
                         }}
                         placeholder="Enter quantity"
                         aria-label="Quantity"
-                        aria-invalid={Boolean(packagingFieldError)}
+                        aria-invalid={Boolean(packagingFieldError) || (showFieldErrors && selectionQty <= 0)}
                         aria-describedby={packagingFieldError ? "packaging-quantity-error-desktop" : undefined}
                         className="w-full bg-white px-4 py-2 text-center text-sm font-semibold text-zinc-900 outline-none"
                       />
@@ -2001,7 +2012,9 @@ export function QuoteBuilder({
                 </label>
                 <div
                   className={`flex w-full overflow-hidden rounded-full border bg-white ${
-                    packagingFieldError ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+                    packagingFieldError || (showFieldErrors && selectionQty <= 0)
+                      ? "border-red-500 ring-2 ring-red-100"
+                      : "border-zinc-200"
                   }`}
                 >
                   <input
@@ -2017,7 +2030,7 @@ export function QuoteBuilder({
                       setSelectionQtyInput(event.target.value);
                     }}
                     placeholder="Enter quantity"
-                    aria-invalid={Boolean(packagingFieldError)}
+                    aria-invalid={Boolean(packagingFieldError) || (showFieldErrors && selectionQty <= 0)}
                     aria-describedby={packagingFieldError ? "mobile-packaging-quantity-error" : undefined}
                     className="w-full bg-white px-4 py-3 text-center text-base font-semibold text-zinc-900 outline-none"
                   />
@@ -2043,7 +2056,16 @@ export function QuoteBuilder({
               <div className="relative z-10">
               <h2 className="site-small-title text-zinc-900">Custom Labels (optional)</h2>
               <div className="mt-3 grid gap-4 md:grid-cols-2">
-                <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
+                <div
+                  className={`space-y-3 rounded-xl border bg-white p-3 ${
+                    showFieldErrors &&
+                    (missingFields.includes("Label artwork") ||
+                      missingFields.includes("Custom Label type") ||
+                      missingFields.includes("Custom Labels Count"))
+                      ? "border-red-300"
+                      : "border-zinc-200"
+                  }`}
+                >
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2080,7 +2102,13 @@ export function QuoteBuilder({
                   </label>
                   {labelsOptIn && (
                     <div className="space-y-3">
-                      <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700">
+                      <div
+                        className={`rounded-lg border bg-white p-3 text-xs text-zinc-700 ${
+                          showFieldErrors && missingFields.includes("Custom Label type")
+                            ? "border-red-500 ring-2 ring-red-100"
+                            : "border-zinc-200"
+                        }`}
+                      >
                         <p className="text-[11px] font-semibold normal-case tracking-[0.1em] text-zinc-500">Label Type</p>
                         {hasLabelTypes ? (
                           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -2129,11 +2157,22 @@ export function QuoteBuilder({
                                 )
                               )
                             }
-                            className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
+                            aria-invalid={showFieldErrors && missingFields.includes("Custom Labels Count")}
+                            className={`mt-1 w-full rounded-full border bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20 ${
+                              showFieldErrors && missingFields.includes("Custom Labels Count")
+                                ? "border-red-500 ring-2 ring-red-100"
+                                : "border-zinc-300"
+                            }`}
                           />
                         </label>
                       )}
-                      <div className="rounded-lg border border-zinc-200 bg-white p-3 text-xs text-zinc-700">
+                      <div
+                        className={`rounded-lg border bg-white p-3 text-xs text-zinc-700 ${
+                          showFieldErrors && missingFields.includes("Label artwork")
+                            ? "border-red-500 ring-2 ring-red-100"
+                            : "border-zinc-200"
+                        }`}
+                      >
                         <span className="block text-[11px] font-semibold normal-case tracking-[0.1em] text-zinc-500">
                           Artwork File
                         </span>
@@ -2147,7 +2186,11 @@ export function QuoteBuilder({
                           />
                           <label
                             htmlFor="label-artwork-upload"
-                            className="inline-flex items-center rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition hover:border-zinc-400"
+                            className={`inline-flex items-center rounded-full border bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition hover:border-zinc-400 ${
+                              showFieldErrors && missingFields.includes("Label artwork")
+                                ? "border-red-500"
+                                : "border-zinc-300"
+                            }`}
                           >
                             {labelFileName ? "Change file" : "Choose file"}
                           </label>
@@ -2201,7 +2244,13 @@ export function QuoteBuilder({
                     </div>
                   )}
                 </div>
-                <div className="space-y-3 rounded-xl border border-zinc-200 bg-white p-3">
+                <div
+                  className={`space-y-3 rounded-xl border bg-white p-3 ${
+                    showFieldErrors && missingFields.includes("Ingredient Labels Count")
+                      ? "border-red-300"
+                      : "border-zinc-200"
+                  }`}
+                >
                   <label className="group flex items-start gap-3 px-1 py-1 text-sm text-zinc-700 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2272,7 +2321,12 @@ export function QuoteBuilder({
                             )
                           )
                         }
-                        className="mt-1 w-full rounded-full border border-zinc-300 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20"
+                        aria-invalid={showFieldErrors && missingFields.includes("Ingredient Labels Count")}
+                        className={`mt-1 w-full rounded-full border bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-[0.08em] text-zinc-700 shadow-sm transition focus:border-[#e91e63] focus:outline-none focus:ring-2 focus:ring-[#e91e63]/20 ${
+                          showFieldErrors && missingFields.includes("Ingredient Labels Count")
+                            ? "border-red-500 ring-2 ring-red-100"
+                            : "border-zinc-300"
+                        }`}
                       />
                     </label>
                   ) : null}
@@ -2311,10 +2365,12 @@ export function QuoteBuilder({
                 type="button"
                 onClick={() => {
                   if (!packagingComplete) {
+                    setShowFieldErrors(true);
                     showPackagingError();
                     return;
                   }
                   if (!packagingStepComplete) {
+                    setShowFieldErrors(true);
                     const missingText = missingFields
                       .filter(
                         (field) =>
@@ -2373,13 +2429,18 @@ export function QuoteBuilder({
                         type="text"
                         value={isWeddingInitials ? initialOne : nameOne}
                         maxLength={isWeddingInitials ? 1 : 8}
-                        onChange={(e) =>
-                          isWeddingInitials
+                      onChange={(e) =>
+                        isWeddingInitials
                             ? setInitialOne((e.target.value || "").slice(0, 1).toUpperCase())
                             : setNameOne((e.target.value || "").slice(0, 8).toUpperCase())
                         }
-                        required
-                        className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
+                      required
+                        aria-invalid={showFieldErrors && !(isWeddingInitials ? initialOne : nameOne)}
+                        className={`mt-1 w-full rounded border bg-white px-3 py-2 text-sm uppercase ${
+                          showFieldErrors && !(isWeddingInitials ? initialOne : nameOne)
+                            ? "border-red-500 ring-2 ring-red-100"
+                            : "border-zinc-200"
+                        }`}
                         placeholder={isWeddingInitials ? "R" : "Romeo"}
                       />
                     {!isWeddingInitials && (
@@ -2397,8 +2458,13 @@ export function QuoteBuilder({
                             ? setInitialTwo((e.target.value || "").slice(0, 1).toUpperCase())
                             : setNameTwo((e.target.value || "").slice(0, 8).toUpperCase())
                         }
-                        required
-                        className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
+                      required
+                        aria-invalid={showFieldErrors && !(isWeddingInitials ? initialTwo : nameTwo)}
+                        className={`mt-1 w-full rounded border bg-white px-3 py-2 text-sm uppercase ${
+                          showFieldErrors && !(isWeddingInitials ? initialTwo : nameTwo)
+                            ? "border-red-500 ring-2 ring-red-100"
+                            : "border-zinc-200"
+                        }`}
                         placeholder={isWeddingInitials ? "J" : "Juliet"}
                       />
                     {!isWeddingInitials && (
@@ -2432,7 +2498,10 @@ export function QuoteBuilder({
                       setCustomText(nextValue);
                     }}
                     required
-                    className="mt-1 w-full rounded border border-zinc-200 bg-white px-3 py-2 text-sm uppercase"
+                    aria-invalid={showFieldErrors && !customTextIsValid}
+                    className={`mt-1 w-full rounded border bg-white px-3 py-2 text-sm uppercase ${
+                      showFieldErrors && !customTextIsValid ? "border-red-500 ring-2 ring-red-100" : "border-zinc-200"
+                    }`}
                     placeholder="Your text"
                   />
                   <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-zinc-500">
@@ -2476,6 +2545,7 @@ export function QuoteBuilder({
                     groups={paletteGroups}
                     onCustom={() => openCustomPicker("text", textColor)}
                     placeholderSwatch={defaultTextColor}
+                    invalid={showFieldErrors && !isBranded && !textColor}
                   />
                 </div>
               )}
@@ -2486,8 +2556,9 @@ export function QuoteBuilder({
                       value={heartColor}
                       onChange={setHeartColor}
                       groups={paletteGroups}
-                      onCustom={() => openCustomPicker("heart", heartColor)}
-                      placeholderSwatch={defaultTextColor}
+                    onCustom={() => openCustomPicker("heart", heartColor)}
+                    placeholderSwatch={defaultTextColor}
+                    invalid={showFieldErrors && isWedding && !heartColor}
                     />
                   </div>
                 )}
@@ -2587,6 +2658,7 @@ export function QuoteBuilder({
                         onCustom={() => openCustomPicker("jacket1", jacketColorOne)}
                         placeholderLabel={showColourTwo ? "Select" : undefined}
                         placeholderSwatch={defaultJacketColor}
+                        invalid={showFieldErrors && !jacketColorOne}
                       />
                       {showColourTwo && (
                         <PalettePicker
@@ -2597,6 +2669,7 @@ export function QuoteBuilder({
                           onCustom={() => openCustomPicker("jacket2", jacketColorTwo)}
                           placeholderLabel="Select"
                           placeholderSwatch={defaultJacketColor}
+                          invalid={showFieldErrors && !jacketColorTwo}
                         />
                       )}
                     </div>
@@ -2609,7 +2682,7 @@ export function QuoteBuilder({
                 </div>
               </div>
               {isBranded && (
-                <div className="order-first col-span-2">
+                  <div className={`order-first col-span-2 rounded-lg ${showFieldErrors && !logoUrl ? "ring-2 ring-red-100" : ""}`}>
                   <label htmlFor="logo-upload" className="text-xs normal-case tracking-[0.04em] text-zinc-500">
                     Upload Your Design
                   </label>
@@ -2623,7 +2696,9 @@ export function QuoteBuilder({
                     />
                     <label
                       htmlFor="logo-upload"
-                      className="inline-flex cursor-pointer items-center rounded border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
+                      className={`inline-flex cursor-pointer items-center rounded border bg-white px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300 ${
+                        showFieldErrors && !logoUrl ? "border-red-500" : "border-zinc-200"
+                      }`}
                     >
                       Choose file (2mb max)
                     </label>
@@ -2671,7 +2746,7 @@ export function QuoteBuilder({
                       setFlavor(f.name);
                     }}
                     aria-pressed={isActive}
-                    className="w-full"
+                    className={`w-full rounded-full ${showFieldErrors && !flavor ? "ring-2 ring-red-200" : ""}`}
                   >
                     <span
                       className="inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-xs font-semibold normal-case tracking-[0.08em] transition"
@@ -2698,6 +2773,7 @@ export function QuoteBuilder({
                 type="button"
                 onClick={() => {
                   if (!designStepComplete) {
+                    setShowFieldErrors(true);
                     const missingText = missingFields.filter((field) => field !== "Packaging & quantity").join(", ");
                     setMobileStepError(`Please complete: ${missingText || "design and flavour"}.`);
                     if (missingFields.includes("Candy flavor")) {
@@ -2768,6 +2844,7 @@ export function QuoteBuilder({
                 onClick={async () => {
                   setPlaceError(null);
                   if (!canPlace) {
+                    setShowFieldErrors(true);
                     const missingText = missingFields.length ? missingFields.join(", ") : "required fields";
                     setPlaceError(`Please complete: ${missingText}.`);
                     showFirstMissingField();
