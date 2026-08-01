@@ -166,43 +166,64 @@ export default async function Home() {
               <h2 className="site-section-title text-[rgb(114,112,111)]">
                 Custom Rock Candy
               </h2>
-              <p className="site-home-card-copy normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
-                At Roc Candy, we believe every sweet moment deserves a personalised touch. Whether you&apos;re planning a
-                wedding, launching a product, or simply want to treat someone special, our handcrafted rock candy is
-                made to impress. From{" "}
-                <Link href="/design/wedding-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
-                  wedding candy
-                </Link>{" "}
-                tailored to your big day, to{" "}
-                <Link href="/design/custom-text-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
-                  custom text candy
-                </Link>{" "}
-                that celebrates life&apos;s milestones, we turn your words and designs into delicious works of art -
-                all made with premium ingredients right here in Australia. Explore our full range, including{" "}
-                <Link href="/design/branded-logo-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
-                  branded candy
-                </Link>{" "}
-                that showcases your logo in every bite, and our colourful selection of{" "}
-                <Link href="/pre-made-candy" className="text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
-                  pre-made candy
-                </Link>{" "}
-                ready to enjoy anytime. Whether it&apos;s for a party, corporate gift, or just because, Roc Candy
-                makes every occasion a little sweeter.
-              </p>
+              <div className="site-home-card-copy space-y-3 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
+                <p>
+                  At Roc Candy, every sweet moment deserves a personalised touch, handcrafted to impress, made with
+                  premium ingredients right here in Australia.
+                </p>
+                <ul className="list-disc space-y-2 pl-5">
+                  <li>
+                    <Link href="/design/wedding-candy" className="font-bold text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                      Wedding candy
+                    </Link>{" "}
+                    - tailored to your big day
+                  </li>
+                  <li>
+                    <Link href="/design/custom-text-candy" className="font-bold text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                      Custom text candy
+                    </Link>{" "}
+                    - celebrating life&apos;s milestones, your words turned into edible art
+                  </li>
+                  <li>
+                    <Link href="/design/branded-logo-candy" className="font-bold text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                      Branded candy
+                    </Link>{" "}
+                    - your logo in every bite, perfect for launches and corporate gifts
+                  </li>
+                  <li>
+                    <Link href="/pre-made-candy" className="font-bold text-[#ff6f95] underline-offset-2 hover:text-[#ff4f80] hover:underline">
+                      Pre-made candy
+                    </Link>{" "}
+                    - a colourful, ready-to-order range for any occasion
+                  </li>
+                </ul>
+                <p>
+                  Whether it&apos;s a wedding, a launch, a party or just because, Roc Candy makes it a little sweeter.
+                </p>
+              </div>
             </article>
 
             <article className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm md:p-8">
               <h2 className="site-section-title text-[rgb(114,112,111)]">
                 A little about us
               </h2>
-              <p className="site-home-card-copy normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
-                We are Australian artisan confectioners specialising in personalised and custom handmade
-                rock candies for all types of occasions. Established in 1999, our rock candy treats are vegan,
-                gluten-free and dairy-free. Each piece of candy is meticulously handcrafted with the finest
-                ingredients, sourced from trusted suppliers, 98% of which are Australian. We offer Free Delivery
-                Australia-wide, delivering our delicious rock candy to all major cities, including Sydney, Melbourne,
-                Brisbane, Perth, Adelaide, Canberra and Hobart.
-              </p>
+              <div className="site-home-card-copy space-y-3 normal-case text-[13px] leading-relaxed text-zinc-600 md:text-[14px]">
+                <p>
+                  We are Australian artisan confectioners specialising in personalised and custom handmade rock candy
+                  for all types of occasions.
+                </p>
+                <ul className="list-disc space-y-2 pl-5">
+                  <li><strong>Established</strong> in 1999</li>
+                  <li><strong>Vegan, gluten-free and dairy-free</strong></li>
+                  <li>
+                    <strong>Handcrafted</strong>, using the finest ingredients from trusted suppliers, 98% of them Australian
+                  </li>
+                  <li>
+                    <strong>Free delivery Australia-wide</strong>, including Sydney, Melbourne, Brisbane, Perth, Adelaide,
+                    Canberra, Hobart and Regional.
+                  </li>
+                </ul>
+              </div>
             </article>
 
             <div className="site-home-media-card overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">

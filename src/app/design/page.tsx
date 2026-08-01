@@ -18,7 +18,13 @@ import { JsonLd } from "@/components/JsonLd";
 import { QuoteBuilder } from "@/app/quote/QuoteBuilder";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
-import { buildDesignerPath, getDesignerCanonicalTarget, isLegacyDesignerQuery, resolveDesignerState } from "@/lib/designUrls";
+import {
+  buildDesignerPath,
+  getDesignerCanonicalTarget,
+  getDesignerLandingPageSlug,
+  isLegacyDesignerQuery,
+  resolveDesignerState,
+} from "@/lib/designUrls";
 import { getManagedSitePage, getManagedSitePageFaqSection } from "@/lib/sitePages";
 import { redirect } from "next/navigation";
 
@@ -191,7 +197,8 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
 
   const designPage = await getManagedSitePage("design");
   const initialOrderType = designerState?.orderType;
-  const faqSection = !initialOrderType ? await getManagedSitePageFaqSection(designPage) : null;
+  const faqPageSlug = initialOrderType ? getDesignerLandingPageSlug(initialOrderType) : "design";
+  const faqSection = await getManagedSitePageFaqSection(faqPageSlug);
   const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
@@ -242,7 +249,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
             ? [
                 {
                   "@type": "FAQPage",
-                  "@id": `${buildAbsoluteUrl("/design")}#faq`,
+                  "@id": `${buildAbsoluteUrl(seoVariant.path)}#faq`,
                   mainEntity: buildFaqSchemaItems(faqSection.items),
                 },
               ]

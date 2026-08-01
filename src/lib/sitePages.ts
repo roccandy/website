@@ -135,15 +135,27 @@ const DEFAULT_SITE_PAGES: Record<string, ManagedSitePage> = {
     heroSubheading: null,
     heroSupportingLine: null,
     bodyHtml: `
-<p><strong>Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!</strong></p>
-<p>Established in 1999 we have been creating for all occasions: Corporate functions, weddings, birthdays, christenings, and special event days such as NAIDOC, Pride, Idahobit, and R U OK? to name a few.</p>
-<p>At Roc Candy, we believe in the power of sweetness and the joy it brings to people's lives in a visual and tasty way. Our passion for crafting delectable handmade candies is matched only by our dedication to creating personalised treats that are as unique as the individuals who savor them.</p>
-<p>With our roots deeply embedded in the art of traditional candy-making, Roc Candy has evolved into a modern confectionery brand, combining time-honored techniques with innovative flavors and custom designs.</p>
-<p>We handcraft each and every piece of candy with meticulous attention to detail, using only the finest ingredients sourced from trusted suppliers, 98% of which are Australian.</p>
-<p>With Roc Candy, you have the freedom to <a href="/design">design your own candy</a>, tailored to match your unique style and event theme.</p>
-<p>Whether you're looking for elegant <a href="/design/wedding-candy">wedding candy</a>, eye-catching <a href="/design/branded-logo-candy">branded candy</a>, or memorable <a href="/design/custom-text-candy">custom text candy</a>, Roc Candy has you covered.</p>
-<p>We ship Australia-wide, delivering our delicious rock candy to all major cities, including Sydney, Melbourne, Brisbane, Perth, Adelaide, and beyond.</p>
-<p>You can also browse our <a href="/pre-made-candy">pre-made candy range</a> for ready-to-order options.</p>
+<h2>Welcome to Roc Candy - Your Source for Exquisite Handmade Personalised Candy!</h2>
+<p>Established in 1999, we've been handcrafting candy for every kind of occasion:</p>
+<ul>
+  <li>Weddings, birthdays and christenings</li>
+  <li>Corporate functions and product launches</li>
+  <li>Special event days - NAIDOC, Pride, Idahobit, R U OK? and more</li>
+</ul>
+<h2>Our story</h2>
+<p>Rooted in traditional candy-making, Roc Candy began as a small retail shop, where Andy and Sylvi spent over 20 years hand-perfecting their craft learning what makes a truly memorable candy.</p>
+<p>When Covid changed the way people shopped, they took that same craftsmanship online, building Roc Candy into the modern confectionery brand it is today, blending time-honoured techniques with innovative flavours and custom designs.</p>
+<p>That hands-on experience is still at the heart of every order. Each piece is individually handcrafted using the finest ingredients, sourced from trusted suppliers, 98% of them Australian.</p>
+<h2>Design it your way</h2>
+<p><a href="/design">Design your own candy</a>, tailored to your style and event theme:</p>
+<ul>
+  <li><a href="/design/wedding-candy"><strong>Wedding candy</strong></a> — elegant and personalised for your big day</li>
+  <li><a href="/design/branded-logo-candy"><strong>Branded candy</strong></a> — eye-catching, with your logo in every piece</li>
+  <li><a href="/design/custom-text-candy"><strong>Custom text candy</strong></a> — memorable names, dates or messages</li>
+</ul>
+<p>Prefer something ready to go? Browse our <a href="/pre-made-candy"><strong>pre-made candy range</strong></a>.</p>
+<h2>Delivery</h2>
+<p>We ship Australia-wide — Sydney, Melbourne, Brisbane, Perth, Adelaide, ACT and regional areas.</p>
     `,
     faqHeading: null,
     faqItemIds: [],

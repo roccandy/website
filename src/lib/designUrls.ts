@@ -119,6 +119,16 @@ export function resolveDesignerState(input: {
     : CATEGORY_TO_PUBLIC_STATE["custom-7-14"];
 }
 
+export function getDesignerLandingPageSlug(orderType: InternalOrderType) {
+  const state =
+    orderType === "weddings"
+      ? CATEGORY_TO_PUBLIC_STATE["weddings-initials"]
+      : orderType === "text"
+        ? CATEGORY_TO_PUBLIC_STATE["custom-1-6"]
+        : CATEGORY_TO_PUBLIC_STATE.branded;
+  return state.landingPath.replace(/^\//, "");
+}
+
 function mergeExtraParams(
   searchParams: URLSearchParams,
   extraParams?:

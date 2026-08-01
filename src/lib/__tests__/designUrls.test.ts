@@ -3,6 +3,7 @@ import {
   buildDesignerEditPath,
   buildDesignerPath,
   getDesignerCanonicalTarget,
+  getDesignerLandingPageSlug,
   isLegacyDesignerQuery,
   resolveDesignerState,
 } from "@/lib/designUrls";
@@ -76,6 +77,12 @@ describe("designUrls", () => {
     expect(getDesignerCanonicalTarget({ type: "text", variant: "short" })).toBe("/design/custom-text-candy");
     expect(getDesignerCanonicalTarget({ type: "branded" })).toBe("/design/branded-logo-candy");
     expect(getDesignerCanonicalTarget({})).toBe("/design");
+  });
+
+  it("maps each designer to its matching landing-page FAQ source", () => {
+    expect(getDesignerLandingPageSlug("weddings")).toBe("design/wedding-candy");
+    expect(getDesignerLandingPageSlug("text")).toBe("design/custom-text-candy");
+    expect(getDesignerLandingPageSlug("branded")).toBe("design/branded-logo-candy");
   });
 
   it("detects legacy query patterns", () => {
