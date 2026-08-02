@@ -692,17 +692,10 @@ export function NewOrderForm({
     }
   };
   const adminPremadeWeightKg = Number(weightValue);
-  const adminPremadeMaxKg = Number(settings.max_total_kg);
-  const isAdminPremadeOverMax =
-    isAdminPremadeOrder &&
-    Number.isFinite(adminPremadeWeightKg) &&
-    Number.isFinite(adminPremadeMaxKg) &&
-    adminPremadeWeightKg > adminPremadeMaxKg;
   const isAdminPremadeReady =
     !isAdminPremadeOrder ||
     (Number.isFinite(adminPremadeWeightKg) &&
       adminPremadeWeightKg > 0 &&
-      !isAdminPremadeOverMax &&
       Boolean(adminPremadeSelectionLabel) &&
       Boolean(adminPremadeFlavor.trim()));
   const ingredientLabelPrice = Number(settings.ingredient_label_price ?? 0);
@@ -2133,18 +2126,14 @@ export function NewOrderForm({
                 type="number"
                 name="total_weight_kg"
                 min={0.01}
-                max={Number.isFinite(adminPremadeMaxKg) ? adminPremadeMaxKg : undefined}
                 step="0.01"
                 required
                 value={weightValue}
                 onChange={(event) => setWeightValue(event.target.value)}
-                aria-invalid={isAdminPremadeOverMax}
-                className={`mt-2 w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 ${
-                  isAdminPremadeOverMax ? "border-red-400 ring-2 ring-red-100" : "border-zinc-200"
-                }`}
+                className="mt-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
               />
-              <span className={`mt-2 block normal-case tracking-normal ${isAdminPremadeOverMax ? "font-semibold text-red-700" : "text-zinc-500"}`}>
-                Maximum {adminPremadeMaxKg.toFixed(2)}kg per production slot. Create another premade batch for additional weight.
+              <span className="mt-2 block normal-case tracking-normal text-zinc-500">
+                Premade stock batches can use any positive weight.
               </span>
             </label>
           ) : null}

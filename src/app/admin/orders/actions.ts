@@ -875,10 +875,6 @@ async function upsertOrderShared(formData: FormData) {
           )
         : null;
 
-    if (isAdminPremade && resolvedWeightKg > Number(settings.max_total_kg)) {
-      throw new Error(`Max total kg per settings is ${settings.max_total_kg}.`);
-    }
-
     const submittedFlavor = flavor?.trim() || null;
     const existingFlavor = existing?.flavor?.trim() || null;
     const existingDesignText = existing?.design_text?.trim() || null;
