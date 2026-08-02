@@ -568,7 +568,7 @@ async function resolveFirstAvailableSlotIndex(
   slotsPerDay: number,
 ) {
   const [{ data: slots, error: slotsError }, { data: assignments, error: assignmentsError }] = await Promise.all([
-    client.from("production_slots").select("id,slot_date,slot_index,capacity_kg,status,notes,created_at"),
+    client.from("production_slots").select("id,slot_date,slot_index,capacity_kg,status,created_at"),
     client.from("order_slots").select("id,order_id,slot_id,kg_assigned,created_at"),
   ]);
   if (slotsError) throw new Error(slotsError.message);
@@ -578,7 +578,7 @@ async function resolveFirstAvailableSlotIndex(
     date: slotDate,
     slotsPerDay,
     assignments: assignments ?? [],
-    slots: slots ?? [],
+    slots: (slots ?? []).map((slot) => ({ ...slot, notes: null })),
   });
 }
 
@@ -1142,6 +1142,16 @@ async function upsertOrderShared(formData: FormData) {
       let payload: (typeof basePayload & { order_number: string }) | null = null;
       let createdOrderId: string | null = null;
       let insertError: { code?: string | null; message?: string | null } | null = null;
+      let productionSlotIndexForCreate: number | null = null;
+
+      if (isAdminPremade && shouldScheduleAfterCreate && productionSlotDate) {
+        await assertAssignableDate(productionSlotDate);
+        const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
+        productionSlotIndexForCreate = await resolveFirstAvailableSlotIndex(productionSlotDate, client, slotsPerDay);
+        if (productionSlotIndexForCreate === null) {
+          throw new Error("No production slot is available on this date.");
+        }
+      }
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const candidate = {
@@ -1343,12 +1353,8 @@ async function upsertOrderShared(formData: FormData) {
       }
 
       if (isAdminPremade && shouldScheduleAfterCreate && productionSlotDate) {
-        await assertAssignableDate(productionSlotDate);
-        const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
-        const slotIndex = await resolveFirstAvailableSlotIndex(productionSlotDate, client, slotsPerDay);
-        if (slotIndex === null) {
-          throw new Error("No production slot is available on this date.");
-        }
+        const slotIndex = productionSlotIndexForCreate;
+        if (slotIndex === null) throw new Error("No production slot is available on this date.");
         const scheduleFormData = new FormData();
         scheduleFormData.set("order_id", createdOrderId);
         scheduleFormData.set("slot_date", productionSlotDate);
@@ -1357,7 +1363,16 @@ async function upsertOrderShared(formData: FormData) {
         scheduleFormData.set("response_mode", "inline");
         const scheduleResult = await assignOrderToSlot(scheduleFormData);
         if (!scheduleResult?.ok) {
-          throw new Error(scheduleResult?.message || "Unable to slot premade order into production schedule.");
+          const scheduleMessage = scheduleResult?.message || "Unable to slot premade order into production schedule.";
+          const { error: cleanupError } = await client
+            .from("orders")
+            .delete()
+            .eq("id", createdOrderId)
+            .eq("notes", ADMIN_PREMADE_ORDER_MARKER);
+          if (cleanupError) {
+            throw new Error(`${scheduleMessage} The unscheduled premade order could not be cleaned up automatically.`);
+          }
+          throw new Error(scheduleMessage);
         }
         postSaveRedirect = `${ORDERS_PATH}?selected=${encodeURIComponent(createdOrderId)}`;
       }
@@ -1395,6 +1410,9 @@ async function upsertOrderShared(formData: FormData) {
     if (redirectTo && toastError) {
       const params = new URLSearchParams({ toast: "error", message: toastError });
       redirect(appendOrderDetailScrollHash(`${redirectTo}?${params.toString()}`, id, redirectScrollY));
+    }
+    if (!id) {
+      redirect(toastRedirect("/admin/orders/new", "error", message));
     }
     throw error;
   }
