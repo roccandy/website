@@ -852,12 +852,13 @@ export async function updateAdminSquareInvoiceDraftAndAttachPdf(
   if (!order.square_invoice_id) {
     throw new Error("Square invoice draft is missing.");
   }
-  let invoiceVersion = Number(order.square_invoice_version);
+  // A prior attempt can update Square successfully but fail before the local
+  // database records the new version. Always retrieve the authoritative
+  // version so retrying a PDF send is safe.
+  const currentInvoice = await retrieveSquareInvoice(order.square_invoice_id);
+  const invoiceVersion = Number(currentInvoice.version);
   if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
-    invoiceVersion = Number((await retrieveSquareInvoice(order.square_invoice_id)).version);
-    if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
-      throw new Error("Square invoice version could not be retrieved.");
-    }
+    throw new Error("Square invoice version could not be retrieved.");
   }
   if (order.square_customer_id) {
     await updateSquareCustomer(order, order.square_customer_id);

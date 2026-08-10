@@ -57,6 +57,7 @@ describe("admin Square invoice removal", () => {
   it("attaches a direct-deposit PDF to the Square draft without publishing it", async () => {
     const fetchMock = vi
       .fn()
+      .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 1, status: "DRAFT" } }))
       .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 2, status: "DRAFT" } }))
       .mockResolvedValueOnce(jsonResponse({ attachment: { id: "inva_123", filename: "tax-invoice.pdf" } }, 201))
       .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 3, status: "DRAFT" } }));
@@ -81,14 +82,14 @@ describe("admin Square invoice removal", () => {
     ).resolves.toMatchObject({ invoiceStatus: "DRAFT", attachmentId: "inva_123" });
 
     expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+      3,
       "https://square.test/v2/invoices/inv_123/attachments",
       expect.objectContaining({ method: "POST" }),
     );
-    const attachmentForm = fetchMock.mock.calls[1]?.[1]?.body as FormData;
+    const attachmentForm = fetchMock.mock.calls[2]?.[1]?.body as FormData;
     expect(JSON.parse(String(attachmentForm.get("request")))).toMatchObject({ description: "Roc Candy tax invoice" });
     expect(attachmentForm.get("file")).toMatchObject({ type: "application/pdf" });
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty("invoice.invoice_number");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty("invoice.invoice_number");
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/publish"))).toBe(false);
   });
 });
