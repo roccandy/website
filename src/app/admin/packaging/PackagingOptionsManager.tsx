@@ -9,6 +9,7 @@ import {
   normalizePackagingLidColorName,
 } from "@/lib/packagingLidColors";
 import {
+  createPackagingLidColor,
   deletePackagingLidColor,
   deletePackaging,
   togglePackagingActive,
@@ -35,19 +36,20 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Jar options</p>
-        <h3 className="admin-subsection-title text-zinc-900">Lid colours</h3>
-        <p className="mt-1 text-xs text-zinc-500">
-          Edit the name or website swatch here. Add new colours while editing or creating a Jar option.
-        </p>
-        <p className="mt-1 text-xs text-zinc-500">Remove any uploaded packaging images for a colour before deleting it.</p>
-      </div>
-      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {lidColors.map((color) =>
-          editingId === color.id ? (
-            <form key={color.id} action={updatePackagingLidColor} className="rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+    <details className="group rounded-lg border border-zinc-200 bg-zinc-50">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 [&::-webkit-details-marker]:hidden">
+        <span>Manage lid colours</span>
+        <span className="flex items-center gap-3 text-xs font-normal text-zinc-500">
+          {lidColors.length} colour{lidColors.length === 1 ? "" : "s"} · Add, edit or delete
+          <span className="text-base transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+        </span>
+      </summary>
+      <div className="border-t border-zinc-200 p-3">
+        <p className="mb-3 text-xs text-zinc-500">Remove any uploaded packaging images for a colour before deleting it.</p>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {lidColors.map((color) =>
+            editingId === color.id ? (
+              <form key={color.id} action={updatePackagingLidColor} className="rounded-lg border border-sky-200 bg-sky-50/50 p-3">
               <input type="hidden" name="id" value={color.id} />
               <div className="flex items-end gap-2">
                 <label className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
@@ -77,8 +79,8 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
                 <button type="button" onClick={() => setEditingId(null)} className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700">Cancel</button>
               </div>
             </form>
-          ) : (
-            <div key={color.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+            ) : (
+              <div key={color.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="h-6 w-6 shrink-0 rounded-full border border-zinc-300" style={{ backgroundColor: color.hex }} aria-hidden="true" />
                 <span className="truncate text-sm font-semibold capitalize text-zinc-800">{color.name}</span>
@@ -97,11 +99,36 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
                 </form>
               </div>
             </div>
-          ),
-        )}
-        {lidColors.length === 0 ? <p className="text-sm text-zinc-500">No lid colours configured.</p> : null}
+            ),
+          )}
+          {lidColors.length === 0 ? <p className="text-sm text-zinc-500">No lid colours configured.</p> : null}
+        </div>
+        <form action={createPackagingLidColor} className="mt-3 flex max-w-xl flex-wrap items-end gap-2 border-t border-zinc-200 pt-3">
+          <label className="min-w-48 flex-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            New lid colour
+            <input
+              name="name"
+              required
+              maxLength={60}
+              placeholder="e.g. Rose gold"
+              className="mt-1 min-h-9 w-full rounded border border-zinc-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-zinc-900"
+            />
+          </label>
+          <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            Website swatch
+            <input
+              type="color"
+              name="hex"
+              required
+              defaultValue={FALLBACK_PACKAGING_LID_HEX}
+              className="mt-1 block h-9 w-12 cursor-pointer rounded border border-zinc-200 bg-white p-1"
+              aria-label="New lid colour website swatch"
+            />
+          </label>
+          <button type="submit" className="min-h-9 rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Add colour</button>
+        </form>
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -132,13 +159,10 @@ function PackagingOptionForm({
   const [selectedLids, setSelectedLids] = useState<string[]>(
     (option?.lid_colors ?? []).map(normalizePackagingLidColorName).filter(Boolean),
   );
-  const [customLid, setCustomLid] = useState("");
-  const [customLidHex, setCustomLidHex] = useState(FALLBACK_PACKAGING_LID_HEX);
-  const [newLidColors, setNewLidColors] = useState<Array<{ name: string; hex: string }>>([]);
   const isJar = typeValue.toLowerCase().includes("jar");
   const lidChoices = useMemo(() => {
     const choices = new Map<string, { name: string; hex: string }>();
-    for (const color of [...lidColors, ...newLidColors]) {
+    for (const color of lidColors) {
       const name = normalizePackagingLidColorName(color.name);
       if (name) choices.set(name, { name, hex: color.hex });
     }
@@ -149,22 +173,7 @@ function PackagingOptionForm({
       }
     }
     return Array.from(choices.values());
-  }, [lidColors, newLidColors, selectedLids]);
-
-  const addCustomLid = () => {
-    const name = normalizePackagingLidColorName(customLid);
-    if (!name) return;
-    const existing = lidColors.some((color) => normalizePackagingLidColorName(color.name) === name);
-    if (!existing) {
-      setNewLidColors((current) => {
-        const withoutDuplicate = current.filter((color) => color.name !== name);
-        return [...withoutDuplicate, { name, hex: customLidHex }];
-      });
-    }
-    setSelectedLids((current) => (current.includes(name) ? current : [...current, name]));
-    setCustomLid("");
-    setCustomLidHex(FALLBACK_PACKAGING_LID_HEX);
-  };
+  }, [lidColors, selectedLids]);
 
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
@@ -173,7 +182,6 @@ function PackagingOptionForm({
         <input type="hidden" name="type_sort_order" value={typeSortOrder} />
         <input type="hidden" name="sort_order" value={optionSortOrder} />
         <input type="hidden" name="is_active" value={option?.is_active === false ? "false" : "true"} />
-        <input type="hidden" name="new_lid_colors_json" value={JSON.stringify(newLidColors)} />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <label className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -318,33 +326,6 @@ function PackagingOptionForm({
                 </label>
               ))}
             </div>
-            <div className="mt-3 flex max-w-xl flex-wrap items-end gap-2">
-              <input
-                value={customLid}
-                onChange={(event) => setCustomLid(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addCustomLid();
-                  }
-                }}
-                placeholder="New lid colour"
-                className="min-h-10 min-w-0 flex-1 rounded border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-              />
-              <label className="flex items-center gap-2 text-xs font-semibold text-zinc-600">
-                Website swatch
-                <input
-                  type="color"
-                  value={customLidHex}
-                  onChange={(event) => setCustomLidHex(event.target.value)}
-                  className="h-10 w-12 cursor-pointer rounded border border-zinc-200 bg-white p-1"
-                  aria-label="New lid colour website swatch"
-                />
-              </label>
-              <button type="button" onClick={addCustomLid} className="rounded border border-zinc-300 bg-white px-3 py-2 text-xs font-semibold text-zinc-700">
-                Add colour
-              </button>
-            </div>
           </fieldset>
         ) : null}
 
@@ -420,8 +401,6 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
 
   return (
     <div className="space-y-6">
-      <LidColorLibrary lidColors={lidColors} />
-
       <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -581,6 +560,11 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                 </tbody>
               </table>
             </div>
+            {type.toLowerCase().includes("jar") ? (
+              <div className="border-t border-zinc-200 p-3">
+                <LidColorLibrary lidColors={lidColors} />
+              </div>
+            ) : null}
           </section>
         );
       })}

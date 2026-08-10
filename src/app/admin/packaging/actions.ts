@@ -311,6 +311,54 @@ export async function updatePackagingLidColor(formData: FormData) {
   redirect(appendAdminToast("/admin/packaging", "success", "Lid colour updated."));
 }
 
+export async function createPackagingLidColor(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const name = normalizePackagingLidColorName(formData.get("name")?.toString() ?? "");
+    const hex = normalizePackagingLidColorHex(formData.get("hex")?.toString() ?? "");
+    if (!name || name.length > 60) throw new Error("Enter a lid colour name up to 60 characters.");
+    if (!hex) throw new Error("Choose a valid website swatch colour.");
+
+    const { data: lastColor, error: orderError } = await supabaseAdminClient
+      .from("packaging_lid_colors")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (orderError) throw new Error(orderError.message);
+
+    const { data: created, error } = await supabaseAdminClient
+      .from("packaging_lid_colors")
+      .insert({ name, hex, sort_order: Number(lastColor?.sort_order ?? -1) + 1 })
+      .select("id")
+      .single();
+    if (error) {
+      if (error.message.toLowerCase().includes("unique")) {
+        throw new Error("A lid colour with that name already exists.");
+      }
+      throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "created",
+      entityType: "packaging-lid-color",
+      entityId: created.id,
+      entityLabel: name,
+      summary: `Created jar lid colour "${name}".`,
+      path: "/admin/packaging",
+      changedFields: ["Lid colour"],
+      metadata: { name, hex },
+    });
+    revalidatePath("/admin/packaging");
+    revalidatePath("/design");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to create the lid colour.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Lid colour created."));
+}
+
 export async function deletePackagingLidColor(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
   try {
