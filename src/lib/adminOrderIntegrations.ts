@@ -621,14 +621,12 @@ async function updateSquareInvoiceDraft(
 ) {
   const dueDate = invoiceDueDate(order);
   const invoiceTitle = order.square_invoice_title?.trim() || defaultAdminSquareInvoiceTitle(order);
-  const invoiceNumber = defaultSquareInvoiceNumber(order);
   const data = await squareRequest<{ invoice?: SquareInvoice }>(`/v2/invoices/${encodeURIComponent(invoiceId)}`, {
     method: "PUT",
     body: {
       idempotency_key: `rc-admin-invoice-update-${order.id}-${Date.now()}`,
       invoice: {
         version: invoiceVersion,
-        invoice_number: invoiceNumber,
         title: invoiceTitle,
         description: await invoiceDescription(order),
         delivery_method: "EMAIL",

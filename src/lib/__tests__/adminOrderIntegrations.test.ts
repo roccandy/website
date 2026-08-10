@@ -85,6 +85,7 @@ describe("admin Square invoice removal", () => {
       "https://square.test/v2/invoices/inv_123/attachments",
       expect.objectContaining({ method: "POST" }),
     );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty("invoice.invoice_number");
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/publish"))).toBe(false);
   });
 });
