@@ -25,6 +25,7 @@ create table if not exists weight_tiers (
 
 create table if not exists packaging_options (
   id uuid primary key default gen_random_uuid(),
+  is_active boolean not null default true,
   type text not null,
   type_sort_order integer not null default 0,
   size text not null,

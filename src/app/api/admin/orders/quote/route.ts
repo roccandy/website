@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Order type, packaging, and quantity are required." }, { status: 400 });
     }
 
-    const context = await buildPricingContext();
+    const context = await buildPricingContext({ includeInactivePackaging: true });
     const pricing = calculateAdminLargeOrderPricingWithContext(
       {
         categoryId,

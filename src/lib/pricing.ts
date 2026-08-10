@@ -63,7 +63,9 @@ export async function calculatePricing(input: PricingInput): Promise<PricingBrea
   return calculatePricingWithContext(input, context);
 }
 
-export async function buildPricingContext(): Promise<PricingContext> {
+export async function buildPricingContext(
+  options: { includeInactivePackaging?: boolean } = {},
+): Promise<PricingContext> {
   const { getCategories, getLabelRanges, getPackagingOptions, getSettings, getWeightTiers } = await import(
     "@/lib/data"
   );
@@ -74,7 +76,15 @@ export async function buildPricingContext(): Promise<PricingContext> {
     getLabelRanges(),
     getSettings(),
   ]);
-  return { categories, tiers, packagingOptions, labelRanges, settings };
+  return {
+    categories,
+    tiers,
+    packagingOptions: options.includeInactivePackaging
+      ? packagingOptions
+      : packagingOptions.filter((option) => option.is_active !== false),
+    labelRanges,
+    settings,
+  };
 }
 
 export function calculatePricingWithContext(input: PricingInput, context: PricingContext): PricingBreakdown {

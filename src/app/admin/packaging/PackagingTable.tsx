@@ -33,6 +33,7 @@ type Props = {
   imageObjectInfo: StorageObjectInfo[];
   maxTotalKg: number;
   labelTypes: LabelType[];
+  optionsEditorHidden?: boolean;
 };
 
 type ComboSortKey = "key" | "category" | "type" | "size" | "lid" | "image";
@@ -142,7 +143,15 @@ function inferStoredImageTypeFromPath(path: string | null | undefined) {
   return extension.toUpperCase();
 }
 
-export function PackagingTable({ options, categories, images, imageObjectInfo, maxTotalKg, labelTypes }: Props) {
+export function PackagingTable({
+  options,
+  categories,
+  images,
+  imageObjectInfo,
+  maxTotalKg,
+  labelTypes,
+  optionsEditorHidden = false,
+}: Props) {
   const [editMode, setEditMode] = useState(false);
   const [comboSort, setComboSort] = useState<{ key: ComboSortKey; direction: SortDirection } | null>(null);
   const [orderedTypes, setOrderedTypes] = useState<string[]>([]);
@@ -223,7 +232,7 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
     return map;
   }, [orderedTypes]);
   const comboRows = useMemo(() => {
-    const rows = options.flatMap((opt) => {
+    const rows = options.filter((opt) => opt.is_active !== false).flatMap((opt) => {
       const isJar = opt.type.toLowerCase().includes("jar");
       const lidColors = isJar ? (opt.lid_colors ?? []) : [""];
       return opt.allowed_categories.flatMap((categoryId) =>
@@ -544,6 +553,8 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
           </ul>
         </details>
       )}
+      {!optionsEditorHidden ? (
+        <>
       <div className="flex gap-2">
         {!editMode && (
           <button
@@ -654,7 +665,6 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
           })}
         </div>
       </div>
-
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full table-fixed text-sm break-words">
@@ -1428,6 +1438,8 @@ export function PackagingTable({ options, categories, images, imageObjectInfo, m
           </table>
         </div>
       </div>
+        </>
+      ) : null}
 
       <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="space-y-2">

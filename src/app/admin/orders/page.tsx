@@ -35,7 +35,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
     getProductionSlots(),
     getOrderSlots(),
     getProductionDayNotes(),
-    buildPricingContext(),
+    buildPricingContext({ includeInactivePackaging: true }),
     getCategories(),
     listRecentAdminActivity(200),
   ]);

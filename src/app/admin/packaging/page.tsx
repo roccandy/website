@@ -1,6 +1,7 @@
 import { getCategories, getLabelTypes, getPackagingOptionImages, getPackagingOptions, getSettings } from "@/lib/data";
 import { listBucketObjectInfo } from "@/lib/storageObjects";
 import { PackagingTable } from "./PackagingTable";
+import { PackagingOptionsManager } from "./PackagingOptionsManager";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -29,9 +30,11 @@ export default async function PackagingPage() {
       <div className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Packaging</p>
         <h2 className="admin-page-title">Packaging options</h2>
-        <p className="text-sm text-zinc-600">Add or update packaging options in the table below.</p>
+        <p className="text-sm text-zinc-600">Manage packaging options by type, availability, and lid colour.</p>
         <p className="text-sm text-zinc-600">Scroll down to upload or replace images for each packaging combination.</p>
       </div>
+
+      <PackagingOptionsManager options={options} categories={categories} labelTypes={labelTypes} />
 
       <PackagingTable
         options={options}
@@ -40,6 +43,7 @@ export default async function PackagingPage() {
         imageObjectInfo={imageObjectInfo}
         maxTotalKg={Number(settings?.max_total_kg ?? 0)}
         labelTypes={labelTypes}
+        optionsEditorHidden
       />
     </section>
   );

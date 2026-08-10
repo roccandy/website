@@ -34,6 +34,14 @@ function parseList(input: string | null) {
     .filter(Boolean);
 }
 
+function parseFormList(formData: FormData, csvName: string, repeatedName: string) {
+  const repeated = formData
+    .getAll(repeatedName)
+    .map((value) => value.toString().trim())
+    .filter(Boolean);
+  return repeated.length > 0 ? Array.from(new Set(repeated)) : parseList(formData.get(csvName)?.toString() ?? null);
+}
+
 function normalizeFileName(value: string) {
   return value
     .trim()
@@ -92,6 +100,11 @@ function isMissingTypeSortOrderColumnError(message: string) {
   return normalized.includes("type_sort_order") && (normalized.includes("column") || normalized.includes("schema cache"));
 }
 
+function isMissingActiveColumnError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("is_active") && (normalized.includes("column") || normalized.includes("schema cache"));
+}
+
 function stripUnsupportedPackagingColumns<T extends Record<string, unknown>>(payload: T, message: string) {
   const next = { ...payload } as Record<string, unknown>;
   if (isMissingDimensionsColumnError(message)) {
@@ -99,6 +112,9 @@ function stripUnsupportedPackagingColumns<T extends Record<string, unknown>>(pay
   }
   if (isMissingTypeSortOrderColumnError(message)) {
     delete next.type_sort_order;
+  }
+  if (isMissingActiveColumnError(message)) {
+    delete next.is_active;
   }
   return next as Partial<T>;
 }
@@ -111,12 +127,13 @@ export async function upsertPackaging(formData: FormData) {
     const size = formData.get("size")?.toString();
     const dimensions = formData.get("dimensions")?.toString().trim() || null;
     const candy_weight_g = Number(formData.get("candy_weight_g"));
-    const allowed_categories = parseList(formData.get("allowed_categories")?.toString() ?? "");
-    const lid_colors = parseList(formData.get("lid_colors")?.toString() ?? "");
-    const label_type_ids = parseList(formData.get("label_type_ids")?.toString() ?? "");
+    const allowed_categories = parseFormList(formData, "allowed_categories", "allowed_category");
+    const lid_colors = parseFormList(formData, "lid_colors", "lid_color");
+    const label_type_ids = parseFormList(formData, "label_type_ids", "label_type_id");
     const unit_price = Number(formData.get("unit_price"));
     const max_packages = Number(formData.get("max_packages"));
     const type_sort_order = Number(formData.get("type_sort_order"));
+    const is_active = formData.get("is_active")?.toString() !== "false";
 
     if (!type || !size) throw new Error("Missing type or size");
     const isJar = type.toLowerCase().includes("jar");
@@ -134,13 +151,15 @@ export async function upsertPackaging(formData: FormData) {
       unit_price,
       max_packages,
       type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
+      is_active,
     };
     if (id) {
       const result = await client.from("packaging_options").update(payload).eq("id", id);
       if (result.error) {
         if (
           !isMissingDimensionsColumnError(result.error.message) &&
-          !isMissingTypeSortOrderColumnError(result.error.message)
+          !isMissingTypeSortOrderColumnError(result.error.message) &&
+          !isMissingActiveColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
         }
@@ -153,7 +172,8 @@ export async function upsertPackaging(formData: FormData) {
       if (result.error) {
         if (
           !isMissingDimensionsColumnError(result.error.message) &&
-          !isMissingTypeSortOrderColumnError(result.error.message)
+          !isMissingTypeSortOrderColumnError(result.error.message) &&
+          !isMissingActiveColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
         }
@@ -184,6 +204,46 @@ export async function upsertPackaging(formData: FormData) {
     redirect(appendAdminToast("/admin/packaging", "error", message));
   }
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging saved."));
+}
+
+export async function togglePackagingActive(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const id = formData.get("id")?.toString().trim();
+    if (!id) throw new Error("Missing packaging option id.");
+    const nextActive = formData.get("next_active")?.toString() === "true";
+    const client = supabaseAdminClient;
+    const { data: existing, error: existingError } = await client
+      .from("packaging_options")
+      .select("id,type,size,is_active")
+      .eq("id", id)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (!existing) throw new Error("Packaging option not found.");
+
+    const { error } = await client.from("packaging_options").update({ is_active: nextActive }).eq("id", id);
+    if (error) {
+      if (isMissingActiveColumnError(error.message)) {
+        throw new Error("Run the 2026-08-10 packaging active SQL migration in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "updated",
+      entityType: "packaging-option",
+      entityId: existing.id,
+      entityLabel: `${existing.type} ${existing.size}`,
+      summary: `${nextActive ? "Enabled" : "Disabled"} packaging option "${existing.type} ${existing.size}".`,
+      path: "/admin/packaging",
+      changedFields: ["Active state"],
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update packaging status.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Packaging status updated."));
 }
 
 export async function updatePackagingTypeOrder(formData: FormData) {

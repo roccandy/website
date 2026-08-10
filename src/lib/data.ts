@@ -17,6 +17,7 @@ export type WeightTier = {
 
 export type PackagingOption = {
   id: string;
+  is_active?: boolean | null;
   type: string;
   type_sort_order?: number | null;
   size: string;

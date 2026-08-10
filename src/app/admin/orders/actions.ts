@@ -801,7 +801,7 @@ async function upsertOrderShared(formData: FormData) {
       throw new Error("Updated Square invoices can only be sent for unpaid admin-created orders with an existing Square invoice.");
     }
 
-    const pricingContext = isAdminPremade ? null : await buildPricingContext();
+    const pricingContext = isAdminPremade ? null : await buildPricingContext({ includeInactivePackaging: true });
     const settings = pricingContext?.settings ?? (await getSettings());
     const existingBatchWeights = normalizeAdminBatchWeights(
       Array.isArray(existing?.admin_batch_weights_kg) ? existing.admin_batch_weights_kg : [],

@@ -620,9 +620,15 @@ export function NewOrderForm({
   const isAdminPremadeOrder = categoryId === ADMIN_PREMADE_CATEGORY_ID;
   const filteredPackagingOptions = useMemo(() => {
     if (isAdminPremadeOrder) return [];
-    if (!categoryId) return packagingOptions;
-    return packagingOptions.filter((option) => option.allowed_categories?.includes(categoryId));
-  }, [categoryId, isAdminPremadeOrder, packagingOptions]);
+    const isSelectable = (option: PackagingOption) =>
+      option.is_active !== false || (isEditMode && option.id === initialOrder?.packaging_option_id);
+    if (!categoryId) return packagingOptions.filter(isSelectable);
+    return packagingOptions.filter(
+      (option) =>
+        option.allowed_categories?.includes(categoryId) &&
+        isSelectable(option),
+    );
+  }, [categoryId, initialOrder?.packaging_option_id, isAdminPremadeOrder, isEditMode, packagingOptions]);
   const selectedPackagingOption = useMemo(() => {
     return packagingOptions.find((option) => option.id === packagingOptionId) || null;
   }, [packagingOptions, packagingOptionId]);
