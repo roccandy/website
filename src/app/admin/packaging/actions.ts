@@ -78,6 +78,14 @@ function normalizeFileName(value: string) {
     .replace(/-{2,}/g, "-");
 }
 
+function createRevisionedImageFileName(comboKey: string, extension: string) {
+  // Public storage assets can be cached for a long time. Reusing a path when an
+  // image is replaced leaves the website at the mercy of that cache, so each
+  // upload deliberately receives a new immutable path.
+  const revision = `${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+  return normalizeFileName(`${comboKey}-${revision}.${extension}`);
+}
+
 function normalizeToken(value: string) {
   return value
     .toLowerCase()
@@ -604,13 +612,22 @@ export async function uploadPackagingImage(formData: FormData) {
       .single();
     if (optionError || !option) throw new Error(optionError?.message ?? "Packaging option not found");
 
+    const { data: existingImage, error: existingImageError } = await client
+      .from("packaging_option_images")
+      .select("image_path")
+      .eq("packaging_option_id", packagingOptionId)
+      .eq("category_id", categoryId)
+      .eq("lid_color", lidColor)
+      .maybeSingle();
+    if (existingImageError) throw new Error(existingImageError.message);
+
     const comboKey = buildComboKey(option.type, option.size, categoryId, lidColor);
     const optimized = await optimizeServerImageForWeb(file, {
       maxWidth: 1800,
       maxHeight: 1800,
       quality: 82,
     });
-    const fileName = normalizeFileName(`${comboKey}.${optimized.extension}`);
+    const fileName = createRevisionedImageFileName(comboKey, optimized.extension);
 
     const { error: uploadError } = await client.storage
       .from(PACKAGING_IMAGE_BUCKET)
@@ -627,6 +644,13 @@ export async function uploadPackagingImage(formData: FormData) {
       { onConflict: "packaging_option_id,category_id,lid_color" }
     );
     if (upsertError) throw new Error(upsertError.message);
+
+    if (existingImage?.image_path && existingImage.image_path !== fileName) {
+      const { error: removeError } = await client.storage
+        .from(PACKAGING_IMAGE_BUCKET)
+        .remove([existingImage.image_path]);
+      if (removeError) throw new Error(removeError.message);
+    }
     await logAdminActivity({
       area: "commercial",
       action: "uploaded",
