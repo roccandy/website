@@ -28,6 +28,7 @@ create table if not exists packaging_options (
   is_active boolean not null default true,
   type text not null,
   type_sort_order integer not null default 0,
+  sort_order integer not null default 0,
   size text not null,
   dimensions text,
   candy_weight_g numeric(10,2) not null,
@@ -36,6 +37,14 @@ create table if not exists packaging_options (
   label_type_ids uuid[] not null default '{}',
   unit_price numeric(12,2) not null,
   max_packages integer not null
+);
+
+create table if not exists packaging_lid_colors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  hex text not null check (hex ~ '^#[0-9a-fA-F]{6}$'),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists label_types (
@@ -243,6 +252,7 @@ $$ language sql stable;
 alter table categories enable row level security;
 alter table weight_tiers enable row level security;
 alter table packaging_options enable row level security;
+alter table packaging_lid_colors enable row level security;
 alter table packaging_option_images enable row level security;
 alter table label_types enable row level security;
   alter table label_ranges enable row level security;
@@ -262,6 +272,7 @@ alter table user_roles enable row level security;
 create policy "categories_select_public" on categories for select using (true);
 create policy "weight_tiers_select_public" on weight_tiers for select using (true);
 create policy "packaging_select_public" on packaging_options for select using (true);
+create policy "packaging_lid_colors_select_public" on packaging_lid_colors for select using (true);
 create policy "packaging_images_select_public" on packaging_option_images for select using (true);
 create policy "label_ranges_select_public" on label_ranges for select using (true);
 create policy "quote_blocks_select_public" on quote_blocks for select using (true);
@@ -273,6 +284,7 @@ create policy "quote_blocks_select_public" on quote_blocks for select using (tru
 create policy "categories_admin_write" on categories for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "weight_tiers_admin_write" on weight_tiers for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "packaging_admin_write" on packaging_options for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
+create policy "packaging_lid_colors_admin_write" on packaging_lid_colors for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
 create policy "packaging_images_admin_write" on packaging_option_images for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "label_ranges_admin_write" on label_ranges for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
   create policy "settings_admin_write" on settings for all using (is_admin(auth.uid())) with check (is_admin(auth.uid()));
@@ -323,6 +335,12 @@ insert into packaging_options (type, type_sort_order, size, dimensions, candy_we
   ('Cone',3,'25-30pc','130-250mm ribbon not incl',60,'{weddings-initials,weddings-both-names}','{}',0.70,120),
   ('Bulk',4,'1kg',null,1000,'{weddings-initials,weddings-both-names,custom-1-6,custom-7-14,branded}','{}',0.00,8)
 on conflict do nothing;
+
+insert into packaging_lid_colors (name, hex, sort_order) values
+  ('black','#1f1f1f',0),
+  ('silver','#d7d7d7',1),
+  ('gold','#d2b16f',2)
+on conflict (name) do update set hex = excluded.hex, sort_order = excluded.sort_order;
 
 insert into label_ranges (upper_bound, range_cost) values
   (25,0.70),(50,0.44),(75,0.44),(100,0.44),(125,0.43),(150,0.41),(175,0.39),(200,0.36),

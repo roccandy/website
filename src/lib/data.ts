@@ -20,6 +20,7 @@ export type PackagingOption = {
   is_active?: boolean | null;
   type: string;
   type_sort_order?: number | null;
+  sort_order?: number | null;
   size: string;
   dimensions?: string | null;
   candy_weight_g: number;
@@ -28,6 +29,14 @@ export type PackagingOption = {
   label_type_ids: string[] | null;
   unit_price: number;
   max_packages: number;
+};
+
+export type PackagingLidColor = {
+  id: string;
+  name: string;
+  hex: string;
+  sort_order: number;
+  created_at: string;
 };
 
 export type LabelType = {
@@ -304,6 +313,11 @@ export async function getPackagingOptions() {
     ...option,
     dimensions: inferPackagingDimensions(option),
   }));
+}
+
+export async function getPackagingLidColors() {
+  const colors = await fetchTable<PackagingLidColor>("packaging_lid_colors");
+  return colors.sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
 }
 
 export async function getPackagingOptionImages() {

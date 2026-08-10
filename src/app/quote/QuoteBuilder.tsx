@@ -14,6 +14,7 @@ import type {
   LabelRange,
   LabelType,
   PackagingOption,
+  PackagingLidColor,
   PackagingOptionImage,
   SettingsRow,
 } from "@/lib/data";
@@ -28,7 +29,8 @@ import {
 } from "@/lib/clientImageOptimization";
 import { buildDesignerPath, resolveDesignerState } from "@/lib/designUrls";
 import { buildEnquiryHref, type EnquiryInterest } from "@/lib/enquiry";
-import { sortPackagingTypes } from "@/lib/packaging";
+import { sortPackagingOptions, sortPackagingTypes } from "@/lib/packaging";
+import { getPackagingLidColorHex } from "@/lib/packagingLidColors";
 import { toPublicPricingError } from "@/lib/publicErrorMessages";
 import {
   buildPaletteGroups,
@@ -72,6 +74,7 @@ import {
 type Props = {
   categories: Category[];
   packagingOptions: PackagingOption[];
+  lidColors: PackagingLidColor[];
   packagingImages: PackagingOptionImage[];
   settings: SettingsRow;
   flavors: Flavor[];
@@ -95,11 +98,6 @@ type QuoteResult = {
   total: number;
   totalWeightKg: number;
   items: QuoteItem[];
-};
-const LID_COLOR_SWATCH: Record<string, string> = {
-  black: "#1f1f1f",
-  silver: "#d7d7d7",
-  gold: "#d2b16f",
 };
 const INGREDIENT_LABEL_PREVIEW_SRC = "/labels/ingredient-label.png";
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -131,6 +129,7 @@ function appendOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
 export function QuoteBuilder({
   categories,
   packagingOptions,
+  lidColors,
   packagingImages,
   settings,
   flavors,
@@ -636,32 +635,7 @@ export function QuoteBuilder({
 
   const sizesForType = useMemo(() => {
     if (!selectionType) return [];
-    const isJarType = selectionType.toLowerCase().includes("jar");
-    const extractLeadingNumber = (value: string) => {
-      const match = value.trim().match(/^(\d+)/);
-      return match ? Number(match[1]) : null;
-    };
-    return filteredPackaging
-      .filter((p) => p.type === selectionType)
-      .map((opt, index) => ({ opt, index }))
-      .sort((a, b) => {
-        if (isJarType) {
-          const aWeight = Number(a.opt.candy_weight_g);
-          const bWeight = Number(b.opt.candy_weight_g);
-          if (Number.isFinite(aWeight) && Number.isFinite(bWeight) && aWeight !== bWeight) {
-            return aWeight - bWeight;
-          }
-        }
-        const aNum = extractLeadingNumber(a.opt.size);
-        const bNum = extractLeadingNumber(b.opt.size);
-        if (aNum !== null && bNum !== null) {
-          return aNum - bNum;
-        }
-        if (aNum !== null) return -1;
-        if (bNum !== null) return 1;
-        return a.index - b.index;
-      })
-      .map(({ opt }) => opt);
+    return sortPackagingOptions(filteredPackaging.filter((option) => option.type === selectionType));
   }, [filteredPackaging, selectionType]);
 
   useEffect(() => {
@@ -1904,7 +1878,7 @@ export function QuoteBuilder({
                       <p className="text-xs font-semibold normal-case tracking-[0.04em] text-zinc-500">Jar Lid Colour</p>
                         <div className="flex w-full flex-wrap gap-2">
                           {availableLidColors.map((color) => {
-                            const swatch = LID_COLOR_SWATCH[color] ?? color;
+                            const swatch = getPackagingLidColorHex(lidColors, color);
                             const isActive = jarLidColor === color;
                             return (
                               <button

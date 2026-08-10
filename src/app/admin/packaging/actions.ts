@@ -7,6 +7,10 @@ import {
   optimizeServerImageForWeb,
 } from "@/lib/serverImageOptimization";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import {
+  normalizePackagingLidColorHex,
+  normalizePackagingLidColorName,
+} from "@/lib/packagingLidColors";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -40,6 +44,29 @@ function parseFormList(formData: FormData, csvName: string, repeatedName: string
     .map((value) => value.toString().trim())
     .filter(Boolean);
   return repeated.length > 0 ? Array.from(new Set(repeated)) : parseList(formData.get(csvName)?.toString() ?? null);
+}
+
+function parseNewLidColors(value: string | null) {
+  if (!value) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("The new lid colour details were invalid.");
+  }
+  if (!Array.isArray(parsed)) throw new Error("The new lid colour details were invalid.");
+  if (parsed.length > 20) throw new Error("Too many new lid colours were supplied at once.");
+
+  const colors = new Map<string, { name: string; hex: string }>();
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") throw new Error("The new lid colour details were invalid.");
+    const raw = item as { name?: unknown; hex?: unknown };
+    const name = normalizePackagingLidColorName(typeof raw.name === "string" ? raw.name : "");
+    const hex = normalizePackagingLidColorHex(typeof raw.hex === "string" ? raw.hex : "");
+    if (!name || name.length > 60 || !hex) throw new Error("Enter a valid lid colour name and website swatch.");
+    colors.set(name, { name, hex });
+  }
+  return Array.from(colors.values());
 }
 
 function normalizeFileName(value: string) {
@@ -105,6 +132,13 @@ function isMissingActiveColumnError(message: string) {
   return normalized.includes("is_active") && (normalized.includes("column") || normalized.includes("schema cache"));
 }
 
+function isMissingOptionSortOrderColumnError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("sort_order") &&
+    !normalized.includes("type_sort_order") &&
+    (normalized.includes("column") || normalized.includes("schema cache"));
+}
+
 function stripUnsupportedPackagingColumns<T extends Record<string, unknown>>(payload: T, message: string) {
   const next = { ...payload } as Record<string, unknown>;
   if (isMissingDimensionsColumnError(message)) {
@@ -115,6 +149,9 @@ function stripUnsupportedPackagingColumns<T extends Record<string, unknown>>(pay
   }
   if (isMissingActiveColumnError(message)) {
     delete next.is_active;
+  }
+  if (isMissingOptionSortOrderColumnError(message)) {
+    delete next.sort_order;
   }
   return next as Partial<T>;
 }
@@ -133,13 +170,30 @@ export async function upsertPackaging(formData: FormData) {
     const unit_price = Number(formData.get("unit_price"));
     const max_packages = Number(formData.get("max_packages"));
     const type_sort_order = Number(formData.get("type_sort_order"));
+    const sort_order = Number(formData.get("sort_order"));
     const is_active = formData.get("is_active")?.toString() !== "false";
 
     if (!type || !size) throw new Error("Missing type or size");
     const isJar = type.toLowerCase().includes("jar");
-    const normalizedLids = isJar ? lid_colors : [];
+    const normalizedLids = isJar
+      ? Array.from(new Set(lid_colors.map(normalizePackagingLidColorName).filter(Boolean)))
+      : [];
+    const newLidColors = isJar
+      ? parseNewLidColors(formData.get("new_lid_colors_json")?.toString() ?? null)
+      : [];
 
     const client = supabaseAdminClient;
+    if (newLidColors.length > 0) {
+      const { error: lidColorError } = await client
+        .from("packaging_lid_colors")
+        .upsert(newLidColors, { onConflict: "name" });
+      if (lidColorError) {
+        if (lidColorError.message.toLowerCase().includes("packaging_lid_colors")) {
+          throw new Error("Run the 2026-08-10 packaging lid-colours SQL migration in Supabase first.");
+        }
+        throw new Error(lidColorError.message);
+      }
+    }
     const payload = {
       type,
       size,
@@ -151,6 +205,7 @@ export async function upsertPackaging(formData: FormData) {
       unit_price,
       max_packages,
       type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
+      sort_order: Number.isFinite(sort_order) ? Math.max(0, Math.floor(sort_order)) : 0,
       is_active,
     };
     if (id) {
@@ -159,7 +214,8 @@ export async function upsertPackaging(formData: FormData) {
         if (
           !isMissingDimensionsColumnError(result.error.message) &&
           !isMissingTypeSortOrderColumnError(result.error.message) &&
-          !isMissingActiveColumnError(result.error.message)
+          !isMissingActiveColumnError(result.error.message) &&
+          !isMissingOptionSortOrderColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
         }
@@ -173,7 +229,8 @@ export async function upsertPackaging(formData: FormData) {
         if (
           !isMissingDimensionsColumnError(result.error.message) &&
           !isMissingTypeSortOrderColumnError(result.error.message) &&
-          !isMissingActiveColumnError(result.error.message)
+          !isMissingActiveColumnError(result.error.message) &&
+          !isMissingOptionSortOrderColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
         }
@@ -196,8 +253,11 @@ export async function upsertPackaging(formData: FormData) {
         type,
         size,
         candyWeightG: candy_weight_g,
+        newLidColors,
       },
     });
+
+    revalidatePath("/design");
 
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save packaging.";
@@ -308,6 +368,53 @@ export async function updatePackagingTypeOrder(formData: FormData) {
     },
   });
   redirect("/admin/packaging");
+}
+
+export async function updatePackagingOptionOrder(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const raw = formData.get("ordered_ids")?.toString() ?? "[]";
+    const parsed = JSON.parse(raw) as unknown;
+    const orderedIds = Array.isArray(parsed)
+      ? Array.from(new Set(parsed.map((value) => String(value).trim()).filter(Boolean)))
+      : [];
+    if (orderedIds.length === 0) throw new Error("No packaging options were supplied.");
+
+    const client = supabaseAdminClient;
+    const { data: rows, error: rowsError } = await client
+      .from("packaging_options")
+      .select("id,type")
+      .in("id", orderedIds);
+    if (rowsError) throw new Error(rowsError.message);
+    if ((rows ?? []).length !== orderedIds.length) throw new Error("One or more packaging options could not be found.");
+    const types = Array.from(new Set((rows ?? []).map((row) => row.type)));
+    if (types.length !== 1) throw new Error("Packaging options can only be reordered within the same type.");
+
+    for (const [index, id] of orderedIds.entries()) {
+      const { error } = await client.from("packaging_options").update({ sort_order: index }).eq("id", id);
+      if (error) {
+        if (isMissingOptionSortOrderColumnError(error.message)) {
+          throw new Error("Run the 2026-08-10 packaging option sort-order SQL migration in Supabase first.");
+        }
+        throw new Error(error.message);
+      }
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "reordered",
+      entityType: "packaging-options",
+      entityLabel: types[0] ?? "Packaging options",
+      summary: `Updated the website order for ${types[0] ?? "packaging options"}.`,
+      path: "/admin/packaging",
+      changedFields: ["Option order"],
+      metadata: { optionCount: orderedIds.length },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update packaging option order.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Packaging option order saved."));
 }
 
 export async function deletePackaging(formData: FormData) {

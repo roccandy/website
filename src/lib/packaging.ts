@@ -49,6 +49,12 @@ export function sortPackagingOptions(options: PackagingOption[]) {
   return [...options].sort((a, b) => {
     const typeCompare = comparePackagingTypes(a.type ?? "", b.type ?? "", options);
     if (typeCompare !== 0) return typeCompare;
+    const aOrder = Number(a.sort_order);
+    const bOrder = Number(b.sort_order);
+    const aHasOrder = Number.isFinite(aOrder);
+    const bHasOrder = Number.isFinite(bOrder);
+    if (aHasOrder && bHasOrder && aOrder !== bOrder) return aOrder - bOrder;
+    if (aHasOrder !== bHasOrder) return aHasOrder ? -1 : 1;
     return collator.compare(a.size ?? "", b.size ?? "");
   });
 }

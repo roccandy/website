@@ -1,4 +1,4 @@
-import { getCategories, getLabelTypes, getPackagingOptionImages, getPackagingOptions, getSettings } from "@/lib/data";
+import { getCategories, getLabelTypes, getPackagingLidColors, getPackagingOptionImages, getPackagingOptions, getSettings } from "@/lib/data";
 import { listBucketObjectInfo } from "@/lib/storageObjects";
 import { PackagingTable } from "./PackagingTable";
 import { PackagingOptionsManager } from "./PackagingOptionsManager";
@@ -16,12 +16,13 @@ export default async function PackagingPage() {
     redirect("/admin/login");
   }
 
-  const [options, categories, images, settings, labelTypes, imageObjectInfo] = await Promise.all([
+  const [options, categories, images, settings, labelTypes, lidColors, imageObjectInfo] = await Promise.all([
     getPackagingOptions(),
     getCategories(),
     getPackagingOptionImages(),
     getSettings(),
     getLabelTypes(),
+    getPackagingLidColors(),
     listBucketObjectInfo("packaging-images"),
   ]);
 
@@ -34,7 +35,7 @@ export default async function PackagingPage() {
         <p className="text-sm text-zinc-600">Scroll down to upload or replace images for each packaging combination.</p>
       </div>
 
-      <PackagingOptionsManager options={options} categories={categories} labelTypes={labelTypes} />
+      <PackagingOptionsManager options={options} categories={categories} labelTypes={labelTypes} lidColors={lidColors} />
 
       <PackagingTable
         options={options}

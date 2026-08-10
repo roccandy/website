@@ -6,6 +6,7 @@ import {
   getColorPalette,
   getFlavors,
   getPackagingOptionImages,
+  getPackagingLidColors,
   getPackagingOptions,
   getSettings,
   getWeightTiers,
@@ -199,10 +200,11 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
   const initialOrderType = designerState?.orderType;
   const faqPageSlug = initialOrderType ? getDesignerLandingPageSlug(initialOrderType) : "design";
   const faqSection = await getManagedSitePageFaqSection(faqPageSlug);
-  const [categories, packagingOptions, packagingImages, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
+  const [categories, packagingOptions, packagingImages, lidColors, settings, flavors, palette, tiers, labelTypes, labelRanges] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getPackagingOptionImages(),
+    getPackagingLidColors(),
     getSettings(),
     getFlavors(),
     getColorPalette(),
@@ -283,6 +285,7 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
               categories={categories}
               packagingOptions={packagingOptions.filter((option) => option.is_active !== false)}
               packagingImages={packagingImages}
+              lidColors={lidColors}
               settings={settings}
               flavors={activeFlavors}
               palette={palette}
