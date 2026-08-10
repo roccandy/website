@@ -6,6 +6,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import {
   getOrdersRecipients,
+  sendEmail,
   sendCustomerOrderSummaryEmail,
   sendCustomerRefundEmail,
   sendOrderEmail,
@@ -1715,6 +1716,9 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     if (invoiceDelivery === "pdf") {
       const invoiceNumber = existingOrder.order_number || existingOrder.id.slice(0, 8);
       const filename = `roc-candy-tax-invoice-${invoiceNumber.replace(/[^a-z0-9_-]/gi, "-")}.pdf`;
+      if (!localPatch.customer_email) {
+        throw new Error("A customer email address is required to send the PDF invoice.");
+      }
       const pdf = await buildDirectDepositInvoicePdf({
         invoiceNumber,
         invoiceTitle: localPatch.square_invoice_title,
@@ -1724,6 +1728,25 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         orders: invoiceGroupOrders,
       });
       const result = await updateAdminSquareInvoiceDraftAndAttachPdf(integrationOrder, { filename, pdf });
+      const emailResult = await sendEmail({
+        to: [localPatch.customer_email],
+        subject: `Roc Candy tax invoice ${invoiceNumber}`,
+        text: [
+          "Please find your Roc Candy tax invoice attached.",
+          "This invoice is payable by direct deposit using the bank details and reference shown in the PDF.",
+          "Please email your remittance advice to admin@roccandy.com.au.",
+        ].join("\n\n"),
+        attachments: [
+          {
+            filename,
+            content: Buffer.from(pdf),
+            contentType: "application/pdf",
+          },
+        ],
+      });
+      if ("skipped" in emailResult) {
+        throw new Error("PDF invoice email could not be sent because SMTP is not configured.");
+      }
       resolvedInvoicePatch = {
         square_invoice_id: result.invoiceId,
         square_invoice_version: result.invoiceVersion,
@@ -1773,28 +1796,30 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         orderIds: invoiceGroupOrders.map((order) => order.id),
       },
     });
-    try {
-      await sendAdminCreatedCustomerOrderEmail({
-        ...existingOrder,
-        ...localPatch,
-        ...paymentPatch,
-        invoiceOrders: invoiceGroupOrders.map((order) =>
-          order.id === existingOrder.id
-            ? {
-                ...order,
-                ...localPatch,
-                ...paymentPatch,
-              }
-            : {
-                ...order,
-                square_invoice_title: localPatch.square_invoice_title,
-                payment_method: paymentPatch.payment_method,
-                payment_provider: paymentPatch.payment_provider,
-              },
-        ),
-      });
-    } catch (error) {
-      console.error("Admin-created customer order email failed:", error);
+    if (invoiceDelivery === "invoice") {
+      try {
+        await sendAdminCreatedCustomerOrderEmail({
+          ...existingOrder,
+          ...localPatch,
+          ...paymentPatch,
+          invoiceOrders: invoiceGroupOrders.map((order) =>
+            order.id === existingOrder.id
+              ? {
+                  ...order,
+                  ...localPatch,
+                  ...paymentPatch,
+                }
+              : {
+                  ...order,
+                  square_invoice_title: localPatch.square_invoice_title,
+                  payment_method: paymentPatch.payment_method,
+                  payment_provider: paymentPatch.payment_provider,
+                },
+          ),
+        });
+      } catch (error) {
+        console.error("Admin-created customer order email failed:", error);
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to send invoice.";
