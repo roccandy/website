@@ -380,6 +380,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
     const category_id = tabbedNullableField(input, "category_id");
     const packaging_option_id = tabbedNullableField(input, "packaging_option_id");
     const quantity = tabbedNumberField(input, "quantity");
+    const due_date = tabbedNullableField(input, "due_date");
     const orderWeightG = tabbedNumberField(input, "order_weight_g");
     const total_weight_kg = orderWeightG !== null ? roundKg(orderWeightG / 1000) : NaN;
     const total_price = tabbedNumberField(input, "total_price");
@@ -391,6 +392,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
     if (!category_id) throw new Error(`Order ${index + 1} needs an order type.`);
     if (!packaging_option_id) throw new Error(`Order ${index + 1} needs packaging.`);
     if (!quantity || quantity <= 0) throw new Error(`Order ${index + 1} needs a quantity.`);
+    if (!due_date) throw new Error(`Order ${index + 1} needs a required date.`);
     if (!Number.isFinite(total_weight_kg) || total_weight_kg <= 0) throw new Error(`Order ${index + 1} needs a valid weight.`);
     if (!total_price || total_price <= 0) throw new Error(`Order ${index + 1} needs a valid total.`);
     if (batchMismatch && !batchWeightMismatchApproved) {
@@ -431,7 +433,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       jar_lid_color: tabbedNullableField(input, "jar_lid_color"),
       logo_url: isBranded ? tabbedNullableField(input, "logo_url") : null,
       label_image_url: tabbedNullableField(input, "label_image_url"),
-      due_date: tabbedNullableField(input, "due_date"),
+      due_date,
       total_weight_kg,
       total_price,
       admin_batch_weights_kg: submittedBatchWeights,
@@ -778,6 +780,9 @@ async function upsertOrderShared(formData: FormData) {
       ? resolvedDesignText
       : null;
   try {
+    if (!isAdminPremade && !resolvedDueDate) {
+      throw new Error("Required date is required.");
+    }
     if (!Number.isFinite(resolvedWeightKg) || resolvedWeightKg <= 0) {
       throw new Error("Order weight is required.");
     }

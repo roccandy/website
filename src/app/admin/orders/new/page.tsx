@@ -13,7 +13,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
+import { adminOrderRemakeFormDefaults, resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
 import { NewOrderForm } from "./NewOrderForm";
 
 export const revalidate = 0;
@@ -47,6 +47,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
   );
   const remakeOrder = resolveAdminOrderRemakeSource(orders, resolvedSearchParams?.remake);
   if (remakeRequested && !remakeOrder) notFound();
+  const initialOrder = remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
   const remakeOrderLabel = remakeOrder?.order_number ? `#${remakeOrder.order_number}` : remakeOrder ? `#${remakeOrder.id.slice(0, 8)}` : null;
@@ -98,7 +99,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         slots={slots}
         assignments={assignments}
         mode="create"
-        initialOrder={remakeOrder}
+        initialOrder={initialOrder}
         cancelHref={remakeOrder ? `/admin/orders/${encodeURIComponent(remakeOrder.id)}` : "/admin/orders"}
       />
     </section>

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { OrderRow } from "@/lib/data";
-import { adminOrderRemakeHref, resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
+import {
+  adminOrderRemakeFormDefaults,
+  adminOrderRemakeHref,
+  resolveAdminOrderRemakeSource,
+} from "@/lib/adminOrderRemake";
 
 const order = (values: Partial<OrderRow> & Pick<OrderRow, "id">) =>
   ({
@@ -22,6 +26,13 @@ describe("admin order re-make", () => {
 
     expect(resolved).toBe(source);
     expect(resolved?.quantity).toBe(100);
+  });
+
+  it("clears the required date in re-make defaults without changing the source order", () => {
+    const source = order({ id: "source-order", due_date: "2026-08-20" });
+
+    expect(adminOrderRemakeFormDefaults(source).due_date).toBeNull();
+    expect(source.due_date).toBe("2026-08-20");
   });
 
   it("does not offer the customer order form for premade stock records", () => {

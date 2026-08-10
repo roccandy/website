@@ -5,6 +5,13 @@ export function adminOrderRemakeHref(orderId: string) {
   return `/admin/orders/new?remake=${encodeURIComponent(orderId)}`;
 }
 
+export function adminOrderRemakeFormDefaults(order: OrderRow) {
+  return {
+    ...order,
+    due_date: null,
+  };
+}
+
 export function resolveAdminOrderRemakeSource(
   orders: OrderRow[],
   value: string | string[] | undefined,
