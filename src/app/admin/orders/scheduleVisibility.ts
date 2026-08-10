@@ -3,7 +3,14 @@ import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 
 type AdminManagedCustomOrderSource = Pick<OrderRow, "design_type" | "woo_order_id" | "woo_payment_url">;
 type AdminManagedCustomOrderPaymentSource = AdminManagedCustomOrderSource &
-  Pick<OrderRow, "paid_at" | "payment_provider" | "square_invoice_id" | "status">;
+  Pick<
+    OrderRow,
+    "paid_at" | "payment_provider" | "square_invoice_id" | "square_invoice_sent_at" | "square_invoice_status" | "status"
+  >;
+
+export type AdminInvoicePaymentStatus = "draft" | "unpaid" | "paid";
+
+const SENT_SQUARE_INVOICE_STATUSES = new Set(["UNPAID", "PARTIALLY_PAID", "PAID"]);
 
 export function isRefundedOrder(order: OrderRow) {
   return Boolean(order.refunded_at);
@@ -24,6 +31,22 @@ export function isAdminManagedCustomOrderUnpaid(order: AdminManagedCustomOrderPa
   if (!order) return false;
   if (!isAdminManagedCustomOrder(order)) return false;
   return !order.paid_at;
+}
+
+/**
+ * The production schedule needs a customer-facing payment flag, rather than
+ * Square's more granular lifecycle status. A draft becomes unpaid only once it
+ * has been published/sent; payment always takes precedence over those fields.
+ */
+export function adminInvoicePaymentStatus(
+  order: AdminManagedCustomOrderPaymentSource | null | undefined,
+): AdminInvoicePaymentStatus | null {
+  if (!order || !isAdminManagedCustomOrder(order)) return null;
+
+  const squareStatus = order.square_invoice_status?.trim().toUpperCase() ?? "";
+  if (order.paid_at || squareStatus === "PAID") return "paid";
+  if (order.square_invoice_sent_at || SENT_SQUARE_INVOICE_STATUSES.has(squareStatus)) return "unpaid";
+  return "draft";
 }
 
 export function isVisibleOnProductionSchedule(order: OrderRow) {

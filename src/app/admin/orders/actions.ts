@@ -1035,7 +1035,7 @@ async function upsertOrderShared(formData: FormData) {
         const replacementPrimary = replacementGroupOrders.find((groupOrder) => groupOrder.id === id) ?? replacementGroupOrders[0];
         const replacementTitle = sharedInvoiceTitle(replacementPrimary, replacementGroupOrders);
         try {
-          const removal = await removeAdminSquareInvoice(existing, { idempotencySuffix });
+          const removal = await removeAdminSquareInvoice(existing);
           oldInvoiceRemoved = Boolean(removal && removal.action !== "skipped");
           const integrationOrder = {
             ...replacementPrimary,
@@ -1562,7 +1562,7 @@ async function createCombinedAdminSquareInvoiceDraftForOrderIds(orderIds: string
   try {
     for (const order of invoiceOrders) {
       if (!order.square_invoice_id || removedInvoiceIds.has(order.square_invoice_id)) continue;
-      await removeAdminSquareInvoice(order, { idempotencySuffix });
+      await removeAdminSquareInvoice(order);
       removedInvoiceIds.add(order.square_invoice_id);
     }
 
@@ -2424,7 +2424,7 @@ async function deleteOrderShared(formData: FormData, inlineResponse: boolean) {
       remainingInvoiceOrderIds = (invoicePeers ?? [])
         .map((peer) => peer.id)
         .filter((peerId): peerId is string => Boolean(peerId && peerId !== orderId));
-      await removeAdminSquareInvoice(order, { idempotencySuffix: `delete-${Date.now()}` });
+      await removeAdminSquareInvoice(order);
     }
 
     const { error: assignmentError } = await client.from("order_slots").delete().eq("order_id", orderId);

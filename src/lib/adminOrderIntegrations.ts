@@ -618,16 +618,14 @@ async function deleteSquareInvoice(invoiceId: string, invoiceVersion: number) {
   );
 }
 
-async function cancelSquareInvoice(invoiceId: string, invoiceVersion: number, orderId: string, idempotencySuffix?: string) {
+async function cancelSquareInvoice(invoiceId: string, invoiceVersion: number) {
   const data = await squareRequest<{ invoice?: SquareInvoice }>(
     `/v2/invoices/${encodeURIComponent(invoiceId)}/cancel`,
     {
       method: "POST",
       body: {
-        invoice: {
-          version: invoiceVersion,
-        },
-        idempotency_key: `rc-admin-invoice-cancel-${orderId}${idempotencySuffix ? `-${idempotencySuffix}` : ""}`,
+        // CancelInvoice accepts only the current version at the top level.
+        version: invoiceVersion,
       },
     },
   );
@@ -685,7 +683,6 @@ export async function createAdminSquareInvoiceDraft(
 
 export async function removeAdminSquareInvoice(
   order: Pick<AdminIntegrationOrder, "id" | "square_invoice_id" | "square_invoice_version">,
-  options: { idempotencySuffix?: string } = {},
 ): Promise<AdminSquareInvoiceRemovalResult | null> {
   if (!order.square_invoice_id) return null;
   const invoice = await retrieveSquareInvoice(order.square_invoice_id);
@@ -706,12 +703,7 @@ export async function removeAdminSquareInvoice(
   }
 
   if (CANCELABLE_INVOICE_STATUSES.has(status)) {
-    const canceled = await cancelSquareInvoice(
-      order.square_invoice_id,
-      invoiceVersion,
-      order.id,
-      options.idempotencySuffix,
-    );
+    const canceled = await cancelSquareInvoice(order.square_invoice_id, invoiceVersion);
     return {
       invoiceId: canceled.id,
       invoiceVersion: Number.isFinite(Number(canceled.version)) ? Number(canceled.version) : invoiceVersion,

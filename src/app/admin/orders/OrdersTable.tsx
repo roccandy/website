@@ -35,6 +35,7 @@ import {
   weightLabel,
 } from "./productionScheduleShared";
 import {
+  adminInvoicePaymentStatus,
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
   isVisibleOnProductionSchedule,
@@ -58,6 +59,12 @@ const JACKET_LABELS = new Map([
   ["two_colour_pinstripe", "Two colour + pin stripe"],
   ["rainbow", "Rainbow"],
 ]);
+
+const invoicePaymentStatusStyle = (status: "draft" | "unpaid" | "paid") => {
+  if (status === "paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "unpaid") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-amber-200 bg-amber-50 text-amber-700";
+};
 
 function PackagingDescription({ value }: { value: string }) {
   const match = value.match(/^(\d+(?:\.\d+)?)\s+x\s+(.+)$/);
@@ -231,6 +238,7 @@ export function OrdersTable({
               const isAdminPremade = isAdminPremadeOrder(order);
               const isAdminManagedCustom = isAdminManagedCustomOrder(order);
               const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
+              const invoicePaymentStatus = adminInvoicePaymentStatus(order);
               const packagingOption = packagingById.get(order.packaging_option_id ?? "") ?? null;
               const packagingDescription = formatOrderDescription(order, packagingOption);
               const dueDateDistance = formatDueDateDistance(order.due_date);
@@ -270,15 +278,26 @@ export function OrdersTable({
                         >
                           {formatScheduleStatusLabel(scheduleStatus)}
                         </button>
-                        {isAdminManagedCustom && order.square_invoice_id ? (
+                        {invoicePaymentStatus && order.square_invoice_id ? (
                           <Link
                             href={`/admin/orders/${order.id}/invoice`}
                             onClick={(event) => event.stopPropagation()}
-                            className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition hover:opacity-85 ${invoicePaymentStatusStyle(
+                              invoicePaymentStatus,
+                            )}`}
                           >
-                            Invoice
+                            {invoicePaymentStatus}
                           </Link>
-                        ) : isAdminManagedCustomUnpaid ? (
+                        ) : invoicePaymentStatus ? (
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${invoicePaymentStatusStyle(
+                              invoicePaymentStatus,
+                            )}`}
+                          >
+                            {invoicePaymentStatus}
+                          </span>
+                        ) : null}
+                        {isAdminManagedCustomUnpaid && !order.square_invoice_id ? (
                           <form
                             action={markOrderAsPaid}
                             className="inline-flex"
@@ -295,7 +314,7 @@ export function OrdersTable({
                               onClick={(event) => event.stopPropagation()}
                               className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
                             >
-                              Unpaid
+                              Mark paid
                             </button>
                           </form>
                         ) : null}

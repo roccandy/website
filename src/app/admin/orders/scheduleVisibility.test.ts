@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
+  adminInvoicePaymentStatus,
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
 } from "./scheduleVisibility";
@@ -101,6 +102,45 @@ describe("admin custom order payment helpers", () => {
 
     expect(isAdminManagedCustomOrder(order)).toBe(true);
     expect(isAdminManagedCustomOrderUnpaid(order)).toBe(true);
+  });
+
+  it("shows an unsent admin invoice as a draft", () => {
+    const order = makeOrder({
+      design_type: "custom-1-6",
+      payment_provider: "square_invoice",
+      square_invoice_id: "inv:123",
+      square_invoice_status: "DRAFT",
+      square_invoice_sent_at: null,
+      paid_at: null,
+    });
+
+    expect(adminInvoicePaymentStatus(order)).toBe("draft");
+  });
+
+  it("shows a sent, unpaid invoice as unpaid", () => {
+    const order = makeOrder({
+      design_type: "custom-1-6",
+      payment_provider: "square_invoice",
+      square_invoice_id: "inv:123",
+      square_invoice_status: "UNPAID",
+      square_invoice_sent_at: "2026-04-27T08:00:00.000Z",
+      paid_at: null,
+    });
+
+    expect(adminInvoicePaymentStatus(order)).toBe("unpaid");
+  });
+
+  it("shows a paid invoice as paid", () => {
+    const order = makeOrder({
+      design_type: "custom-1-6",
+      payment_provider: "square_invoice",
+      square_invoice_id: "inv:123",
+      square_invoice_status: "PAID",
+      square_invoice_sent_at: "2026-04-27T08:00:00.000Z",
+      paid_at: "2026-04-28T08:00:00.000Z",
+    });
+
+    expect(adminInvoicePaymentStatus(order)).toBe("paid");
   });
 });
 
