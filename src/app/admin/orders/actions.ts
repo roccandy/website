@@ -206,6 +206,12 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
     const amount = Number(item.total_price);
     return sum + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+  const emailPreviews = Array.isArray(order.emailPreviews)
+    ? order.emailPreviews.filter(
+        (preview): preview is { orderNumber?: string | null; previewSvg?: string | null } =>
+          Boolean(preview && typeof preview === "object"),
+      )
+    : [];
   const summary = await buildAdminOrderSummaryEmailPayload({
     orderPayloads,
     orderNumber:
@@ -222,6 +228,7 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
     pickup,
     paymentMethod: typeof order.payment_method === "string" ? order.payment_method : "Square invoice",
     paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
+    customPreviews: emailPreviews,
   });
   await sendCustomerOrderSummaryEmail([customerEmail], summary);
 }
@@ -314,6 +321,7 @@ function squareInvoiceSendPatch(
 type TabbedInvoiceOrderInput = {
   fields?: Record<string, unknown>;
   batchWeights?: unknown[];
+  previewSvg?: unknown;
 };
 
 const tabbedField = (input: TabbedInvoiceOrderInput, name: string) => {
@@ -537,6 +545,10 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       state,
       postcode,
       payment_method: "Square invoice",
+      emailPreviews: insertedOrders.map((order, index) => ({
+        orderNumber: order.order_number,
+        previewSvg: typeof tabbedOrders[index]?.previewSvg === "string" ? tabbedOrders[index].previewSvg : null,
+      })),
     });
   } catch (error) {
     console.error("Customer order email failed:", error);

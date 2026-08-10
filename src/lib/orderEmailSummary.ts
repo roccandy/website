@@ -1,5 +1,6 @@
 import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import sharp from "sharp";
 
 type OrderPayload = Record<string, unknown>;
 
@@ -157,16 +158,15 @@ async function persistEmailPreview(previewSource: string | null, orderNumber: st
     }
     if (!bytes || bytes.length === 0) return null;
 
-    const ext = contentType.includes("jpeg")
-      ? "jpg"
-      : contentType.includes("webp")
-        ? "webp"
-        : contentType.includes("gif")
-          ? "gif"
-          : contentType.includes("svg")
-            ? "svg"
-            : "png";
-    const objectPath = `email-previews/${monthKey}/${orderKey}-${Date.now()}.${ext}`;
+    // Store every designer capture as PNG. The source may be the exact SVG rendered by
+    // CandyPreview, but SVG support varies across mail clients.
+    bytes = await sharp(bytes, { animated: false, failOn: "none" })
+      .rotate()
+      .flatten({ background: "#ffffff" })
+      .png()
+      .toBuffer();
+    contentType = "image/png";
+    const objectPath = `email-previews/${monthKey}/${orderKey}-${Date.now()}.png`;
     const { error } = await supabaseAdminClient.storage.from(bucket).upload(objectPath, bytes, {
       upsert: false,
       contentType,

@@ -45,6 +45,28 @@ import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 const BULK_LABEL_COUNT_MAX = 1000;
 const WEDDING_HEART = "❤️";
+const SVG_NS = "http://www.w3.org/2000/svg";
+const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+
+function appendPreviewOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
+  const overlayGroup = document.createElementNS(SVG_NS, "g");
+  if (overlaySvg.querySelector("text, textPath")) {
+    overlayGroup.setAttribute("font-family", PREVIEW_FONT_FAMILY);
+  }
+
+  for (const child of Array.from(overlaySvg.childNodes)) {
+    const clonedChild = child.cloneNode(true);
+    if (clonedChild.nodeName.toLowerCase() === "defs") {
+      baseSvg.appendChild(clonedChild);
+      continue;
+    }
+    overlayGroup.appendChild(clonedChild);
+  }
+
+  if (overlayGroup.childNodes.length > 0) {
+    baseSvg.appendChild(overlayGroup);
+  }
+}
 
 const STATES = [
   { value: "", label: "Select state" },
@@ -383,6 +405,7 @@ type InvoiceOrderDraft = {
   id: string;
   fields: Record<string, string>;
   batchWeights: string[];
+  previewSvg: string | null;
 };
 
 type AdminPremadeMode = "" | "premade" | "custom";
@@ -406,6 +429,7 @@ const emptyInvoiceOrderDraft = (id: string): InvoiceOrderDraft => ({
   id,
   fields: {},
   batchWeights: [],
+  previewSvg: null,
 });
 
 const draftLabel = (draft: InvoiceOrderDraft, index: number) =>
@@ -494,6 +518,7 @@ export function NewOrderForm({
   const [sharedState, setSharedState] = useState(customerDefaults?.state ?? "");
   const [sharedCustomerNote, setSharedCustomerNote] = useState(customerDefaults?.customer_note ?? "");
   const formRef = useRef<HTMLFormElement | null>(null);
+  const candyPreviewRef = useRef<HTMLElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
   const batchWeightMismatchApprovedInputRef = useRef<HTMLInputElement | null>(null);
@@ -1021,6 +1046,27 @@ export function NewOrderForm({
     if (customTarget === "jacket2") setJacketColorTwo(normalized);
     setCustomPickerOpen(false);
   };
+  const captureCandyPreviewSvg = () => {
+    const root = candyPreviewRef.current;
+    if (!root) return null;
+    const svgs = Array.from(root.querySelectorAll("svg"));
+    if (svgs.length === 0) return null;
+
+    const baseSvg = svgs[0].cloneNode(true) as SVGSVGElement;
+    baseSvg.style.removeProperty("transform");
+    baseSvg.style.removeProperty("transform-origin");
+    for (let index = 1; index < svgs.length; index += 1) {
+      appendPreviewOverlaySvg(baseSvg, svgs[index] as SVGSVGElement);
+    }
+    if (!baseSvg.getAttribute("xmlns")) baseSvg.setAttribute("xmlns", SVG_NS);
+    if (!baseSvg.getAttribute("viewBox")) baseSvg.setAttribute("viewBox", "0 0 1772 1300");
+
+    try {
+      return new XMLSerializer().serializeToString(baseSvg);
+    } catch {
+      return null;
+    }
+  };
   const captureCurrentInvoiceDraft = (draftId = activeInvoiceDraftId): InvoiceOrderDraft => {
     const fields: Record<string, string> = {};
     const draftBatchWeights: string[] = [];
@@ -1082,6 +1128,7 @@ export function NewOrderForm({
         production_slot_date: productionSlotDate,
       },
       batchWeights: isAdminPremadeOrder ? [] : draftBatchWeights.length > 0 ? draftBatchWeights : batchWeights,
+      previewSvg: isAdminPremadeOrder ? null : captureCandyPreviewSvg(),
     };
   };
   const saveActiveInvoiceDraft = () => {
@@ -1305,6 +1352,7 @@ export function NewOrderForm({
                 }) ?? "",
             },
             batchWeights: draft.batchWeights,
+            previewSvg: draft.previewSvg,
           };
         }),
       ),
@@ -2890,7 +2938,7 @@ export function NewOrderForm({
                 </div>
               )}
               </div>
-              <aside className="flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40">
+              <aside ref={candyPreviewRef} className="flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40">
                 <CandyPreview
                   designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
                   lineOne={isWedding ? weddingLineOne : undefined}

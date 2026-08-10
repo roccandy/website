@@ -1,8 +1,10 @@
+import sharp from "sharp";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getColorPalette = vi.fn();
 const getPackagingOptions = vi.fn();
 const getLabelTypes = vi.fn();
+const uploadPreview = vi.fn();
 
 vi.mock("@/lib/data", () => ({
   getColorPalette,
@@ -14,7 +16,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   supabaseAdminClient: {
     storage: {
       from: vi.fn(() => ({
-        upload: vi.fn(),
+        upload: uploadPreview,
       })),
     },
   },
@@ -23,6 +25,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 describe("buildAdminOrderSummaryEmailPayload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    uploadPreview.mockResolvedValue({ error: null });
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     delete process.env.SUPABASE_URL;
     delete process.env.VERCEL_URL;
@@ -221,5 +224,43 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     expect(summary.customDetails?.outerColours).toBe("Red");
     expect(summary.customDetails?.labels).toBe("No");
     expect(summary.customDetails?.labelImageUrl).toBeNull();
+  });
+
+  it("rasterizes the exact captured designer SVG to a public PNG", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://storage.example.com";
+    process.env.SITE_URL = "https://roccandy.test";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+    const previewSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1772 1300"><path d="M0 0h1772v1300H0z" fill="#ff5f99"/></svg>';
+
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [
+        {
+          order_number: "0135",
+          title: "Exact designer candy",
+          quantity: 10,
+          packaging_option_id: "pack-1",
+          total_weight_kg: 1,
+          total_price: 100,
+          category_id: "custom-1-6",
+          design_type: "custom-1-6",
+          design_text: "TEST",
+          jacket_color_one: "#ff0000",
+        },
+      ],
+      orderNumber: "0135",
+      requestedDate: null,
+      billing: {},
+      pickup: true,
+      paymentMethod: "Square invoice",
+      paymentAmount: 100,
+      customPreviews: [{ orderNumber: "0135", previewSvg }],
+    });
+
+    expect(uploadPreview).toHaveBeenCalledOnce();
+    const [path, content, options] = uploadPreview.mock.calls[0];
+    expect(path).toMatch(/^email-previews\/\d{4}-\d{2}\/0135-\d+\.png$/);
+    expect(options).toEqual(expect.objectContaining({ contentType: "image/png" }));
+    expect((await sharp(content).metadata()).format).toBe("png");
+    expect(summary.customDetails?.imageUrl).toContain("/storage/v1/object/public/flavor-images/");
   });
 });
