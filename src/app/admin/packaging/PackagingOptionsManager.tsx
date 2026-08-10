@@ -9,8 +9,10 @@ import {
   normalizePackagingLidColorName,
 } from "@/lib/packagingLidColors";
 import {
+  deletePackagingLidColor,
   deletePackaging,
   togglePackagingActive,
+  updatePackagingLidColor,
   updatePackagingOptionOrder,
   updatePackagingTypeOrder,
   upsertPackaging,
@@ -27,6 +29,80 @@ function moveItem(items: string[], index: number, direction: -1 | 1) {
   const next = [...items];
   [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
   return next;
+}
+
+function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Jar options</p>
+        <h3 className="admin-subsection-title text-zinc-900">Lid colours</h3>
+        <p className="mt-1 text-xs text-zinc-500">
+          Edit the name or website swatch here. Add new colours while editing or creating a Jar option.
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">Remove any uploaded packaging images for a colour before deleting it.</p>
+      </div>
+      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {lidColors.map((color) =>
+          editingId === color.id ? (
+            <form key={color.id} action={updatePackagingLidColor} className="rounded-lg border border-sky-200 bg-sky-50/50 p-3">
+              <input type="hidden" name="id" value={color.id} />
+              <div className="flex items-end gap-2">
+                <label className="min-w-0 flex-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                  Name
+                  <input
+                    name="name"
+                    required
+                    maxLength={60}
+                    defaultValue={color.name}
+                    className="mt-1 min-h-9 w-full rounded border border-zinc-200 bg-white px-2 py-1.5 text-sm normal-case tracking-normal text-zinc-900"
+                  />
+                </label>
+                <label className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                  Swatch
+                  <input
+                    type="color"
+                    name="hex"
+                    required
+                    defaultValue={color.hex}
+                    className="mt-1 block h-9 w-12 cursor-pointer rounded border border-zinc-200 bg-white p-1"
+                    aria-label={`Website swatch for ${color.name}`}
+                  />
+                </label>
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button type="submit" className="rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Save</button>
+                <button type="button" onClick={() => setEditingId(null)} className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700">Cancel</button>
+              </div>
+            </form>
+          ) : (
+            <div key={color.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="h-6 w-6 shrink-0 rounded-full border border-zinc-300" style={{ backgroundColor: color.hex }} aria-hidden="true" />
+                <span className="truncate text-sm font-semibold capitalize text-zinc-800">{color.name}</span>
+                <span className="text-[10px] uppercase text-zinc-400">{color.hex}</span>
+              </div>
+              <div className="flex shrink-0 gap-1.5">
+                <button type="button" onClick={() => setEditingId(color.id)} className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs font-semibold text-zinc-700">Edit</button>
+                <form
+                  action={deletePackagingLidColor}
+                  onSubmit={(event) => {
+                    if (!window.confirm(`Delete ${color.name} from every packaging option?`)) event.preventDefault();
+                  }}
+                >
+                  <input type="hidden" name="id" value={color.id} />
+                  <button type="submit" className="rounded border border-rose-200 bg-white px-2 py-1 text-xs font-semibold text-rose-700">Delete</button>
+                </form>
+              </div>
+            </div>
+          ),
+        )}
+        {lidColors.length === 0 ? <p className="text-sm text-zinc-500">No lid colours configured.</p> : null}
+      </div>
+    </section>
+  );
 }
 
 type OptionFormProps = {
@@ -344,6 +420,8 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
 
   return (
     <div className="space-y-6">
+      <LidColorLibrary lidColors={lidColors} />
+
       <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>

@@ -266,6 +266,93 @@ export async function upsertPackaging(formData: FormData) {
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging saved."));
 }
 
+export async function updatePackagingLidColor(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const id = formData.get("id")?.toString().trim();
+    const name = normalizePackagingLidColorName(formData.get("name")?.toString() ?? "");
+    const hex = normalizePackagingLidColorHex(formData.get("hex")?.toString() ?? "");
+    if (!id) throw new Error("Missing lid colour id.");
+    if (!name || name.length > 60) throw new Error("Enter a lid colour name up to 60 characters.");
+    if (!hex) throw new Error("Choose a valid website swatch colour.");
+
+    const { error } = await supabaseAdminClient.rpc("update_packaging_lid_color", {
+      p_id: id,
+      p_name: name,
+      p_hex: hex,
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes("update_packaging_lid_color")) {
+        throw new Error("Run the 2026-08-10 lid-colour edit/delete SQL migration in Supabase first.");
+      }
+      if (error.message.toLowerCase().includes("unique")) {
+        throw new Error("A lid colour with that name already exists.");
+      }
+      throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "updated",
+      entityType: "packaging-lid-color",
+      entityId: id,
+      entityLabel: name,
+      summary: `Updated jar lid colour "${name}".`,
+      path: "/admin/packaging",
+      changedFields: ["Lid colour name", "Website swatch"],
+      metadata: { name, hex },
+    });
+    revalidatePath("/admin/packaging");
+    revalidatePath("/design");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update the lid colour.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Lid colour updated."));
+}
+
+export async function deletePackagingLidColor(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const id = formData.get("id")?.toString().trim();
+    if (!id) throw new Error("Missing lid colour id.");
+
+    const { data: existing, error: existingError } = await supabaseAdminClient
+      .from("packaging_lid_colors")
+      .select("id,name,hex")
+      .eq("id", id)
+      .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
+    if (!existing) throw new Error("Lid colour not found.");
+
+    const { error } = await supabaseAdminClient.rpc("delete_packaging_lid_color", { p_id: id });
+    if (error) {
+      if (error.message.toLowerCase().includes("delete_packaging_lid_color")) {
+        throw new Error("Run the 2026-08-10 lid-colour edit/delete SQL migration in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "deleted",
+      entityType: "packaging-lid-color",
+      entityId: existing.id,
+      entityLabel: existing.name,
+      summary: `Deleted jar lid colour "${existing.name}" from packaging selections.`,
+      path: "/admin/packaging",
+      changedFields: ["Lid colour"],
+      metadata: { name: existing.name, hex: existing.hex },
+    });
+    revalidatePath("/admin/packaging");
+    revalidatePath("/design");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to delete the lid colour.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Lid colour deleted."));
+}
+
 export async function togglePackagingActive(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
   try {
