@@ -17,6 +17,8 @@ import {
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { formatDate, formatMoney } from "../productionScheduleShared";
 import { NewOrderForm } from "../new/NewOrderForm";
+import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
+import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -99,6 +101,14 @@ export default async function AdminOrderDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!isAdminPremadeOrder(order) ? (
+            <Link
+              href={adminOrderRemakeHref(order.id)}
+              className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:border-sky-300"
+            >
+              Re-make
+            </Link>
+          ) : null}
           <Link
             href={`/admin/orders/${order.id}/print?id=${order.id}`}
             target="_blank"

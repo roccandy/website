@@ -11,8 +11,9 @@ import {
 } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
 import { NewOrderForm } from "./NewOrderForm";
 
 export const revalidate = 0;
@@ -22,6 +23,7 @@ export const fetchCache = "force-no-store";
 type SearchParams = {
   toast?: string;
   message?: string;
+  remake?: string | string[];
 };
 
 export default async function NewOrderPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
@@ -40,15 +42,21 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
     getProductionSlots(),
     getOrderSlots(),
   ]);
+  const remakeRequested = Boolean(
+    (Array.isArray(resolvedSearchParams?.remake) ? resolvedSearchParams?.remake[0] : resolvedSearchParams?.remake)?.trim(),
+  );
+  const remakeOrder = resolveAdminOrderRemakeSource(orders, resolvedSearchParams?.remake);
+  if (remakeRequested && !remakeOrder) notFound();
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
+  const remakeOrderLabel = remakeOrder?.order_number ? `#${remakeOrder.order_number}` : remakeOrder ? `#${remakeOrder.id.slice(0, 8)}` : null;
 
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-          <h2 className="admin-page-title">Create order</h2>
+          <h2 className="admin-page-title">{remakeOrder ? "Re-make order" : "Create order"}</h2>
         </div>
         <Link
           href="/admin/orders"
@@ -57,6 +65,15 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
           Back to schedule
         </Link>
       </div>
+
+      {remakeOrder ? (
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          <p className="font-semibold">Prefilled from order {remakeOrderLabel}</p>
+          <p className="mt-1">
+            Edit anything needed below. Sending the invoice will create a new order and leave the original unchanged.
+          </p>
+        </div>
+      ) : null}
 
       {toastTone && toastMessage ? (
         <p
@@ -80,6 +97,9 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         orders={orders}
         slots={slots}
         assignments={assignments}
+        mode="create"
+        initialOrder={remakeOrder}
+        cancelHref={remakeOrder ? `/admin/orders/${encodeURIComponent(remakeOrder.id)}` : "/admin/orders"}
       />
     </section>
   );

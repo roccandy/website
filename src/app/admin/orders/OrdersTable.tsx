@@ -13,6 +13,7 @@ import type {
 } from "@/lib/data";
 import { archiveOrderInline, deleteOrderInline, markOrderAsPaid } from "./actions";
 import { ADMIN_PREMADE_CATEGORY_ID, ADMIN_PREMADE_ORDER_LABEL, isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
+import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import ProductionScheduleSection from "./ProductionScheduleSection";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
@@ -380,6 +381,15 @@ export function OrdersTable({
                               >
                                 View details
                               </Link>
+                              {!isAdminPremade ? (
+                                <Link
+                                  href={adminOrderRemakeHref(order.id)}
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:border-sky-300"
+                                >
+                                  Re-make
+                                </Link>
+                              ) : null}
                               {printTarget ? (
                                 <Link
                                   href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}

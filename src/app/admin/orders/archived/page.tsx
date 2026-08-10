@@ -8,6 +8,7 @@ import { RefundForm } from "../RefundForm";
 import SplitAwareActionForm from "../SplitAwareActionForm";
 import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButton";
 import { getPremadeSiblingMeta, getScheduleStatus } from "../productionScheduleShared";
+import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
 
 export const metadata = {
   title: "All Orders | Roc Candy Admin",
@@ -760,6 +761,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
 
                             return (
                               <div key={`actions-${order.id}`} className="space-y-1">
+                                <Link
+                                  href={adminOrderRemakeHref(order.id)}
+                                  className="inline-flex items-center rounded border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:border-sky-300"
+                                >
+                                  Re-make
+                                </Link>
                                 {canComplete ? (
                                   <SplitAwareActionForm
                                     action={archiveOrderInline}
@@ -794,7 +801,6 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   />
                                 ) : null}
                                 {isFullyRefunded ? <span className="text-xs font-semibold text-rose-700">Fully Refunded</span> : null}
-                                {!canComplete && !hasReset && !hasRefund && !isFullyRefunded ? <span className="text-xs text-zinc-400">-</span> : null}
                               </div>
                             );
                           })}
