@@ -32,6 +32,26 @@ const money = (amount: number | null | undefined) => {
   return Number.isFinite(numeric) ? `$${numeric.toFixed(2)}` : "-";
 };
 
+/**
+ * PDF standard fonts are WinAnsi-only. Customer-entered order text can contain
+ * emoji, hearts, smart quotes, and other Unicode characters, so normalise it
+ * before measuring or drawing to guarantee that an invoice can always send.
+ */
+function cleanPdfText(value: string | null | undefined) {
+  return (value ?? "")
+    .replace(/[\u2764\u2665](?:\uFE0F)?/gu, "heart")
+    .replace(/[\u2018\u2019]/gu, "'")
+    .replace(/[\u201C\u201D]/gu, '"')
+    .replace(/[\u2013\u2014]/gu, "-")
+    .replace(/\u2026/gu, "...")
+    .replace(/\u00D7/gu, "x")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036F]/gu, "")
+    .replace(/[^\x20-\x7E]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
 const date = (value: string | null | undefined) => {
   if (!value) return "-";
   const parsed = new Date(`${value.slice(0, 10)}T12:00:00`);
@@ -40,7 +60,7 @@ const date = (value: string | null | undefined) => {
 };
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
-  const words = text.trim().split(/\s+/).filter(Boolean);
+  const words = cleanPdfText(text).split(/\s+/).filter(Boolean);
   if (words.length === 0) return [""];
   const lines: string[] = [];
   let line = "";
@@ -107,11 +127,11 @@ export async function buildDirectDepositInvoicePdf(input: DirectDepositInvoicePd
 
   page.drawRectangle({ x: MARGIN, y: y - 56, width: PAGE_WIDTH - MARGIN * 2, height: 56, color: LIGHT });
   page.drawText("Invoice", { x: MARGIN + 12, y: y - 17, size: 8, font: bold, color: MUTED });
-  page.drawText(input.invoiceNumber, { x: MARGIN + 12, y: y - 32, size: 10, font: bold, color: DARK });
+  page.drawText(cleanPdfText(input.invoiceNumber), { x: MARGIN + 12, y: y - 32, size: 10, font: bold, color: DARK });
   page.drawText("Due date", { x: 255, y: y - 17, size: 8, font: bold, color: MUTED });
   page.drawText(date(input.dueDate), { x: 255, y: y - 32, size: 10, font: bold, color: DARK });
   page.drawText("Customer", { x: 395, y: y - 17, size: 8, font: bold, color: MUTED });
-  page.drawText((input.customerName || input.customerEmail || "Customer").slice(0, 27), {
+  page.drawText(cleanPdfText(input.customerName || input.customerEmail || "Customer").slice(0, 27), {
     x: 395,
     y: y - 32,
     size: 10,
@@ -120,7 +140,7 @@ export async function buildDirectDepositInvoicePdf(input: DirectDepositInvoicePd
   });
   y -= 82;
 
-  page.drawText(input.invoiceTitle, { x: MARGIN, y, size: 12, font: bold, color: DARK });
+  page.drawText(cleanPdfText(input.invoiceTitle), { x: MARGIN, y, size: 12, font: bold, color: DARK });
   y -= 26;
 
   page.drawRectangle({ x: MARGIN, y: y - 20, width: PAGE_WIDTH - MARGIN * 2, height: 20, color: ROC_CANDY_RED });
