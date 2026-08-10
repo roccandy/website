@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
+import { ADMIN_PREMADE_ORDER_MARKER } from "@/lib/adminPremadeOrder";
 import {
   adminInvoicePaymentStatus,
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
+  isVisibleOnProductionScheduleWithAssignments,
 } from "./scheduleVisibility";
 import {
   buildMondayFirstMonthCells,
@@ -153,6 +155,19 @@ describe("production completion labels", () => {
   it("shows completed pickup orders as collected", () => {
     expect(productionCompletionActionLabel(makeOrder({ status: "archived", pickup: true }))).toBe("Collected");
     expect(productionCompletionActionLabel(makeOrder({ status: "shipped", pickup: true }))).toBe("Collected");
+  });
+});
+
+describe("production schedule visibility", () => {
+  it("removes completed premade stock from the active list the following day", () => {
+    const order = makeOrder({
+      design_type: "premade",
+      notes: ADMIN_PREMADE_ORDER_MARKER,
+      status: "scheduled",
+    });
+
+    expect(isVisibleOnProductionScheduleWithAssignments(order, ["2026-08-10"], "2026-08-10")).toBe(true);
+    expect(isVisibleOnProductionScheduleWithAssignments(order, ["2026-08-10"], "2026-08-11")).toBe(false);
   });
 });
 

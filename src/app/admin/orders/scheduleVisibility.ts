@@ -50,8 +50,27 @@ export function adminInvoicePaymentStatus(
 }
 
 export function isVisibleOnProductionSchedule(order: OrderRow) {
+  return isVisibleOnProductionScheduleWithAssignments(order);
+}
+
+export function isVisibleOnProductionScheduleWithAssignments(
+  order: OrderRow,
+  assignedSlotDates: string[] = [],
+  todayKey = new Date().toISOString().slice(0, 10),
+) {
   const isStandalonePremade = isAdminPremadeOrder(order);
-  return (order.design_type !== "premade" || isStandalonePremade) && order.status !== "archived" && !isRefundedOrder(order);
+  if ((order.design_type === "premade" && !isStandalonePremade) || order.status === "archived" || isRefundedOrder(order)) {
+    return false;
+  }
+
+  // Pre-made stock is a one-day production task. Keep its completed slot in
+  // the calendar as history, but remove it from the active schedule list on
+  // the following day.
+  if (isStandalonePremade && assignedSlotDates.length > 0 && assignedSlotDates.every((slotDate) => slotDate < todayKey)) {
+    return false;
+  }
+
+  return true;
 }
 
 export function isVisibleOnPremadeOrders(order: OrderRow) {

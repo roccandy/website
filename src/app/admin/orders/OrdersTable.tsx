@@ -33,12 +33,13 @@ import {
   splitCustomerName,
   statusBadge,
   weightLabel,
+  dateKey,
 } from "./productionScheduleShared";
 import {
   adminInvoicePaymentStatus,
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
-  isVisibleOnProductionSchedule,
+  isVisibleOnProductionScheduleWithAssignments,
 } from "./scheduleVisibility";
 
 type Props = {
@@ -122,16 +123,30 @@ export function OrdersTable({
       ]),
     [categories],
   );
+  const slotMap = useMemo(() => new Map(slots.map((slot) => [slot.id, slot])), [slots]);
+  const assignedSlotDatesByOrderId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    assignments.forEach((assignment) => {
+      const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
+      if (!slotDate) return;
+      const list = map.get(assignment.order_id) ?? [];
+      list.push(slotDate);
+      map.set(assignment.order_id, list);
+    });
+    return map;
+  }, [assignments, slotMap]);
+  const scheduleTodayKey = dateKey(new Date());
   const listOrders = useMemo(() => {
-    const visible = orders.filter(isVisibleOnProductionSchedule);
+    const visible = orders.filter((order) =>
+      isVisibleOnProductionScheduleWithAssignments(order, assignedSlotDatesByOrderId.get(order.id) ?? [], scheduleTodayKey),
+    );
     return [...visible].sort((a, b) => {
       const aDate = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
       const bDate = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
       if (aDate !== bDate) return aDate - bDate;
       return (a.order_number ?? a.id ?? "").localeCompare(b.order_number ?? b.id ?? "");
     });
-  }, [orders]);
-  const slotMap = useMemo(() => new Map(slots.map((slot) => [slot.id, slot])), [slots]);
+  }, [assignedSlotDatesByOrderId, orders, scheduleTodayKey]);
   const assignmentByOrderId = useMemo(() => {
     const map = new Map<string, { assignment: OrderSlot; slot: ProductionSlot | null }>();
     assignments.forEach((assignment) => {
@@ -152,17 +167,6 @@ export function OrdersTable({
     });
     return map;
   }, [assignments]);
-  const assignedSlotDatesByOrderId = useMemo(() => {
-    const map = new Map<string, string[]>();
-    assignments.forEach((assignment) => {
-      const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
-      if (!slotDate) return;
-      const list = map.get(assignment.order_id) ?? [];
-      list.push(slotDate);
-      map.set(assignment.order_id, list);
-    });
-    return map;
-  }, [assignments, slotMap]);
   const unassignedOrders = useMemo(
     () =>
       listOrders.filter((order) => {
