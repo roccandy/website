@@ -272,6 +272,10 @@ function renderCandyPreviewImage(imageSrc: string | null, width: number) {
   return `<img src="${escapeHtml(imageSrc)}" alt="Candy design" width="${width}" style="display:block;width:${width}px;max-width:100%;height:auto;border-radius:12px;margin:0 auto 12px;" />`;
 }
 
+function getHostedImageUrl(imageSources: Array<string | null | undefined>) {
+  return imageSources.find((source): source is string => Boolean(source && /^https:\/\//i.test(source))) ?? null;
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "-";
   const date = new Date(value);
@@ -490,11 +494,16 @@ async function buildCustomHtmlSections(
   const attachments: NonNullable<nodemailer.SendMailOptions["attachments"]> = [];
   const sections = await Promise.all(
     details.map(async (detail, index) => {
-      const customPreview = await buildInlineAttachment(
-        [detail.imageDataUrl, detail.imageUrl, detail.fallbackImageUrl],
-        `candy-design-${index}@roccandy`,
-        `candy-design-${index + 1}`
-      );
+      // Use the saved designer PNG as the email image. It is public HTTPS, renders consistently
+      // across major mail clients, and preserves the exact preview the customer saw on the site.
+      const hostedCandyPreviewUrl = getHostedImageUrl([detail.imageUrl, detail.fallbackImageUrl]);
+      const customPreview = hostedCandyPreviewUrl
+        ? { src: hostedCandyPreviewUrl, attachment: null, externalUrl: hostedCandyPreviewUrl }
+        : await buildInlineAttachment(
+            [detail.imageDataUrl],
+            `candy-design-${index}@roccandy`,
+            `candy-design-${index + 1}`
+          );
       const labelPreview = await buildInlineAttachment(
         [detail.labelImageUrl],
         `label-design-${index}@roccandy`,
@@ -506,6 +515,11 @@ async function buildCustomHtmlSections(
       const orderNumber = detail.orderNumber ? `#${detail.orderNumber}` : "-";
       return `
         ${renderCandyPreviewImage(customPreview.src, options.previewWidth)}
+        ${
+          customPreview.externalUrl
+            ? `<div style="margin:-4px 0 10px;text-align:center;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy design</a></div>`
+            : ""
+        }
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
         ${
           options.includeWeight

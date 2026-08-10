@@ -390,14 +390,12 @@ export async function buildAdminOrderSummaryEmailPayload({
       customOrderNumber
     );
     const imageUrl =
-      generatedPreviewUrl ||
       persistedPreviewUrl ||
+      generatedPreviewUrl ||
       (typeof customItem.logo_url === "string" && customItem.logo_url.trim()) ||
       null;
     const fallbackImageUrl =
-      imageUrl === generatedPreviewUrl
-        ? persistedPreviewUrl
-        : generatedPreviewUrl;
+      imageUrl === persistedPreviewUrl ? generatedPreviewUrl : persistedPreviewUrl;
     const shouldShowHeart =
       typeof customItem.heart_color === "string" &&
       customItem.heart_color.trim().length > 0 &&

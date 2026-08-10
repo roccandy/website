@@ -91,4 +91,47 @@ describe("sendCustomerOrderSummaryEmail", () => {
       }),
     );
   });
+
+  it("uses the saved public designer preview instead of a regenerated attachment", async () => {
+    const previewUrl = "https://storage.example.com/email-previews/order-0135.png";
+
+    await sendCustomerOrderSummaryEmail(["customer@example.com"], {
+      orderNumber: "0135",
+      dateOrderedIso: "2026-08-10T00:00:00.000Z",
+      customerName: "Customer",
+      customerEmail: "customer@example.com",
+      customerPhone: null,
+      requestedDate: null,
+      deliveryAddress: "Pickup",
+      paymentMethod: "Square invoice",
+      paymentAmount: 100,
+      items: [{ title: "Custom candy", quantity: 1, flavor: "Raspberry", labelsCount: null, totalPrice: 100 }],
+      customDetails: null,
+      customDetailsList: [
+        {
+          imageUrl: previewUrl,
+          imageDataUrl: "data:image/png;base64,AAAA",
+          fallbackImageUrl: "https://roccandy.com.au/api/preview/candy-image",
+          orderNumber: "0135",
+          weightKg: null,
+          outerColours: "Pink",
+          pinstripe: "No",
+          flavor: "Raspberry",
+          textColour: "White",
+          heartColour: null,
+          packaging: "1 x Bag 100g",
+          labels: "No",
+          labelImageUrl: null,
+          ingredientLabels: "No",
+        },
+      ],
+    });
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.stringContaining(`src="${previewUrl}"`),
+        attachments: undefined,
+      }),
+    );
+  });
 });
