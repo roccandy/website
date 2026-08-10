@@ -208,7 +208,7 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
   }, 0);
   const emailPreviews = Array.isArray(order.emailPreviews)
     ? order.emailPreviews.filter(
-        (preview): preview is { orderNumber?: string | null; previewSvg?: string | null } =>
+        (preview): preview is { orderNumber?: string | null; previewSvg?: string | null; previewPngDataUrl?: string | null } =>
           Boolean(preview && typeof preview === "object"),
       )
     : [];
@@ -322,6 +322,7 @@ type TabbedInvoiceOrderInput = {
   fields?: Record<string, unknown>;
   batchWeights?: unknown[];
   previewSvg?: unknown;
+  previewPngDataUrl?: unknown;
 };
 
 const tabbedField = (input: TabbedInvoiceOrderInput, name: string) => {
@@ -548,6 +549,8 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       emailPreviews: insertedOrders.map((order, index) => ({
         orderNumber: order.order_number,
         previewSvg: typeof tabbedOrders[index]?.previewSvg === "string" ? tabbedOrders[index].previewSvg : null,
+        previewPngDataUrl:
+          typeof tabbedOrders[index]?.previewPngDataUrl === "string" ? tabbedOrders[index].previewPngDataUrl : null,
       })),
     });
   } catch (error) {

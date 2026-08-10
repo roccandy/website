@@ -406,6 +406,7 @@ type InvoiceOrderDraft = {
   fields: Record<string, string>;
   batchWeights: string[];
   previewSvg: string | null;
+  previewPngDataUrl: string | null;
 };
 
 type AdminPremadeMode = "" | "premade" | "custom";
@@ -430,6 +431,7 @@ const emptyInvoiceOrderDraft = (id: string): InvoiceOrderDraft => ({
   fields: {},
   batchWeights: [],
   previewSvg: null,
+  previewPngDataUrl: null,
 });
 
 const draftLabel = (draft: InvoiceOrderDraft, index: number) =>
@@ -1067,6 +1069,33 @@ export function NewOrderForm({
       return null;
     }
   };
+  const captureCandyPreviewPng = async (svgMarkup: string | null) => {
+    if (!svgMarkup) return null;
+    const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new window.Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error("Preview image load failed."));
+        nextImage.src = objectUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = 886;
+      canvas.height = 650;
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/png");
+    } catch {
+      return null;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
   const captureCurrentInvoiceDraft = (draftId = activeInvoiceDraftId): InvoiceOrderDraft => {
     const fields: Record<string, string> = {};
     const draftBatchWeights: string[] = [];
@@ -1129,6 +1158,7 @@ export function NewOrderForm({
       },
       batchWeights: isAdminPremadeOrder ? [] : draftBatchWeights.length > 0 ? draftBatchWeights : batchWeights,
       previewSvg: isAdminPremadeOrder ? null : captureCandyPreviewSvg(),
+      previewPngDataUrl: null,
     };
   };
   const saveActiveInvoiceDraft = () => {
@@ -1280,9 +1310,15 @@ export function NewOrderForm({
       </div>
     </section>
   );
-  const openReview = () => {
+  const openReview = async () => {
     const nextDrafts = saveActiveInvoiceDraft();
-    setInvoiceOrderDrafts(nextDrafts);
+    const draftsWithPngPreviews = await Promise.all(
+      nextDrafts.map(async (draft) => ({
+        ...draft,
+        previewPngDataUrl: await captureCandyPreviewPng(draft.previewSvg),
+      })),
+    );
+    setInvoiceOrderDrafts(draftsWithPngPreviews);
     setReviewMode(true);
     window.requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1353,6 +1389,7 @@ export function NewOrderForm({
             },
             batchWeights: draft.batchWeights,
             previewSvg: draft.previewSvg,
+            previewPngDataUrl: draft.previewPngDataUrl,
           };
         }),
       ),
