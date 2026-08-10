@@ -63,15 +63,6 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
         invoiceOrder.square_invoice_status === "PAID",
     ),
   );
-  const productionBatchCount = groupedOrders.reduce(
-    (count, invoiceOrder) =>
-      count +
-      (Array.isArray(invoiceOrder.admin_batch_weights_kg)
-        ? invoiceOrder.admin_batch_weights_kg.filter((weight) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
-        : 0),
-    0,
-  );
-  const canSendBankTransferPdf = (productionBatchCount > 1 || groupedOrders.length > 1) && !isAlreadySent;
   const invoiceStatus = groupedOrders.some((invoiceOrder) => invoiceOrder.square_invoice_status === "PAID")
     ? "Paid"
     : groupedOrders.some((invoiceOrder) => invoiceOrder.square_invoice_status === "UNPAID")
@@ -210,21 +201,14 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
                 className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm normal-case tracking-normal text-zinc-900 disabled:bg-zinc-50 disabled:text-zinc-500"
               />
             </label>
-            {canSendBankTransferPdf ? (
-              <label className="flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-700">
-                <input
-                  type="checkbox"
-                  name="square_invoice_payment_mode"
-                  value="bank_transfer"
-                  className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
-                />
-                <span>
-                  <span className="block font-semibold text-zinc-900">Send as bank transfer PDF</span>
-                  <span className="mt-0.5 block text-xs text-zinc-500">
-                    Sends a Square invoice configured for bank transfer instead of card payment.
-                  </span>
-                </span>
-              </label>
+            {!isAlreadySent ? (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-xs text-zinc-600">
+                <p className="font-semibold text-zinc-900">Choose how to send this invoice</p>
+                <p className="mt-1">
+                  Send invoice publishes Square&apos;s hosted card-payment invoice. Send PDF keeps the Square invoice as a draft and
+                  emails the attached direct-deposit tax invoice through Square.
+                </p>
+              </div>
             ) : null}
           </div>
         </div>
@@ -265,7 +249,7 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
               Pricing is locked from the create order screen and cannot be changed here.
             </div>
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
               {isAlreadySent ? (
                 <Link
                   href={primaryOrder.square_invoice_url ?? `/admin/orders?selected=${encodeURIComponent(primaryOrder.id)}`}
@@ -274,7 +258,10 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
                   View invoice
                 </Link>
               ) : (
-                <SendInvoiceButton />
+                <>
+                  <SendInvoiceButton delivery="pdf" />
+                  <SendInvoiceButton delivery="invoice" />
+                </>
               )}
             </div>
           </div>

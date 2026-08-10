@@ -80,6 +80,11 @@ type SquareInvoice = {
   updated_at?: string;
 };
 
+type SquareInvoiceAttachment = {
+  id: string;
+  filename?: string;
+};
+
 export type AdminSquareInvoicePaymentMode = "card" | "bank_transfer";
 
 export type AdminSquareInvoiceDraftResult = {
@@ -119,6 +124,7 @@ const DEFAULT_COUNTRY = "AU";
 const CANCELABLE_INVOICE_STATUSES = new Set(["SCHEDULED", "UNPAID", "PARTIALLY_PAID"]);
 const SKIPPABLE_INVOICE_STATUSES = new Set(["CANCELED", "FAILED", "REFUNDED"]);
 const BANK_TRANSFER_PAYMENT_METHOD_LABEL = "Square bank transfer invoice";
+export const DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL = "Direct deposit PDF via Square";
 
 function moneyToCents(value: number | null | undefined) {
   const amount = Number(value);
@@ -327,6 +333,46 @@ async function squareRequest<T>(path: string, options: SquareRequestOptions = {}
     throw new SquareRequestError(detail, response.status, data.errors ?? []);
   }
   return data as T;
+}
+
+async function attachSquareInvoicePdf(input: {
+  invoiceId: string;
+  orderId: string;
+  filename: string;
+  pdf: Uint8Array;
+}) {
+  const config = getSquareConfig();
+  const form = new FormData();
+  form.append(
+    "request",
+    new Blob(
+      [JSON.stringify({ idempotency_key: `rc-admin-invoice-pdf-${input.orderId}-${Date.now()}`, description: "Roc Candy tax invoice" })],
+      { type: "application/json" },
+    ),
+  );
+  form.append("file", new Blob([Buffer.from(input.pdf)], { type: "application/pdf" }), input.filename);
+
+  const response = await fetch(`${config.apiBase}/v2/invoices/${encodeURIComponent(input.invoiceId)}/attachments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.accessToken}`,
+      "Square-Version": config.version,
+    },
+    body: form,
+    cache: "no-store",
+  });
+  const data = (await response.json().catch(() => ({}))) as {
+    attachment?: SquareInvoiceAttachment;
+    errors?: Array<{ detail?: string; code?: string }>;
+  };
+  if (!response.ok || !data.attachment?.id) {
+    throw new SquareRequestError(
+      data.errors?.[0]?.detail || data.errors?.[0]?.code || "Square invoice PDF attachment failed.",
+      response.status,
+      data.errors ?? [],
+    );
+  }
+  return data.attachment;
 }
 
 function isSquareInvoiceNumberConflict(error: unknown) {
@@ -797,5 +843,47 @@ export async function updateAndPublishAdminSquareInvoice(
     invoiceStatus: published.status ?? null,
     invoiceUrl: published.public_url ?? null,
     invoiceSentAt: published.updated_at ?? new Date().toISOString(),
+  };
+}
+
+export async function updateAdminSquareInvoiceDraftAndAttachPdf(
+  order: AdminInvoiceOrderInput,
+  input: { filename: string; pdf: Uint8Array },
+) {
+  if (!order.square_invoice_id) {
+    throw new Error("Square invoice draft is missing.");
+  }
+  let invoiceVersion = Number(order.square_invoice_version);
+  if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
+    invoiceVersion = Number((await retrieveSquareInvoice(order.square_invoice_id)).version);
+    if (!Number.isFinite(invoiceVersion) || invoiceVersion < 0) {
+      throw new Error("Square invoice version could not be retrieved.");
+    }
+  }
+  if (order.square_customer_id) {
+    await updateSquareCustomer(order, order.square_customer_id);
+  }
+  const versionAfterRecipientClear = order.square_customer_id
+    ? await clearSquareInvoiceRecipient(order.id, order.square_invoice_id, invoiceVersion)
+    : invoiceVersion;
+  const { invoice: updated } = await updateSquareInvoiceDraft(order, order.square_invoice_id, versionAfterRecipientClear, "card");
+  const updatedVersion = Number(updated.version);
+  if (!Number.isFinite(updatedVersion) || updatedVersion < 0) {
+    throw new Error("Square invoice update returned no version.");
+  }
+
+  const attachment = await attachSquareInvoicePdf({
+    invoiceId: order.square_invoice_id,
+    orderId: order.id,
+    filename: input.filename,
+    pdf: input.pdf,
+  });
+  const invoice = await retrieveSquareInvoice(order.square_invoice_id);
+  return {
+    invoiceId: invoice.id,
+    invoiceVersion: Number.isFinite(Number(invoice.version)) ? Number(invoice.version) : updatedVersion,
+    invoiceStatus: invoice.status ?? null,
+    invoiceUrl: invoice.public_url ?? null,
+    attachmentId: attachment.id,
   };
 }

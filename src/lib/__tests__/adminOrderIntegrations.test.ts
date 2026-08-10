@@ -53,4 +53,38 @@ describe("admin Square invoice removal", () => {
     );
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ version: 7 });
   });
+
+  it("attaches a direct-deposit PDF to the Square draft without publishing it", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 2, status: "DRAFT" } }))
+      .mockResolvedValueOnce(jsonResponse({ attachment: { id: "inva_123", filename: "tax-invoice.pdf" } }, 201))
+      .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 3, status: "DRAFT" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { updateAdminSquareInvoiceDraftAndAttachPdf } = await import("@/lib/adminOrderIntegrations");
+
+    await expect(
+      updateAdminSquareInvoiceDraftAndAttachPdf(
+        {
+          id: "order_123",
+          order_number: "RC-123",
+          title: "Custom candy order",
+          customer_name: "Example Customer",
+          customer_email: "customer@example.com",
+          due_date: "2026-08-25",
+          square_invoice_id: "inv_123",
+          square_invoice_version: 1,
+        } as never,
+        { filename: "tax-invoice.pdf", pdf: new Uint8Array([37, 80, 68, 70]) },
+      ),
+    ).resolves.toMatchObject({ invoiceStatus: "DRAFT", attachmentId: "inva_123" });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://square.test/v2/invoices/inv_123/attachments",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/publish"))).toBe(false);
+  });
 });

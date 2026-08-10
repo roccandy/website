@@ -23,10 +23,12 @@ import {
 import {
   createAndPublishAdminSquareInvoice,
   createAdminSquareInvoiceDraft,
+  DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL,
   defaultAdminSquareInvoiceTitle,
   isBankTransferSquareInvoicePaymentMethod,
   removeAdminSquareInvoice,
   squareInvoicePaymentMethodLabel,
+  updateAdminSquareInvoiceDraftAndAttachPdf,
   updateAndPublishAdminSquareInvoice,
   type AdminInvoiceOrderInput,
   type AdminSquareInvoicePaymentMode,
@@ -42,6 +44,7 @@ import {
 import { batchWeightsForOrder, findFirstAvailableSlotIndexForDate, productionKgForOrder } from "./productionScheduleShared";
 import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 import { buildOrderActivityChanges } from "./orderActivityChanges";
+import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -1636,8 +1639,9 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   const customerName = [firstName, lastName].filter(Boolean).join(" ") || formData.get("customer_name")?.toString().trim() || null;
   const customerEmail = formData.get("customer_email")?.toString().trim() || null;
   const phone = formData.get("phone")?.toString().trim() || null;
+  const invoiceDelivery = formData.get("invoice_delivery")?.toString() === "pdf" ? "pdf" : "invoice";
   const invoicePaymentMode: AdminSquareInvoicePaymentMode =
-    formData.get("square_invoice_payment_mode")?.toString() === "bank_transfer" ? "bank_transfer" : "card";
+    "card";
 
   if (!orderId) {
     redirect(toastRedirect(ORDERS_PATH, "error", "Missing order id."));
@@ -1669,23 +1673,6 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
   const invoiceGroupOrders = await fetchInvoiceGroupOrders(existingOrder.square_invoice_id, existingOrder, client);
-  const productionBatchCount = invoiceGroupOrders.reduce(
-    (count, order) =>
-      count +
-      (Array.isArray(order.admin_batch_weights_kg)
-        ? order.admin_batch_weights_kg.filter((weight: unknown) => Number.isFinite(Number(weight)) && Number(weight) > 0).length
-        : 0),
-    0,
-  );
-  if (invoicePaymentMode === "bank_transfer" && productionBatchCount <= 1 && invoiceGroupOrders.length <= 1) {
-    const params = new URLSearchParams({
-      selected: orderId,
-      toast: "error",
-      message: "Bank transfer PDF can only be selected for multiple-batch orders.",
-    });
-    redirect(`${ORDERS_PATH}?${params.toString()}`);
-  }
-
   const localPatch = {
     square_invoice_title:
       invoiceTitle ?? existingOrder.square_invoice_title ?? sharedInvoiceTitle(existingOrder, invoiceGroupOrders),
@@ -1698,7 +1685,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     square_invoice_error: null,
   };
   const paymentPatch = {
-    payment_method: squareInvoicePaymentMethodLabel(invoicePaymentMode),
+    payment_method: invoiceDelivery === "pdf" ? DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL : squareInvoicePaymentMethodLabel(invoicePaymentMode),
     payment_provider: "square_invoice",
   };
 
@@ -1723,15 +1710,39 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   } satisfies AdminInvoiceOrderInput;
 
   try {
-    const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder, {
-      paymentMode: invoicePaymentMode,
-    });
-    const invoicePatch = squareInvoiceSendPatch(sentInvoice, invoicePaymentMode);
+    const sentAt = new Date().toISOString();
+    let resolvedInvoicePatch: ReturnType<typeof squareInvoiceSendPatch>;
+    if (invoiceDelivery === "pdf") {
+      const invoiceNumber = existingOrder.order_number || existingOrder.id.slice(0, 8);
+      const filename = `roc-candy-tax-invoice-${invoiceNumber.replace(/[^a-z0-9_-]/gi, "-")}.pdf`;
+      const pdf = await buildDirectDepositInvoicePdf({
+        invoiceNumber,
+        invoiceTitle: localPatch.square_invoice_title,
+        customerName: localPatch.customer_name,
+        customerEmail: localPatch.customer_email,
+        dueDate: existingOrder.square_invoice_due_date ?? existingOrder.due_date,
+        orders: invoiceGroupOrders,
+      });
+      const result = await updateAdminSquareInvoiceDraftAndAttachPdf(integrationOrder, { filename, pdf });
+      resolvedInvoicePatch = {
+        square_invoice_id: result.invoiceId,
+        square_invoice_version: result.invoiceVersion,
+        square_invoice_status: result.invoiceStatus,
+        square_invoice_url: result.invoiceUrl,
+        square_invoice_sent_at: sentAt,
+        square_invoice_error: null,
+        payment_method: paymentPatch.payment_method,
+        payment_provider: paymentPatch.payment_provider,
+      };
+    } else {
+      const sentInvoice = await updateAndPublishAdminSquareInvoice(integrationOrder, { paymentMode: invoicePaymentMode });
+      resolvedInvoicePatch = squareInvoiceSendPatch(sentInvoice, invoicePaymentMode);
+    }
     const { error: updateError } = await client
       .from("orders")
       .update({
         ...localPatch,
-        ...invoicePatch,
+        ...resolvedInvoicePatch,
       })
       .in(
         "id",
@@ -1749,7 +1760,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         title: existingOrder.title,
         customerName: localPatch.customer_name,
       }),
-      summary: `Sent ${squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
+      summary: `Sent ${invoiceDelivery === "pdf" ? "direct deposit PDF via Square" : squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
         orderNumber: existingOrder.order_number,
         title: existingOrder.title,
         customerName: localPatch.customer_name,
@@ -1757,8 +1768,8 @@ export async function sendAdminSquareInvoice(formData: FormData) {
       path: ORDERS_PATH,
       changedFields: ["Square invoice"],
       metadata: {
-        invoiceId: sentInvoice.invoiceId,
-        invoiceStatus: sentInvoice.invoiceStatus,
+        invoiceId: resolvedInvoicePatch.square_invoice_id,
+        invoiceStatus: resolvedInvoicePatch.square_invoice_status,
         orderIds: invoiceGroupOrders.map((order) => order.id),
       },
     });
@@ -1786,7 +1797,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
       console.error("Admin-created customer order email failed:", error);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to send Square invoice.";
+    const message = error instanceof Error ? error.message : "Unable to send invoice.";
     await client
       .from("orders")
       .update({ ...localPatch, square_invoice_error: message })
@@ -1801,7 +1812,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   revalidatePath(`/admin/orders/${orderId}/invoice`);
   redirect(
     `${ORDERS_PATH}?selected=${encodeURIComponent(orderId)}&toast=success&message=${encodeURIComponent(
-      invoicePaymentMode === "bank_transfer" ? "Square bank transfer invoice sent." : "Square invoice sent.",
+      invoiceDelivery === "pdf" ? "Direct deposit PDF sent by Square." : "Square invoice sent.",
     )}`,
   );
 }

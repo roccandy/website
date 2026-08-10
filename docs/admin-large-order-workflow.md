@@ -56,7 +56,11 @@ The admin create flow creates:
 - one Square order
 - one Square invoice draft
 
-The Square invoice starts as a draft. Admin is redirected to the Roc Candy invoice review screen, can edit customer-facing invoice fields, and sends the Square invoice from admin.
+The Square invoice starts as a draft. Admin is redirected to the Roc Candy invoice review screen, can edit customer-facing invoice fields, and chooses one delivery route:
+
+- **Send invoice** publishes Square's hosted card-payment invoice.
+- **Send PDF** generates a Roc Candy tax invoice with direct-deposit details and attaches it to the Square draft. Square emails the attachment to the customer, while the invoice remains a draft and the order stays unpaid until staff confirm the bank transfer.
+
 Customer notes and Direct Deposit instructions are written into the standard Square invoice description. The order line in that message uses the selected packaging type, size, and jar lid colour where relevant, for example `1500 x Bulk - 1kg` or `1500 x Jar - Small - Black Lid`. GST is applied to the Square order as an inclusive 10% tax so Square shows GST correctly in the invoice summary. Do not use Square invoice custom fields for this workflow because Square can require a paid plan for that feature.
 
 Required existing env vars:
