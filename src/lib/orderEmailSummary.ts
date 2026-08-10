@@ -22,6 +22,7 @@ export type AdminOrderSummaryItem = {
 export type AdminCustomOrderDetails = {
   imageUrl: string | null;
   imageDataUrl: string | null;
+  fallbackImageUrl: string | null;
   orderNumber: string | null;
   weightKg: number | null;
   outerColours: string;
@@ -95,10 +96,10 @@ const ensureBaseUrl = (value: string) => {
 };
 
 const getSiteBaseUrl = () => {
-  const vercel = ensureBaseUrl(process.env.VERCEL_URL ?? "");
-  if (vercel) return vercel;
   const explicit = ensureBaseUrl(process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "");
   if (explicit) return explicit;
+  const vercel = ensureBaseUrl(process.env.VERCEL_URL ?? "");
+  if (vercel) return vercel;
   return null;
 };
 
@@ -389,10 +390,14 @@ export async function buildAdminOrderSummaryEmailPayload({
       customOrderNumber
     );
     const imageUrl =
-      persistedPreviewUrl ||
       generatedPreviewUrl ||
+      persistedPreviewUrl ||
       (typeof customItem.logo_url === "string" && customItem.logo_url.trim()) ||
       null;
+    const fallbackImageUrl =
+      imageUrl === generatedPreviewUrl
+        ? persistedPreviewUrl
+        : generatedPreviewUrl;
     const shouldShowHeart =
       typeof customItem.heart_color === "string" &&
       customItem.heart_color.trim().length > 0 &&
@@ -401,6 +406,7 @@ export async function buildAdminOrderSummaryEmailPayload({
     const detail: AdminCustomOrderDetails = {
       imageUrl,
       imageDataUrl: previewPngDataUrl,
+      fallbackImageUrl,
       orderNumber: customOrderNumber,
       weightKg: customWeight > 0 ? customWeight : null,
       outerColours,

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import sharp from "sharp";
 import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
 
@@ -401,76 +402,57 @@ function isAttachment(
 }
 
 async function buildInlineAttachment(
-  imageUrl: string | null | undefined,
+  imageSources: Array<string | null | undefined>,
   cid: string,
   filenameBase: string
 ): Promise<AttachmentResult> {
-  if (!imageUrl) {
-    return { src: null, attachment: null, externalUrl: null };
+  let externalUrl: string | null = null;
+
+  for (const imageUrl of imageSources) {
+    if (!imageUrl) continue;
+
+    let source: Buffer | null = null;
+    const dataMatch = imageUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\s]+)$/);
+    if (dataMatch) {
+      source = Buffer.from(dataMatch[2].replace(/\s+/g, ""), "base64");
+    } else if (/^https?:\/\//i.test(imageUrl)) {
+      externalUrl ??= imageUrl;
+      try {
+        const response = await fetch(imageUrl, { cache: "no-store" });
+        if (!response.ok || !response.headers.get("content-type")?.startsWith("image/")) continue;
+        source = Buffer.from(await response.arrayBuffer());
+      } catch {
+        continue;
+      }
+    }
+
+    if (!source?.length) continue;
+    try {
+      // SVG, WebP and other valid browser images are not reliably supported by email clients.
+      // Convert every preview to a self-contained PNG before assigning the content ID.
+      const content = await sharp(source, { animated: false, failOn: "none" })
+        .rotate()
+        .flatten({ background: "#ffffff" })
+        .png()
+        .toBuffer();
+      return {
+        src: `cid:${cid}`,
+        externalUrl,
+        attachment: {
+          filename: `${filenameBase}.png`,
+          content,
+          contentType: "image/png",
+          cid,
+          contentDisposition: "inline",
+        },
+      };
+    } catch {
+      // Try the next source (for example, the generated preview when a captured image is corrupt).
+    }
   }
 
-  const dataMatch = imageUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=\s]+)$/);
-  if (dataMatch) {
-    const contentType = dataMatch[1] || "image/png";
-    const ext = contentType.includes("jpeg")
-      ? "jpg"
-      : contentType.includes("webp")
-        ? "webp"
-        : contentType.includes("gif")
-          ? "gif"
-          : contentType.includes("svg")
-            ? "svg"
-            : "png";
-    const content = Buffer.from(dataMatch[2].replace(/\s+/g, ""), "base64");
-    return {
-      src: `cid:${cid}`,
-      externalUrl: null,
-      attachment: {
-        filename: `${filenameBase}.${ext}`,
-        content,
-        contentType,
-        cid,
-        contentDisposition: "inline",
-      },
-    };
-  }
-
-  if (!/^https?:\/\//i.test(imageUrl)) {
-    return { src: imageUrl, attachment: null, externalUrl: imageUrl };
-  }
-  try {
-    const response = await fetch(imageUrl, { cache: "no-store" });
-    if (!response.ok) {
-      return { src: imageUrl, attachment: null, externalUrl: imageUrl };
-    }
-    const contentType = response.headers.get("content-type") || "image/png";
-    if (!contentType.startsWith("image/")) {
-      return { src: imageUrl, attachment: null, externalUrl: imageUrl };
-    }
-    const ext = contentType.includes("jpeg")
-      ? "jpg"
-      : contentType.includes("webp")
-        ? "webp"
-        : contentType.includes("gif")
-          ? "gif"
-          : contentType.includes("svg")
-            ? "svg"
-            : "png";
-    const content = Buffer.from(await response.arrayBuffer());
-    return {
-      src: `cid:${cid}`,
-      externalUrl: imageUrl,
-      attachment: {
-        filename: `${filenameBase}.${ext}`,
-        content,
-        contentType,
-        cid,
-        contentDisposition: "inline",
-      },
-    };
-  } catch {
-    return { src: imageUrl, attachment: null, externalUrl: imageUrl };
-  }
+  // Do not leave clients with a broken-image placeholder when a source cannot be embedded.
+  return { src: null, attachment: null, externalUrl };
 }
 
 function getCustomDetailsList(order: AdminOrderSummaryEmailPayload) {
@@ -509,12 +491,12 @@ async function buildCustomHtmlSections(
   const sections = await Promise.all(
     details.map(async (detail, index) => {
       const customPreview = await buildInlineAttachment(
-        detail.imageDataUrl ?? detail.imageUrl ?? null,
+        [detail.imageDataUrl, detail.imageUrl, detail.fallbackImageUrl],
         `candy-design-${index}@roccandy`,
         `candy-design-${index + 1}`
       );
       const labelPreview = await buildInlineAttachment(
-        detail.labelImageUrl ?? null,
+        [detail.labelImageUrl],
         `label-design-${index}@roccandy`,
         `label-design-${index + 1}`
       );
