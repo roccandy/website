@@ -343,12 +343,12 @@ async function attachSquareInvoicePdf(input: {
 }) {
   const config = getSquareConfig();
   const form = new FormData();
+  // Square expects `request` as a regular multipart field. Supplying it as a
+  // JSON Blob makes Node add a filename, which Square then treats as a second
+  // file and rejects for having the application/json content type.
   form.append(
     "request",
-    new Blob(
-      [JSON.stringify({ idempotency_key: `rc-admin-invoice-pdf-${input.orderId}-${Date.now()}`, description: "Roc Candy tax invoice" })],
-      { type: "application/json" },
-    ),
+    JSON.stringify({ idempotency_key: `rc-admin-invoice-pdf-${input.orderId}-${Date.now()}`, description: "Roc Candy tax invoice" }),
   );
   form.append("file", new Blob([Buffer.from(input.pdf)], { type: "application/pdf" }), input.filename);
 
@@ -357,6 +357,7 @@ async function attachSquareInvoicePdf(input: {
     headers: {
       Authorization: `Bearer ${config.accessToken}`,
       "Square-Version": config.version,
+      Accept: "application/json",
     },
     body: form,
     cache: "no-store",

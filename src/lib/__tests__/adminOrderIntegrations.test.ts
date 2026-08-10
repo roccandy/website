@@ -85,6 +85,9 @@ describe("admin Square invoice removal", () => {
       "https://square.test/v2/invoices/inv_123/attachments",
       expect.objectContaining({ method: "POST" }),
     );
+    const attachmentForm = fetchMock.mock.calls[1]?.[1]?.body as FormData;
+    expect(JSON.parse(String(attachmentForm.get("request")))).toMatchObject({ description: "Roc Candy tax invoice" });
+    expect(attachmentForm.get("file")).toMatchObject({ type: "application/pdf" });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty("invoice.invoice_number");
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/publish"))).toBe(false);
   });
