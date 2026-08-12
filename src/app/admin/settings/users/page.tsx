@@ -3,6 +3,7 @@ import { listAdminUsers } from "@/lib/adminUsers";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { addAdminUser, deleteAdminUserAction, resetAdminUserPassword, updateAdminUserAction } from "./actions";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
+import { BirthdayField } from "./BirthdayField";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -49,10 +50,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
           <span className="text-xs text-zinc-500">Display name</span>
           <input type="text" name="display_name" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
         </label>
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Birthday</span>
-          <input type="date" name="birthday" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
-        </label>
+        <BirthdayField />
         <label className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Password</span>
           <input type="password" name="password" minLength={8} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
@@ -96,15 +94,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
                 />
               </label>
-              <label className="space-y-1 text-sm text-zinc-700">
-                <span className="text-xs text-zinc-500">Birthday</span>
-                <input
-                  type="date"
-                  name="birthday"
-                  defaultValue={user.birthday ?? ""}
-                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                />
-              </label>
+              <BirthdayField defaultValue={user.birthday} />
               <label className="space-y-1 text-sm text-zinc-700">
                 <span className="text-xs text-zinc-500">Role</span>
                 <select name="role" defaultValue={user.role} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm">

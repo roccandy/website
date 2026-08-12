@@ -5,6 +5,7 @@ import { AdminSidebar } from "@/app/admin/AdminSidebar";
 import { ToastProvider } from "@/components/Toast";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
+import { AdminBirthdayRefresh } from "@/app/admin/AdminBirthdayRefresh";
 import { AdminNav } from "@/app/admin/AdminNav";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
@@ -83,6 +84,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <ToastProvider>
       <AdminBodyAttributes />
+      <AdminBirthdayRefresh />
       <AdminQueryToast />
       <AdminScrollRestoration />
       <div className="min-h-screen bg-zinc-100 text-zinc-900 print:min-h-0 print:bg-white">
