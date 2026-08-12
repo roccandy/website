@@ -41,31 +41,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         </div>
       ) : null}
 
-      <form action={addAdminUser} className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm md:grid-cols-5">
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Email</span>
-          <input type="email" name="email" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
-        </label>
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Display name</span>
-          <input type="text" name="display_name" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
-        </label>
-        <BirthdayField />
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Password</span>
-          <input type="password" name="password" minLength={8} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
-        </label>
-        <label className="space-y-1 text-sm text-zinc-700">
-          <span className="text-xs text-zinc-500">Role</span>
-          <select name="role" defaultValue="editor" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm">
-            <option value="viewer">Viewer</option>
-            <option value="seo">SEO</option>
-            <option value="production">Production</option>
-            <option value="editor">Editor</option>
-            <option value="admin">Admin</option>
-          </select>
-        </label>
-        <div className="md:col-span-5">
+      <form action={addAdminUser} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900">Add admin user</h2>
+            <p className="text-xs text-zinc-500">Create an account with its own access level and password.</p>
+          </div>
           <AdminSubmitButton
             type="submit"
             pendingLabel="Saving..."
@@ -74,12 +55,41 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
             Add user
           </AdminSubmitButton>
         </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Email</span>
+            <input type="email" name="email" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Display name</span>
+            <input type="text" name="display_name" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
+          </label>
+          <BirthdayField />
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Password</span>
+            <input type="password" name="password" minLength={8} className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
+          </label>
+          <label className="space-y-1 text-sm text-zinc-700">
+            <span className="text-xs text-zinc-500">Role</span>
+            <select name="role" defaultValue="editor" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm">
+              <option value="viewer">Viewer</option>
+              <option value="seo">SEO</option>
+              <option value="production">Production</option>
+              <option value="editor">Editor</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+        </div>
       </form>
 
       <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-zinc-900">Existing users</h2>
+          <span className="text-xs text-zinc-500">{users.length} total</span>
+        </div>
         {users.map((user) => (
-          <div key={user.id} className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:grid-cols-[1.3fr,0.8fr,0.55fr]">
-            <form action={updateAdminUserAction} className="grid gap-3 sm:grid-cols-4">
+          <div key={user.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <form action={updateAdminUserAction} className="grid items-end gap-3 md:grid-cols-2 xl:grid-cols-[minmax(13rem,1.5fr)_minmax(9rem,1fr)_minmax(10rem,1fr)_8rem_auto]">
               <input type="hidden" name="id" value={user.id} />
               <label className="space-y-1 text-sm text-zinc-700">
                 <span className="text-xs text-zinc-500">Email</span>
@@ -105,11 +115,11 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   <option value="admin">Admin</option>
                 </select>
               </label>
-              <label className="flex items-center gap-2 text-sm text-zinc-700 sm:col-span-2">
-                <input type="checkbox" name="is_active" defaultChecked={user.is_active} />
-                Active
-              </label>
-              <div className="sm:col-span-4">
+              <div className="flex items-center gap-3 pb-1.5">
+                <label className="flex items-center gap-2 whitespace-nowrap text-sm text-zinc-700">
+                  <input type="checkbox" name="is_active" defaultChecked={user.is_active} />
+                  Active
+                </label>
                 <AdminSubmitButton
                   type="submit"
                   pendingLabel="Saving..."
@@ -120,37 +130,39 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
               </div>
             </form>
 
-            <form action={resetAdminUserPassword} className="space-y-3 rounded-lg border border-zinc-200 p-4">
-              <input type="hidden" name="id" value={user.id} />
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Reset password</p>
-                <input
-                  type="password"
-                  name="password"
-                  minLength={8}
-                  placeholder="New password"
-                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
-                  required
-                />
-              </div>
-              <AdminSubmitButton
-                type="submit"
-                pendingLabel="Updating..."
-                className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
-              >
-                Update password
-              </AdminSubmitButton>
-            </form>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+              <details className="group">
+                <summary className="cursor-pointer text-xs font-semibold text-zinc-600 hover:text-zinc-900">Reset password</summary>
+                <form action={resetAdminUserPassword} className="mt-3 flex flex-wrap items-center gap-2">
+                  <input type="hidden" name="id" value={user.id} />
+                  <input
+                    type="password"
+                    name="password"
+                    minLength={8}
+                    placeholder="New password"
+                    className="w-52 rounded border border-zinc-200 px-3 py-2 text-sm"
+                    required
+                  />
+                  <AdminSubmitButton
+                    type="submit"
+                    pendingLabel="Updating..."
+                    className="rounded-md border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-400 hover:text-zinc-900"
+                  >
+                    Update password
+                  </AdminSubmitButton>
+                </form>
+              </details>
 
-            <form action={deleteAdminUserAction} className="flex items-start justify-end">
-              <input type="hidden" name="id" value={user.id} />
-              <button
-                type="submit"
-                className="rounded-md border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:border-red-300 hover:text-red-700"
-              >
-                Delete
-              </button>
-            </form>
+              <form action={deleteAdminUserAction}>
+                <input type="hidden" name="id" value={user.id} />
+                <button
+                  type="submit"
+                  className="rounded-md border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:border-red-300 hover:text-red-700"
+                >
+                  Delete user
+                </button>
+              </form>
+            </div>
           </div>
         ))}
 
