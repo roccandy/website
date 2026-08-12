@@ -40,7 +40,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         </div>
       ) : null}
 
-      <form action={addAdminUser} className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm md:grid-cols-4">
+      <form action={addAdminUser} className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm md:grid-cols-5">
         <label className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Email</span>
           <input type="email" name="email" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" required />
@@ -48,6 +48,10 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
         <label className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Display name</span>
           <input type="text" name="display_name" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
+        </label>
+        <label className="space-y-1 text-sm text-zinc-700">
+          <span className="text-xs text-zinc-500">Birthday</span>
+          <input type="date" name="birthday" className="w-full rounded border border-zinc-200 px-3 py-2 text-sm" />
         </label>
         <label className="space-y-1 text-sm text-zinc-700">
           <span className="text-xs text-zinc-500">Password</span>
@@ -63,7 +67,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
             <option value="admin">Admin</option>
           </select>
         </label>
-        <div className="md:col-span-4">
+        <div className="md:col-span-5">
           <AdminSubmitButton
             type="submit"
             pendingLabel="Saving..."
@@ -77,7 +81,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
       <div className="space-y-4">
         {users.map((user) => (
           <div key={user.id} className="grid gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm lg:grid-cols-[1.3fr,0.8fr,0.55fr]">
-            <form action={updateAdminUserAction} className="grid gap-3 sm:grid-cols-3">
+            <form action={updateAdminUserAction} className="grid gap-3 sm:grid-cols-4">
               <input type="hidden" name="id" value={user.id} />
               <label className="space-y-1 text-sm text-zinc-700">
                 <span className="text-xs text-zinc-500">Email</span>
@@ -89,6 +93,15 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                   type="text"
                   name="display_name"
                   defaultValue={user.display_name ?? ""}
+                  className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="space-y-1 text-sm text-zinc-700">
+                <span className="text-xs text-zinc-500">Birthday</span>
+                <input
+                  type="date"
+                  name="birthday"
+                  defaultValue={user.birthday ?? ""}
                   className="w-full rounded border border-zinc-200 px-3 py-2 text-sm"
                 />
               </label>
@@ -106,7 +119,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams?: 
                 <input type="checkbox" name="is_active" defaultChecked={user.is_active} />
                 Active
               </label>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-4">
                 <AdminSubmitButton
                   type="submit"
                   pendingLabel="Saving..."

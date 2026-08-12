@@ -28,18 +28,28 @@ function parseRole(value: string): AdminRole {
   throw new Error("Invalid role.");
 }
 
+function parseBirthday(value: string) {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new Error("Birthday must be a valid date.");
+  }
+  return value;
+}
+
 export async function addAdminUser(formData: FormData) {
   await requireAdminManageUsersAccess();
 
   const email = normalizeAdminEmail(normalizeField(formData.get("email")));
   const displayName = normalizeField(formData.get("display_name")) || null;
+  const birthday = parseBirthday(normalizeField(formData.get("birthday")));
   const password = normalizeField(formData.get("password"));
   const role = parseRole(normalizeField(formData.get("role")));
 
   if (!email) throw new Error("Email is required.");
   if (!password || password.length < 8) throw new Error("Password must be at least 8 characters.");
 
-  await createAdminUser({ email, displayName, password, role });
+  await createAdminUser({ email, displayName, birthday, password, role });
   const createdUser = await getAdminUserByEmail(email);
   await logAdminActivity({
     area: "admin",
@@ -62,6 +72,7 @@ export async function updateAdminUserAction(formData: FormData) {
   const session = await requireAdminManageUsersAccess();
   const id = normalizeField(formData.get("id"));
   const displayName = normalizeField(formData.get("display_name")) || null;
+  const birthday = parseBirthday(normalizeField(formData.get("birthday")));
   const role = parseRole(normalizeField(formData.get("role")));
   const isActive = formData.get("is_active") === "on";
 
@@ -71,7 +82,7 @@ export async function updateAdminUserAction(formData: FormData) {
   }
 
   const previousUser = await getAdminUserById(id);
-  await updateAdminUserProfile({ id, displayName, role, isActive });
+  await updateAdminUserProfile({ id, displayName, birthday, role, isActive });
   const nextUser = await getAdminUserById(id);
   if (previousUser && nextUser) {
     await logAdminActivity({
@@ -85,16 +96,19 @@ export async function updateAdminUserAction(formData: FormData) {
       changedFields: getChangedFieldLabels(
         {
           display_name: previousUser.display_name,
+          birthday: previousUser.birthday,
           role: previousUser.role,
           is_active: previousUser.is_active,
         },
         {
           display_name: nextUser.display_name,
+          birthday: nextUser.birthday,
           role: nextUser.role,
           is_active: nextUser.is_active,
         },
         {
           display_name: "Display name",
+          birthday: "Birthday",
           role: "Role",
           is_active: "Account status",
         },

@@ -10,10 +10,19 @@ import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
 import { buildAdminNavSections, isProductionUser, isSeoFocusedUser } from "@/app/admin/adminNavigation";
 import { getAdminSession } from "@/lib/adminAuth";
+import { getAdminUserById } from "@/lib/adminUsers";
 
 const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_SQUARE_ENV ?? "production").toLowerCase() === "sandbox" ||
   (process.env.NEXT_PUBLIC_PAYPAL_ENV ?? "production").toLowerCase() === "sandbox";
+
+function isBirthdayToday(birthday: string | null | undefined) {
+  if (!birthday || !/^\d{4}-\d{2}-\d{2}$/.test(birthday)) return false;
+  const parts = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Perth", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return Boolean(month && day && birthday.slice(5) === `${month}-${day}`);
+}
 
 export const metadata: Metadata = {
   title: "Roc Candy Admin",
@@ -55,6 +64,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const signedInDisplay = session.user.name?.trim() || session.user.email?.trim() || "Signed in";
+  const signedInUser = session.user.isBootstrap ? null : await getAdminUserById(session.user.id);
+  const birthdayGreeting = isBirthdayToday(signedInUser?.birthday) ? `Happy birthday ${signedInUser?.display_name?.trim() || signedInDisplay} ✦` : null;
   const navSections = buildAdminNavSections(session.user);
   const seoFocused = isSeoFocusedUser(session.user);
   const productionUser = isProductionUser(session.user);
@@ -76,16 +87,18 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <AdminScrollRestoration />
       <div className="min-h-screen bg-zinc-100 text-zinc-900 print:min-h-0 print:bg-white">
         <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden">
-          <div
-            className="overflow-hidden border-b border-rose-100 bg-rose-50/70 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-500"
-            aria-label="Happy birthday Sylvia"
-          >
-            <div className="admin-birthday-banner inline-flex min-w-max gap-16 whitespace-nowrap">
-              <span>Happy birthday Sylvia ✦</span>
-              <span aria-hidden="true">Happy birthday Sylvia ✦</span>
-              <span aria-hidden="true">Happy birthday Sylvia ✦</span>
+          {birthdayGreeting ? (
+            <div
+              className="overflow-hidden border-b border-rose-100 bg-rose-50/70 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-500"
+              aria-label={birthdayGreeting}
+            >
+              <div className="admin-birthday-banner inline-flex min-w-max gap-16 whitespace-nowrap">
+                <span>{birthdayGreeting}</span>
+                <span aria-hidden="true">{birthdayGreeting}</span>
+                <span aria-hidden="true">{birthdayGreeting}</span>
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
               <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">

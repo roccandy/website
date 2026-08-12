@@ -11,6 +11,7 @@ export type AdminUserRecord = {
   password_hash: string;
   role: AdminRole;
   is_active: boolean;
+  birthday: string | null;
   created_at?: string;
   updated_at?: string;
   last_login_at?: string | null;
@@ -36,7 +37,7 @@ function isMissingTableError(message: string) {
 export async function listAdminUsers() {
   const { data, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
-    .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
+    .select("id,email,display_name,password_hash,role,is_active,birthday,created_at,updated_at,last_login_at")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -51,7 +52,7 @@ export async function getAdminUserByEmail(email: string) {
   const normalized = normalizeAdminEmail(email);
   const { data, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
-    .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
+    .select("id,email,display_name,password_hash,role,is_active,birthday,created_at,updated_at,last_login_at")
     .eq("email", normalized)
     .maybeSingle();
 
@@ -69,7 +70,7 @@ export async function getAdminUserById(id: string) {
 
   const { data, error } = await supabaseAdminClient
     .from(ADMIN_USERS_TABLE)
-    .select("id,email,display_name,password_hash,role,is_active,created_at,updated_at,last_login_at")
+    .select("id,email,display_name,password_hash,role,is_active,birthday,created_at,updated_at,last_login_at")
     .eq("id", normalized)
     .maybeSingle();
 
@@ -97,6 +98,7 @@ export async function hasAnyAdminUsers() {
 export async function createAdminUser(input: {
   email: string;
   displayName?: string | null;
+  birthday?: string | null;
   password: string;
   role: AdminRole;
 }) {
@@ -105,6 +107,7 @@ export async function createAdminUser(input: {
   const { error } = await supabaseAdminClient.from(ADMIN_USERS_TABLE).insert({
     email,
     display_name: input.displayName?.trim() || null,
+    birthday: input.birthday ?? null,
     password_hash: passwordHash,
     role: input.role,
     is_active: true,
@@ -115,6 +118,7 @@ export async function createAdminUser(input: {
 export async function updateAdminUserProfile(input: {
   id: string;
   displayName?: string | null;
+  birthday?: string | null;
   role: AdminRole;
   isActive: boolean;
 }) {
@@ -122,6 +126,7 @@ export async function updateAdminUserProfile(input: {
     .from(ADMIN_USERS_TABLE)
     .update({
       display_name: input.displayName?.trim() || null,
+      birthday: input.birthday ?? null,
       role: input.role,
       is_active: input.isActive,
     })
