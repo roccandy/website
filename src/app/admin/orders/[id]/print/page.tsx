@@ -223,13 +223,6 @@ const resolvePrintQuantity = ({
     : Math.floor(storedQuantity);
 };
 
-const batchQuantityLabel = (group: { weight: number; count: number }, totalBatchWeightKg: number, totalQuantity: number | null) => {
-  if (!totalQuantity || !Number.isFinite(totalBatchWeightKg) || totalBatchWeightKg <= 0) return "";
-  const perBatchQuantity = Math.round((totalQuantity * group.weight) / totalBatchWeightKg);
-  if (!Number.isFinite(perBatchQuantity) || perBatchQuantity <= 0) return "";
-  return ` (${perBatchQuantity} bags each)`;
-};
-
 const formatLabelPrintCount = (count: number | null) => {
   if (!count || !Number.isFinite(count) || count <= 0) return "No";
   return `Yes - ${Math.floor(count)}`;
@@ -345,7 +338,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         ? assignmentBatchWeights
         : batchWeightsForOrder(order);
   const batchWeightGroups = groupBatchWeights(batchWeights);
-  const totalBatchWeightKg = batchWeights.reduce((sum, weight) => sum + weight, 0);
   const printQuantity = resolvePrintQuantity({
     quantity: order.quantity,
     totalWeightKg: Number(order.total_weight_kg),
@@ -572,12 +564,10 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 <span className={INLINE_LABEL_CLASS}>Order weight:</span>
                 <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
                   {batchWeightGroups.length > 1 || batchWeights.length > 1 ? (
-                    <span className="block">
-                      {batchWeightGroups.map((group) => (
-                        <span key={group.weight} className="block whitespace-nowrap">
-                          {group.count} x {formatPrintKg(group.weight)}kg{batchQuantityLabel(group, totalBatchWeightKg, printQuantity)}
-                        </span>
-                      ))}
+                    <span className="whitespace-nowrap">
+                      {formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg ({batchWeightGroups
+                        .map((group) => `${group.count} x ${formatPrintKg(group.weight)}kg`)
+                        .join(" + ")})
                     </span>
                   ) : (
                     `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`
