@@ -206,7 +206,7 @@ export default async function AdminInvoiceReviewPage({ params }: Params) {
                 <p className="font-semibold text-zinc-900">Choose how to send this invoice</p>
                 <p className="mt-1">
                   Send invoice publishes Square&apos;s hosted card-payment invoice. Send PDF keeps the Square invoice as a draft and
-                  emails the attached direct-deposit tax invoice through Square.
+                  emails the attached direct-deposit tax invoice to the customer and the orders mailbox.
                 </p>
               </div>
             ) : null}

@@ -1748,8 +1748,13 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         orders: invoiceGroupOrders,
       });
       const result = await updateAdminSquareInvoiceDraftAndAttachPdf(integrationOrder, { filename, pdf });
+      // Keep an operational copy without exposing the orders mailbox to the customer.
+      const ordersRecipients = getOrdersRecipients().filter(
+        (recipient) => recipient.toLowerCase() !== localPatch.customer_email!.toLowerCase(),
+      );
       const emailResult = await sendEmail({
         to: [localPatch.customer_email],
+        bcc: ordersRecipients,
         subject: `Roc Candy tax invoice ${invoiceNumber}`,
         text: [
           "Please find your Roc Candy tax invoice attached.",
@@ -1803,7 +1808,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         title: existingOrder.title,
         customerName: localPatch.customer_name,
       }),
-      summary: `Sent ${invoiceDelivery === "pdf" ? "direct deposit PDF via Square" : squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
+      summary: `Sent ${invoiceDelivery === "pdf" ? "direct deposit PDF to the customer and orders mailbox" : squareInvoicePaymentMethodLabel(invoicePaymentMode)} for ${describeOrderTarget({
         orderNumber: existingOrder.order_number,
         title: existingOrder.title,
         customerName: localPatch.customer_name,
@@ -1857,7 +1862,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
   revalidatePath(`/admin/orders/${orderId}/invoice`);
   redirect(
     `${ORDERS_PATH}?selected=${encodeURIComponent(orderId)}&toast=success&message=${encodeURIComponent(
-      invoiceDelivery === "pdf" ? "Direct deposit PDF sent by Square." : "Square invoice sent.",
+      invoiceDelivery === "pdf" ? "Direct deposit PDF sent to the customer and orders mailbox." : "Square invoice sent.",
     )}`,
   );
 }

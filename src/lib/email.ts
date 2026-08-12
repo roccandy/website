@@ -6,6 +6,7 @@ import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
 type EmailPayload = {
   from?: string;
   to: string[];
+  bcc?: string[];
   subject: string;
   text: string;
   html?: string;
@@ -129,6 +130,7 @@ export async function sendEmail(payload: EmailPayload) {
   }
 
   const to = payload.to.filter(Boolean);
+  const bcc = payload.bcc?.filter(Boolean);
   if (to.length === 0) {
     return { skipped: true };
   }
@@ -136,6 +138,7 @@ export async function sendEmail(payload: EmailPayload) {
   await transporter.sendMail({
     from,
     to,
+    bcc,
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
