@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AdminSidebar } from "@/app/admin/AdminSidebar";
@@ -9,7 +10,7 @@ import { AdminBirthdayRefresh } from "@/app/admin/AdminBirthdayRefresh";
 import { AdminNav } from "@/app/admin/AdminNav";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
-import { buildAdminNavSections, isProductionUser, isSeoFocusedUser } from "@/app/admin/adminNavigation";
+import { buildAdminNavSections, isProductionUser } from "@/app/admin/adminNavigation";
 import { getAdminSession } from "@/lib/adminAuth";
 import { getAdminUserById } from "@/lib/adminUsers";
 
@@ -68,18 +69,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const signedInUser = session.user.isBootstrap ? null : await getAdminUserById(session.user.id);
   const birthdayGreeting = isBirthdayToday(signedInUser?.birthday) ? `Happy birthday ${signedInUser?.display_name?.trim() || signedInDisplay} ✦` : null;
   const navSections = buildAdminNavSections(session.user);
-  const seoFocused = isSeoFocusedUser(session.user);
   const productionUser = isProductionUser(session.user);
-  const roleLabel =
-    session.user.role === "admin"
-      ? "Full admin"
-      : session.user.role === "editor"
-        ? "Editor"
-        : session.user.role === "seo"
-          ? "SEO editor"
-          : session.user.role === "production"
-            ? "Production"
-            : "Viewer";
+  const productionHref = productionUser ? "/admin/production" : "/admin/orders";
 
   return (
     <ToastProvider>
@@ -103,37 +94,47 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           ) : null}
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
-              <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">
-                {seoFocused ? "SEO Workspace" : productionUser ? "Production" : "Roc Candy Admin"}
+              <Link href="/admin" className="shrink-0 transition hover:opacity-80" aria-label="Roc Candy admin home">
+                <Image src="/branding/logo-gold.svg" alt="Roc Candy" width={124} height={124} className="h-10 w-auto" priority />
               </Link>
-              <span className="hidden text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 md:inline-flex">
-                {roleLabel}
-              </span>
-              {seoFocused ? (
-                <Link
-                  href="/admin/settings/pages"
-                  className="hidden text-xs font-semibold text-rose-700 transition hover:text-rose-900 lg:inline-flex"
-                >
-                  Open Site Pages & SEO
-                </Link>
-              ) : null}
             </div>
             <AdminNav sections={navSections} />
             <div className="flex items-center gap-3">
-              <div className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-right leading-tight">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signed in</p>
-                <p className="text-xs font-medium normal-case text-zinc-700">{signedInDisplay}</p>
-              </div>
-              {!productionUser ? (
-                <Link
-                  href="/admin/stats"
-                  title="Open the secret stats room"
-                  aria-label="Open the secret stats room"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-sm text-zinc-400 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-700"
+              <form action="/admin/orders/archived" method="get" className="hidden items-center lg:flex">
+                <label className="sr-only" htmlFor="admin-header-order-search">
+                  Search orders
+                </label>
+                <input
+                  id="admin-header-order-search"
+                  type="search"
+                  name="q"
+                  placeholder="Search orders"
+                  className="w-36 rounded-l-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none lg:w-44"
+                />
+                <button
+                  type="submit"
+                  className="rounded-r-md border border-l-0 border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:text-zinc-900"
                 >
-                  <span aria-hidden="true">◔</span>
+                  Search
+                </button>
+              </form>
+              <Link
+                href={productionHref}
+                className="hidden rounded-md border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:text-zinc-900 lg:inline-flex"
+              >
+                Production
+              </Link>
+              {session.user.canWrite ? (
+                <Link
+                  href="/admin/orders/new"
+                  className="hidden rounded-md bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800 lg:inline-flex"
+                >
+                  New order
                 </Link>
               ) : null}
+              <p className="max-w-36 truncate text-sm font-medium text-zinc-700" title={signedInDisplay}>
+                {signedInDisplay}
+              </p>
               <LogoutButton />
             </div>
           </div>
