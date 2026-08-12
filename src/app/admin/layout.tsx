@@ -76,6 +76,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <AdminScrollRestoration />
       <div className="min-h-screen bg-zinc-100 text-zinc-900 print:min-h-0 print:bg-white">
         <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden">
+          <div
+            className="overflow-hidden border-b border-rose-100 bg-rose-50/70 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-rose-500"
+            aria-label="Happy birthday Sylvia"
+          >
+            <div className="admin-birthday-banner inline-flex min-w-max gap-16 whitespace-nowrap">
+              <span>Happy birthday Sylvia ✦</span>
+              <span aria-hidden="true">Happy birthday Sylvia ✦</span>
+              <span aria-hidden="true">Happy birthday Sylvia ✦</span>
+            </div>
+          </div>
           <div className="mx-auto flex max-w-[92rem] items-center justify-between gap-4 px-4 py-4 lg:px-6">
             <div className="flex items-center gap-3">
               <Link href="/admin" className="text-sm font-semibold text-zinc-900 transition hover:text-zinc-700">

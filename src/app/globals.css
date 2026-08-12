@@ -1192,6 +1192,16 @@ textarea::placeholder {
   animation: marquee 15s linear infinite;
 }
 
+.admin-birthday-banner {
+  animation: marquee 24s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-birthday-banner {
+    animation: none;
+  }
+}
+
 @keyframes toast-pop {
   0% {
     transform: scale(0.9);
