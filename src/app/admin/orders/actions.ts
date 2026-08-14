@@ -1821,31 +1821,6 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         orderIds: invoiceGroupOrders.map((order) => order.id),
       },
     });
-    if (invoiceDelivery === "invoice") {
-      try {
-        await sendAdminCreatedCustomerOrderEmail({
-          ...existingOrder,
-          ...localPatch,
-          ...paymentPatch,
-          invoiceOrders: invoiceGroupOrders.map((order) =>
-            order.id === existingOrder.id
-              ? {
-                  ...order,
-                  ...localPatch,
-                  ...paymentPatch,
-                }
-              : {
-                  ...order,
-                  square_invoice_title: localPatch.square_invoice_title,
-                  payment_method: paymentPatch.payment_method,
-                  payment_provider: paymentPatch.payment_provider,
-                },
-          ),
-        });
-      } catch (error) {
-        console.error("Admin-created customer order email failed:", error);
-      }
-    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to send invoice.";
     await client

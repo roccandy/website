@@ -92,4 +92,57 @@ describe("admin Square invoice removal", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).not.toHaveProperty("invoice.invoice_number");
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith("/publish"))).toBe(false);
   });
+
+  it("publishes an emailed Square invoice with the customer recipient and hosted payment link", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ customer: { id: "customer_123" } }))
+      .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 2, status: "DRAFT" } }))
+      .mockResolvedValueOnce(jsonResponse({ invoice: { id: "inv_123", version: 3, status: "DRAFT" } }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          invoice: {
+            id: "inv_123",
+            version: 4,
+            status: "UNPAID",
+            public_url: "https://square.test/invoice/inv_123",
+            updated_at: "2026-08-14T03:36:45.000Z",
+          },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { updateAndPublishAdminSquareInvoice } = await import("@/lib/adminOrderIntegrations");
+
+    await expect(
+      updateAndPublishAdminSquareInvoice({
+        id: "order_123",
+        order_number: "0151",
+        title: "Custom candy order",
+        customer_name: "Example Customer",
+        customer_email: "customer@example.com",
+        due_date: "2026-08-25",
+        total_price: 110,
+        square_customer_id: "customer_123",
+        square_invoice_id: "inv_123",
+        square_invoice_version: 1,
+      } as never),
+    ).resolves.toMatchObject({
+      invoiceStatus: "UNPAID",
+      invoiceUrl: "https://square.test/invoice/inv_123",
+      invoiceSentAt: "2026-08-14T03:36:45.000Z",
+    });
+
+    const invoiceUpdate = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body));
+    expect(invoiceUpdate.invoice).toMatchObject({
+      delivery_method: "EMAIL",
+      primary_recipient: { customer_id: "customer_123" },
+      accepted_payment_methods: { card: true, square_gift_card: false, bank_account: false, buy_now_pay_later: false },
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "https://square.test/v2/invoices/inv_123/publish",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });
