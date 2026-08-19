@@ -353,7 +353,7 @@ export async function buildAdminOrderSummaryEmailPayload({
     const packagingWithQty = `${packageQty} x ${packagingLabel}${lidDetail}`;
     const notesRaw = String(customItem.notes ?? "").toLowerCase();
     const ingredientLabelsCount = toNumber(customItem.ingredient_labels_count);
-    const ingredientLabels = Number.isFinite(ingredientLabelsCount)
+    const ingredientLabels = Number.isFinite(ingredientLabelsCount) && Number(ingredientLabelsCount) > 0
       ? String(Math.max(0, Math.floor(ingredientLabelsCount as number)))
       : notesRaw.includes("ingredient labels requested")
         ? "Yes"
