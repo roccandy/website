@@ -30,7 +30,7 @@ type HeaderNavProps = {
 };
 
 const navLinkClass =
-  "inline-flex min-h-10 items-center rounded-md px-2 text-[15px] font-semibold text-[#ff6f95] transition-colors hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";
+  "inline-flex min-h-10 items-center rounded-md px-2 text-[17px] font-semibold text-[#ff6f95] transition-colors hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";
 
 function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -94,8 +94,8 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
     };
   }, [closeMenus, openMenu]);
 
-  const renderShopLinks = (mobile = false) => (
-    <div className={mobile ? "grid grid-cols-2 gap-1" : "space-y-1"}>
+  const renderShopLinks = () => (
+    <div className="space-y-1">
       {SHOP_LINKS.map((link) => {
         const active = isActivePath(pathname, link.href);
         return (
@@ -183,6 +183,7 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
             email={enquiriesEmail}
             emailHref={enquiriesHref}
             responsiveHeader
+            className="hidden lg:block"
           />
           <HeaderMenu />
           <div ref={mobilePagesRootRef} className="static lg:hidden">
@@ -205,7 +206,7 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
               id={mobilePagesId}
               aria-label="Mobile navigation"
               hidden={openMenu !== "mobile-pages"}
-              className="absolute right-0 top-full z-[80] mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-zinc-200 bg-white p-3 shadow-xl"
+              className="absolute right-0 top-full z-[80] mt-2 max-h-[calc(100vh-7rem)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-zinc-200 bg-white p-3 shadow-xl"
             >
               <Link
                 href="/"
@@ -222,11 +223,11 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
               <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Shop
               </p>
-              {renderShopLinks(true)}
+              {renderShopLinks()}
               <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
                 Explore
               </p>
-              <div className="grid grid-cols-2 gap-1">
+              <div className="space-y-1">
                 {[...PAGE_LINKS, { label: "Contact", href: "/contact" }].map((link) => {
                   const active = isActivePath(pathname, link.href);
                   return (
@@ -251,32 +252,40 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
         </div>
       </div>
 
-      <div ref={mobileShopRootRef} className="relative mt-1.5 lg:hidden">
-        <button
-          ref={mobileShopButtonRef}
-          type="button"
-          aria-expanded={openMenu === "mobile-shop"}
-          aria-controls={mobileShopId}
-          onClick={() => toggleMenu("mobile-shop")}
-          className={`inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-full border text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
-            shopIsActive
-              ? "border-[#ff9db8] bg-[#fff0f5] text-[#e94f7d]"
-              : "border-[#ffd0dd] bg-[#fff8fa] text-[#ff6f95] hover:border-[#ff9db8] hover:text-[#ff4f80]"
-          }`}
-        >
-          Shop
-          <ChevronDown
-            className={`h-4 w-4 transition-transform ${openMenu === "mobile-shop" ? "rotate-180" : ""}`}
-            aria-hidden="true"
-          />
-        </button>
-        <div
-          id={mobileShopId}
-          hidden={openMenu !== "mobile-shop"}
-          className="absolute inset-x-0 top-full z-[80] mt-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-xl"
-        >
-          {renderShopLinks(true)}
+      <div className="mt-1.5 grid grid-cols-2 gap-2 lg:hidden">
+        <div ref={mobileShopRootRef} className="relative">
+          <button
+            ref={mobileShopButtonRef}
+            type="button"
+            aria-expanded={openMenu === "mobile-shop"}
+            aria-controls={mobileShopId}
+            onClick={() => toggleMenu("mobile-shop")}
+            className={`inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
+              shopIsActive
+                ? "border-[#ff9db8] bg-[#fff0f5] text-[#e94f7d]"
+                : "border-[#ffd0dd] bg-[#fff8fa] text-[#ff6f95] hover:border-[#ff9db8] hover:text-[#ff4f80]"
+            }`}
+          >
+            Shop
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${openMenu === "mobile-shop" ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          <div
+            id={mobileShopId}
+            hidden={openMenu !== "mobile-shop"}
+            className="absolute left-0 top-full z-[80] mt-2 w-full rounded-xl border border-zinc-200 bg-white p-2 shadow-xl"
+          >
+            {renderShopLinks()}
+          </div>
         </div>
+        <ContactUsButton
+          email={enquiriesEmail}
+          emailHref={enquiriesHref}
+          responsiveHeader
+          className="w-full"
+        />
       </div>
     </div>
   );

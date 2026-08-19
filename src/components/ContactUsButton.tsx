@@ -31,7 +31,7 @@ function buttonClass(variant: "header" | "footer", responsiveHeader: boolean) {
   }
 
   if (responsiveHeader) {
-    return "inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#ffbfd0] bg-white px-2.5 text-[13px] font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] sm:gap-2 sm:px-3 sm:text-sm lg:h-11";
+    return "inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-[#ffbfd0] bg-white px-2.5 text-[13px] font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] sm:gap-2 sm:px-3 sm:text-sm lg:h-11 lg:w-auto";
   }
 
   return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-3 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";
