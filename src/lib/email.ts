@@ -228,7 +228,7 @@ export async function sendOrderEmail(to: string[], order: OrderEmailPayload) {
 export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderEmailPayload) {
   const orderNumber = order.orderNumber ?? null;
   const subject = orderNumber
-    ? `Roc Candy Tax Invoice ${orderNumber}`
+    ? `Roc Candy Tax Invoice #${orderNumber}`
     : "Roc Candy Tax Invoice";
   const totalPrice =
     Number.isFinite(order.totalPrice ?? NaN) && order.totalPrice !== null
@@ -257,7 +257,7 @@ export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderE
     `${ROC_CANDY_EMAIL} | ${ROC_CANDY_PHONE}`,
     `ABN ${ROC_CANDY_ABN}`,
     "",
-    `Tax Invoice ${orderNumber ?? ""}`.trim(),
+    `Tax Invoice ${orderNumber ? `#${orderNumber}` : ""}`.trim(),
     "",
     `Thanks for your order!`,
     "",
@@ -319,10 +319,6 @@ function escapeHtml(value: string) {
 function renderCandyPreviewImage(imageSrc: string | null, width: number) {
   if (!imageSrc) return "";
   return `<img src="${escapeHtml(imageSrc)}" alt="Candy design" width="${width}" style="display:block;width:${width}px;max-width:100%;height:auto;border-radius:12px;margin:0 auto 12px;" />`;
-}
-
-function getHostedImageUrl(imageSources: Array<string | null | undefined>) {
-  return imageSources.find((source): source is string => Boolean(source && /^https:\/\//i.test(source))) ?? null;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -445,7 +441,6 @@ export async function sendPaidOrderSaveFailureEmail(
 type AttachmentResult = {
   src: string | null;
   attachment: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null;
-  externalUrl: string | null;
 };
 
 function isAttachment(
@@ -459,8 +454,6 @@ async function buildInlineAttachment(
   cid: string,
   filenameBase: string
 ): Promise<AttachmentResult> {
-  let externalUrl: string | null = null;
-
   for (const imageUrl of imageSources) {
     if (!imageUrl) continue;
 
@@ -469,7 +462,6 @@ async function buildInlineAttachment(
     if (dataMatch) {
       source = Buffer.from(dataMatch[2].replace(/\s+/g, ""), "base64");
     } else if (/^https?:\/\//i.test(imageUrl)) {
-      externalUrl ??= imageUrl;
       try {
         const response = await fetch(imageUrl, { cache: "no-store" });
         if (!response.ok || !response.headers.get("content-type")?.startsWith("image/")) continue;
@@ -490,7 +482,6 @@ async function buildInlineAttachment(
         .toBuffer();
       return {
         src: `cid:${cid}`,
-        externalUrl,
         attachment: {
           filename: `${filenameBase}.png`,
           content,
@@ -505,7 +496,7 @@ async function buildInlineAttachment(
   }
 
   // Do not leave clients with a broken-image placeholder when a source cannot be embedded.
-  return { src: null, attachment: null, externalUrl };
+  return { src: null, attachment: null };
 }
 
 function getCustomDetailsList(order: AdminOrderSummaryEmailPayload) {
@@ -518,7 +509,6 @@ function getCustomDetailsList(order: AdminOrderSummaryEmailPayload) {
 
 function buildCustomTextLines(details: AdminCustomOrderDetails[], includeWeight: boolean) {
   return details.flatMap((detail) => [
-    `Custom order: ${detail.orderNumber ? `#${detail.orderNumber}` : "-"}`,
     includeWeight ? `Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}` : null,
     `Outer colour / colours: ${detail.outerColours}`,
     `Pinstripe: ${detail.pinstripe}`,
@@ -543,16 +533,13 @@ async function buildCustomHtmlSections(
   const attachments: NonNullable<nodemailer.SendMailOptions["attachments"]> = [];
   const sections = await Promise.all(
     details.map(async (detail, index) => {
-      // Use the saved designer PNG as the email image. It is public HTTPS, renders consistently
-      // across major mail clients, and preserves the exact preview the customer saw on the site.
-      const hostedCandyPreviewUrl = getHostedImageUrl([detail.imageUrl, detail.fallbackImageUrl]);
-      const customPreview = hostedCandyPreviewUrl
-        ? { src: hostedCandyPreviewUrl, attachment: null, externalUrl: hostedCandyPreviewUrl }
-        : await buildInlineAttachment(
-            [detail.imageDataUrl],
-            `candy-design-${index}@roccandy`,
-            `candy-design-${index + 1}`
-          );
+      // Embed the preview so mail clients do not need to load remote images. Prefer the exact
+      // browser-captured design, then fall back to the persisted or generated preview URL.
+      const customPreview = await buildInlineAttachment(
+        [detail.imageDataUrl, detail.imageUrl, detail.fallbackImageUrl],
+        `candy-design-${index}@roccandy`,
+        `candy-design-${index + 1}`
+      );
       const labelPreview = await buildInlineAttachment(
         [detail.labelImageUrl],
         `label-design-${index}@roccandy`,
@@ -561,39 +548,25 @@ async function buildCustomHtmlSections(
       if (customPreview.attachment) attachments.push(customPreview.attachment);
       if (labelPreview.attachment) attachments.push(labelPreview.attachment);
 
-      const orderNumber = detail.orderNumber ? `#${detail.orderNumber}` : "-";
       return `
-        ${renderCandyPreviewImage(customPreview.src, options.previewWidth)}
-        ${
-          customPreview.externalUrl
-            ? `<div style="margin:-4px 0 10px;text-align:center;"><a href="${escapeHtml(customPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open candy design</a></div>`
-            : ""
-        }
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(orderNumber)}</div>
-        ${
-          options.includeWeight
-            ? `<div style="font-size:24px;font-weight:700;margin-bottom:4px;">Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>`
-            : ""
-        }
-        <div><strong>Outer Colour/Colours:</strong> ${escapeHtml(detail.outerColours)}</div>
-        <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
-        <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
-        <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
-        ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
-        <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
-        <div><strong>Custom Label type:</strong> ${escapeHtml(detail.labels)}</div>
-        ${
-          labelPreview.src
-            ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;max-width:100%;width:${options.labelWidth}px;border-radius:10px;border:1px solid #e4e4e7;" /></div>`
-            : ""
-        }
-        ${
-          labelPreview.externalUrl
-            ? `<div style="margin-top:6px;"><a href="${escapeHtml(labelPreview.externalUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563eb;text-decoration:underline;">Open label image</a></div>`
-            : ""
-        }
-        <div style="margin-top:8px;"><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
-        <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 20px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
+          <tr>
+            ${customPreview.src ? `<td width="${options.previewWidth + 32}" style="padding:16px;vertical-align:top;">${renderCandyPreviewImage(customPreview.src, options.previewWidth)}</td>` : ""}
+            <td style="padding:16px;vertical-align:top;">
+              <div style="font-size:15px;font-weight:700;margin:0 0 8px;">Candy design</div>
+              ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
+              <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
+              <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
+              <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
+              <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
+              ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
+              <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
+              <div><strong>Custom label type:</strong> ${escapeHtml(detail.labels)}</div>
+              <div><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
+              ${labelPreview.src ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;max-width:100%;width:${options.labelWidth}px;border-radius:8px;border:1px solid #e4e4e7;" /></div>` : ""}
+            </td>
+          </tr>
+        </table>
       `;
     })
   );
@@ -707,10 +680,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   const orderNumber = order.orderNumber ?? null;
   const displayOrderNumber = orderNumber ?? "-";
   const subject = orderNumber
-    ? `Roc Candy Tax Invoice ${orderNumber}`
+    ? `Roc Candy Tax Invoice #${orderNumber}`
     : "Roc Candy Tax Invoice";
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
   const gstIncluded = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount / 11).toFixed(2)}` : "-";
+  const subtotalExGst = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount - order.paymentAmount / 11).toFixed(2)}` : "-";
   const customDetailsList = getCustomDetailsList(order);
 
   const productsText = order.items
@@ -726,25 +700,29 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `${ROC_CANDY_EMAIL} | ${ROC_CANDY_PHONE}`,
     `ABN ${ROC_CANDY_ABN}`,
     "",
-    `Tax Invoice ${displayOrderNumber}`,
+    `Tax Invoice #${displayOrderNumber}`,
     "",
     "Thanks for your order. It has been confirmed and is now being prepared.",
     ...buildCustomTextLines(customDetailsList, false),
     "",
-    "Order Information",
-    `Date ordered: ${formatDate(order.dateOrderedIso)}`,
-    `Order number: ${orderNumber}`,
+    `Invoice date: ${formatDate(order.dateOrderedIso)}`,
+    "Status: PAID",
+    "",
+    "Bill to",
     `Customer: ${order.customerName ?? "-"}`,
     `Email: ${order.customerEmail ?? "-"}`,
     `Phone: ${order.customerPhone ?? "-"}`,
+    "",
+    "Order details",
     `Requested date: ${formatDate(order.requestedDate)}`,
     `Delivery address: ${order.deliveryAddress}`,
-    "",
-    "Products ordered",
-    productsText || "-",
-    `Payment amount: ${paymentAmount}`,
-    `GST included (10%): ${gstIncluded}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
+    "",
+    "Invoice items",
+    productsText || "-",
+    `Subtotal (ex GST): ${subtotalExGst}`,
+    `GST (10%): ${gstIncluded}`,
+    `Total paid: ${paymentAmount}`,
   ].filter((line) => line !== null) as string[];
 
   const customSection = await buildCustomHtmlSections(customDetailsList, {
@@ -770,22 +748,40 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
       ${branding.html}
-      <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;">Tax Invoice ${escapeHtml(displayOrderNumber)}</h1>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+        <tr>
+          <td style="vertical-align:top;padding:0 16px 0 0;">
+            <h1 style="margin:0;font-size:26px;line-height:1.25;">Tax Invoice #${escapeHtml(displayOrderNumber)}</h1>
+          </td>
+          <td style="vertical-align:top;text-align:right;color:#52525b;">
+            <div><strong style="color:#18181b;">Invoice date</strong></div>
+            <div>${escapeHtml(formatDate(order.dateOrderedIso))}</div>
+            <div style="margin-top:6px;font-weight:700;color:#15803d;">PAID</div>
+          </td>
+        </tr>
+      </table>
       <p style="margin:0 0 14px;font-size:15px;">
         Thanks for your order. It has been confirmed and is now being prepared.
       </p>
       ${customSection.html}
-      <h3 style="margin:0 0 8px;">Order Information</h3>
-      <div><strong>Date ordered:</strong> ${escapeHtml(formatDate(order.dateOrderedIso))}</div>
-      <div><strong>Order number:</strong> ${escapeHtml(displayOrderNumber)}</div>
-      <div><strong>Customer:</strong> ${escapeHtml(order.customerName ?? "-")}</div>
-      <div><strong>Email:</strong> ${escapeHtml(order.customerEmail ?? "-")}</div>
-      <div><strong>Phone:</strong> ${escapeHtml(order.customerPhone ?? "-")}</div>
-      <div><strong>Requested date:</strong> ${escapeHtml(formatDate(order.requestedDate))}</div>
-      <div><strong>Delivery address:</strong> ${escapeHtml(order.deliveryAddress)}</div>
-      <hr style="border:none;border-top:1px solid #e4e4e7;margin:20px 0;" />
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 24px;background:#fafafa;border:1px solid #e4e4e7;">
+        <tr>
+          <td width="50%" style="padding:14px;vertical-align:top;border-right:1px solid #e4e4e7;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#71717a;margin-bottom:6px;">Bill to</div>
+            <div style="font-weight:700;">${escapeHtml(order.customerName ?? "-")}</div>
+            <div>${escapeHtml(order.customerEmail ?? "-")}</div>
+            <div>${escapeHtml(order.customerPhone ?? "-")}</div>
+          </td>
+          <td width="50%" style="padding:14px;vertical-align:top;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#71717a;margin-bottom:6px;">Order details</div>
+            <div><strong>Requested date:</strong> ${escapeHtml(formatDate(order.requestedDate))}</div>
+            <div><strong>Delivery:</strong> ${escapeHtml(order.deliveryAddress)}</div>
+            <div><strong>Payment:</strong> ${escapeHtml(order.paymentMethod ?? "-")}</div>
+          </td>
+        </tr>
+      </table>
 
-      <h3 style="margin:0 0 8px;">Products ordered</h3>
+      <h2 style="margin:0 0 8px;font-size:18px;">Invoice items</h2>
       <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
         <thead>
           <tr>
@@ -797,9 +793,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         </thead>
         <tbody>${productsHtml}</tbody>
       </table>
-      <div><strong>Payment amount:</strong> ${escapeHtml(paymentAmount)}</div>
-      <div><strong>GST included (10%):</strong> ${escapeHtml(gstIncluded)}</div>
-      <div><strong>Payment method:</strong> ${escapeHtml(order.paymentMethod ?? "-")}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 0 auto;border-collapse:collapse;min-width:280px;">
+        <tr><td style="padding:5px 14px 5px 0;color:#52525b;">Subtotal (ex GST)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(subtotalExGst)}</td></tr>
+        <tr><td style="padding:5px 14px 5px 0;color:#52525b;">GST (10%)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(gstIncluded)}</td></tr>
+        <tr><td style="padding:10px 14px 0 0;border-top:2px solid #18181b;font-size:17px;font-weight:700;">Total paid</td><td style="padding:10px 0 0;border-top:2px solid #18181b;text-align:right;font-size:17px;font-weight:700;">${escapeHtml(paymentAmount)}</td></tr>
+      </table>
     </div>
   `;
 

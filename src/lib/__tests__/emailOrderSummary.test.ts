@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { sendMail } = vi.hoisted(() => ({
   sendMail: vi.fn(),
@@ -32,6 +32,10 @@ describe("sendCustomerOrderSummaryEmail", () => {
   beforeEach(() => {
     sendMail.mockReset();
     sendMail.mockResolvedValue({ messageId: "message-1" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   afterAll(() => {
@@ -79,8 +83,8 @@ describe("sendCustomerOrderSummaryEmail", () => {
 
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: "Roc Candy Tax Invoice 0135",
-        html: expect.stringMatching(/Tax Invoice 0135[\s\S]*src="cid:candy-design-0@roccandy"/),
+        subject: "Roc Candy Tax Invoice #0135",
+        html: expect.stringMatching(/Tax Invoice #0135[\s\S]*src="cid:candy-design-0@roccandy"/),
         attachments: expect.arrayContaining([
           expect.objectContaining({
             filename: "roc-candy-logo.png",
@@ -99,8 +103,10 @@ describe("sendCustomerOrderSummaryEmail", () => {
     );
   });
 
-  it("uses the saved public designer preview instead of a regenerated attachment", async () => {
+  it("embeds the saved public designer preview instead of leaving it as a remote image", async () => {
     const previewUrl = "https://storage.example.com/email-previews/order-0135.png";
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="18" fill="#ff5f99"/></svg>';
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(svg, { headers: { "content-type": "image/svg+xml" } })));
 
     await sendCustomerOrderSummaryEmail(["customer@example.com"], {
       orderNumber: "0135",
@@ -117,7 +123,7 @@ describe("sendCustomerOrderSummaryEmail", () => {
       customDetailsList: [
         {
           imageUrl: previewUrl,
-          imageDataUrl: "data:image/png;base64,AAAA",
+          imageDataUrl: null,
           fallbackImageUrl: "https://roccandy.com.au/api/preview/candy-image",
           orderNumber: "0135",
           weightKg: null,
@@ -136,11 +142,15 @@ describe("sendCustomerOrderSummaryEmail", () => {
 
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        html: expect.stringContaining(`src="${previewUrl}"`),
+        html: expect.stringContaining('src="cid:candy-design-0@roccandy"'),
         attachments: expect.arrayContaining([
           expect.objectContaining({
             filename: "roc-candy-logo.png",
             cid: "roc-candy-logo@roccandy",
+          }),
+          expect.objectContaining({
+            filename: "candy-design-1.png",
+            cid: "candy-design-0@roccandy",
           }),
         ]),
       }),
@@ -168,7 +178,9 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(message?.html).toContain("admin@roccandy.com.au");
     expect(message?.html).toContain("0411 810 538");
     expect(message?.html).toContain("ABN 61 076 609 035");
-    expect(message?.html).toContain("Tax Invoice 0165");
+    expect(message?.html).toContain("Tax Invoice #0165");
+    expect(message?.html).toContain("Subtotal (ex GST)");
+    expect(message?.html).toContain("Total paid");
     expect(message?.html).not.toContain("Our website is new");
     expect(message?.text).not.toContain("Our website is new");
   });
