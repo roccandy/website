@@ -124,6 +124,8 @@ export default async function Home() {
               <div id="design" className="site-home-cta-wrap">
                 <DesignCtaModal />
               </div>
+
+              <GoogleReviews className="mt-6" />
             </div>
 
             <div className="site-home-option-grid grid grid-cols-2 md:grid-cols-3">
@@ -148,8 +150,6 @@ export default async function Home() {
               ))}
             </div>
           </section>
-
-          <GoogleReviews className="mt-6" />
 
           <div className="site-home-below-hero-stack site-page-stack-large">
           <ScrollReveal delayMs={40}>
