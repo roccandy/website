@@ -31,7 +31,7 @@ function buttonClass(variant: "header" | "footer", responsiveHeader: boolean) {
   }
 
   if (responsiveHeader) {
-    return "inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-[#ffbfd0] bg-white px-1.5 text-[clamp(11px,3.2vw,13px)] font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] lg:h-11 lg:w-auto lg:gap-2 lg:px-3 lg:text-sm";
+    return "inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 rounded-md px-1.5 text-[clamp(11px,3.2vw,13px)] font-semibold text-[#ff6f95] transition hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] lg:h-11 lg:w-auto lg:gap-2 lg:rounded-full lg:border lg:border-[#ffbfd0] lg:bg-white lg:px-3 lg:text-sm lg:shadow-sm lg:hover:border-[#ff6f95]";
   }
 
   return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-3 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";

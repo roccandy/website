@@ -185,10 +185,8 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
             aria-expanded={openMenu === "mobile-shop"}
             aria-controls={mobileShopId}
             onClick={() => toggleMenu("mobile-shop")}
-            className={`inline-flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-full border px-1.5 text-[clamp(11px,3.2vw,13px)] font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
-              shopIsActive
-                ? "border-[#ff9db8] bg-[#fff0f5] text-[#e94f7d]"
-                : "border-[#ffd0dd] bg-[#fff8fa] text-[#ff6f95] hover:border-[#ff9db8] hover:text-[#ff4f80]"
+            className={`inline-flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-md px-1.5 text-[clamp(11px,3.2vw,13px)] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
+              shopIsActive ? "text-[#e94f7d]" : "text-[#ff6f95] hover:text-[#ff4f80]"
             }`}
           >
             Shop
