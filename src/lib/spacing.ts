@@ -53,7 +53,7 @@ export const SPACING_CONTROLS = {
     // Gap between the mail / phone / menu buttons.
     headerActionsGap: "0.5rem",
     // Top/bottom padding inside the main sticky header.
-    headerPaddingY: "0.75rem",
+    headerPaddingY: "1rem",
 
     // Gap between FAQ / About / Blog in the tiny top links bar.
     topLinksGap: "1.5rem",

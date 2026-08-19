@@ -30,7 +30,7 @@ export default async function PublicSiteHeader({
 
   return (
     <div className={resolvedClassName} data-site-header="true" data-quote-header={dataQuoteHeader ? "true" : undefined}>
-      <div className="site-header-inner relative mx-auto w-full max-w-6xl px-3 sm:px-4 lg:px-6">
+      <div className="site-header-inner relative mx-auto w-full max-w-6xl px-4 lg:px-6">
         <HeaderNav
           enquiriesEmail={enquiriesEmail}
           enquiriesHref={enquiriesHref}

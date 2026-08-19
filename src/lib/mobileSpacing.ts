@@ -24,7 +24,7 @@ export const MOBILE_SPACING_CONTROLS = {
   headerAndBanner: {
     headerRowGap: "0.25rem",
     headerActionsGap: "0.5rem",
-    headerPaddingY: "0.25rem",
+    headerPaddingY: "0.625rem",
     topLinksGap: "1.5rem",
     topLinksPaddingY: "0.25rem",
     bannerPaddingY: "0.4rem",
