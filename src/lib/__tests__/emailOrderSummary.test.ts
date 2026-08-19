@@ -221,7 +221,7 @@ describe("sendCustomerOrderSummaryEmail", () => {
 
     const message = sendMail.mock.calls[0]?.[0];
     const html = String(message?.html);
-    expect(html.indexOf('src="cid:candy-design-0@roccandy"')).toBeLessThan(html.indexOf("Candy design"));
+    expect(html.indexOf("Candy design")).toBeLessThan(html.indexOf('src="cid:candy-design-0@roccandy"'));
     expect(html).toContain('width="72"');
     expect(html).toContain("max-width:72px");
     expect(html).toContain("background:#ffffff");

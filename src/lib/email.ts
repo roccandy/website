@@ -557,7 +557,6 @@ async function buildCustomHtmlSections(
       if (labelPreview.attachment) attachments.push(labelPreview.attachment);
 
       const detailsHtml = `
-        <div style="font-size:14px;font-weight:700;margin:0 0 4px;">Candy design</div>
         ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
         <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
         <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
@@ -572,6 +571,7 @@ async function buildCustomHtmlSections(
 
       return options.stacked ? `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-card" style="width:100%;border-collapse:collapse;margin:0 0 10px;background:#ffffff;">
+          <tr><td style="padding:0 0 4px;font-size:14px;font-weight:700;">Candy design</td></tr>
           ${customPreview.src ? `<tr><td class="rc-design-image" style="padding:2px 0 0;text-align:center;">${renderCandyPreviewImage(customPreview.src, options.previewWidth, 2)}</td></tr>` : ""}
           <tr><td style="padding:2px 0 6px;vertical-align:top;font-size:13px;line-height:1.35;">${detailsHtml}</td></tr>
         </table>
@@ -579,7 +579,7 @@ async function buildCustomHtmlSections(
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 20px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
           <tr>
             ${customPreview.src ? `<td width="${options.previewWidth + 32}" style="padding:16px;vertical-align:top;">${renderCandyPreviewImage(customPreview.src, options.previewWidth)}</td>` : ""}
-            <td style="padding:16px;vertical-align:top;">${detailsHtml}</td>
+            <td style="padding:16px;vertical-align:top;"><div style="font-size:14px;font-weight:700;margin:0 0 4px;">Candy design</div>${detailsHtml}</td>
           </tr>
         </table>
       `;
