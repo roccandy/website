@@ -60,6 +60,7 @@ The Square invoice starts as a draft. Admin is redirected to the Roc Candy invoi
 
 - **Send invoice** publishes Square's hosted card-payment invoice.
 - **Send PDF** generates a Roc Candy tax invoice with direct-deposit details and attaches it to the Square draft. The PDF is emailed to both the customer and the configured orders mailbox (as a hidden copy), while the invoice remains a draft and the order stays unpaid until staff confirm the bank transfer.
+- New admin invoices are due a configurable number of calendar days after creation (7 days by default). This is controlled in **Admin / Settings / Production** and does not use the order's required production date.
 
 Customer notes and Direct Deposit instructions are written into the standard Square invoice description. The order line in that message uses the selected packaging type, size, and jar lid colour where relevant, for example `1500 x Bulk - 1kg` or `1500 x Jar - Small - Black Lid`. GST is applied to the Square order as an inclusive 10% tax so Square shows GST correctly in the invoice summary. Do not use Square invoice custom fields for this workflow because Square can require a paid plan for that feature.
 

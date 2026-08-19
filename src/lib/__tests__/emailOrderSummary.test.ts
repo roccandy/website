@@ -79,15 +79,22 @@ describe("sendCustomerOrderSummaryEmail", () => {
 
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        html: expect.stringContaining('src="cid:candy-design-0@roccandy"'),
-        attachments: [
+        subject: "Roc Candy Tax Invoice 0135",
+        html: expect.stringMatching(/Tax Invoice 0135[\s\S]*src="cid:candy-design-0@roccandy"/),
+        attachments: expect.arrayContaining([
+          expect.objectContaining({
+            filename: "roc-candy-logo.png",
+            contentType: "image/png",
+            cid: "roc-candy-logo@roccandy",
+            contentDisposition: "inline",
+          }),
           expect.objectContaining({
             filename: "candy-design-1.png",
             contentType: "image/png",
             cid: "candy-design-0@roccandy",
             contentDisposition: "inline",
           }),
-        ],
+        ]),
       }),
     );
   });
@@ -130,8 +137,39 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         html: expect.stringContaining(`src="${previewUrl}"`),
-        attachments: undefined,
+        attachments: expect.arrayContaining([
+          expect.objectContaining({
+            filename: "roc-candy-logo.png",
+            cid: "roc-candy-logo@roccandy",
+          }),
+        ]),
       }),
     );
+  });
+
+  it("renders the tax invoice company header and removes the launch feedback note", async () => {
+    await sendCustomerOrderSummaryEmail(["customer@example.com"], {
+      orderNumber: "0165",
+      dateOrderedIso: "2026-08-19T00:00:00.000Z",
+      customerName: "Customer",
+      customerEmail: "customer@example.com",
+      customerPhone: null,
+      requestedDate: null,
+      deliveryAddress: "Pickup",
+      paymentMethod: "Card",
+      paymentAmount: 110,
+      items: [{ title: "Custom candy", quantity: 1, flavor: null, labelsCount: null, totalPrice: 110 }],
+      customDetails: null,
+      customDetailsList: [],
+    });
+
+    const message = sendMail.mock.calls[0]?.[0];
+    expect(message?.html).toContain("Roc Candy Pty Ltd");
+    expect(message?.html).toContain("admin@roccandy.com.au");
+    expect(message?.html).toContain("0411 810 538");
+    expect(message?.html).toContain("ABN 61 076 609 035");
+    expect(message?.html).toContain("Tax Invoice 0165");
+    expect(message?.html).not.toContain("Our website is new");
+    expect(message?.text).not.toContain("Our website is new");
   });
 });

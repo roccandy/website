@@ -77,6 +77,7 @@ create table if not exists settings (
   id int primary key default 1 check (id = 1),
   lead_time_days int not null default 14,
   urgency_fee numeric(12,2) not null default 10,
+  invoice_due_days int not null default 7 check (invoice_due_days between 0 and 90),
   production_slots_per_day int not null default 3,
   no_production_mon boolean not null default false,
   no_production_tue boolean not null default false,

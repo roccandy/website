@@ -37,6 +37,7 @@ export type AdminIntegrationOrder = Pick<
 
 export type AdminInvoiceOrderInput = AdminIntegrationOrder & {
   invoiceOrders?: AdminIntegrationOrder[];
+  invoiceDueDays?: number | null;
 };
 
 type SquareConfig = {
@@ -386,25 +387,26 @@ function isSquareInvoiceNumberConflict(error: unknown) {
   return text.includes("invoice_number") && (text.includes("unique") || text.includes("duplicate") || text.includes("already"));
 }
 
-function formatDateKey(date: Date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function dateKeyFromPerthToday(daysToAdd: number) {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Perth",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  const dueDate = new Date(Date.UTC(year, month - 1, day + daysToAdd));
+  return dueDate.toISOString().slice(0, 10);
 }
 
 function invoiceDueDate(order: AdminInvoiceOrderInput) {
-  const dueDate = invoiceOrdersFor(order)
-    .map((invoiceOrder) => invoiceOrder.due_date)
-    .filter((value): value is string => Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value)))
-    .sort()[0];
-  if (dueDate) {
-    const today = formatDateKey(new Date());
-    return dueDate < today ? today : dueDate;
-  }
-  const fallback = new Date();
-  fallback.setDate(fallback.getDate() + 7);
-  return formatDateKey(fallback);
+  const configuredDays = order.invoiceDueDays == null ? Number.NaN : Number(order.invoiceDueDays);
+  const dueDays = Number.isFinite(configuredDays)
+    ? Math.min(90, Math.max(0, Math.floor(configuredDays)))
+    : 7;
+  return dateKeyFromPerthToday(dueDays);
 }
 
 function daysUntil(dateKey: string) {

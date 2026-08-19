@@ -25,8 +25,36 @@ describe("admin Square invoice removal", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     process.env = { ...originalEnv };
+  });
+
+  it("sets a new invoice due date from the configured number of Perth calendar days", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-19T20:00:00.000Z")); // 20 Aug in Perth
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ customer: { id: "customer_123" } }))
+      .mockResolvedValueOnce(jsonResponse({ order: { id: "square_order_123" } }))
+      .mockResolvedValueOnce(
+        jsonResponse({ invoice: { id: "inv_123", version: 0, status: "DRAFT", created_at: "2026-08-19T20:00:00.000Z" } }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { createAdminSquareInvoiceDraft } = await import("@/lib/adminOrderIntegrations");
+    await createAdminSquareInvoiceDraft({
+      id: "order_123",
+      order_number: "0165",
+      title: "Custom candy order",
+      customer_name: "Example Customer",
+      customer_email: "customer@example.com",
+      total_price: 110,
+      invoiceDueDays: 7,
+    } as never);
+
+    const invoiceRequest = JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body));
+    expect(invoiceRequest.invoice.payment_requests[0].due_date).toBe("2026-08-27");
   });
 
   it("cancels a sent invoice with Square's top-level version payload", async () => {

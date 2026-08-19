@@ -42,6 +42,10 @@ async function updateProductionSettings(formData: FormData) {
 
   const production_slots_per_day = Number(formData.get("production_slots_per_day"));
   const max_total_kg = Number(formData.get("max_total_kg"));
+  const invoiceDueDaysRaw = Number(formData.get("invoice_due_days"));
+  const invoice_due_days = Number.isFinite(invoiceDueDaysRaw)
+    ? Math.min(90, Math.max(0, Math.floor(invoiceDueDaysRaw)))
+    : 7;
 
   const client = supabaseAdminClient;
   const { error } = await client
@@ -49,6 +53,7 @@ async function updateProductionSettings(formData: FormData) {
     .update({
       production_slots_per_day,
       max_total_kg,
+      invoice_due_days,
     })
     .eq("id", 1);
 
@@ -62,9 +67,9 @@ async function updateProductionSettings(formData: FormData) {
     action: "updated",
     entityType: "production-settings",
     entityLabel: "Production settings",
-    summary: "Updated production capacity settings.",
+    summary: "Updated production and invoice settings.",
     path: "/admin/settings/production",
-    changedFields: ["Slots per day", "Max total kg"],
+    changedFields: ["Slots per day", "Max total kg", "Invoice due days"],
   });
   redirect("/admin/settings/production");
 }
@@ -271,6 +276,10 @@ export default async function SettingsProductionPage() {
   const quoteBlockoutMonths = Number.isFinite(quoteBlockoutMonthsRaw)
     ? Math.min(12, Math.max(1, Math.floor(quoteBlockoutMonthsRaw)))
     : 3;
+  const invoiceDueDaysRaw = Number(settings.invoice_due_days ?? 7);
+  const invoiceDueDays = Number.isFinite(invoiceDueDaysRaw)
+    ? Math.min(90, Math.max(0, Math.floor(invoiceDueDaysRaw)))
+    : 7;
 
   return (
     <section className="space-y-6">
@@ -278,7 +287,7 @@ export default async function SettingsProductionPage() {
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
           <h2 className="admin-page-title">Production settings</h2>
-          <p className="text-sm text-zinc-600">Production options & Blocked Dates</p>
+          <p className="text-sm text-zinc-600">Capacity, invoice timing, working days and website blockouts.</p>
         </div>
         <Link
           href="/admin/orders"
@@ -290,30 +299,51 @@ export default async function SettingsProductionPage() {
 
       <form
         action={updateProductionSettings}
-        className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
+        className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
       >
-        <h3 className="admin-card-title text-zinc-900">Production options</h3>
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Slots per production day</span>
+        <div>
+          <h3 className="admin-card-title text-zinc-900">Capacity and invoices</h3>
+          <p className="mt-1 text-xs text-zinc-500">The everyday limits used for scheduling and new admin invoices.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            <span className="font-semibold text-zinc-900">Production slots</span>
+            <span className="mt-1 block text-xs text-zinc-500">Available slots on each production day.</span>
             <input
               type="number"
               name="production_slots_per_day"
               defaultValue={settings.production_slots_per_day}
-              className="mt-1 w-full rounded border border-zinc-200 px-2 py-1"
+              className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
               min={1}
             />
           </label>
-          <label className="block text-sm text-zinc-700">
-            <span className="text-xs text-zinc-500">Max total kg</span>
+          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            <span className="font-semibold text-zinc-900">Daily capacity (kg)</span>
+            <span className="mt-1 block text-xs text-zinc-500">Maximum production weight per day.</span>
             <input
               type="number"
               step="0.1"
               name="max_total_kg"
               defaultValue={settings.max_total_kg}
-              className="mt-1 w-full rounded border border-zinc-200 px-2 py-1"
+              className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
               min={0}
             />
+          </label>
+          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
+            <span className="font-semibold text-zinc-900">Invoice due in</span>
+            <span className="mt-1 block text-xs text-zinc-500">Calendar days from the day an admin invoice is created.</span>
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="number"
+                name="invoice_due_days"
+                defaultValue={invoiceDueDays}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                min={0}
+                max={90}
+                required
+              />
+              <span className="text-xs text-zinc-500">days</span>
+            </div>
           </label>
         </div>
         <div>
@@ -322,15 +352,15 @@ export default async function SettingsProductionPage() {
             pendingLabel="Saving..."
             className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
           >
-            Save production settings
+            Save settings
           </AdminSubmitButton>
         </div>
       </form>
 
-      <div className="space-y-6 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="space-y-1">
           <h3 className="admin-card-title text-zinc-900">Blocked dates</h3>
-          <p className="text-xs text-zinc-500">Default no-production days and one-off blocks.</p>
+          <p className="text-xs text-zinc-500">Choose the regular working week, then add exceptions only when needed.</p>
         </div>
         <div className="space-y-3">
           <h4 className="admin-card-title text-zinc-900">Default no-production days</h4>

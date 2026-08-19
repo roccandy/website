@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 import sharp from "sharp";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
 
@@ -77,8 +79,49 @@ export type PaidOrderSaveFailureEmailPayload = {
   }>;
 };
 
-const CUSTOMER_WEBSITE_FEEDBACK_NOTE =
-  "Our website is new. If you notice any issues or have feedback, please contact enquiries@roccandy.com.au.";
+const ROC_CANDY_EMAIL = "admin@roccandy.com.au";
+const ROC_CANDY_PHONE = "0411 810 538";
+const ROC_CANDY_ABN = "61 076 609 035";
+const ROC_CANDY_LOGO_CID = "roc-candy-logo@roccandy";
+
+let emailLogoPromise: Promise<Buffer | null> | null = null;
+
+function getEmailLogo() {
+  emailLogoPromise ??= readFile(path.join(process.cwd(), "public/branding/logo-gold.svg"))
+    .then((source) => sharp(source).resize(124, 124, { fit: "contain" }).grayscale().png().toBuffer())
+    .catch((error) => {
+      console.error("Email logo could not be prepared:", error);
+      return null;
+    });
+  return emailLogoPromise;
+}
+
+async function buildTaxInvoiceBranding() {
+  const logo = await getEmailLogo();
+  const attachment: NonNullable<nodemailer.SendMailOptions["attachments"]>[number] | null = logo
+    ? {
+        filename: "roc-candy-logo.png",
+        content: logo,
+        contentType: "image/png",
+        cid: ROC_CANDY_LOGO_CID,
+        contentDisposition: "inline",
+      }
+    : null;
+  return {
+    attachment,
+    html: `
+      <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px;">
+        <tr>
+          ${logo ? `<td style="padding:0 24px 0 0;vertical-align:middle;"><img src="cid:${ROC_CANDY_LOGO_CID}" width="112" height="112" alt="Roc Candy" style="display:block;width:112px;height:112px;" /></td>` : ""}
+          <td style="vertical-align:middle;color:#18181b;">
+            <div style="font-size:24px;line-height:1.25;font-weight:700;">Roc Candy Pty Ltd</div>
+            <div style="font-size:18px;line-height:1.5;"><a href="mailto:${ROC_CANDY_EMAIL}" style="color:#18181b;text-decoration:none;">${ROC_CANDY_EMAIL}</a> | ${ROC_CANDY_PHONE}</div>
+            <div style="font-size:18px;line-height:1.5;">ABN ${ROC_CANDY_ABN}</div>
+          </td>
+        </tr>
+      </table>`,
+  };
+}
 
 let cachedTransporter: nodemailer.Transporter | null = null;
 
@@ -183,10 +226,10 @@ export async function sendOrderEmail(to: string[], order: OrderEmailPayload) {
 }
 
 export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderEmailPayload) {
-  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : null;
+  const orderNumber = order.orderNumber ?? null;
   const subject = orderNumber
-    ? `RocCandy Order confirmation ${orderNumber}`
-    : "RocCandy Order confirmation";
+    ? `Roc Candy Tax Invoice ${orderNumber}`
+    : "Roc Candy Tax Invoice";
   const totalPrice =
     Number.isFinite(order.totalPrice ?? NaN) && order.totalPrice !== null
       ? `$${Number(order.totalPrice).toFixed(2)}`
@@ -210,12 +253,15 @@ export async function sendCustomerOrderEmail(to: string[], order: CustomerOrderE
     .join(", ");
 
   const lines = [
-    "Tax invoice",
+    "Roc Candy Pty Ltd",
+    `${ROC_CANDY_EMAIL} | ${ROC_CANDY_PHONE}`,
+    `ABN ${ROC_CANDY_ABN}`,
+    "",
+    `Tax Invoice ${orderNumber ?? ""}`.trim(),
     "",
     `Thanks for your order!`,
-    CUSTOMER_WEBSITE_FEEDBACK_NOTE,
     "",
-    `Order #: ${orderNumber ?? "-"}`,
+    `Order number: ${orderNumber ?? "-"}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
     `Due date: ${order.dueDate ?? "-"}`,
     `${deliveryLabel}: ${addressParts || "-"}`,
@@ -658,11 +704,11 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
 }
 
 export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
-  const orderNumber = order.orderNumber ? `#${order.orderNumber}` : null;
+  const orderNumber = order.orderNumber ?? null;
   const displayOrderNumber = orderNumber ?? "-";
   const subject = orderNumber
-    ? `RocCandy Order confirmation ${orderNumber}`
-    : "RocCandy Order confirmation";
+    ? `Roc Candy Tax Invoice ${orderNumber}`
+    : "Roc Candy Tax Invoice";
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
   const gstIncluded = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount / 11).toFixed(2)}` : "-";
   const customDetailsList = getCustomDetailsList(order);
@@ -676,12 +722,13 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     .join("\n");
 
   const lines = [
-    "Tax invoice",
+    "Roc Candy Pty Ltd",
+    `${ROC_CANDY_EMAIL} | ${ROC_CANDY_PHONE}`,
+    `ABN ${ROC_CANDY_ABN}`,
+    "",
+    `Tax Invoice ${displayOrderNumber}`,
     "",
     "Thanks for your order. It has been confirmed and is now being prepared.",
-    CUSTOMER_WEBSITE_FEEDBACK_NOTE,
-    "",
-    `Order #: ${displayOrderNumber}`,
     ...buildCustomTextLines(customDetailsList, false),
     "",
     "Order Information",
@@ -705,6 +752,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     labelWidth: 260,
     includeWeight: false,
   });
+  const branding = await buildTaxInvoiceBranding();
 
   const productsHtml = order.items
     .map((item) => {
@@ -721,13 +769,10 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
 
   const html = `
     <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
-      <div style="display:inline-block;margin:0 0 10px;padding:5px 10px;border:1px solid #d4d4d8;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#52525b;">Tax invoice</div>
+      ${branding.html}
+      <h1 style="margin:0 0 14px;font-size:24px;line-height:1.25;">Tax Invoice ${escapeHtml(displayOrderNumber)}</h1>
       <p style="margin:0 0 14px;font-size:15px;">
         Thanks for your order. It has been confirmed and is now being prepared.
-      </p>
-      <p style="margin:0 0 14px;font-size:14px;color:#52525b;">
-        Our website is new. If you notice any issues or have feedback, please contact
-        <a href="mailto:enquiries@roccandy.com.au" style="color:#2563eb;text-decoration:underline;">enquiries@roccandy.com.au</a>.
       </p>
       ${customSection.html}
       <h3 style="margin:0 0 8px;">Order Information</h3>
@@ -758,7 +803,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     </div>
   `;
 
-  const attachments = customSection.attachments.filter(isAttachment);
+  const attachments = [branding.attachment, ...customSection.attachments].filter(isAttachment);
 
   return sendEmail({
     to,

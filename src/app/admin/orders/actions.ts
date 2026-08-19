@@ -128,6 +128,10 @@ const refundedCentsForOrder = (order: { refunded_amount?: number | null; refunde
 };
 const remainingRefundCentsForOrder = (order: { refunded_amount?: number | null; refunded_at?: string | null; status?: string | null; total_price?: number | null }) =>
   Math.max(0, toMoneyCents(Number(order.total_price ?? 0)) - refundedCentsForOrder(order));
+const invoiceDueDaysFromSettings = (settings: Awaited<ReturnType<typeof getSettings>>) => {
+  const value = Number(settings.invoice_due_days ?? 7);
+  return Number.isFinite(value) ? Math.min(90, Math.max(0, Math.floor(value))) : 7;
+};
 
 const syncIngredientLabelsNote = (notes: string | null, enabled: boolean) => {
   const existingLines = (notes ?? "")
@@ -374,6 +378,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
   if (!customer_email) {
     throw new Error("Customer email is required before creating a Square invoice.");
   }
+  const invoiceDueDays = invoiceDueDaysFromSettings(await getSettings());
 
   const batchWeightMismatchApproved = formData.get("batch_weight_mismatch_approved")?.toString() === "on";
   const createdPayloads = tabbedOrders.map((input, index) => {
@@ -497,6 +502,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
   } else {
     const invoiceDraft = await createAdminSquareInvoiceDraft({
       ...primaryOrder,
+      invoiceDueDays,
       square_customer_id: null,
       square_invoice_id: null,
       square_invoice_version: null,
@@ -1063,6 +1069,7 @@ async function upsertOrderShared(formData: FormData) {
           oldInvoiceRemoved = Boolean(removal && removal.action !== "skipped");
           const integrationOrder = {
             ...replacementPrimary,
+            invoiceDueDays: invoiceDueDaysFromSettings(settings),
             square_invoice_title: replacementTitle,
             square_invoice_id: null,
             square_invoice_version: null,
@@ -1234,6 +1241,7 @@ async function upsertOrderShared(formData: FormData) {
         const integrationOrder = {
           id: createdOrderId,
           ...payload,
+          invoiceDueDays: invoiceDueDaysFromSettings(settings),
           admin_batch_weights_kg: payload.admin_batch_weights_kg ?? null,
           square_customer_id: null,
           square_invoice_id: null,
@@ -1496,8 +1504,9 @@ export async function retryAdminSquareInvoiceDraft(formData: FormData) {
   }
 
   try {
+    const invoiceDueDays = invoiceDueDaysFromSettings(await getSettings());
     const invoiceDraft = await createAdminSquareInvoiceDraft(
-      order as Parameters<typeof createAdminSquareInvoiceDraft>[0],
+      { ...order, invoiceDueDays } as Parameters<typeof createAdminSquareInvoiceDraft>[0],
       { idempotencySuffix: `retry-${Date.now()}` },
     );
     const { error: updateError } = await client
@@ -1592,6 +1601,7 @@ async function createCombinedAdminSquareInvoiceDraftForOrderIds(orderIds: string
 
     const integrationOrder = {
       ...primaryOrder,
+      invoiceDueDays: invoiceDueDaysFromSettings(await getSettings()),
       square_invoice_title: invoiceTitle,
       square_invoice_id: null,
       square_invoice_version: null,
@@ -1712,6 +1722,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
 
   const integrationOrder = {
     ...existingOrder,
+    invoiceDueDays: invoiceDueDaysFromSettings(await getSettings()),
     ...localPatch,
     ...paymentPatch,
     invoiceOrders: invoiceGroupOrders.map((order) =>
