@@ -114,9 +114,9 @@ async function buildTaxInvoiceBranding() {
         <tr>
           ${logo ? `<td style="padding:0 24px 0 0;vertical-align:middle;"><img src="cid:${ROC_CANDY_LOGO_CID}" width="112" height="112" alt="Roc Candy" style="display:block;width:112px;height:112px;" /></td>` : ""}
           <td style="vertical-align:middle;color:#18181b;">
-            <div style="font-size:24px;line-height:1.25;font-weight:700;">Roc Candy Pty Ltd</div>
-            <div style="font-size:18px;line-height:1.5;"><a href="mailto:${ROC_CANDY_EMAIL}" style="color:#18181b;text-decoration:none;">${ROC_CANDY_EMAIL}</a> | ${ROC_CANDY_PHONE}</div>
-            <div style="font-size:18px;line-height:1.5;">ABN ${ROC_CANDY_ABN}</div>
+            <div class="rc-brand-name" style="font-size:24px;line-height:1.25;font-weight:700;">Roc Candy Pty Ltd</div>
+            <div class="rc-brand-contact" style="font-size:18px;line-height:1.5;"><a href="mailto:${ROC_CANDY_EMAIL}" style="color:#18181b;text-decoration:none;">${ROC_CANDY_EMAIL}</a> | ${ROC_CANDY_PHONE}</div>
+            <div class="rc-brand-contact" style="font-size:18px;line-height:1.5;">ABN ${ROC_CANDY_ABN}</div>
           </td>
         </tr>
       </table>`,
@@ -452,7 +452,8 @@ function isAttachment(
 async function buildInlineAttachment(
   imageSources: Array<string | null | undefined>,
   cid: string,
-  filenameBase: string
+  filenameBase: string,
+  resize?: { width: number; height: number },
 ): Promise<AttachmentResult> {
   for (const imageUrl of imageSources) {
     if (!imageUrl) continue;
@@ -475,9 +476,13 @@ async function buildInlineAttachment(
     try {
       // SVG, WebP and other valid browser images are not reliably supported by email clients.
       // Convert every preview to a self-contained PNG before assigning the content ID.
-      const content = await sharp(source, { animated: false, failOn: "none" })
+      let image = sharp(source, { animated: false, failOn: "none" })
         .rotate()
-        .flatten({ background: "#ffffff" })
+        .flatten({ background: "#ffffff" });
+      if (resize) {
+        image = image.resize(resize.width, resize.height, { fit: "inside", withoutEnlargement: true });
+      }
+      const content = await image
         .png()
         .toBuffer();
       return {
@@ -528,6 +533,7 @@ async function buildCustomHtmlSections(
     previewWidth: number;
     labelWidth: number;
     includeWeight: boolean;
+    stacked?: boolean;
   }
 ) {
   const attachments: NonNullable<nodemailer.SendMailOptions["attachments"]> = [];
@@ -538,33 +544,42 @@ async function buildCustomHtmlSections(
       const customPreview = await buildInlineAttachment(
         [detail.imageDataUrl, detail.imageUrl, detail.fallbackImageUrl],
         `candy-design-${index}@roccandy`,
-        `candy-design-${index + 1}`
+        `candy-design-${index + 1}`,
+        { width: options.previewWidth * 2, height: options.previewWidth * 2 },
       );
       const labelPreview = await buildInlineAttachment(
         [detail.labelImageUrl],
         `label-design-${index}@roccandy`,
-        `label-design-${index + 1}`
+        `label-design-${index + 1}`,
+        { width: options.labelWidth * 2, height: options.labelWidth * 2 },
       );
       if (customPreview.attachment) attachments.push(customPreview.attachment);
       if (labelPreview.attachment) attachments.push(labelPreview.attachment);
 
-      return `
+      const detailsHtml = `
+        <div style="font-size:15px;font-weight:700;margin:0 0 6px;">Candy design</div>
+        ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
+        <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
+        <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
+        <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
+        <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
+        ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
+        <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
+        <div><strong>Custom label type:</strong> ${escapeHtml(detail.labels)}</div>
+        <div><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
+        ${labelPreview.src ? `<div style="margin-top:6px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;width:${options.labelWidth}px;max-width:${options.labelWidth}px;height:auto;max-height:${options.labelWidth}px;object-fit:contain;border-radius:6px;border:1px solid #e4e4e7;" /></div>` : ""}
+      `;
+
+      return options.stacked ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-card" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 14px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
+          ${customPreview.src ? `<tr><td class="rc-design-image" style="padding:12px 14px 4px;text-align:center;">${renderCandyPreviewImage(customPreview.src, options.previewWidth)}</td></tr>` : ""}
+          <tr><td style="padding:8px 14px 12px;vertical-align:top;">${detailsHtml}</td></tr>
+        </table>
+      ` : `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 20px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
           <tr>
             ${customPreview.src ? `<td width="${options.previewWidth + 32}" style="padding:16px;vertical-align:top;">${renderCandyPreviewImage(customPreview.src, options.previewWidth)}</td>` : ""}
-            <td style="padding:16px;vertical-align:top;">
-              <div style="font-size:15px;font-weight:700;margin:0 0 8px;">Candy design</div>
-              ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
-              <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
-              <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
-              <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
-              <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
-              ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
-              <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
-              <div><strong>Custom label type:</strong> ${escapeHtml(detail.labels)}</div>
-              <div><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
-              ${labelPreview.src ? `<div style="margin-top:10px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;max-width:100%;width:${options.labelWidth}px;border-radius:8px;border:1px solid #e4e4e7;" /></div>` : ""}
-            </td>
+            <td style="padding:16px;vertical-align:top;">${detailsHtml}</td>
           </tr>
         </table>
       `;
@@ -726,9 +741,10 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   ].filter((line) => line !== null) as string[];
 
   const customSection = await buildCustomHtmlSections(customDetailsList, {
-    previewWidth: 180,
-    labelWidth: 260,
+    previewWidth: 200,
+    labelWidth: 96,
     includeWeight: false,
+    stacked: true,
   });
   const branding = await buildTaxInvoiceBranding();
 
@@ -746,7 +762,20 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     .join("");
 
   const html = `
-    <div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#18181b;max-width:720px;">
+    <style>
+      @media only screen and (max-width:600px) {
+        .rc-invoice { width:100% !important; max-width:100% !important; font-size:13px !important; }
+        .rc-two-col, .rc-two-col tbody, .rc-two-col tr, .rc-two-col-cell { display:block !important; width:100% !important; box-sizing:border-box !important; }
+        .rc-two-col-cell { border-right:0 !important; border-bottom:1px solid #e4e4e7 !important; }
+        .rc-brand-name { font-size:19px !important; }
+        .rc-brand-contact { font-size:13px !important; }
+      }
+      @media print {
+        .rc-invoice { max-width:none !important; font-size:11px !important; line-height:1.3 !important; }
+        .rc-card, .rc-two-col, .rc-items, .rc-totals { page-break-inside:avoid !important; break-inside:avoid !important; }
+      }
+    </style>
+    <div class="rc-invoice" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#18181b;max-width:680px;">
       ${branding.html}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
         <tr>
@@ -764,15 +793,15 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         Thanks for your order. It has been confirmed and is now being prepared.
       </p>
       ${customSection.html}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 24px;background:#fafafa;border:1px solid #e4e4e7;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-two-col" style="width:100%;border-collapse:collapse;margin:0 0 18px;background:#fafafa;border:1px solid #e4e4e7;">
         <tr>
-          <td width="50%" style="padding:14px;vertical-align:top;border-right:1px solid #e4e4e7;">
+          <td width="50%" class="rc-two-col-cell" style="padding:12px;vertical-align:top;border-right:1px solid #e4e4e7;">
             <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#71717a;margin-bottom:6px;">Bill to</div>
             <div style="font-weight:700;">${escapeHtml(order.customerName ?? "-")}</div>
             <div>${escapeHtml(order.customerEmail ?? "-")}</div>
             <div>${escapeHtml(order.customerPhone ?? "-")}</div>
           </td>
-          <td width="50%" style="padding:14px;vertical-align:top;">
+          <td width="50%" class="rc-two-col-cell" style="padding:12px;vertical-align:top;">
             <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#71717a;margin-bottom:6px;">Order details</div>
             <div><strong>Requested date:</strong> ${escapeHtml(formatDate(order.requestedDate))}</div>
             <div><strong>Delivery:</strong> ${escapeHtml(order.deliveryAddress)}</div>
@@ -782,7 +811,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       </table>
 
       <h2 style="margin:0 0 8px;font-size:18px;">Invoice items</h2>
-      <table style="width:100%;border-collapse:collapse;margin-bottom:12px;">
+      <table class="rc-items" style="width:100%;border-collapse:collapse;margin-bottom:10px;">
         <thead>
           <tr>
             <th style="text-align:left;padding:8px;border-bottom:2px solid #d4d4d8;">Product</th>
@@ -793,7 +822,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         </thead>
         <tbody>${productsHtml}</tbody>
       </table>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 0 auto;border-collapse:collapse;min-width:280px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" class="rc-totals" style="margin:0 0 0 auto;border-collapse:collapse;min-width:280px;">
         <tr><td style="padding:5px 14px 5px 0;color:#52525b;">Subtotal (ex GST)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(subtotalExGst)}</td></tr>
         <tr><td style="padding:5px 14px 5px 0;color:#52525b;">GST (10%)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(gstIncluded)}</td></tr>
         <tr><td style="padding:10px 14px 0 0;border-top:2px solid #18181b;font-size:17px;font-weight:700;">Total paid</td><td style="padding:10px 0 0;border-top:2px solid #18181b;text-align:right;font-size:17px;font-weight:700;">${escapeHtml(paymentAmount)}</td></tr>

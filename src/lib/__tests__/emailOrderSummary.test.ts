@@ -11,6 +11,7 @@ vi.mock("nodemailer", () => ({
 }));
 
 import { sendCustomerOrderSummaryEmail } from "@/lib/email";
+import sharp from "sharp";
 
 describe("sendCustomerOrderSummaryEmail", () => {
   const originalEnv = {
@@ -183,5 +184,50 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(message?.html).toContain("Total paid");
     expect(message?.html).not.toContain("Our website is new");
     expect(message?.text).not.toContain("Our website is new");
+  });
+
+  it("stacks the candy preview above details and constrains uploaded label artwork", async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#ffd54f"/></svg>';
+    const imageDataUrl = `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+    await sendCustomerOrderSummaryEmail(["customer@example.com"], {
+      orderNumber: "0167",
+      dateOrderedIso: "2026-08-19T00:00:00.000Z",
+      customerName: "Customer",
+      customerEmail: "customer@example.com",
+      customerPhone: null,
+      requestedDate: null,
+      deliveryAddress: "Pickup",
+      paymentMethod: "Card",
+      paymentAmount: 110,
+      items: [{ title: "Custom candy", quantity: 1, flavor: null, labelsCount: 1, totalPrice: 110 }],
+      customDetails: null,
+      customDetailsList: [{
+        imageUrl: null,
+        imageDataUrl,
+        fallbackImageUrl: null,
+        orderNumber: "0167",
+        weightKg: null,
+        outerColours: "Yellow",
+        pinstripe: "No",
+        flavor: null,
+        textColour: "Black",
+        heartColour: null,
+        packaging: "1 x Jar",
+        labels: "Circle 35mm",
+        labelImageUrl: imageDataUrl,
+        ingredientLabels: "No",
+      }],
+    });
+
+    const message = sendMail.mock.calls[0]?.[0];
+    const html = String(message?.html);
+    expect(html.indexOf('src="cid:candy-design-0@roccandy"')).toBeLessThan(html.indexOf("Candy design"));
+    expect(html).toContain('width="96"');
+    expect(html).toContain("max-width:96px");
+
+    const labelAttachment = message?.attachments?.find((attachment: { cid?: string }) => attachment.cid === "label-design-0@roccandy");
+    const metadata = await sharp(labelAttachment?.content as Buffer).metadata();
+    expect(metadata.width).toBeLessThanOrEqual(192);
+    expect(metadata.height).toBeLessThanOrEqual(192);
   });
 });
