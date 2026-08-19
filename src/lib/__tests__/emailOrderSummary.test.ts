@@ -222,12 +222,14 @@ describe("sendCustomerOrderSummaryEmail", () => {
     const message = sendMail.mock.calls[0]?.[0];
     const html = String(message?.html);
     expect(html.indexOf('src="cid:candy-design-0@roccandy"')).toBeLessThan(html.indexOf("Candy design"));
-    expect(html).toContain('width="96"');
-    expect(html).toContain("max-width:96px");
+    expect(html).toContain('width="72"');
+    expect(html).toContain("max-width:72px");
+    expect(html).toContain("background:#ffffff");
+    expect(html).not.toContain('class="rc-card" style="width:100%;border-collapse:separate');
 
     const labelAttachment = message?.attachments?.find((attachment: { cid?: string }) => attachment.cid === "label-design-0@roccandy");
     const metadata = await sharp(labelAttachment?.content as Buffer).metadata();
-    expect(metadata.width).toBeLessThanOrEqual(192);
-    expect(metadata.height).toBeLessThanOrEqual(192);
+    expect(metadata.width).toBeLessThanOrEqual(144);
+    expect(metadata.height).toBeLessThanOrEqual(144);
   });
 });

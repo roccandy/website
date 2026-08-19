@@ -88,7 +88,7 @@ let emailLogoPromise: Promise<Buffer | null> | null = null;
 
 function getEmailLogo() {
   emailLogoPromise ??= readFile(path.join(process.cwd(), "public/branding/logo-gold.svg"))
-    .then((source) => sharp(source).resize(124, 124, { fit: "contain" }).grayscale().png().toBuffer())
+    .then((source) => sharp(source).resize(88, 88, { fit: "contain" }).grayscale().png().toBuffer())
     .catch((error) => {
       console.error("Email logo could not be prepared:", error);
       return null;
@@ -110,13 +110,13 @@ async function buildTaxInvoiceBranding() {
   return {
     attachment,
     html: `
-      <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 12px;">
         <tr>
-          ${logo ? `<td style="padding:0 24px 0 0;vertical-align:middle;"><img src="cid:${ROC_CANDY_LOGO_CID}" width="112" height="112" alt="Roc Candy" style="display:block;width:112px;height:112px;" /></td>` : ""}
+          ${logo ? `<td style="padding:0 14px 0 0;vertical-align:middle;"><img src="cid:${ROC_CANDY_LOGO_CID}" width="76" height="76" alt="Roc Candy" style="display:block;width:76px;height:76px;" /></td>` : ""}
           <td style="vertical-align:middle;color:#18181b;">
-            <div class="rc-brand-name" style="font-size:24px;line-height:1.25;font-weight:700;">Roc Candy Pty Ltd</div>
-            <div class="rc-brand-contact" style="font-size:18px;line-height:1.5;"><a href="mailto:${ROC_CANDY_EMAIL}" style="color:#18181b;text-decoration:none;">${ROC_CANDY_EMAIL}</a> | ${ROC_CANDY_PHONE}</div>
-            <div class="rc-brand-contact" style="font-size:18px;line-height:1.5;">ABN ${ROC_CANDY_ABN}</div>
+            <div class="rc-brand-name" style="font-size:19px;line-height:1.25;font-weight:700;">Roc Candy Pty Ltd</div>
+            <div class="rc-brand-contact" style="font-size:14px;line-height:1.4;"><a href="mailto:${ROC_CANDY_EMAIL}" style="color:#18181b;text-decoration:none;">${ROC_CANDY_EMAIL}</a> | ${ROC_CANDY_PHONE}</div>
+            <div class="rc-brand-contact" style="font-size:14px;line-height:1.4;">ABN ${ROC_CANDY_ABN}</div>
           </td>
         </tr>
       </table>`,
@@ -316,9 +316,9 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-function renderCandyPreviewImage(imageSrc: string | null, width: number) {
+function renderCandyPreviewImage(imageSrc: string | null, width: number, marginBottom = 12) {
   if (!imageSrc) return "";
-  return `<img src="${escapeHtml(imageSrc)}" alt="Candy design" width="${width}" style="display:block;width:${width}px;max-width:100%;height:auto;border-radius:12px;margin:0 auto 12px;" />`;
+  return `<img src="${escapeHtml(imageSrc)}" alt="Candy design" width="${width}" style="display:block;width:${width}px;max-width:100%;height:auto;border-radius:12px;margin:0 auto ${marginBottom}px;" />`;
 }
 
 function formatDate(value: string | null | undefined) {
@@ -557,7 +557,7 @@ async function buildCustomHtmlSections(
       if (labelPreview.attachment) attachments.push(labelPreview.attachment);
 
       const detailsHtml = `
-        <div style="font-size:15px;font-weight:700;margin:0 0 6px;">Candy design</div>
+        <div style="font-size:14px;font-weight:700;margin:0 0 4px;">Candy design</div>
         ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
         <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
         <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
@@ -567,13 +567,13 @@ async function buildCustomHtmlSections(
         <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
         <div><strong>Custom label type:</strong> ${escapeHtml(detail.labels)}</div>
         <div><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>
-        ${labelPreview.src ? `<div style="margin-top:6px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;width:${options.labelWidth}px;max-width:${options.labelWidth}px;height:auto;max-height:${options.labelWidth}px;object-fit:contain;border-radius:6px;border:1px solid #e4e4e7;" /></div>` : ""}
+        ${labelPreview.src ? `<div style="margin-top:4px;"><img src="${escapeHtml(labelPreview.src)}" alt="Uploaded label" width="${options.labelWidth}" style="display:block;width:${options.labelWidth}px;max-width:${options.labelWidth}px;height:auto;max-height:${options.labelWidth}px;object-fit:contain;border-radius:5px;border:1px solid #e4e4e7;" /></div>` : ""}
       `;
 
       return options.stacked ? `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-card" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 14px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
-          ${customPreview.src ? `<tr><td class="rc-design-image" style="padding:12px 14px 4px;text-align:center;">${renderCandyPreviewImage(customPreview.src, options.previewWidth)}</td></tr>` : ""}
-          <tr><td style="padding:8px 14px 12px;vertical-align:top;">${detailsHtml}</td></tr>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-card" style="width:100%;border-collapse:collapse;margin:0 0 10px;background:#ffffff;">
+          ${customPreview.src ? `<tr><td class="rc-design-image" style="padding:2px 0 0;text-align:center;">${renderCandyPreviewImage(customPreview.src, options.previewWidth, 2)}</td></tr>` : ""}
+          <tr><td style="padding:2px 0 6px;vertical-align:top;font-size:13px;line-height:1.35;">${detailsHtml}</td></tr>
         </table>
       ` : `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:separate;border-spacing:0;margin:0 0 20px;border:1px solid #e4e4e7;border-radius:10px;background:#fafafa;">
@@ -741,8 +741,8 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
   ].filter((line) => line !== null) as string[];
 
   const customSection = await buildCustomHtmlSections(customDetailsList, {
-    previewWidth: 200,
-    labelWidth: 96,
+    previewWidth: 160,
+    labelWidth: 72,
     includeWeight: false,
     stacked: true,
   });
@@ -767,29 +767,29 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         .rc-invoice { width:100% !important; max-width:100% !important; font-size:13px !important; }
         .rc-two-col, .rc-two-col tbody, .rc-two-col tr, .rc-two-col-cell { display:block !important; width:100% !important; box-sizing:border-box !important; }
         .rc-two-col-cell { border-right:0 !important; border-bottom:1px solid #e4e4e7 !important; }
-        .rc-brand-name { font-size:19px !important; }
-        .rc-brand-contact { font-size:13px !important; }
+        .rc-brand-name { font-size:17px !important; }
+        .rc-brand-contact { font-size:12px !important; }
       }
       @media print {
         .rc-invoice { max-width:none !important; font-size:11px !important; line-height:1.3 !important; }
         .rc-card, .rc-two-col, .rc-items, .rc-totals { page-break-inside:avoid !important; break-inside:avoid !important; }
       }
     </style>
-    <div class="rc-invoice" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.45;color:#18181b;max-width:680px;">
+    <div class="rc-invoice" style="font-family:Arial,sans-serif;font-size:13px;line-height:1.4;color:#18181b;max-width:660px;">
       ${branding.html}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 10px;">
         <tr>
           <td style="vertical-align:top;padding:0 16px 0 0;">
-            <h1 style="margin:0;font-size:26px;line-height:1.25;">Tax Invoice #${escapeHtml(displayOrderNumber)}</h1>
+            <h1 style="margin:0;font-size:22px;line-height:1.2;">Tax Invoice #${escapeHtml(displayOrderNumber)}</h1>
           </td>
-          <td style="vertical-align:top;text-align:right;color:#52525b;">
+          <td style="vertical-align:top;text-align:right;color:#52525b;font-size:12px;line-height:1.3;">
             <div><strong style="color:#18181b;">Invoice date</strong></div>
             <div>${escapeHtml(formatDate(order.dateOrderedIso))}</div>
-            <div style="margin-top:6px;font-weight:700;color:#15803d;">PAID</div>
+            <div style="margin-top:3px;font-weight:700;color:#15803d;">PAID</div>
           </td>
         </tr>
       </table>
-      <p style="margin:0 0 14px;font-size:15px;">
+      <p style="margin:0 0 9px;font-size:14px;">
         Thanks for your order. It has been confirmed and is now being prepared.
       </p>
       ${customSection.html}
