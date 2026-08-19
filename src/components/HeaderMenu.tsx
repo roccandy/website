@@ -7,7 +7,7 @@ function HeaderMenuFallback() {
     <div className="relative">
       <span
         aria-hidden="true"
-        className="inline-flex h-11 w-11 items-center justify-center text-[#ff6f95] opacity-80"
+        className="inline-flex h-10 w-10 items-center justify-center text-[#ff6f95] opacity-80 lg:h-11 lg:w-11"
       >
         <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
           <path

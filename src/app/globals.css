@@ -795,11 +795,6 @@ body {
   gap: var(--space-header-actions-gap);
 }
 
-.site-top-links-row {
-  gap: var(--space-top-links-gap);
-  padding-block: var(--space-top-links-padding-y);
-}
-
 .site-banner-inner {
   padding-block: var(--space-banner-padding-y);
 }
@@ -1164,14 +1159,6 @@ textarea::placeholder {
 }
 
 @media (max-width: 768px) {
-  [data-header-logo] {
-    transition: height 180ms ease;
-  }
-
-  body.mobile-header-scrolled [data-header-logo] {
-    height: 2.5rem !important;
-  }
-
   input,
   select,
   textarea {

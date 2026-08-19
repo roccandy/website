@@ -16,6 +16,7 @@ type ContactUsButtonProps = {
   placement?: "bottom" | "top";
   align?: "right" | "center";
   className?: string;
+  mobileIconOnly?: boolean;
 };
 
 function getEmailHref(email: string, emailHref?: string) {
@@ -24,17 +25,26 @@ function getEmailHref(email: string, emailHref?: string) {
   return `mailto:${email.trim()}`;
 }
 
-function buttonClass(variant: "header" | "footer") {
+function buttonClass(variant: "header" | "footer", mobileIconOnly: boolean) {
   if (variant === "footer") {
     return "inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#ff5f99] px-4 text-sm font-semibold text-white transition hover:bg-[#ff4f8d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5f99] focus-visible:ring-offset-2";
+  }
+
+  if (mobileIconOnly) {
+    return "inline-flex h-10 w-10 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-0 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] lg:h-11 lg:w-auto lg:px-3";
   }
 
   return "inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[#ffbfd0] bg-white px-3 text-sm font-semibold text-[#ff6f95] shadow-sm transition hover:border-[#ff6f95] hover:text-[#ff4f80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95]";
 }
 
-function panelClass(placement: "bottom" | "top", align: "right" | "center") {
+function panelClass(placement: "bottom" | "top", align: "right" | "center", mobileIconOnly: boolean) {
   const vertical = placement === "top" ? "bottom-full mb-3" : "top-full mt-3";
-  const horizontal = align === "center" ? "left-1/2 -translate-x-1/2" : "right-0";
+  const horizontal =
+    align === "center"
+      ? "left-1/2 -translate-x-1/2"
+      : mobileIconOnly
+        ? "right-3 sm:right-4 lg:right-0"
+        : "right-0";
 
   return [
     "absolute",
@@ -53,6 +63,7 @@ export function ContactUsButton({
   placement = "bottom",
   align = "right",
   className = "",
+  mobileIconOnly = false,
 }: ContactUsButtonProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -80,20 +91,26 @@ export function ContactUsButton({
   }, [open]);
 
   return (
-    <div ref={rootRef} className={`relative ${className}`}>
+    <div ref={rootRef} className={`${mobileIconOnly ? "static lg:relative" : "relative"} ${className}`}>
       <button
         type="button"
+        aria-label={mobileIconOnly ? "Contact Roc Candy" : undefined}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((current) => !current)}
-        className={buttonClass(variant)}
+        className={buttonClass(variant, mobileIconOnly)}
       >
         <Mail className="h-4 w-4" aria-hidden="true" />
-        <span>Contact Us</span>
+        <span className={mobileIconOnly ? "sr-only lg:not-sr-only" : undefined}>Contact Us</span>
       </button>
 
       {open ? (
-        <div id={panelId} role="dialog" aria-label="Roc Candy contact details" className={panelClass(placement, align)}>
+        <div
+          id={panelId}
+          role="dialog"
+          aria-label="Roc Candy contact details"
+          className={panelClass(placement, align, mobileIconOnly)}
+        >
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#ff5f99]">Contact Roc Candy</p>
             <button

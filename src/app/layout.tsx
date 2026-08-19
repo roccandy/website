@@ -6,7 +6,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { Analytics } from "@/components/Analytics";
 import { JsonLd } from "@/components/JsonLd";
-import MobileHeaderShrinkOnScroll from "@/components/MobileHeaderShrinkOnScroll";
 import ConditionalSiteFooter from "@/components/ConditionalSiteFooter";
 import { SPACING_STYLE_VARS } from "@/lib/spacing";
 import { TYPOGRAPHY_STYLE_VARS } from "@/lib/typography";
@@ -107,7 +106,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             buildWebsiteSchema(),
           ])}
         />
-        <MobileHeaderShrinkOnScroll />
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">{children}</div>
           <ConditionalSiteFooter />

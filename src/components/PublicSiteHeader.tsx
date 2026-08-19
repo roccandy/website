@@ -1,9 +1,4 @@
-import Image from "next/image";
-import Link from "next/link";
-import { ContactUsButton } from "@/components/ContactUsButton";
-import HeaderMenu from "@/components/HeaderMenu";
 import HeaderNav from "@/components/HeaderNav";
-import LandingTopLinksBar from "@/components/LandingTopLinksBar";
 import ProductionBlockoutBanner from "@/components/ProductionBlockoutBanner";
 import { getSiteBannerMessage } from "@/lib/productionBlockout";
 
@@ -35,27 +30,12 @@ export default async function PublicSiteHeader({
 
   return (
     <div className={resolvedClassName} data-site-header="true" data-quote-header={dataQuoteHeader ? "true" : undefined}>
-      <LandingTopLinksBar />
-      <div className="site-header-inner mx-auto w-full max-w-6xl px-6">
-        <div className="site-header-row flex flex-wrap items-center justify-between">
-          <Link href="/" className="shrink-0">
-            <Image
-              src="/branding/logo-gold.svg"
-              alt="Roc Candy"
-              width={240}
-              height={96}
-              className="h-20 w-auto md:h-24"
-              style={{ width: "auto" }}
-              data-header-logo
-              priority={logoPriority}
-            />
-          </Link>
-          <HeaderNav />
-          <div className="site-header-actions flex shrink-0 items-center">
-            <ContactUsButton email={enquiriesEmail} emailHref={enquiriesHref} />
-            <HeaderMenu />
-          </div>
-        </div>
+      <div className="site-header-inner relative mx-auto w-full max-w-6xl px-3 sm:px-4 lg:px-6">
+        <HeaderNav
+          enquiriesEmail={enquiriesEmail}
+          enquiriesHref={enquiriesHref}
+          logoPriority={logoPriority}
+        />
       </div>
       <ProductionBlockoutBanner message={bannerMessage} />
     </div>
