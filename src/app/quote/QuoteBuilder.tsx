@@ -1535,19 +1535,14 @@ export function QuoteBuilder({
                     { step: 3 as const, label: "Review", complete: canPlace },
                   ].map((item, index) => {
                     const isCurrent = mobileStep === item.step;
-                    const canOpen =
-                      item.step === 1 ||
-                      (item.step === 2 && designStepComplete) ||
-                      (item.step === 3 && packagingComplete && designStepComplete);
                     return (
                       <li
                         key={item.step}
-                        className={index > 0 ? "border-l border-zinc-200" : undefined}
+                        className={`flex ${index > 0 ? "border-l border-zinc-200" : ""}`}
                       >
                         <button
                           type="button"
                           onClick={() => {
-                            if (!canOpen) return;
                             setMobileStepError(null);
                             const sectionRef =
                               item.step === 1
@@ -1557,14 +1552,11 @@ export function QuoteBuilder({
                                   : reviewSectionRef;
                             focusMobileSection(item.step, sectionRef, false);
                           }}
-                          disabled={!canOpen}
                           aria-current={isCurrent ? "step" : undefined}
-                          className={`inline-flex h-6 w-full items-center justify-center px-1 text-[10px] font-semibold transition ${
+                          className={`inline-flex min-h-6 w-full items-center justify-center px-1 text-[10px] font-semibold transition ${
                             isCurrent
                               ? "bg-[#fff1f5] text-[#b6456b]"
-                              : canOpen
-                                ? "bg-white text-zinc-600"
-                                : "bg-zinc-50 text-zinc-400"
+                              : "bg-white text-zinc-600"
                           }`}
                         >
                           <span className="mr-1" aria-hidden="true">
@@ -2338,26 +2330,6 @@ export function QuoteBuilder({
               <button
                 type="button"
                 onClick={() => {
-                  if (!packagingComplete) {
-                    setShowFieldErrors(true);
-                    showPackagingError();
-                    return;
-                  }
-                  if (!packagingStepComplete) {
-                    setShowFieldErrors(true);
-                    const missingText = missingFields
-                      .filter(
-                        (field) =>
-                          field === "Label artwork" ||
-                          field === "Custom Label type" ||
-                          field === "Custom Labels Count" ||
-                          field === "Ingredient Labels Count",
-                      )
-                      .join(", ");
-                    setMobileStepError(`Please complete: ${missingText || "packaging details"}.`);
-                    focusMobileSection(2, packagingSectionRef);
-                    return;
-                  }
                   setMobileStepError(null);
                   focusMobileSection(3, reviewSectionRef, false);
                 }}
@@ -2652,7 +2624,7 @@ export function QuoteBuilder({
               </div>
               <div className="col-span-2 mt-2 md:hidden">
                 <div ref={mobilePreviewRef} className="flex justify-center">
-                  {renderCandyPreview({ width: 300, height: 223 }, 1.2)}
+                  {renderCandyPreview({ width: 240, height: 178 }, 1.2)}
                 </div>
               </div>
               {isBranded && (
@@ -2746,17 +2718,6 @@ export function QuoteBuilder({
               <button
                 type="button"
                 onClick={() => {
-                  if (!designStepComplete) {
-                    setShowFieldErrors(true);
-                    const missingText = missingFields.filter((field) => field !== "Packaging & quantity").join(", ");
-                    setMobileStepError(`Please complete: ${missingText || "design and flavour"}.`);
-                    if (missingFields.includes("Candy flavor")) {
-                      focusMobileSection(1, flavorSectionRef);
-                    } else {
-                      focusMobileSection(1, designSectionRef);
-                    }
-                    return;
-                  }
                   setMobileStepError(null);
                   focusMobileSection(2, packagingSectionRef, false);
                 }}

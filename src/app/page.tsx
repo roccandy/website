@@ -125,7 +125,7 @@ export default async function Home() {
                 <DesignCtaModal />
               </div>
 
-              <GoogleReviews className="mb-3 mt-8 lg:mb-0" />
+              <GoogleReviews className="mb-3 mt-8 lg:mb-0 lg:mt-14" />
             </div>
 
             <div className="site-home-option-grid grid grid-cols-2 md:grid-cols-3">

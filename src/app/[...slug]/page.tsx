@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DesignCtaModal } from "@/app/DesignCtaModal";
 import { PageFaqSection } from "@/components/PageFaqSection";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
@@ -39,6 +40,7 @@ type LandingPageConfig = {
   detail: string;
   defaultGalleryImageUrls?: string[];
   primaryCta?: { label: string; href: string } | null;
+  designOptions?: { label: string; href: string }[];
   enquiryCta?: {
     interest: EnquiryInterest;
     productContext: string;
@@ -64,6 +66,16 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "weddings" }),
     },
+    designOptions: [
+      {
+        label: "Initials",
+        href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-initials" }),
+      },
+      {
+        label: "Both Names",
+        href: buildDesignerPath({ orderType: "weddings", categoryId: "weddings-both-names" }),
+      },
+    ],
     enquiryCta: {
       interest: "wedding",
       productContext: "Personalised wedding candy",
@@ -112,6 +124,16 @@ const LANDING_PAGE_CONFIG: Record<string, LandingPageConfig> = {
       label: "Design Your Candy",
       href: buildDesignerPath({ orderType: "text" }),
     },
+    designOptions: [
+      {
+        label: "1–6 Letters",
+        href: buildDesignerPath({ orderType: "text", categoryId: "custom-1-6" }),
+      },
+      {
+        label: "7–14 Letters",
+        href: buildDesignerPath({ orderType: "text", categoryId: "custom-7-14" }),
+      },
+    ],
     enquiryCta: {
       interest: "custom-text",
       productContext: "Personalised custom text candy",
@@ -332,19 +354,26 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
 
                 {landingConfig.primaryCta ? (
                   <div className="site-landing-cta-wrap">
-                    <StickyLandingCta>
-                      <Link
-                        href={landingConfig.primaryCta.href}
-                        className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]`}
-                      >
-                        <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
-                        <span className="site-primary-cta-arrow" aria-hidden="true">
-                          <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
-                            <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </span>
-                      </Link>
-                    </StickyLandingCta>
+                    {landingConfig.designOptions ? (
+                      <DesignCtaModal
+                        buttonLabel={landingConfig.primaryCta.label}
+                        options={landingConfig.designOptions}
+                      />
+                    ) : (
+                      <StickyLandingCta>
+                        <Link
+                          href={landingConfig.primaryCta.href}
+                          className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_10px_20px_rgba(255,111,149,0.28)] transition hover:bg-[#ff4f80]`}
+                        >
+                          <span className="site-primary-cta-label">{landingConfig.primaryCta.label}</span>
+                          <span className="site-primary-cta-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
+                              <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        </Link>
+                      </StickyLandingCta>
+                    )}
                     {landingConfig.enquiryCta && landingEnquiryHref ? (
                       <Link
                         href={landingEnquiryHref}

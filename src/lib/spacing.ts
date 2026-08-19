@@ -66,7 +66,7 @@ export const SPACING_CONTROLS = {
 
   homePage: {
     // Gap between the left text column and the right option-card grid.
-    heroColumnsGap: "5rem",
+    heroColumnsGap: "2.5rem",
     // On mobile this is the space below the CTA and above the six option boxes.
     // On desktop it only matters if the grid wraps to multiple rows.
     ctaToBoxesGap: "3rem",

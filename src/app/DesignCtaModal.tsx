@@ -1,18 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { LANDING_CTA_ARROW_CLASS, LANDING_CTA_BUTTON_BASE_CLASS } from "@/components/landingCtaClasses";
 import { buildDesignerPath } from "@/lib/designUrls";
 
-const OPTIONS = [
+type DesignCtaOption = {
+  label: string;
+  href: string;
+};
+
+const DEFAULT_OPTIONS: DesignCtaOption[] = [
   { label: "Wedding Candy", href: buildDesignerPath({ orderType: "weddings" }) },
   { label: "Text Candy", href: buildDesignerPath({ orderType: "text" }) },
   { label: "Branded Candy", href: buildDesignerPath({ orderType: "branded", categoryId: "branded" }) },
 ];
 
-export function DesignCtaModal() {
+type DesignCtaModalProps = {
+  options?: DesignCtaOption[];
+  buttonLabel?: string;
+};
+
+export function DesignCtaModal({ options = DEFAULT_OPTIONS, buttonLabel = "Design Your Candy" }: DesignCtaModalProps) {
   const [expanded, setExpanded] = useState(false);
+  const optionsId = useId();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const stickyRef = useRef<HTMLDivElement | null>(null);
@@ -244,13 +255,13 @@ export function DesignCtaModal() {
               type="button"
               onClick={() => setExpanded(true)}
               aria-expanded={expanded}
-              aria-controls="design-options"
+              aria-controls={optionsId}
               tabIndex={expanded ? -1 : undefined}
               className={`${LANDING_CTA_BUTTON_BASE_CLASS} bg-[#ff6f95] shadow-[0_18px_38px_rgba(114,112,111,0.24)] transition-all duration-300 ease-out hover:bg-[#ff4f80] ${
                 expanded ? "pointer-events-none scale-95 opacity-0" : "scale-100 opacity-100"
               }`}
             >
-              <span className="site-primary-cta-label">Design Your Candy</span>
+              <span className="site-primary-cta-label">{buttonLabel}</span>
               <span className="site-primary-cta-arrow" aria-hidden="true">
                 <svg viewBox="0 0 12 12" className={LANDING_CTA_ARROW_CLASS} fill="none">
                   <path d="M3 2.25 7.5 6 3 9.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -260,13 +271,13 @@ export function DesignCtaModal() {
           </div>
 
           <div
-            id="design-options"
+            id={optionsId}
             aria-hidden={!expanded}
             hidden={!expanded}
             className="relative flex items-center justify-center"
           >
             <div className="inline-flex overflow-hidden rounded-full border border-zinc-200 bg-white shadow-[0_10px_22px_rgba(114,112,111,0.16)]">
-              {OPTIONS.map((option, index) => (
+              {options.map((option, index) => (
                 <Link
                   key={option.href}
                   href={option.href}
