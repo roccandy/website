@@ -57,6 +57,14 @@ describe("admin Square invoice removal", () => {
     expect(invoiceRequest.invoice.payment_requests[0].due_date).toBe("2026-08-27");
   });
 
+  it("calculates PDF due dates from the current Perth date", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-19T20:00:00.000Z")); // 20 Aug in Perth
+    const { adminInvoiceDueDateFromToday } = await import("@/lib/adminOrderIntegrations");
+
+    expect(adminInvoiceDueDateFromToday(7)).toBe("2026-08-27");
+  });
+
   it("cancels a sent invoice with Square's top-level version payload", async () => {
     const fetchMock = vi
       .fn()

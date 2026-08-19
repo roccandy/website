@@ -401,12 +401,16 @@ function dateKeyFromPerthToday(daysToAdd: number) {
   return dueDate.toISOString().slice(0, 10);
 }
 
-function invoiceDueDate(order: AdminInvoiceOrderInput) {
-  const configuredDays = order.invoiceDueDays == null ? Number.NaN : Number(order.invoiceDueDays);
+export function adminInvoiceDueDateFromToday(invoiceDueDays: number | null | undefined) {
+  const configuredDays = invoiceDueDays == null ? Number.NaN : Number(invoiceDueDays);
   const dueDays = Number.isFinite(configuredDays)
     ? Math.min(90, Math.max(0, Math.floor(configuredDays)))
     : 7;
   return dateKeyFromPerthToday(dueDays);
+}
+
+function invoiceDueDate(order: AdminInvoiceOrderInput) {
+  return adminInvoiceDueDateFromToday(order.invoiceDueDays);
 }
 
 function daysUntil(dateKey: string) {

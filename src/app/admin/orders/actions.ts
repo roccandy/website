@@ -22,6 +22,7 @@ import {
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
 import {
+  adminInvoiceDueDateFromToday,
   createAndPublishAdminSquareInvoice,
   createAdminSquareInvoiceDraft,
   DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL,
@@ -1743,10 +1744,11 @@ export async function sendAdminSquareInvoice(formData: FormData) {
 
   try {
     const sentAt = new Date().toISOString();
-    let resolvedInvoicePatch: ReturnType<typeof squareInvoiceSendPatch>;
+    let resolvedInvoicePatch: ReturnType<typeof squareInvoiceSendPatch> & { square_invoice_due_date?: string };
     if (invoiceDelivery === "pdf") {
       const invoiceNumber = existingOrder.order_number || existingOrder.id.slice(0, 8);
       const filename = `roc-candy-tax-invoice-${invoiceNumber.replace(/[^a-z0-9_-]/gi, "-")}.pdf`;
+      const pdfDueDate = adminInvoiceDueDateFromToday(integrationOrder.invoiceDueDays);
       if (!localPatch.customer_email) {
         throw new Error("A customer email address is required to send the PDF invoice.");
       }
@@ -1755,7 +1757,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         invoiceTitle: localPatch.square_invoice_title,
         customerName: localPatch.customer_name,
         customerEmail: localPatch.customer_email,
-        dueDate: existingOrder.square_invoice_due_date ?? existingOrder.due_date,
+        dueDate: pdfDueDate,
         orders: invoiceGroupOrders,
       });
       const result = await updateAdminSquareInvoiceDraftAndAttachPdf(integrationOrder, { filename, pdf });
@@ -1788,6 +1790,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         square_invoice_version: result.invoiceVersion,
         square_invoice_status: result.invoiceStatus,
         square_invoice_url: result.invoiceUrl,
+        square_invoice_due_date: pdfDueDate,
         square_invoice_sent_at: sentAt,
         square_invoice_error: null,
         payment_method: paymentPatch.payment_method,
