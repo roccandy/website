@@ -81,8 +81,8 @@ export const SPACING_CONTROLS = {
     belowParagraph: "2.5rem",
     // Space below the homepage USP strip and above the CTA.
     belowUsp: "3.5rem",
-    // Space below the homepage CTA and above the next section.
-    belowCta: "2rem",
+    // Space below the homepage hero (including reviews and option grid) and above the next section.
+    belowCta: "1rem",
 
     // Gap between the homepage option cards on the right.
     optionGridGap: "1rem",
