@@ -119,7 +119,7 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
 
   return (
     <div className="relative">
-      <div className="site-header-row flex items-center lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="site-header-row grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem_2.5rem] items-center lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <Link
           href="/"
           aria-label="Roc Candy home"
@@ -178,7 +178,42 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
           })}
         </nav>
 
-        <div className="site-header-actions ml-auto flex shrink-0 items-center lg:ml-0 lg:justify-self-end">
+        <div ref={mobileShopRootRef} className="static min-w-0 lg:hidden">
+          <button
+            ref={mobileShopButtonRef}
+            type="button"
+            aria-expanded={openMenu === "mobile-shop"}
+            aria-controls={mobileShopId}
+            onClick={() => toggleMenu("mobile-shop")}
+            className={`inline-flex h-10 w-full min-w-0 items-center justify-center gap-1 rounded-full border px-1.5 text-[clamp(11px,3.2vw,13px)] font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
+              shopIsActive
+                ? "border-[#ff9db8] bg-[#fff0f5] text-[#e94f7d]"
+                : "border-[#ffd0dd] bg-[#fff8fa] text-[#ff6f95] hover:border-[#ff9db8] hover:text-[#ff4f80]"
+            }`}
+          >
+            Shop
+            <ChevronDown
+              className={`h-3.5 w-3.5 shrink-0 transition-transform ${openMenu === "mobile-shop" ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+          <div
+            id={mobileShopId}
+            hidden={openMenu !== "mobile-shop"}
+            className="absolute inset-x-0 top-full z-[80] mt-2 rounded-xl border border-zinc-200 bg-white p-2 shadow-xl"
+          >
+            {renderShopLinks()}
+          </div>
+        </div>
+
+        <ContactUsButton
+          email={enquiriesEmail}
+          emailHref={enquiriesHref}
+          responsiveHeader
+          className="min-w-0 lg:hidden"
+        />
+
+        <div className="site-header-actions contents lg:flex lg:shrink-0 lg:items-center lg:justify-self-end">
           <ContactUsButton
             email={enquiriesEmail}
             emailHref={enquiriesHref}
@@ -250,42 +285,6 @@ export default function HeaderNav({ enquiriesEmail, enquiriesHref, logoPriority 
             </nav>
           </div>
         </div>
-      </div>
-
-      <div className="mt-1.5 grid grid-cols-2 gap-2 lg:hidden">
-        <div ref={mobileShopRootRef} className="relative">
-          <button
-            ref={mobileShopButtonRef}
-            type="button"
-            aria-expanded={openMenu === "mobile-shop"}
-            aria-controls={mobileShopId}
-            onClick={() => toggleMenu("mobile-shop")}
-            className={`inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-full border text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6f95] ${
-              shopIsActive
-                ? "border-[#ff9db8] bg-[#fff0f5] text-[#e94f7d]"
-                : "border-[#ffd0dd] bg-[#fff8fa] text-[#ff6f95] hover:border-[#ff9db8] hover:text-[#ff4f80]"
-            }`}
-          >
-            Shop
-            <ChevronDown
-              className={`h-4 w-4 transition-transform ${openMenu === "mobile-shop" ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-          <div
-            id={mobileShopId}
-            hidden={openMenu !== "mobile-shop"}
-            className="absolute left-0 top-full z-[80] mt-2 w-full rounded-xl border border-zinc-200 bg-white p-2 shadow-xl"
-          >
-            {renderShopLinks()}
-          </div>
-        </div>
-        <ContactUsButton
-          email={enquiriesEmail}
-          emailHref={enquiriesHref}
-          responsiveHeader
-          className="w-full"
-        />
       </div>
     </div>
   );
