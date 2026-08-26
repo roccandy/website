@@ -36,7 +36,6 @@ export type CheckoutOrderPayload = {
   dueDate?: string;
   pickup?: boolean;
   paymentPreference?: string | null;
-  promoCode?: string | null;
   customer: {
     firstName: string;
     lastName: string;

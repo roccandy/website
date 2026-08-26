@@ -1,5 +1,7 @@
 # Pre Admin Large Order Rollback Reference
 
+> Historical rollback snapshot only. It records the system before later WooCommerce removal and must not be interpreted as current behavior. See `docs/architecture-notes.md` and `docs/launch-steps.md` for the live system.
+
 Created: 2026-06-14 19:26 AWST
 Workspace: `/Users/joeconlin/dev/roccandy`
 Current branch at capture time: `main`

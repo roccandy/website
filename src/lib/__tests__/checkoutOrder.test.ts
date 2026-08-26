@@ -279,46 +279,6 @@ describe("buildCheckoutOrderContext", () => {
     ]);
   });
 
-  it("applies the checkout test promo across checkout lines and stored order payloads", async () => {
-    premadeRows = [
-      {
-        id: "premade-1",
-        name: "Premade Candy",
-        price: 12,
-        weight_g: 100,
-        description: "Premade",
-      },
-    ];
-    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
-
-    const context = await buildCheckoutOrderContext(
-      buildOrder({
-        promoCode: "FH*#HK@NXsh83D=-S",
-        customItems: [customItem("ONE")],
-        premadeItems: [{ premadeId: "premade-1", quantity: 2 }],
-      })
-    );
-
-    expect(context.totalAmount).toBe(0.01);
-    expect(context.lineItems.map((item) => item.total)).toEqual(["0.01", "0.00"]);
-    expect(context.orderPayloads.map((payload) => payload.total_price)).toEqual([0.01, 0]);
-  });
-
-  it("ignores non-matching checkout promo codes", async () => {
-    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
-
-    const context = await buildCheckoutOrderContext(
-      buildOrder({
-        promoCode: "FH*#HK@NXsh83D=-X",
-        customItems: [customItem("ONE")],
-      })
-    );
-
-    expect(context.totalAmount).toBe(100);
-    expect(context.lineItems.map((item) => item.total)).toEqual(["100.00"]);
-    expect(context.orderPayloads.map((payload) => payload.total_price)).toEqual([100]);
-  });
-
   it("rejects custom label artwork with a zero label count", async () => {
     const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 

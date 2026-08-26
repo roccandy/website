@@ -2,11 +2,14 @@ import { createHash, createHmac, timingSafeEqual } from "crypto";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 function stableOrderJson(order: CheckoutOrderPayload) {
+  // Preserve the pre-removal signature shape so a PayPal order created just
+  // before deployment can still be captured. This value has no pricing effect.
+  const legacyPromoCode = (order as CheckoutOrderPayload & { promoCode?: unknown }).promoCode;
   return JSON.stringify({
     dueDate: order.dueDate ?? null,
     pickup: Boolean(order.pickup),
     paymentPreference: order.paymentPreference ?? null,
-    promoCode: order.promoCode ?? null,
+    promoCode: typeof legacyPromoCode === "string" ? legacyPromoCode : null,
     customer: order.customer,
     customItems: order.customItems,
     premadeItems: order.premadeItems,

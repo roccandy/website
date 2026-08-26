@@ -23,4 +23,13 @@ describe("checkout fingerprint", () => {
     expect(verifyCheckoutFingerprint(fingerprint, { ...order, pickup: false }, "0008")).toBe(false);
     expect(verifyCheckoutFingerprint(fingerprint, order, "0009")).toBe(false);
   });
+
+  it("keeps pre-removal PayPal checkout signatures compatible without changing pricing", () => {
+    process.env.PAYPAL_SECRET = "test-secret";
+    const legacyOrder = { ...order, promoCode: "legacy-value" } as CheckoutOrderPayload;
+    const fingerprint = createCheckoutFingerprint(legacyOrder, "0008");
+
+    expect(verifyCheckoutFingerprint(fingerprint, legacyOrder, "0008")).toBe(true);
+    expect(verifyCheckoutFingerprint(fingerprint, order, "0008")).toBe(false);
+  });
 });

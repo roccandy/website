@@ -200,40 +200,6 @@ describe("finalizePaidCheckoutOrder", () => {
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
 
-  it("stores test promo orders without creating a Woo order", async () => {
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
-
-    await expect(
-      finalizePaidCheckoutOrder({
-        order: {
-          ...baseOrder,
-          promoCode: "FH*#HK@NXsh83D=-S",
-        },
-        paymentProvider: "square",
-        paymentMethod: "square",
-        paymentMethodTitle: "Credit Card",
-        transactionId: "txn_test",
-      }),
-    ).resolves.toEqual({
-      orderNumber: "000123",
-      trackingTransactionId: "000123-txn_test",
-      orderTotal: 149.5,
-      tax: 13.59,
-      shipping: 0,
-      adminEmailWarning: null,
-    });
-
-    expect(insert).toHaveBeenCalledWith([
-      expect.objectContaining({
-        payment_provider: "square",
-        payment_transaction_id: "txn_test",
-        status: "test",
-      }),
-    ]);
-    expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
-    expect(sendAdminOrderSummaryEmail).toHaveBeenCalledTimes(1);
-  });
-
   it("rebuilds the context and retries when an order number conflicts", async () => {
     buildCheckoutOrderContext
       .mockResolvedValueOnce({

@@ -1,6 +1,6 @@
 # Roc Candy Pricing Fact Sheet
 
-Authoritative summary of the current live pricing, packaging, labels, and extras.
+Historical pricing snapshot last verified on the date below. Live pricing and packaging are editable in Supabase/admin and therefore take precedence. See `docs/architecture-notes.md` for the current data-ownership model.
 
 Verified against the live Supabase pricing/config tables on `2026-04-21`.
 

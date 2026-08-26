@@ -51,7 +51,7 @@ Do not deploy code that writes the new order columns before this migration has b
 
 The admin create flow creates:
 
-- one pending Woo order mirror
+- one or more pending Supabase order rows
 - one Square customer
 - one Square order
 - one Square invoice draft
@@ -69,10 +69,6 @@ Required existing env vars:
 - `SQUARE_ACCESS_TOKEN`
 - `SQUARE_LOCATION_ID`
 - `SQUARE_API_BASE`
-- `WOO_BASE_URL`
-- `WOO_CONSUMER_KEY`
-- `WOO_CONSUMER_SECRET`
-- `WOO_CUSTOM_PRODUCT_ID`
 
 New webhook env vars:
 
@@ -89,13 +85,13 @@ Subscribe the Square webhook to:
 - `invoice.published`
 - `invoice.updated`
 
-When `invoice.payment_made` is received, Supabase is marked paid with `payment_provider = square_invoice`, the Woo mirror is moved to paid/processing, and the orders inbox receives a paid-invoice notification.
+When `invoice.payment_made` is received, the Supabase order is marked paid with `payment_provider = square_invoice`, and the orders inbox receives a paid-invoice notification.
 
 Admin-created customer confirmation emails use the same email summary as website orders. Because the admin form does not capture a browser-rendered preview image, the email generates a static preview from the saved order fields, including branded logos, wedding hearts, initials mode, and two-colour pinstripe jackets.
 
 ## Operational Notes
 
-- If Woo or Square invoice creation fails, the Supabase order remains saved and unpaid.
+- If Square invoice creation fails, the Supabase order remains saved and unpaid.
 - The failure text is stored on `orders.square_invoice_error`.
 - Admin order rows show an invoice warning badge when `square_invoice_error` exists.
 - Admin order rows show a payment overdue badge when an unpaid admin-managed order is past its due date.

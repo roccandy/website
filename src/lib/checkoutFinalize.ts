@@ -8,7 +8,6 @@ import {
 } from "@/lib/email";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
-import { isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { logPaymentFailure } from "@/lib/paymentFailures";
@@ -70,20 +69,18 @@ function buildPaidOrderPayloads({
   paymentProvider,
   paymentMethodTitle,
   transactionId,
-  isTestOrder,
   paidAt,
 }: {
   context: CheckoutOrderContext;
   paymentProvider: string;
   paymentMethodTitle: string;
   transactionId: string;
-  isTestOrder: boolean;
   paidAt: string;
 }): Array<Record<string, unknown>> {
   return context.orderPayloads.map((payload) => ({
     ...payload,
     payment_method: paymentMethodTitle,
-    status: isTestOrder ? "test" : "pending",
+    status: "pending",
     paid_at: paidAt,
     payment_provider: paymentProvider,
     payment_transaction_id: transactionId,
@@ -104,7 +101,6 @@ export async function finalizePaidCheckoutOrder({
       baseOrderNumber,
     }));
   const customerEmail = order.customer?.email?.trim() || null;
-  const isTestOrder = isCheckoutTestPromoCode(order.promoCode);
   const paidAt = new Date().toISOString();
 
   const existingOrders = await findExistingPaymentOrder(paymentProvider, transactionId).catch(() => []);
@@ -129,7 +125,6 @@ export async function finalizePaidCheckoutOrder({
       paymentProvider,
       paymentMethodTitle,
       transactionId,
-      isTestOrder,
       paidAt,
     });
     let insertError: { message?: string } | null = null;
@@ -178,7 +173,6 @@ export async function finalizePaidCheckoutOrder({
       paymentProvider,
       paymentMethodTitle,
       transactionId,
-      isTestOrder,
       paidAt,
     });
     await logPaymentFailure({

@@ -1,384 +1,188 @@
-# Launch Steps
-
-Single ordered runbook for launching Roc Candy.
+# Roc Candy Operations and Release Guide
 
-Rule for this document:
+Status: authoritative current operations document
+Last verified against the repository and production: 2026-08-26
 
-- `roccandy.vercel.app` must keep working right up until cutover.
-- Admin auth must keep working right up until cutover.
-- Any change that would break `roccandy.vercel.app` stays in the post-cutover section.
-
-Last reviewed against the live production site on `2026-04-29`.
-
-## Use This Document
-
-Work from top to bottom.
+The site is launched and in production. This document replaces the old pre-launch checklist. Use it with `docs/architecture-notes.md`; old audits and rollout plans are historical evidence, not open launch work.
 
-- Do not skip ahead.
-- Do not change post-cutover items early.
-- Tick each item off only after it is actually done.
-
-## Phase 1: Finish Launch Content And Redirect Prep
-
-- [x] Complete the editable site pages in `/admin/settings/pages`.
-- [x] Finalise homepage content, SEO title, meta description, and share image.
-- [x] Finalise About page content and metadata.
-- [x] Finalise FAQ page intro and metadata.
-- [x] Finalise Blog landing page content and metadata.
-- [x] Finalise Design page intro and metadata.
-- [x] Finalise Pre-made Candy page intro and metadata.
-- [x] Finalise Wedding landing page content and metadata.
-- [x] Finalise Custom Text landing page content and metadata.
-- [x] Finalise Branded landing page content and metadata.
-- [x] Finalise Contact page content and metadata.
-- [x] Finalise Shipping and Returns content and metadata.
-- [x] Finalise Privacy page content and metadata.
-- [x] Finalise Terms page metadata.
-- [x] Fill in pre-made product SEO fields for priority products.
-- [x] Upload final page/product social images where needed.
-- [x] Choose relevant FAQ items for the key landing/category pages.
-- [x] Gather old live URLs that need redirects.
-- [x] Gather Google Ads landing page URLs.
-- [x] Gather important indexed URLs and known campaign/backlink URLs.
-- [x] Enter the redirect map into the SEO workspace.
-- [x] Check business phone, email, and contact details across edited pages.
-
-## Phase 2: Confirm Database And Admin Preconditions
-
-- [x] Confirm the live Supabase schema is aligned with `docs/sql/`.
-- [x] Run [2026-03-24-schema-health-check.sql](/Users/joeconlin/dev/roccandy/docs/sql/2026-03-24-schema-health-check.sql) if you want a final DB confidence pass.
-- [x] Confirm the `SEO` role exists in admin if needed.
-- [x] Confirm any SEO-only user can access `/admin/settings/pages`.
-- [x] Confirm any SEO-only user is read-only everywhere else intended.
-- [x] Finalise production settings and blocked dates in `/admin/settings/production`.
-
-## Phase 3: Set Safe Pre-Cutover Production Env Vars
-
-These are the env-var changes you can make before cutover without breaking `roccandy.vercel.app`.
-
-### Core Site / Auth
-
-- [x] Set `NEXT_PUBLIC_SITE_URL=https://roccandy.com.au` in Vercel `Production`.
-- [x] Set `SITE_URL=https://roccandy.com.au` only if you intentionally use that fallback env in Vercel.
-- [x] Confirm `NEXTAUTH_SECRET` is set in Vercel `Production`.
-- [x] Do not change `NEXTAUTH_URL` yet.
-
-### Preview Crawl / Temporary SEO Audit Flags
-
-- [x] Confirm `ALLOW_PREVIEW_CRAWL` is unset or `false` for normal production use.
-- [x] Confirm `PREVIEW_SITE_URL` is not left on for launch mode.
-- [x] Confirm `NEXT_PUBLIC_PREVIEW_SITE_URL` is not left on for launch mode.
-
-### Tracking / Verification
-
-- [ ] Set `NEXT_PUBLIC_GA_MEASUREMENT_ID` if using direct GA4.
-- [X] Set `NEXT_PUBLIC_GTM_ID` if using GTM.
-- [x] Decide whether GTM or direct GA4 is the source of truth.
-- [ ] Set `GOOGLE_SITE_VERIFICATION` if using HTML-tag verification.
-- [ ] Set `BING_SITE_VERIFICATION` if needed.
-- [ ] Set `YANDEX_SITE_VERIFICATION` if needed.
-
-### Square
-
-- [x] Replace `NEXT_PUBLIC_SQUARE_APP_ID` with the live app ID.
-- [x] Replace `NEXT_PUBLIC_SQUARE_LOCATION_ID` with the live location ID.
-- [x] Set `NEXT_PUBLIC_SQUARE_ENV=production`.
-- [x] Replace `SQUARE_ACCESS_TOKEN` with the live access token.
-- [x] Replace `SQUARE_LOCATION_ID` with the live location ID.
-- [x] Clear `SQUARE_API_BASE` if it still points at sandbox, or set it to `https://connect.squareup.com`. #set to squareup
-
-### PayPal
-
-- [x] Replace `NEXT_PUBLIC_PAYPAL_CLIENT_ID` with the live client ID.
-- [x] Set `NEXT_PUBLIC_PAYPAL_ENV=production`.
-- [x] Set `PAYPAL_ENV=production` if you use the server-side env explicitly.
-- [x] Replace `PAYPAL_SECRET` with the live secret.
-- [x] Clear `PAYPAL_API_BASE` if it still points at sandbox, or set it to `https://api-m.paypal.com`.
-
-### Supabase
-
-- [x] Confirm `NEXT_PUBLIC_SUPABASE_URL`.
-- [x] Confirm `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- [x] Confirm `SUPABASE_SERVICE_ROLE_KEY`.
-
-### WooCommerce
-
-- [x] Confirm `WOO_BASE_URL=https://woo.roccandy.com.au`.
-- [x] Confirm `WOO_CONSUMER_KEY`.
-- [x] Confirm `WOO_CONSUMER_SECRET`.
-- [x] Confirm `WOO_AUTH_METHOD`.
-- [x] Confirm `WOO_CUSTOM_PRODUCT_ID`.
-- [x] Confirm `WOO_WEBHOOK_SECRET`.
-
-### Email
-
-- [x] Confirm `SMTP_HOST`.
-- [x] Confirm `SMTP_PORT`.
-- [x] Confirm `SMTP_USER`.
-- [x] Confirm `SMTP_PASS`.
-- [x] Confirm `SMTP_FROM`.
-- [x] Confirm `SMTP_SECURE`.
-- [x] Confirm `SMTP_ENABLED`.
-- [x] Confirm `ORDERS_EMAIL`.
-- [x] Confirm `ENQUIRIES_EMAIL`. #not added.
-
-## Phase 4: Prepare Vercel Domains Without Cutting Over
-
-- [x] Add `roccandy.com.au` to Vercel.
-- [x] Add `www.roccandy.com.au` to Vercel.
-- [x] Make `roccandy.com.au` the intended primary domain in Vercel.
-- [x] Configure `www` to redirect to the apex domain.
-- [x] Do not change DNS yet.
-
-## Phase 5: Redeploy Production And Test On `roccandy.vercel.app`
-
-- [x] Redeploy Vercel `Production` after the safe env changes above.
-- [x] Open the production deployment on `roccandy.vercel.app`.
-- [x] Confirm the public site still works on `roccandy.vercel.app`.
-- [x] Confirm admin still works on `roccandy.vercel.app`.
-- [x] Confirm the admin no longer shows the sandbox banner.
-- [x] Confirm `/sitemap.xml` loads.
-- [x] Confirm `/robots.txt` loads.
-- [x] Confirm canonicals use `roccandy.com.au` and not a random preview host.
-- [x] Confirm preview hosts remain non-indexable.
-
-## Phase 6: Run Pre-Cutover Functional QA On `roccandy.vercel.app`
-
-- [x] Test homepage on desktop and mobile.
-- [x] Test About page.
-- [x] Test FAQ page.
-- [x] Test Design page.
-- [x] Test Wedding landing page.
-- [x] Test Custom Text landing page.
-- [x] Test Branded landing page.
-- [x] Test Pre-made Candy listing page.
-- [x] Test several pre-made product pages.
-- [x] Test Contact page.
-- [x] Test Shipping and Returns page.
-- [x] Test Privacy page.
-- [x] Test Terms page.
-- [x] Test 404 page.
-- [x] Test cart add / remove / update.
-- [x] Test custom order flow from designer to checkout.
-- [x] Test pre-made order flow from product page to checkout.
-- [X] Test redirects already entered in the SEO workspace.
-
-## Phase 7: Run Pre-Cutover Payment QA On `roccandy.vercel.app`
-
-- [x] Run one live Square payment on `roccandy.vercel.app` if operationally safe.
-- [x] Run one live PayPal payment on `roccandy.vercel.app` if operationally safe.
-- [x] Confirm successful payments create Woo orders.
-- [x] Confirm successful payments create Supabase order rows.
-- [x] Confirm Woo order totals, line items, and statuses look correct.
-- [X] Confirm admin email notifications are received.
-- [X] Confirm customer email notifications are received.
-- [X] Confirm refunds / payment-failure handling are acceptable.
+## Current Production Baseline
 
-## Phase 8: Run Pre-Cutover Analytics QA On `roccandy.vercel.app`
-
-- [ ] Confirm `add_to_cart` in GA4 DebugView.
-- [ ] Confirm `begin_checkout` in GA4 DebugView.
-- [ ] Confirm `purchase` in GA4 DebugView.
-- [ ] Confirm purchase transaction IDs are present and stable.
-- [ ] Link GA4 and Google Ads if required.
-- [ ] Mark `purchase` as a GA4 key event if that is your conversion source.
-- [ ] Import the GA4 `purchase` conversion into Google Ads if required.
-
-## Phase 9: Prepare External Services, But Do Not Cut Them Over Yet
+Verified without mutating production on 2026-08-26:
 
-### Search Console
+- `https://roccandy.com.au` serves the storefront; `www` redirects to the apex domain.
+- Checkout is live and marked `noindex`.
+- `/admin` redirects to the login page for an unauthenticated browser; admin pages are marked `noindex`.
+- `robots.txt`, `sitemap.xml`, `manifest.webmanifest`, and `llms.txt` respond successfully. The sitemap currently contains 36 URLs.
+- Vercel preview hosts return `X-Robots-Tag: noindex, nofollow, noarchive`.
+- The Apple Pay association file and Square invoice webhook health GET respond successfully.
+- `/design` has a self-canonical URL, and Google site verification metadata is present.
+- The active GTM container includes the expected ecommerce and enquiry event names.
+- Old `/api/woo/*` URLs return 404, as intended.
 
-- [x] Create the real-domain property for `roccandy.com.au`.
-- [x] Verify it now if you are using DNS verification.
-- [x] Do not treat `roccandy.vercel.app` as the main indexed property.
-- [x] Do not submit the final-domain sitemap yet unless the domain is already live.
+Not proven by a read-only website check:
 
-### Merchant Center
+- A real Square, wallet, or PayPal payment completes end to end.
+- Customer/admin email delivery reaches inboxes rather than spam.
+- An authenticated admin can complete every role-specific workflow.
+- Square invoice webhook delivery is configured in the Square dashboard.
+- GA4, Search Console, Merchant Center, and Ads show fresh production data.
 
-- [ ] Decide whether Merchant Center will cover pre-made products only.
-- [ ] Prepare the account/feed/crawl setup.
-- [ ] Do not point Merchant product URLs at `vercel.app`.
-- [ ] Do not claim the staging host as the real website.
-- [ ] Wait until cutover before refreshing the live crawl/feed.
-- [ ] Damien to work on Google Merchant Center account and product feed on Tuesday, May 5, 2026.
+Those items require authenticated console checks or controlled transactions. They are ongoing operations, not evidence that the website is unfinished.
 
-### Google Ads
+## Safe Change and Release Process
 
-- [ ] Inventory any ad URLs or assets using `roccandy.vercel.app`.
-- [ ] Prepare to switch them after cutover if needed.
+This process is designed so checks do not mutate production data.
 
-### Cloudflare
+1. Before editing, inspect `git status` and preserve unrelated work.
+2. Make the smallest scoped change. Database, payment, auth, email, and image-processing changes require extra review.
+3. Run locally:
 
-- [x] Prepare the DNS change plan for `@` and `www`.
-- [x] Do not move DNS yet.
+   ```bash
+   npm test
+   npm run lint
+   npm run build
+   npm audit --omit=dev
+   ```
 
-### GitHub Actions
+4. Treat `npm audit` as a triage report, not an instruction to run `npm audit fix`. Review the proposed package and breaking-change risk.
+5. Deploy to a Vercel preview first. Confirm the preview remains `noindex` and uses safe credentials/provider modes.
+6. Perform the read-only smoke checks below. For checkout-related changes, also complete a deliberate provider sandbox or approved low-value production transaction with a reconciliation plan.
+7. Promote only after the preview checks pass. Do not make dependency PRs auto-merge or auto-deploy to production.
+8. Repeat production smoke checks and watch Vercel/Supabase/payment/email logs immediately after release.
 
-- [x] Note that `KEEPALIVE_URL` must stay on the current working host until cutover.
+### Read-only smoke checks
 
-### Woo / WordPress
+- Load `/`, `/design`, `/pre-made-candy`, one product page, one blog page, `/checkout`, and `/admin/login`.
+- Add a product and custom design to a cart; confirm quantity/date/pricing changes update visibly. Stop before payment unless a controlled transaction was planned.
+- Confirm public images, a Supabase-hosted product image, and designer preview render.
+- Confirm `robots.txt`, `sitemap.xml`, `manifest.webmanifest`, and `llms.txt` respond.
+- Confirm a Vercel preview response contains the noindex header.
+- Confirm the browser console has no new application errors.
 
-- [x] Note that Woo webhook delivery URL must stay on the current working host until cutover.
-- [x] Note that the Woo return/success URL must stay on the current working host until cutover.
-- [x] Confirm the current plugin source is [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php).
-- [x] Confirm the packaged plugin zips that will need updating after cutover are:
-  - [roccandy-woo-redirect.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect.zip)
-  - [roccandy-woo-redirect-clean.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect-clean.zip)
+Do not use live checkout, refunds, admin order creation, production scheduling, or webhook replay as casual smoke tests; they create real external or business state.
 
-### Square Apple Pay
+## Dependency Maintenance
 
-- [x] Confirm the verification file exists at [apple-developer-merchantid-domain-association](/Users/joeconlin/dev/roccandy/public/.well-known/apple-developer-merchantid-domain-association).
-- [x] Wait until cutover before verifying Apple Pay against `roccandy.com.au`.
+The current production dependency audit has known findings. The safest policy is controlled patching, not indefinite avoidance and not blind bulk upgrades.
 
-### Supabase Auth
+- Keep the lockfile committed. A deployed build does not silently upgrade because a newer package exists.
+- Prioritize Internet-facing/runtime packages first: Next.js, NextAuth, and Sharp. Handle Nodemailer separately because its secure target is a major-version upgrade.
+- Put each coherent update group in its own branch/PR, run tests/lint/build, inspect the lockfile, deploy a preview, and smoke-test the affected flow.
+- Keep provider/package versions pinned by the lockfile until that review is complete.
+- Enable Dependabot alerts/security-update PRs if desired, but require human review and passing checks. Never enable automatic merging to production.
+- Review dependency alerts at least monthly and promptly when GitHub/Supabase/Vercel reports a critical issue affecting a used path.
 
-- [x] If you use Supabase Auth email links or redirect URLs anywhere, note that Site URL / Redirect URLs should be changed after cutover.
+Leaving the tree untouched avoids update-induced regressions today, but retains known denial-of-service, middleware/auth-token, image-processing, and transitive-library risk and makes a later upgrade larger. The application’s actual exposure varies: some reported Nodemailer, OAuth/email-provider, custom-server, rewrite, or low-level library APIs are not used here. Record a deliberate deferral; do not treat “the site still works” as vulnerability remediation.
 
-## Phase 10: Final Go / No-Go Check Before DNS Cutover
-
-- [x] `roccandy.vercel.app` public site is working.
-- [x] `roccandy.vercel.app` admin is working.
-- [x] Live payments are working on `roccandy.vercel.app`.
-- [x] Woo sync is working.
-- [x] Supabase order inserts are working.
-- [x] Admin and customer emails are working.
-- [ ] GA4 purchase tracking is working.
-- [x] Redirect map is entered.
-- [x] Vercel domains are prepared.
-- [x] Cloudflare DNS plan is ready.
-- [x] You are ready to perform the cutover immediately after the next section starts.
-
-If any of the above is false, stop here and fix it before cutover.
-
-## Phase 11: Cutover Actions
-
-Do these in order once you are ready to switch.
-
-### Host / Auth Switch
-
-- [x] In Vercel `Production`, set `NEXTAUTH_URL=https://roccandy.com.au`.
-- [x] Redeploy `Production` immediately after changing `NEXTAUTH_URL`.
+## Automated Checks: Sensible Baseline
 
-### DNS Switch
-
-- [x] Update Cloudflare DNS so `@` points to Vercel.
-- [x] Update Cloudflare DNS so `www` points to Vercel.
-- [x] Confirm `www` redirects to `roccandy.com.au`.
-- [x] Keep `woo.roccandy.com.au` unchanged if Woo stays on its current host.
+The recommended baseline is additive and does not change production application behavior:
 
-### GitHub Actions
-
-- [ ] Change the GitHub `KEEPALIVE_URL` secret to `https://roccandy.com.au/api/keepalive`.
-
-### Woo / WordPress
-
-- [x] Change the Woo webhook delivery URL to `https://roccandy.com.au/api/woo/webhook`.
-- [x] Update the Woo return/success URL from `https://roccandy.vercel.app/checkout/success` to `https://roccandy.com.au/checkout/success`.
-- [x] Update [roccandy-woo-redirect.php](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect/roccandy-woo-redirect.php) to the live domain.
-- [x] Rebuild or replace:
-  - [roccandy-woo-redirect.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect.zip)
-  - [roccandy-woo-redirect-clean.zip](/Users/joeconlin/dev/roccandy/wordpress/roccandy-woo-redirect-clean.zip)
-- [x] Re-upload or update the installed WordPress plugin if needed.
-
-### Square Apple Pay
-
-- [x] Verify Apple Pay against `https://roccandy.com.au/.well-known/apple-developer-merchantid-domain-association`.
-- [ ] Complete one low-value live Apple Pay checkout in Safari and confirm the Square payment, Roc Candy order, and emails.
-
-### Search Console
-
-- [x] Submit `https://roccandy.com.au/sitemap.xml`.
-- [ ] Use URL inspection on the homepage and key landing/product pages.
-
-### Merchant Center
-
-- [ ] Switch the website/product URLs to `https://roccandy.com.au`.
-- [ ] Refresh or fetch the feed / crawl.
-- [ ] Confirm website claim / verification is tied to the real domain.
-- [ ] Damien to work on Merchant Center account and product feed on Tuesday, May 5, 2026.
-
-### Supabase Auth
-
-- [x] If used, set Supabase Auth Site URL to `https://roccandy.com.au` or confirm Supabase Auth is not used.
-- [x] If used, add Supabase Auth Redirect URLs for `https://roccandy.com.au/**` or confirm Supabase Auth is not used.
-
-### External Links Still Using `vercel.app`
-
-- [ ] Switch any Google Ads final URLs still using `vercel.app`.
-- [ ] Switch any Merchant Center URLs still using `vercel.app`.
-- [ ] Switch any email-template, campaign, or profile links under your control that still use `vercel.app`.
-
-## Phase 12: Immediate Post-Cutover Smoke Test
-
-- [x] Homepage loads on `https://roccandy.com.au`.
-- [ ] Admin login works on `https://roccandy.com.au`.
-- [ ] Admin logout works on `https://roccandy.com.au`.
-- [x] Core landing pages load.
-- [x] Key pre-made product pages load.
-- [x] Old high-value URLs redirect correctly.
-- [x] Checkout loads.
-- [ ] Run one live payment on the live domain if operationally safe.
-- [ ] Confirm Woo order creation from the live domain.
-- [ ] Confirm Supabase order rows from the live domain.
-- [ ] Confirm admin email delivery from the live domain.
-- [ ] Confirm customer email delivery from the live domain.
-- [ ] Confirm `purchase` appears in GA4 for the live-domain order.
-
-## Phase 13: Post-Cutover Validation Over The Next 24-72 Hours
-
-### SEO / Indexing
-
-- [x] Confirm `https://roccandy.com.au/sitemap.xml` loads.
-- [x] Confirm `https://roccandy.com.au/robots.txt` loads.
-- [x] Confirm canonicals point to `roccandy.com.au`.
-- [x] Confirm no important pages point canonicals at preview hosts.
-- [x] Confirm Open Graph metadata is correct.
-- [x] Confirm structured data is present on key pages.
-- [x] Confirm preview deployments remain non-indexable.
-- [ ] Resolve or intentionally document the non-critical `/design` canonical warning between `/design` and `/design/wedding-candy`.
-
-### Analytics / Ads / Merchant
-
-- [x] Check GA4 Realtime.
-- [ ] Check GA4 DebugView.
-- [ ] Check Google Ads conversion diagnostics.
-- [ ] Check Merchant Center diagnostics.
-- [ ] Check Search Console coverage and URL inspection.
-- [x] Confirm GTM / GA4 page-view tracking fires on the live domain.
-- [x] Enable Vercel Speed Insights and confirm live data is coming in.
-- [x] Enable Vercel Web Analytics and confirm the live site injects the analytics script.
-
-### Operations
-
-- [ ] Check payment failures.
-- [ ] Check Woo order consistency.
-- [ ] Check email delivery.
-- [ ] Check 404s and missing redirects.
-- [ ] Check the mobile journey again.
-
-### Performance
-
-- [x] Re-run Lighthouse / CWV checks on `roccandy.com.au`.
-- [x] Use the live production domain as the benchmark, not `roccandy.vercel.app`.
-
-## Deferred / Not Required For Launch
-
-- [ ] Occasion hub pages and occasion subpages.
-- [ ] Location pages.
-- [ ] Review widget / Trustindex.
-- [ ] Enhanced conversions.
-- [ ] Broader product-list `view_item` tracking.
-- [ ] Deeper Merchant feed enrichment.
-- [ ] A larger ongoing blog publishing cadence.
-
-## Launch Complete When All Of These Are True
-
-- [x] `roccandy.vercel.app` worked all the way up until cutover.
-- [x] `roccandy.com.au` is now the live public domain.
-- [ ] Admin works on the live domain.
-- [ ] Live payments work.
-- [ ] Woo and Supabase both receive orders.
-- [ ] Admin and customer emails send.
-- [ ] GA4 purchase tracking works.
-- [x] Important old URLs redirect correctly.
-- [ ] Search Console and Merchant are tied to the real domain, not `vercel.app`.
+- On pull requests and pushes, run `npm ci`, `npm test`, `npm run lint`, and `npm run build` in GitHub Actions.
+- Enable Dependabot alerts and security-update PRs without auto-merge.
+- Add a small Playwright/browser suite for public navigation, cart/pricing behavior, checkout validation before payment, and unauthenticated admin redirects. Mock or sandbox payment providers; never automate real production charges.
+- Add an independent read-only uptime check for the homepage and one health endpoint. Alert on repeated failure rather than mutating production.
+- Add an environment-variable validation module or documented example containing names only, never secret values.
+
+Risk and cost:
+
+- CI runs against a checked-out build and cannot break the already deployed site. A failing check can block a future merge only if branch rules make it required.
+- Dependabot opens reviewable PRs; it changes nothing until a human merges one.
+- Browser tests can only create business state if they are pointed at production and allowed to submit real actions. Keep them on local/preview with provider mocks or sandbox credentials.
+- Standard GitHub-hosted Actions are free for public repositories. Private repositories receive a monthly minute allowance based on the GitHub plan; excess usage can cost money. A modest Linux-only baseline usually fits the included allowance, but confirm the repository owner’s billing budget.
+- Dependabot security updates are available for all repositories.
+- Manual maintenance is limited to reviewing failures/PRs and occasionally updating brittle assertions. Budget roughly 15–30 minutes per week during active development and a monthly security review when the site is quiet.
+
+Do not add these workflows automatically as part of an unrelated site change. Introduce them in a dedicated PR so a workflow mistake can be corrected without touching production code.
+
+## Supabase Paid Plan and Keepalive
+
+Supabase paid-plan projects are not automatically paused for inactivity. The daily `.github/workflows/supabase-keepalive.yml` ping is therefore not needed to keep this paid project awake.
+
+The current workflow is harmless when configured: it performs one small read through `/api/keepalive`. It can be left as a very basic health signal, removed in a dedicated housekeeping change, or replaced with real monitoring that alerts on failure. It is not independent monitoring because both the endpoint and database must work, but the workflow currently sends no purpose-built alert beyond the GitHub job failure.
+
+Before removing it, confirm the production project is inside the paid Supabase organization—not merely that a different organization is paid. Removing the workflow does not affect application runtime, checkout, auth, database connections, backups, or performance.
+
+Paid Supabase reduces inactivity risk but does not remove operational work:
+
+- Keep billing/payment details current; overdue billing can still restrict service.
+- Review usage and spend-cap behavior.
+- Confirm automated backup availability and retention in the project dashboard; use PITR only if the business recovery objective justifies the extra cost.
+- Periodically test a documented restore/export process without overwriting production.
+
+## Image Fetching Safety
+
+Next.js customer-facing optimized images are already restricted to the configured Supabase public-storage host. The remaining concern is server-side preview/email code that can fetch a supplied HTTP(S) image URL.
+
+A safe future restriction should:
+
+1. Allow `data:` images used by normal customer uploads.
+2. Allow the production Roc Candy domain and the configured Supabase public-storage origin.
+3. Inventory/log any existing order image hosts before enforcement.
+4. For an unapproved legacy URL, render a placeholder or safe text link rather than failing checkout, order saving, or email sending.
+5. Enforce response timeout, byte limit, content type, and redirect limits.
+
+With that design, ordinary customers will still see their uploaded images. The only likely visible difference is for a legacy saved order/cart whose logo or label points directly to an unrelated third-party host; it would show a placeholder until migrated or explicitly allowed. Do not implement a blanket “Supabase only” rejection without first checking legacy data.
+
+## Payment and Order Recovery
+
+### Website payment succeeded but no Supabase order appears
+
+1. Do not ask the customer to pay again until the provider transaction is checked.
+2. Search Square/PayPal by the transaction ID, email, amount, and time.
+3. Check `payment_failures`, Vercel logs, and the orders mailbox alert for the saved checkout snapshot.
+4. Reconstruct the order in admin only after verifying the exact successful charge. Record the provider/transaction ID and notes to avoid double handling.
+5. If appropriate, refund from the provider/admin flow and record the reason.
+
+### Email failed after payment/order save
+
+- Treat the payment and Supabase order as authoritative.
+- Confirm SMTP configuration/provider logs, then resend or contact the customer manually.
+- Do not refund or recreate an order merely because an email failed.
+
+### Admin Square invoice issue
+
+- The Supabase order remains authoritative and unpaid when invoice creation fails.
+- Review `square_invoice_error`, correct provider/configuration data, then use the invoice review/recovery workflow.
+- For direct deposit, staff must verify the bank transfer and update the order according to the admin process; no automated bank webhook exists.
+
+### Webhook issue
+
+- Confirm the Square dashboard notification URL exactly matches the configured signature URL and includes `invoice.payment_made`.
+- Check signature failures and provider delivery logs before replaying an event.
+- The handler is idempotent enough to avoid re-emailing orders already marked paid, but replay only a known event deliberately.
+
+## Routine Operations
+
+Weekly or after meaningful changes:
+
+- Review Vercel errors, payment failures, SMTP failures, and Square webhook delivery.
+- Check the orders queue and overdue unpaid admin invoices.
+- Review failed GitHub workflows if the keepalive/health job remains.
+
+Monthly:
+
+- Review dependency/security alerts and schedule controlled patches.
+- Check Supabase usage, billing/spend cap, backup status, and storage growth.
+- Confirm Square/PayPal/SMTP credentials are healthy and remove obsolete admin accounts.
+- Check GA4/GTM, Search Console indexing, Merchant Center diagnostics, and Ads landing pages in their external consoles.
+- Update the two authoritative docs when behavior changed.
+
+Quarterly or after checkout/auth/invoice changes:
+
+- Run one planned end-to-end transaction per active payment route, confirm the Supabase order and both emails, then refund or retain it according to the test plan.
+- Test admin invoice publishing/direct deposit and the signed Square payment webhook in sandbox or with a controlled real invoice.
+- Exercise role-based admin access and a non-destructive backup/export/restore rehearsal.
+
+## Documentation and Historical Files
+
+For future LLM work, provide only:
+
+- `README.md`
+- `docs/architecture-notes.md`
+- `docs/launch-steps.md`
+- the specific code/schema/migration file relevant to the requested change
+
+The following are useful history but are not current general context: `infrastructure-map.md`, `admin-simple-map.*`, `README_Roadmap.rtf`, dated SEO/performance/mobile audits, rollback references, and old pricing/schema snapshots. They may describe WooCommerce, pre-launch tasks, old test counts, old routes, or temporary file paths that are no longer valid.
+
+When behavior changes, update the two authoritative guides in the same PR. Do not duplicate a third full architecture or launch checklist.

@@ -137,6 +137,7 @@ create table if not exists premade_candies (
   product_condition text default 'new',
   sale_price numeric(12,2),
   availability text default 'in_stock',
+  -- Legacy inert compatibility columns. WooCommerce is not an active integration.
   woo_product_id text,
   woo_sync_status text,
   woo_last_sync_at timestamptz,

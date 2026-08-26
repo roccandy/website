@@ -11,7 +11,6 @@ import {
   type QuoteBlock,
 } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
-import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { formatPremadeFlavors } from "@/lib/premadeCatalog";
 
 const DEFAULT_COUNTRY = "AU";
@@ -277,15 +276,6 @@ async function buildCustomItemLine(
   };
 }
 
-function applyCheckoutPromoOverride(lineItems: CheckoutLineItem[], orderPayloads: OrderInsertPayload[]) {
-  lineItems.forEach((item, index) => {
-    item.total = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL.toFixed(2) : "0.00";
-  });
-  orderPayloads.forEach((payload, index) => {
-    payload.total_price = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL : 0;
-  });
-}
-
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
@@ -443,10 +433,6 @@ export async function buildCheckoutOrderContext(
       status: "pending_payment",
       made: false,
     });
-  }
-
-  if (isCheckoutTestPromoCode(body.promoCode)) {
-    applyCheckoutPromoOverride(lineItems, orderPayloads);
   }
 
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
