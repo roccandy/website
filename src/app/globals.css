@@ -119,6 +119,14 @@ body {
   --type-public-rich-h3-letter-spacing: var(--type-public-rich-h3-letter-spacing-mobile);
 }
 
+/* The production schedule is a desktop planning workspace. Let its sidebar and
+   two working panels use the available viewport without changing other admin pages. */
+@media (min-width: 1280px) {
+  .admin-page-shell:has(.admin-production-schedule) {
+    max-width: none;
+  }
+}
+
 @media (min-width: 768px) {
   body {
     --space-page-inline-padding: var(--space-page-inline-padding-desktop);

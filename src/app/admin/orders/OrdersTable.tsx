@@ -109,7 +109,6 @@ export function OrdersTable({
   initialSelectedId = null,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
-  const [showAllOrders, setShowAllOrders] = useState(false);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
 
   const packagingById = useMemo(
@@ -176,13 +175,7 @@ export function OrdersTable({
       }),
     [assignmentsByOrderId, listOrders],
   );
-  const visibleListOrders = useMemo(
-    () =>
-      showAllOrders || (selectedId ? !listOrders.slice(0, 15).some((order) => order.id === selectedId) : false)
-        ? listOrders
-        : listOrders.slice(0, 15),
-    [listOrders, selectedId, showAllOrders],
-  );
+  const visibleListOrders = listOrders;
   const assignmentModalOrder = useMemo(
     () => orders.find((order) => order.id === assignmentModalOrderId) ?? null,
     [assignmentModalOrderId, orders],
@@ -220,9 +213,10 @@ export function OrdersTable({
   }, [selectedId]);
 
   return (
-    <div className="space-y-4">
-      <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
+    <div className="space-y-4 xl:grid xl:grid-cols-[minmax(25rem,0.82fr)_minmax(34rem,1.2fr)] xl:items-start xl:gap-6 xl:space-y-0">
+      <div className="min-w-0 space-y-4">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <table className="min-w-full text-sm">
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               <th className="px-3 py-3 text-left">Order #</th>
@@ -511,29 +505,21 @@ export function OrdersTable({
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
+
       </div>
 
-      {listOrders.length > 15 ? (
-        <div className="flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShowAllOrders((current) => !current)}
-            className="rounded border border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-          >
-            {showAllOrders ? "Show fewer orders" : `Show all ${listOrders.length} orders`}
-          </button>
-        </div>
-      ) : null}
-
-      <ProductionScheduleSection
-        orders={orders}
-        slots={slots}
-        assignments={assignments}
-        settings={settings}
-        unassignedOrders={unassignedOrders}
-        dayNotes={dayNotes}
-      />
+      <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
+        <ProductionScheduleSection
+          orders={orders}
+          slots={slots}
+          assignments={assignments}
+          settings={settings}
+          unassignedOrders={unassignedOrders}
+          dayNotes={dayNotes}
+        />
+      </div>
       {assignmentModalOrder ? (
         <AssignmentCalendarModal
           order={assignmentModalOrder}

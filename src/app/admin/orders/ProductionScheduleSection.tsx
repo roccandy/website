@@ -10,7 +10,6 @@ import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
 import {
   buildAssignmentBySlotKey,
-  buildProductionWorkweekMonthCells,
   buildSlotIdByKey,
   batchWeightsForOrder,
   canCompleteOrderForSlotDates,
@@ -18,7 +17,6 @@ import {
   formatDayMonthLabel,
   formatDate,
   formatDueDateDistance,
-  formatMonthLabel,
   formatOrderDescription,
   formatWeekdayDayMonthLabel,
   formatWeekdayShortLabel,
@@ -45,6 +43,18 @@ const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
 
 const WORKWEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
+const startOfWorkweek = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+};
+
+const calendarWeightLabel = (kg: number | null | undefined) => {
+  if (!Number.isFinite(kg ?? NaN)) return "";
+  return `${Number(kg).toFixed(2)} kg`;
+};
+
 const productionScheduleTitle = (order: OrderRow | null | undefined) => {
   if (!order) return "Order";
   const title = order.title || formatOrderDescription(order) || order.order_number || "Order";
@@ -60,8 +70,8 @@ export default function ProductionScheduleSection({
   dayNotes,
 }: Props) {
   const router = useRouter();
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [viewMode, setViewMode] = useState<"calendar" | "week">("calendar");
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfWorkweek(new Date()));
+  const viewMode = "calendar";
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
   const [assignmentModalTarget, setAssignmentModalTarget] = useState<{
     orderId: string;
@@ -117,10 +127,20 @@ export default function ProductionScheduleSection({
   }, [assignments, slotMap]);
 
   const calendarCells = useMemo(
-    () => buildProductionWorkweekMonthCells(calendarMonth, settings),
+    () =>
+      Array.from({ length: 25 }, (_, index) => {
+        const day = new Date(calendarMonth);
+        day.setDate(day.getDate() + Math.floor(index / 5) * 7 + (index % 5));
+        return isScheduleDateBlocked(day, settings).blocked ? null : day;
+      }),
     [calendarMonth, settings],
   );
   const hasVisibleCalendarDays = calendarCells.some(Boolean);
+  const calendarEndDate = useMemo(() => {
+    const end = new Date(calendarMonth);
+    end.setDate(end.getDate() + 32);
+    return end;
+  }, [calendarMonth]);
 
   const weekDays = useMemo(() => {
     const anchor = new Date(calendarMonth);
@@ -178,20 +198,12 @@ export default function ProductionScheduleSection({
   );
 
   const movePrev = () => {
-    if (viewMode === "calendar") {
-      setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
-      return;
-    }
     const next = new Date(calendarMonth);
     next.setDate(calendarMonth.getDate() - 7);
     setCalendarMonth(next);
   };
 
   const moveNext = () => {
-    if (viewMode === "calendar") {
-      setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
-      return;
-    }
     const next = new Date(calendarMonth);
     next.setDate(calendarMonth.getDate() + 7);
     setCalendarMonth(next);
@@ -301,40 +313,22 @@ export default function ProductionScheduleSection({
             <h3 className="admin-card-title text-zinc-900">Production Calendar</h3>
           </div>
           <div className="flex items-center gap-2">
-            <div className="inline-flex overflow-hidden rounded-full border border-zinc-200">
-              <button
-                type="button"
-                onClick={() => setViewMode("week")}
-                className={`px-3 py-1 text-xs font-semibold ${
-                  viewMode === "week" ? "bg-zinc-900 text-white" : "bg-white text-zinc-700"
-                }`}
-              >
-                Week list
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("calendar")}
-                className={`px-3 py-1 text-xs font-semibold ${
-                  viewMode === "calendar" ? "bg-zinc-900 text-white" : "bg-white text-zinc-700"
-                }`}
-              >
-                Calendar
-              </button>
-            </div>
             <button
               type="button"
               onClick={movePrev}
               className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
             >
-              Prev
+              Prev week
             </button>
-            <span className="text-sm font-semibold text-zinc-800">{formatMonthLabel(calendarMonth)}</span>
+            <span className="text-sm font-semibold text-zinc-800">
+              {formatDayMonthLabel(calendarMonth)} – {formatDayMonthLabel(calendarEndDate)}
+            </span>
             <button
               type="button"
               onClick={moveNext}
               className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
             >
-              Next
+              Next week
             </button>
           </div>
         </div>
@@ -353,7 +347,7 @@ export default function ProductionScheduleSection({
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               {!hasVisibleCalendarDays ? (
                 <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 sm:col-span-2 lg:col-span-5">
-                  No production days are visible for this month.
+                  No production days are visible in this five-week range.
                 </div>
               ) : (
                 calendarCells.map((day, cellIndex) => {
@@ -389,14 +383,8 @@ export default function ProductionScheduleSection({
                         const slotKey = `${key}:${slotIndex}`;
                         const assignment = assignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
-                        const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
-                        const printTarget = order?.id ?? order?.order_number;
                         const title = productionScheduleTitle(order);
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
-                        const canCompleteSlotOrder = order
-                          ? canCompleteOrderForSlotDates(order, assignedSlotDatesByOrderId.get(order.id) ?? [key])
-                          : false;
-                        const premadeSiblingMeta = order ? getPremadeSiblingMeta(orders, order) : null;
                         const canDragSlotOrder = key >= todayKey;
                         const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
                         const isCollapsedCompletedCalendarOrder =
@@ -507,64 +495,19 @@ export default function ProductionScheduleSection({
                                         />
                                       </p>
                                     )}
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0 flex-1 space-y-0 text-[9px] text-zinc-700">
-                                        <p>
-                                          {weightLabel(assignment.kg_assigned)}
-                                          {Number(assignment.kg_assigned) !== Number(order.total_weight_kg)
-                                            ? ` of ${weightLabel(order.total_weight_kg)}`
-                                            : ""}
-                                        </p>
-                                        <p className="flex flex-wrap gap-x-1">
-                                          <span className="whitespace-nowrap">{formatDate(order.due_date)}</span>
-                                          {dueDateDistance ? (
-                                            <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
-                                          ) : null}
-                                        </p>
-                                      </div>
-                                      <div className="flex w-[5.4rem] shrink-0 flex-col items-stretch gap-1">
-                                        {printTarget ? (
-                                          <a
-                                            href={`/admin/orders/${encodeURIComponent(printTarget)}/print?id=${encodeURIComponent(printTarget)}`}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="rounded border border-zinc-200 bg-white px-2 py-1 text-center text-[8px] font-semibold text-zinc-700 hover:border-zinc-300"
-                                          >
-                                            Print
-                                          </a>
+                                    <div className="space-y-0 text-[9px] text-zinc-700">
+                                      <p>
+                                        {calendarWeightLabel(assignment.kg_assigned)}
+                                        {Number(assignment.kg_assigned) !== Number(order.total_weight_kg)
+                                          ? ` of ${calendarWeightLabel(order.total_weight_kg)}`
+                                          : ""}
+                                      </p>
+                                      <p className="flex flex-wrap gap-x-1">
+                                        <span className="whitespace-nowrap">{formatDate(order.due_date)}</span>
+                                        {dueDateDistance ? (
+                                          <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
                                         ) : null}
-                                        {canCompleteSlotOrder ? (
-                                          <SplitAwareActionForm
-                                            action={archiveOrderInline}
-                                            hiddenFields={[{ name: "order_id", value: order.id }]}
-                                            buttonLabel={productionCompletionActionLabel(order)}
-                                            buttonClassName="w-full rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-center text-[8px] font-semibold text-emerald-700 hover:border-emerald-300"
-                                            confirmMessage={
-                                              isAdminPremade
-                                                ? "Confirm this premade batch is made? It will move out of the production schedule."
-                                                : `Confirm ${order.pickup ? "collection" : "delivery"} for this order? It will move out of the production schedule.`
-                                            }
-                                            companionMeta={premadeSiblingMeta}
-                                          />
-                                        ) : (
-                                          <button
-                                            type="button"
-                                            disabled
-                                            className="w-full cursor-not-allowed rounded border border-zinc-200 bg-zinc-100 px-2 py-1 text-center text-[8px] font-semibold text-zinc-400"
-                                          >
-                                            {productionCompletionActionLabel(order)}
-                                          </button>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            setAssignmentModalTarget({ orderId: order.id, assignmentId: assignment.id })
-                                          }
-                                          className="w-full rounded border border-blue-200 bg-blue-50 px-2 py-1 text-center text-[8px] font-semibold text-blue-700 hover:border-blue-300"
-                                        >
-                                          Change
-                                        </button>
-                                      </div>
+                                      </p>
                                     </div>
                                   </div>
                                 )}

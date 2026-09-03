@@ -160,7 +160,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </div>
           </div>
         ) : null}
-        <div className="mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6 print:block print:max-w-none print:px-0 print:py-0">
+        <div className="admin-page-shell mx-auto flex max-w-[92rem] gap-6 px-4 py-6 lg:px-6 print:block print:max-w-none print:px-0 print:py-0">
           {!productionUser ? <AdminSidebar sections={navSections} user={session.user} /> : null}
           <main className="min-w-0 flex-1 print:w-full">{children}</main>
         </div>
