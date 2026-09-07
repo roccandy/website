@@ -3361,25 +3361,38 @@ export function NewOrderForm({
             Review order
           </button>
         ) : (
-          <button
-            type="submit"
-            name="submit_intent"
-            value={invoiceDraftMode && !isAdminPremadeOrder ? "create_tabbed_invoice" : "save"}
-            disabled={isSubmittingOrder || (isAdminPremadeOrder ? !isAdminPremadeReady : !batchWeightsValid || Boolean(pricingError))}
-            className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
-          >
-            {isSubmittingOrder
-              ? isEditMode
-                ? "Saving..."
-                : "Creating invoice..."
-              : isEditMode
-                ? "Save order"
-                : isAdminPremadeOrder
-                  ? "Add to Orders"
-                  : reviewMode
-                    ? "Create Square draft invoice"
-                    : "Create Invoice"}
-          </button>
+          <>
+            <button
+              type="submit"
+              name="submit_intent"
+              value={invoiceDraftMode && !isAdminPremadeOrder ? "create_tabbed_invoice" : "save"}
+              disabled={isSubmittingOrder || (isAdminPremadeOrder ? !isAdminPremadeReady : !batchWeightsValid || Boolean(pricingError))}
+              className="rounded border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-200 disabled:text-zinc-500"
+            >
+              {isSubmittingOrder
+                ? isEditMode
+                  ? "Saving..."
+                  : "Creating invoice..."
+                : isEditMode
+                  ? "Save order"
+                  : isAdminPremadeOrder
+                    ? "Add to Orders"
+                    : reviewMode
+                      ? "Create Square draft invoice"
+                      : "Create Invoice"}
+            </button>
+            {isEditMode && !isAdminPremadeOrder ? (
+              <button
+                type="submit"
+                name="submit_intent"
+                value="save_and_resend_confirmation"
+                disabled={isSubmittingOrder || !sharedEmail.trim() || !batchWeightsValid || Boolean(pricingError)}
+                className="rounded border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:border-sky-400 hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
+              >
+                Save &amp; resend confirmation
+              </button>
+            ) : null}
+          </>
         )}
         <button
           ref={scheduleSubmitButtonRef}

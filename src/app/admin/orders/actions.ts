@@ -235,7 +235,7 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
     paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
     customPreviews: emailPreviews,
   });
-  await sendCustomerOrderSummaryEmail([customerEmail], summary);
+  return sendCustomerOrderSummaryEmail([customerEmail], summary);
 }
 
 const normalizeInvoiceCustomerEmail = (value: string | null | undefined) => value?.trim().toLowerCase() || "";
@@ -624,6 +624,7 @@ async function upsertOrderShared(formData: FormData) {
     }
   }
   const shouldScheduleAfterCreate = submitIntent === "save_and_schedule";
+  const shouldResendCustomerConfirmation = submitIntent === "save_and_resend_confirmation";
   const productionSlotDate = formData.get("production_slot_date")?.toString() || null;
   const redirectTo = formData.get("redirect_to")?.toString() || null;
   const redirectScrollY = formData.get("redirect_scroll_y")?.toString() || null;
@@ -1033,6 +1034,7 @@ async function upsertOrderShared(formData: FormData) {
     const orderChanges = existing ? buildOrderActivityChanges(existing as OrderRow, basePayload) : [];
 
     if (id) {
+      let customerConfirmationResent = false;
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
       if (error) throw new Error(error.message);
       await syncOrderSlotWeightsWithBatches(
@@ -1126,6 +1128,25 @@ async function upsertOrderShared(formData: FormData) {
           inlineMessage = `Order saved, but updated Square invoice failed: ${message}`;
         }
       }
+      if (shouldResendCustomerConfirmation) {
+        const customerEmail = basePayload.customer_email?.trim();
+        if (!customerEmail) {
+          throw new Error("A customer email address is required to resend the order confirmation.");
+        }
+        const emailResult = await sendAdminCreatedCustomerOrderEmail({
+          ...(existing as Record<string, unknown>),
+          ...basePayload,
+          id,
+          customer_email: customerEmail,
+        });
+        if (!emailResult || "skipped" in emailResult) {
+          inlineTone = "error";
+          inlineMessage = "Order saved, but the confirmation could not be sent because email is not configured.";
+        } else {
+          customerConfirmationResent = true;
+          inlineMessage = "Order saved and confirmation resent.";
+        }
+      }
       activity = {
         area: "operations",
         action: "updated",
@@ -1136,7 +1157,7 @@ async function upsertOrderShared(formData: FormData) {
           title: basePayload.title,
           customerName: basePayload.customer_name,
         }),
-        summary: `Updated ${describeOrderTarget({
+        summary: `${customerConfirmationResent ? "Updated and resent confirmation for" : "Updated"} ${describeOrderTarget({
           orderNumber: existing?.order_number ?? order_number,
           title: basePayload.title,
           customerName: basePayload.customer_name,
