@@ -7,7 +7,6 @@ import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { SiteUsps } from "@/components/SiteUsps";
-import { GoogleReviews } from "@/components/GoogleReviews";
 import { buildAbsoluteUrl, buildMetadata, buildSchemaGraph, buildWebPageSchema, stripHtml, truncateText } from "@/lib/seo";
 import { buildFaqSchemaItems } from "@/lib/faqs";
 import { DesignCtaModal } from "./DesignCtaModal";
@@ -125,7 +124,6 @@ export default async function Home() {
                 <DesignCtaModal />
               </div>
 
-              <GoogleReviews className="mb-3 mt-8 lg:mb-0 lg:mt-14" />
             </div>
 
             <div className="site-home-option-grid grid grid-cols-2 md:grid-cols-3">

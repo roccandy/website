@@ -28,7 +28,6 @@ import { buildDesignerPath } from "@/lib/designUrls";
 import { buildLandingGalleryRows } from "@/lib/landingGallery";
 import { EnquiryForm } from "@/components/EnquiryForm";
 import { ContextualEnquiryCta } from "@/components/ContextualEnquiryCta";
-import { GoogleReviews } from "@/components/GoogleReviews";
 import {
   buildEnquiryHref,
   ENQUIRY_INTERESTS,
@@ -383,9 +382,6 @@ export default async function ManagedContentPage({ params, searchParams }: Manag
                       </Link>
                     ) : null}
                   </div>
-                ) : null}
-                {["design/wedding-candy", "design/custom-text-candy", "design/branded-logo-candy"].includes(page.slug) ? (
-                  <GoogleReviews className="-mb-2 mt-10 w-full" />
                 ) : null}
               </div>
 

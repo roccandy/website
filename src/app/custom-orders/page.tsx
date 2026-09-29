@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DesignCtaModal } from "@/app/DesignCtaModal";
 import { EnquiryForm } from "@/components/EnquiryForm";
-import { GoogleReviews } from "@/components/GoogleReviews";
 import { JsonLd } from "@/components/JsonLd";
 import PublicSiteHeader from "@/components/PublicSiteHeader";
 import { SiteUsps } from "@/components/SiteUsps";
@@ -72,7 +71,6 @@ export default async function CustomOrdersPage() {
               <p className="mx-auto mt-3 max-w-3xl text-base leading-7 text-zinc-600">{page.heroSupportingLine}</p>
             ) : null}
             <SiteUsps className="mt-7" />
-            <GoogleReviews showBorders={false} transparent className="mt-2" />
           </section>
 
           <section className="-mt-5 grid gap-5 md:grid-cols-2">
