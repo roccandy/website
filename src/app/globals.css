@@ -119,12 +119,64 @@ body {
   --type-public-rich-h3-letter-spacing: var(--type-public-rich-h3-letter-spacing-mobile);
 }
 
-/* The production schedule is a desktop planning workspace. Let its sidebar and
-   two working panels use the available viewport without changing other admin pages. */
-@media (min-width: 1280px) {
-  .admin-page-shell:has(.admin-production-schedule) {
-    max-width: none;
+/* Admin pages use the current tab width. Wide tables scroll inside their own
+   panels; they must never make the whole workspace wider than the viewport. */
+.admin-workspace,
+.admin-page-shell,
+.admin-page-content,
+.admin-page-content > div,
+.admin-page-content > div > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-workspace { overflow-x: clip; }
+.admin-page-content [id] { scroll-margin-top: 9rem; }
+
+.admin-page-content :where(section, article, form, fieldset, .overflow-x-auto) {
+  min-width: 0;
+}
+
+.admin-page-content :where(p, h1, h2, h3, h4, dd) {
+  overflow-wrap: anywhere;
+}
+
+.admin-page-content :where(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.admin-production-workspace {
+  container: production-workspace / inline-size;
+}
+
+.admin-production-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@container production-workspace (min-width: 1150px) {
+  .admin-production-panels {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: start;
   }
+}
+
+.admin-production-panels:not([data-view="both"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-production-calendar { container: production-calendar / inline-size; }
+.admin-calendar-weekdays, .admin-calendar-empty { display: none; }
+.admin-calendar-days { grid-template-columns: minmax(0, 1fr); }
+@container production-calendar (min-width: 500px) {
+  .admin-calendar-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container production-calendar (min-width: 950px) {
+  .admin-calendar-weekdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .admin-calendar-days { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .admin-calendar-empty { display: block; }
 }
 
 @media (min-width: 768px) {

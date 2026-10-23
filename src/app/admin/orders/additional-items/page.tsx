@@ -2,7 +2,7 @@ import { getOrders, getOrderSlots, getProductionSlots } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { formatPremadeWeight } from "@/lib/premadeCatalog";
 import { markAdditionalItemsPending, markAdditionalItemsShipped } from "../actions";

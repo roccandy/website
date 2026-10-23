@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { BarChart3, CircleDollarSign, Clock3, MapPinned, Sparkles, Users, WalletCards } from "lucide-react";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { getCategories, getOrders, getPackagingOptions, type OrderRow } from "@/lib/data";

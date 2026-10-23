@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CircleDollarSign, Mail, MessageSquareText, Phone, Repeat2, UserRound } from "lucide-react";
 import { addCustomerNote, assertCustomerCrmAccess, mergeCustomersAction } from "../actions";

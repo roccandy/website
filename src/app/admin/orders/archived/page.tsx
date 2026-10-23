@@ -2,7 +2,7 @@ import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/l
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { archiveOrderInline, markAdditionalItemsShipped, refundOrder, unarchiveOrder } from "../actions";
 import { RefundForm } from "../RefundForm";
 import SplitAwareActionForm from "../SplitAwareActionForm";
@@ -506,7 +506,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
+        <div className="inline-flex max-w-full flex-wrap rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
           {FILTER_OPTIONS.map((option) => {
             const isActive = activeView === option.value;
             return (
@@ -522,8 +522,8 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <form action="/admin/orders/archived" className="flex items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
+          <form action="/admin/orders/archived" className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             {activeView !== "all" ? <input type="hidden" name="view" value={activeView} /> : null}
             {activeSort !== "order" || activeDirection !== "desc" ? (
               <>

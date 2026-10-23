@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { redirect } from "next/navigation";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { requireAdminSession } from "@/lib/adminAuth";

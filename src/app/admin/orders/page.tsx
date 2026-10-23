@@ -8,7 +8,7 @@ import {
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
 import { buildPricingContext } from "@/lib/pricing";

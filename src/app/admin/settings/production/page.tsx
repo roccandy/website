@@ -4,7 +4,7 @@ import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 
 export const revalidate = 0;

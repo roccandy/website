@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import type {
   Category,
   OrderRow,
@@ -110,6 +110,7 @@ export function OrdersTable({
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<"both" | "calendar" | "orders">("both");
 
   const packagingById = useMemo(
     () => new Map(packagingOptions.map((option) => [option.id, option])),
@@ -192,10 +193,11 @@ export function OrdersTable({
       const rect = detail.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const margin = 16;
+      const topInset = (document.querySelector(".admin-workspace-header")?.getBoundingClientRect().height ?? 0) + margin;
 
-      if (rect.height + margin * 2 >= viewportHeight) {
+      if (rect.height + topInset + margin >= viewportHeight || rect.top < topInset) {
         window.scrollTo({
-          top: window.scrollY + rect.top - margin,
+          top: window.scrollY + rect.top - topInset,
           behavior: "smooth",
         });
         return;
@@ -213,8 +215,15 @@ export function OrdersTable({
   }, [selectedId]);
 
   return (
-    <div className="space-y-4 xl:grid xl:grid-cols-[minmax(25rem,0.82fr)_minmax(34rem,1.2fr)] xl:items-start xl:gap-6 xl:space-y-0">
-      <div className="min-w-0 space-y-4">
+    <div className="admin-production-workspace space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-zinc-500">{visibleListOrders.length} active order items · {unassignedOrders.length} need scheduling</p>
+        <div aria-label="Production workspace view" className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1">
+          {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
+        </div>
+      </div>
+      <div className="admin-production-panels" data-view={workspaceView}>
+      <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
         <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <table className="min-w-full text-sm">
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
@@ -510,7 +519,7 @@ export function OrdersTable({
 
       </div>
 
-      <div className="min-w-0 xl:sticky xl:top-24 xl:self-start">
+      <div hidden={workspaceView === "orders"} className="min-w-0">
         <ProductionScheduleSection
           orders={orders}
           slots={slots}
@@ -519,6 +528,7 @@ export function OrdersTable({
           unassignedOrders={unassignedOrders}
           dayNotes={dayNotes}
         />
+      </div>
       </div>
       {assignmentModalOrder ? (
         <AssignmentCalendarModal

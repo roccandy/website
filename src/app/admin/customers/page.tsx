@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { Search, Users, Repeat2, MessageSquareText, CircleDollarSign, AlertTriangle } from "lucide-react";
 import { assertCustomerCrmAccess } from "./actions";
 import {
@@ -219,7 +219,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
       </div>
 
       <form className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm" action="/admin/customers">
-        <div className="grid gap-3 xl:grid-cols-[minmax(18rem,1fr)_12rem_12rem_13rem_11rem_auto]">
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[minmax(0,1fr)_10rem_10rem_11rem_9rem_auto]">
           <label className="relative block">
             <span className="sr-only">Search customers</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />

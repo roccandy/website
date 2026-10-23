@@ -27,9 +27,9 @@ function SortableFlavorItem({ item, index }: { item: Flavor; index: number }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between py-2 ${isDragging ? "opacity-80" : ""}`}
+      className={`flex min-w-0 flex-wrap items-center justify-between gap-3 py-2 ${isDragging ? "opacity-80" : ""}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-zinc-900">{item.name}</span>
         <span
           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -39,7 +39,7 @@ function SortableFlavorItem({ item, index }: { item: Flavor; index: number }) {
           {isActive ? "Active" : "Inactive"}
         </span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex max-w-full flex-wrap items-center gap-2">
         <button
           type="button"
           className="inline-flex cursor-grab items-center rounded border border-zinc-200 px-2 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-50 active:cursor-grabbing"

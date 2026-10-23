@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import AssignmentCalendarModal from "@/app/admin/orders/AssignmentCalendarModal";

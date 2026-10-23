@@ -1,5 +1,5 @@
 import { stat } from "fs/promises";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { join } from "path";

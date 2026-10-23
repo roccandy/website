@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import type { AdminActivityEntry } from "@/lib/adminActivity";
 
 const ACTIVITY_TIME_ZONE = "Australia/Perth";

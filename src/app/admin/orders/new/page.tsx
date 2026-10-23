@@ -12,7 +12,7 @@ import {
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { adminOrderRemakeFormDefaults, resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
 import { NewOrderForm } from "./NewOrderForm";
 

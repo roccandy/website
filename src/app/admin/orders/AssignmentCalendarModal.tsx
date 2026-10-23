@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { archiveOrderInline, assignOrderToSlot, deleteAssignment } from "./actions";
@@ -241,10 +242,13 @@ export default function AssignmentCalendarModal({
   };
 
   return (
-    <>
+    <AdminModalPortal onClose={onClose}>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
         <div
-          className="w-full max-w-4xl rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${actionLabel}: ${order.title ?? "Untitled order"}`}
+          className="max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-4xl overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg [overflow-wrap:anywhere]"
           onClick={(event) => event.stopPropagation()}
         >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -496,6 +500,6 @@ export default function AssignmentCalendarModal({
           onCancel={() => setSplitPromptOpen(false)}
         />
       ) : null}
-    </>
+    </AdminModalPortal>
   );
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/adminAuth";
 import {

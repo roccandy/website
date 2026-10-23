@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -1562,7 +1562,7 @@ export function PackagingTable({
                       </td>
                       <td className="min-w-[110px] px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <form action={uploadPackagingImage} className="flex flex-col gap-2">
+                          <form action={uploadPackagingImage} className="relative flex flex-col gap-2">
                             <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
                             <input type="hidden" name="category_id" value={row.categoryId} />
                             <input type="hidden" name="lid_color" value={row.lidColor} />

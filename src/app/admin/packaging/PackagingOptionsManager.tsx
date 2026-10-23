@@ -37,7 +37,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
 
   return (
     <details className="group rounded-lg border border-zinc-200 bg-zinc-50">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 [&::-webkit-details-marker]:hidden">
         <span>Manage lid colours</span>
         <span className="flex items-center gap-3 text-xs font-normal text-zinc-500">
           {lidColors.length} colour{lidColors.length === 1 ? "" : "s"} · Add, edit or delete
@@ -46,7 +46,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
       </summary>
       <div className="border-t border-zinc-200 p-3">
         <p className="mb-3 text-xs text-zinc-500">Remove any uploaded packaging images for a colour before deleting it.</p>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
           {lidColors.map((color) =>
             editingId === color.id ? (
               <form key={color.id} action={updatePackagingLidColor} className="rounded-lg border border-sky-200 bg-sky-50/50 p-3">
@@ -80,7 +80,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
               </div>
             </form>
             ) : (
-              <div key={color.id} className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+              <div key={color.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="h-6 w-6 shrink-0 rounded-full border border-zinc-300" style={{ backgroundColor: color.hex }} aria-hidden="true" />
                 <span className="truncate text-sm font-semibold capitalize text-zinc-800">{color.name}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { usePathname } from "next/navigation";
 import {
   type AdminNavSection,
@@ -10,6 +10,7 @@ import {
   isSelfServiceAdminHref,
 } from "@/app/admin/adminNavigation";
 import type { Session } from "next-auth";
+import { useAdminNavigation } from "./AdminNavigationFeedback";
 
 type AdminSidebarProps = {
   sections: AdminNavSection[];
@@ -19,6 +20,7 @@ type AdminSidebarProps = {
 export function AdminSidebar({ sections, user }: AdminSidebarProps) {
   const pathname = usePathname();
   const seoFocused = isSeoFocusedUser(user);
+  const navigation = useAdminNavigation();
 
   return (
     <aside className="hidden print:hidden lg:sticky lg:top-24 lg:block lg:h-[calc(100vh-7rem)] lg:w-64 lg:flex-none lg:self-start">
@@ -52,6 +54,7 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
               <div className="mt-3 space-y-1.5">
                 {section.items.map((item) => {
                   const active = pathname === item.href;
+                  const opening = navigation?.destination?.split(/[?#]/)[0] === item.href;
                   const writable =
                     isSelfServiceAdminHref(item.href) ||
                     user.canWrite ||
@@ -61,9 +64,9 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      prefetch
+                      aria-busy={opening}
                       className={`block rounded-2xl border px-3 py-2.5 transition ${
-                        active
+                        active || opening
                           ? `${toneClasses.border} bg-white shadow-sm`
                           : "border-transparent bg-white/75 hover:border-zinc-200 hover:bg-white"
                       }`}
@@ -72,14 +75,14 @@ export function AdminSidebar({ sections, user }: AdminSidebarProps) {
                         <p className="text-sm font-semibold text-zinc-900">{item.label}</p>
                         <span
                           className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${
-                            active
+                            active || opening
                               ? toneClasses.badge
                               : writable
                                 ? toneClasses.badgeMuted
                                 : "border-zinc-200 bg-white text-zinc-500"
                           }`}
                         >
-                          {active ? "Open" : writable ? "Edit" : "View"}
+                          {opening ? "Opening…" : active ? "Open" : writable ? "Edit" : "View"}
                         </span>
                       </div>
                     </Link>

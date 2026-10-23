@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { archiveOrderInline, assignOrderToSlot, upsertProductionDayNote } from "./actions";
@@ -307,12 +308,12 @@ export default function ProductionScheduleSection({
 
   return (
     <>
-      <div id="production-calendar" className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div id="production-calendar" className="admin-production-calendar min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="admin-card-title text-zinc-900">Production Calendar</h3>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={movePrev}
@@ -334,7 +335,7 @@ export default function ProductionScheduleSection({
         </div>
         {viewMode === "calendar" ? (
           <>
-            <div className="mt-3 hidden grid-cols-5 gap-2 lg:grid">
+            <div className="admin-calendar-weekdays mt-3 gap-2">
               {WORKWEEK_LABELS.map((label) => (
                 <div
                   key={label}
@@ -344,9 +345,9 @@ export default function ProductionScheduleSection({
                 </div>
               ))}
             </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="admin-calendar-days mt-2 grid gap-2">
               {!hasVisibleCalendarDays ? (
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500 sm:col-span-2 lg:col-span-5">
+                <div className="col-span-full rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-6 text-sm text-zinc-500">
                   No production days are visible in this five-week range.
                 </div>
               ) : (
@@ -356,7 +357,7 @@ export default function ProductionScheduleSection({
                       <div
                         key={`empty-${cellIndex}`}
                         aria-hidden="true"
-                        className="hidden min-h-[10rem] rounded-lg border border-transparent lg:block"
+                        className="admin-calendar-empty min-h-[10rem] rounded-lg border border-transparent"
                       />
                     );
                   }
@@ -365,7 +366,7 @@ export default function ProductionScheduleSection({
                   return (
                     <div
                       key={key}
-                      className={`rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
+                      className={`min-w-0 rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
                     >
                     <div className="flex items-center gap-3">
                       <div>
@@ -724,9 +725,13 @@ export default function ProductionScheduleSection({
         )}
       </div>
       {slotPicker && (
+        <AdminModalPortal onClose={closeSlotPicker}>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeSlotPicker}>
           <div
-            className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select order"
+            className="max-h-[calc(100dvh-2rem)] w-full min-w-0 max-w-md overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-4 shadow-lg [overflow-wrap:anywhere]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3">
@@ -800,6 +805,7 @@ export default function ProductionScheduleSection({
             </div>
           </div>
         </div>
+        </AdminModalPortal>
       )}
       {assignmentModalOrder ? (
         <AssignmentCalendarModal

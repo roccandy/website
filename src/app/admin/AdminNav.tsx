@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { type AdminNavSection, getAdminNavToneClasses } from "@/app/admin/adminNavigation";
@@ -59,7 +59,6 @@ export function AdminNav({ sections }: { sections: AdminNavSection[] }) {
                       <Link
                         key={item.href}
                         href={item.href}
-                        prefetch
                         onClick={close}
                         className={`block rounded-2xl border px-3 py-3 text-sm transition ${
                           pathname === item.href

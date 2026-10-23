@@ -23,13 +23,13 @@ export default async function FlavorsPage() {
         <p className="text-sm text-zinc-600">Manage the list of flavors customers can choose.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[2fr,1fr]">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <h3 className="admin-card-title text-zinc-900">Current flavors</h3>
           <FlavorAdminList items={flavors} />
         </div>
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <div className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <h3 className="admin-card-title text-zinc-900">Add flavor</h3>
           <AddFlavorForm />
         </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { Edit3, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import OrderColorField from "../OrderColorField";

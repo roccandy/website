@@ -1,7 +1,7 @@
 ﻿import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import Link from "next/link";
+import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { redirect } from "next/navigation";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
