@@ -6,6 +6,7 @@ import {
   getCategories,
   getColorPalette,
   getFlavors,
+  getLabelTypes,
   getOrderSlots,
   getOrders,
   getPackagingOptions,
@@ -19,6 +20,8 @@ import { formatDate, formatMoney } from "../productionScheduleShared";
 import { NewOrderForm } from "../new/NewOrderForm";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
+import { OrderSummary } from "./OrderSummary";
+import { perthDate } from "../../stats-v2/statsModel";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -29,12 +32,15 @@ type Params = {
 };
 
 type SearchParams = {
+  edit?: string;
   toast?: string;
   message?: string;
 };
 
 const isUuid = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 
 async function loadOrder(rawId: string) {
   const query = supabaseAdminClient.from("orders").select("*");
@@ -65,8 +71,20 @@ export default async function AdminOrderDetailPage({
 
   const order = await loadOrder(rawId);
   if (!order) redirect("/admin/orders");
+  const editing = resolvedSearchParams?.edit === "1" && session.user.canWrite;
 
-  const [categories, packagingOptions, flavors, settings, palette, premadeCandies, orders, slots, assignments] = await Promise.all([
+  const [
+    categories,
+    packagingOptions,
+    flavors,
+    settings,
+    palette,
+    premadeCandies,
+    orders,
+    slots,
+    assignments,
+    labelTypes,
+  ] = await Promise.all([
     getCategories(),
     getPackagingOptions(),
     getFlavors(),
@@ -76,6 +94,7 @@ export default async function AdminOrderDetailPage({
     getOrders(),
     getProductionSlots(),
     getOrderSlots(),
+    getLabelTypes(),
   ]);
   const invoiceGroupOrders = order.square_invoice_id
     ? orders
@@ -83,25 +102,48 @@ export default async function AdminOrderDetailPage({
         .sort((a, b) => {
           const aNumber = a.order_number ?? "";
           const bNumber = b.order_number ?? "";
-          return aNumber.localeCompare(bNumber) || a.created_at.localeCompare(b.created_at);
+          return (
+            aNumber.localeCompare(bNumber) ||
+            a.created_at.localeCompare(b.created_at)
+          );
         })
     : [];
-  const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
+  const toastTone =
+    resolvedSearchParams?.toast === "error"
+      ? "error"
+      : resolvedSearchParams?.toast === "success"
+        ? "success"
+        : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
-  const orderLabel = order.order_number ? `#${order.order_number}` : `#${order.id.slice(0, 8)}`;
+  const orderLabel = order.order_number
+    ? `#${order.order_number}`
+    : `#${order.id.slice(0, 8)}`;
 
   return (
     <section className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Orders</p>
-          <h2 className="admin-page-title">Order details</h2>
+          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Admin / Orders
+          </p>
+          <h1 className="admin-page-title">
+            {editing ? "Edit order" : "Order details"}
+          </h1>
           <p className="text-sm text-zinc-600">
-            {orderLabel} · {order.title || order.customer_name || "Untitled order"}
+            {orderLabel} ·{" "}
+            {order.title || order.customer_name || "Untitled order"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {!isAdminPremadeOrder(order) ? (
+          {session.user.canWrite && (
+            <Link
+              href={`/admin/orders/${order.id}${editing ? "" : "?edit=1"}`}
+              className="rounded-lg bg-emerald-800 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-900"
+            >
+              {editing ? "Cancel editing" : "Edit order"}
+            </Link>
+          )}
+          {editing && session.user.canWrite && !isAdminPremadeOrder(order) ? (
             <Link
               href={adminOrderRemakeHref(order.id)}
               className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:border-sky-300"
@@ -118,10 +160,10 @@ export default async function AdminOrderDetailPage({
             Print
           </Link>
           <Link
-            href={`/admin/orders?selected=${encodeURIComponent(order.id)}`}
+            href="/admin/orders/archived"
             className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
           >
-            Back to schedule
+            Back to orders
           </Link>
         </div>
       </div>
@@ -140,10 +182,13 @@ export default async function AdminOrderDetailPage({
 
       {invoiceGroupOrders.length > 1 ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-semibold">This order is part of a combined Square invoice.</p>
+          <p className="font-semibold">
+            This order is part of a combined Square invoice.
+          </p>
           <p className="mt-1">
-            Edit this order here, then approve the replacement invoice prompt if price, quantity, packaging, date,
-            batches, labels, or design changes affect what the customer should pay.
+            {editing
+              ? "Changes to price, quantity, packaging, date, batches, labels, or design may require the replacement invoice approval prompt."
+              : "These items share one invoice. Payments and invoice changes can affect all linked items."}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {invoiceGroupOrders.map((invoiceOrder) => (
@@ -156,7 +201,9 @@ export default async function AdminOrderDetailPage({
                     : "border-amber-200 bg-amber-100 text-amber-800 hover:border-amber-300"
                 }`}
               >
-                {invoiceOrder.order_number ? `#${invoiceOrder.order_number}` : invoiceOrder.title ?? "Order"}
+                {invoiceOrder.order_number
+                  ? `#${invoiceOrder.order_number}`
+                  : (invoiceOrder.title ?? "Order")}
                 {" · "}
                 {formatMoney(invoiceOrder.total_price)}
               </Link>
@@ -165,41 +212,72 @@ export default async function AdminOrderDetailPage({
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Total</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-900">{formatMoney(order.total_price)}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Required</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-900">{formatDate(order.due_date) || "-"}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Customer</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-900">{order.customer_name || order.customer_email || "-"}</p>
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">Payment</p>
-          <p className="mt-1 text-sm font-semibold text-zinc-900">
-            {order.payment_method || order.payment_provider || "-"}
-          </p>
-        </div>
-      </div>
+      {editing ? (
+        <>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-xl border border-zinc-200 bg-white p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                Total
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-900">
+                {formatMoney(order.total_price)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                Required
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-900">
+                {formatDate(order.due_date) || "-"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                Customer
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-900">
+                {order.customer_name || order.customer_email || "-"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">
+                Payment
+              </p>
+              <p className="mt-1 text-sm font-semibold text-zinc-900">
+                {order.payment_method || order.payment_provider || "-"}
+              </p>
+            </div>
+          </div>
 
-      <NewOrderForm
-        categories={categories}
-        packagingOptions={packagingOptions}
-        flavors={flavors}
-        palette={palette}
-        premadeCandies={premadeCandies}
-        settings={settings}
-        orders={orders}
-        slots={slots}
-        assignments={assignments}
-        mode="edit"
-        initialOrder={order}
-        cancelHref={`/admin/orders?selected=${encodeURIComponent(order.id)}`}
-      />
+          <NewOrderForm
+            categories={categories}
+            packagingOptions={packagingOptions}
+            flavors={flavors}
+            palette={palette}
+            premadeCandies={premadeCandies}
+            settings={settings}
+            orders={orders}
+            slots={slots}
+            assignments={assignments}
+            mode="edit"
+            initialOrder={order}
+            cancelHref={`/admin/orders/${order.id}`}
+          />
+        </>
+      ) : (
+        <OrderSummary
+          order={order}
+          orders={orders}
+          categories={categories}
+          packagingOptions={packagingOptions}
+          palette={palette}
+          labelTypes={labelTypes}
+          slots={slots}
+          assignments={assignments}
+          today={perthDate(new Date().toISOString())}
+          canWrite={session.user.canWrite}
+        />
+      )}
     </section>
   );
 }

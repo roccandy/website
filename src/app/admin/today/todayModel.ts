@@ -39,6 +39,7 @@ export type TodayOrder = Pick<
   | "square_invoice_due_date"
   | "square_invoice_error"
   | "refunded_at"
+  | "refund_reason"
   | "refunded_amount"
   | "archived_at"
   | "shipped_at"
@@ -199,6 +200,28 @@ export function buildTodayHub(
         : `/admin/orders?selected=${encodeURIComponent(row.id)}#order-${encodeURIComponent(row.id)}`;
       const internal = isAdminPremadeOrder(row);
       const premade = row.design_type === "premade" && !internal;
+      if (
+        row.refunded_at ||
+        row.status === "partially-refunded" ||
+        cents(row.refunded_amount) > 0
+      ) {
+        const refunded = cents(row.refunded_amount);
+        const remaining = Math.max(0, cents(row.total_price) - refunded);
+        const money = (value: number) =>
+          new Intl.NumberFormat("en-AU", {
+            style: "currency",
+            currency: "AUD",
+          }).format(value / 100);
+        issues.push({
+          category: "review",
+          label: "Partially refunded order still open",
+          detail: `${refunded > 0 ? `${money(refunded)} refunded; ${money(remaining)} was not refunded (not a new debt). ` : "A partial refund is recorded. "}${row.refund_reason ? `Recorded reason: ${row.refund_reason}. ` : ""}Confirm whether any goods still need making or fulfilment, or close the order if resolved.`,
+          action: "Review refund & status",
+          href: `${href}#order-payment`,
+          priority: 80,
+        });
+        continue;
+      }
       const invoiceKey = row.square_invoice_id || row.id;
       if (!internal && !isPaid(row) && !seenInvoices.has(invoiceKey)) {
         const invoiceHref = row.square_invoice_id ? `${href}/invoice` : href;
@@ -423,6 +446,7 @@ export function buildTodayHub(
         .filter(
           (assignment) =>
             activeMap.has(assignment.order_id) &&
+            !activeMap.get(assignment.order_id)?.refunded_at &&
             slotMap.get(assignment.slot_id)?.slot_date === date,
         )
         .map((assignment) => {

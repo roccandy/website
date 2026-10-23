@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
+import { GripVertical } from "lucide-react";
+import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import type {
   Category,
   OrderRow,
@@ -52,6 +54,7 @@ type Props = {
   categories: Category[];
   dayNotes: ProductionDayNote[];
   initialSelectedId?: string | null;
+  canWrite: boolean;
 };
 
 const JACKET_LABELS = new Map([
@@ -107,10 +110,12 @@ export function OrdersTable({
   categories,
   dayNotes,
   initialSelectedId = null,
+  canWrite,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"both" | "calendar" | "orders">("both");
+  const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
 
   const packagingById = useMemo(
     () => new Map(packagingOptions.map((option) => [option.id, option])),
@@ -217,7 +222,7 @@ export function OrdersTable({
   return (
     <div className="admin-production-workspace space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-zinc-500">{visibleListOrders.length} active order items · {unassignedOrders.length} need scheduling</p>
+        <div><p className="text-xs text-zinc-500">{visibleListOrders.length} active order items · {unassignedOrders.length} need scheduling</p>{canWrite && workspaceView === "both" && <p className="mt-1 text-[11px] text-zinc-400">Drag an order onto an empty calendar slot. Multi-batch orders allocate the next batch, or ask which assigned batch to move.</p>}</div>
         <div aria-label="Production workspace view" className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1">
           {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
         </div>
@@ -255,11 +260,21 @@ export function OrdersTable({
                 : order.category_id
                   ? categoryLabelById.get(order.category_id) ?? order.category_id
                   : "-";
+              const dragPlan = canWrite ? orderDropPlan(order, assignments, slots, scheduleTodayKey) : null;
 
               return (
                 <Fragment key={order.id}>
                   <tr
                     id={`order-${order.id}`}
+                    draggable={Boolean(dragPlan)}
+                    onDragStart={(event) => {
+                      if (!dragPlan || (event.target instanceof Element && event.target.closest("button, a, input, select, textarea"))) { event.preventDefault(); return; }
+                      event.dataTransfer.setData(PRODUCTION_ORDER_DRAG_TYPE, order.id);
+                      event.dataTransfer.setData("text/plain", order.order_number || order.title || "Order");
+                      event.dataTransfer.effectAllowed = "move";
+                      setDraggingOrderId(order.id);
+                    }}
+                    onDragEnd={() => setDraggingOrderId(null)}
                     className={`cursor-pointer bg-white hover:bg-zinc-50 ${
                       selectedId === order.id ? "bg-zinc-50" : ""
                     }`}
@@ -267,6 +282,7 @@ export function OrdersTable({
                   >
                     <td className="px-3 py-2 font-semibold text-zinc-900">
                       <div className="flex items-center gap-2">
+                        {dragPlan && <span title={dragPlan.kind === "assign" ? `Drag next batch (${dragPlan.kg.toFixed(2)} kg) to the calendar` : "Drag to move an assigned batch"} className="shrink-0 cursor-grab text-zinc-300 active:cursor-grabbing"><GripVertical size={14} /></span>}
                         <span>
                           {order.order_number
                             ? `#${order.order_number}`
@@ -527,6 +543,9 @@ export function OrdersTable({
           settings={settings}
           unassignedOrders={unassignedOrders}
           dayNotes={dayNotes}
+          canWrite={canWrite}
+          draggingOrderId={draggingOrderId}
+          onOrderDragEnd={() => setDraggingOrderId(null)}
         />
       </div>
       </div>

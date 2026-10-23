@@ -31,6 +31,7 @@ const row = (changes: Partial<TodayOrder> = {}): TodayOrder => ({
   square_invoice_due_date: null,
   square_invoice_error: null,
   refunded_at: null,
+  refund_reason: null,
   refunded_amount: null,
   archived_at: null,
   shipped_at: null,
@@ -71,7 +72,41 @@ describe("Today work queue", () => {
       }),
     ]);
     expect(data.counts.active).toBe(1);
-    expect(data.items[0].issues[0].href).toBe("/admin/orders/row-1");
+    expect(data.items[0].issues[0].href).toBe(
+      "/admin/orders/row-1#order-payment",
+    );
+    expect(data.items[0].issues[0].label).toBe(
+      "Partially refunded order still open",
+    );
+    expect(data.counts.schedule).toBe(0);
+    expect(data.counts.dispatch).toBe(0);
+    expect(data.counts.payments).toBe(0);
+  });
+
+  it("explains a cancelled order with a retained fee without making up a new debt or production task", () => {
+    const data = hub([
+      row({
+        title: "ELEVATE 2027",
+        total_price: 670.5,
+        refunded_at: "2026-07-27",
+        refunded_amount: 660.11,
+        refund_reason: "Cancelled order less 1.5% transaction fee",
+        due_date: "2026-08-10",
+        status: "scheduled",
+      }),
+    ]);
+    expect(data.items[0].issues).toHaveLength(1);
+    expect(data.items[0].issues[0].category).toBe("review");
+    expect(data.items[0].issues[0].detail).toContain(
+      "$10.39 was not refunded (not a new debt)",
+    );
+    expect(data.items[0].issues[0].detail).toContain(
+      "Cancelled order less 1.5% transaction fee",
+    );
+    expect(
+      data.counts.payments + data.counts.dispatch + data.counts.schedule,
+    ).toBe(0);
+    expect(data.counts.urgent).toBe(0);
   });
 
   it("groups split checkout items and counts the entire queue, not just six cards", () => {

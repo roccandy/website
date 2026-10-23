@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type DragEvent } from "react";
+import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import { useRouter } from "next/navigation";
 import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
@@ -37,6 +38,9 @@ type Props = {
   settings: SettingsRow;
   unassignedOrders: OrderRow[];
   dayNotes: ProductionDayNote[];
+  canWrite: boolean;
+  draggingOrderId: string | null;
+  onOrderDragEnd: () => void;
 };
 
 const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
@@ -69,6 +73,9 @@ export default function ProductionScheduleSection({
   settings,
   unassignedOrders,
   dayNotes,
+  canWrite,
+  draggingOrderId,
+  onOrderDragEnd,
 }: Props) {
   const router = useRouter();
   const [calendarMonth, setCalendarMonth] = useState(() => startOfWorkweek(new Date()));
@@ -81,6 +88,7 @@ export default function ProductionScheduleSection({
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
   const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
+  const [dropChoice, setDropChoice] = useState<{ orderId: string; date: string; slotIndex: number; assignments: OrderSlot[] } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [savingNoteDate, setSavingNoteDate] = useState<string | null>(null);
   const [isNotePending, startNoteTransition] = useTransition();
@@ -229,6 +237,39 @@ export default function ProductionScheduleSection({
       refreshAfterAssignment();
     }
   };
+  const commitDrop = (orderId: string, date: string, slotIndex: number, kg: number, assignmentId?: string) => {
+    setDraggingAssignmentId(null);
+    setHoveredDropSlotKey(null);
+    onOrderDragEnd();
+    startDropTransition(async () => {
+      const formData = new FormData();
+      formData.set("order_id", orderId);
+      formData.set("slot_date", date);
+      formData.set("slot_index", String(slotIndex));
+      formData.set("slot_id", slotIdByKey.get(`${date}:${slotIndex}`) ?? "");
+      formData.set("kg_assigned", String(kg));
+      if (assignmentId) formData.set("assignment_id", assignmentId);
+      try { await runAssignmentAction(formData); } catch { emitToast("error", "Unable to update the schedule. No success was confirmed; refresh and check the slot before retrying."); }
+    });
+  };
+  const handleSlotDrop = (event: DragEvent<HTMLDivElement>, date: string, slotIndex: number, occupied: boolean) => {
+    event.preventDefault();
+    if (!canWrite || occupied || date < todayKey || isDropPending) return;
+    const orderId = draggingOrderId || event.dataTransfer.getData(PRODUCTION_ORDER_DRAG_TYPE);
+    if (orderId) {
+      const order = ordersById.get(orderId);
+      const plan = order && orderDropPlan(order, assignments, slots, todayKey);
+      onOrderDragEnd();
+      setHoveredDropSlotKey(null);
+      if (!plan) { emitToast("error", "This order has no movable production batch. Open the order to review its status."); return; }
+      if (plan.kind === "assign") commitDrop(orderId, date, slotIndex, plan.kg);
+      else if (plan.kind === "move") commitDrop(orderId, date, slotIndex, Number(plan.assignment.kg_assigned), plan.assignment.id);
+      else setDropChoice({ orderId, date, slotIndex, assignments: plan.assignments });
+      return;
+    }
+    const assignment = draggingAssignmentId && assignmentById.get(draggingAssignmentId);
+    if (assignment) commitDrop(assignment.order_id, date, slotIndex, Number(assignment.kg_assigned), assignment.id);
+  };
   const toggleCompletedCalendarAssignment = (assignmentId: string) => {
     setExpandedCompletedCalendarAssignments((current) => {
       const next = new Set(current);
@@ -308,7 +349,8 @@ export default function ProductionScheduleSection({
 
   return (
     <>
-      <div id="production-calendar" className="admin-production-calendar min-w-0 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div id="production-calendar" aria-busy={isDropPending} className="admin-production-calendar min-w-0 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
+        {isDropPending && <p role="status" className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">Updating production slot…</p>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="admin-card-title text-zinc-900">Production Calendar</h3>
@@ -396,47 +438,31 @@ export default function ProductionScheduleSection({
                           <div
                             key={slotKey}
                             className={`rounded border border-dashed p-1 ${
-                              hoveredDropSlotKey === slotKey
+                              hoveredDropSlotKey === slotKey && Boolean(draggingOrderId || draggingAssignmentId)
                                 ? "border-blue-500 ring-2 ring-blue-200"
-                                : "border-zinc-200"
-                            } ${draggingAssignmentId && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                                    : "border-zinc-200"
+                            } ${(draggingAssignmentId || draggingOrderId) && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            data-production-date={key}
+                            data-production-slot={slotIndex}
+                            data-occupied={Boolean(assignment)}
                             onDragOver={(event) => {
-                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
+                              if (!canWrite || (!draggingAssignmentId && !draggingOrderId) || assignment || key < todayKey || isDropPending) return;
                               event.preventDefault();
+                              event.dataTransfer.dropEffect = "move";
                               if (hoveredDropSlotKey !== slotKey) setHoveredDropSlotKey(slotKey);
                             }}
-                            onDrop={(event) => {
-                              if (!draggingAssignmentId || assignment || key < todayKey || isDropPending) return;
-                              event.preventDefault();
-                              const draggedAssignment = assignmentById.get(draggingAssignmentId);
-                              if (!draggedAssignment) return;
-                              const draggedOrder = ordersById.get(draggedAssignment.order_id);
-                              if (!draggedOrder) return;
-                              startDropTransition(async () => {
-                                const formData = new FormData();
-                                formData.set("assignment_id", draggedAssignment.id);
-                                formData.set("order_id", draggedOrder.id);
-                                formData.set("slot_id", slotIdByKey.get(slotKey) ?? "");
-                                formData.set("slot_date", key);
-                                formData.set("slot_index", String(slotIndex));
-                                formData.set(
-                                  "kg_assigned",
-                                  String(
-                                    Number.isFinite(Number(draggedAssignment.kg_assigned)) &&
-                                      Number(draggedAssignment.kg_assigned) > 0
-                                      ? Number(draggedAssignment.kg_assigned)
-                                      : 0.01,
-                                  ),
-                                );
-                                setDraggingAssignmentId(null);
-                                await runAssignmentAction(formData);
-                              });
+                            onDragLeave={(event) => {
+                              if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+                              setHoveredDropSlotKey((current) => current === slotKey ? null : current);
                             }}
+                            onDrop={(event) => handleSlotDrop(event, key, slotIndex, Boolean(assignment))}
                           >
                             {assignment && order ? (
                               <div
-                                draggable={canDragSlotOrder && !isCompletedCalendarOrder}
-                                onDragStart={() => {
+                                draggable={canWrite && canDragSlotOrder && !isCompletedCalendarOrder && !order.made && !order.refunded_at}
+                                onDragStart={(event) => {
+                                  event.dataTransfer.effectAllowed = "move";
+                                  event.dataTransfer.setData("text/plain", order.order_number || "Production batch");
                                   setDraggingAssignmentId(assignment.id);
                                   setHoveredDropSlotKey(null);
                                 }}
@@ -724,6 +750,7 @@ export default function ProductionScheduleSection({
           </div>
         )}
       </div>
+      {dropChoice && <AdminModalPortal onClose={() => setDropChoice(null)}><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDropChoice(null)}><section role="dialog" aria-modal="true" aria-label="Choose batch to move" className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onClick={(event) => event.stopPropagation()}><h3 className="text-lg font-semibold">Which batch should move?</h3><p className="mt-2 text-xs leading-5 text-zinc-500">{ordersById.get(dropChoice.orderId)?.title} has multiple allocated batches. Move one to {formatDate(dropChoice.date)}, slot {dropChoice.slotIndex}. Other batches stay where they are.</p><div className="mt-4 space-y-2">{dropChoice.assignments.map((assignment) => { const slot = slotMap.get(assignment.slot_id);return <button key={assignment.id} type="button" className="block w-full rounded-lg border border-zinc-200 px-3 py-3 text-left text-sm hover:border-emerald-500" onClick={() => { const choice = dropChoice; setDropChoice(null); commitDrop(choice.orderId, choice.date, choice.slotIndex, Number(assignment.kg_assigned), assignment.id); }}>{Number(assignment.kg_assigned).toFixed(2)} kg · {slot ? `${formatDate(slot.slot_date)} · Slot ${slot.slot_index}` : "Unknown date"}</button>; })}</div><button type="button" onClick={() => setDropChoice(null)} className="mt-4 text-xs font-semibold text-zinc-500">Cancel</button></section></div></AdminModalPortal>}
       {slotPicker && (
         <AdminModalPortal onClose={closeSlotPicker}>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeSlotPicker}>

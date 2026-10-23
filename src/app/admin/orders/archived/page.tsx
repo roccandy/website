@@ -7,8 +7,10 @@ import { archiveOrderInline, markAdditionalItemsShipped, refundOrder, unarchiveO
 import { RefundForm } from "../RefundForm";
 import SplitAwareActionForm from "../SplitAwareActionForm";
 import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButton";
-import { getPremadeSiblingMeta, getScheduleStatus } from "../productionScheduleShared";
-import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
+import { getPremadeSiblingMeta, getMultiAssignmentScheduleStatus } from "../productionScheduleShared";
+import { OrderActions } from "../OrderActions";
+import { orderWorkflow } from "../orderWorkflow";
+import { perthDate } from "../../stats-v2/statsModel";
 
 export const metadata = {
   title: "All Orders | Roc Candy Admin",
@@ -99,7 +101,7 @@ const isFullyRefundedOrder = (order: OrderRow) =>
   Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) <= 0;
 const isRefundableOrder = (order: OrderRow) =>
   Boolean(order.paid_at && order.payment_transaction_id && remainingRefundCentsForOrder(order) > 0 && !isResettableCompletedOrder(order));
-const isCompletablePremadeOrder = (order: OrderRow) => order.design_type === "premade" && order.status !== "shipped" && !order.refunded_at;
+const isCompletablePremadeOrder = (order: OrderRow) => order.design_type === "premade" && !["shipped", "archived", "cancelled", "canceled", "test", "draft", "pending_payment"].includes(order.status) && !order.refunded_at && Boolean(order.paid_at || order.square_invoice_status === "PAID");
 const isPartiallyRefundedOrder = (order: OrderRow) =>
   Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
 const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
@@ -227,35 +229,15 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
 
   const [orders, slots, assignments] = await Promise.all([getOrders(), getProductionSlots(), getOrderSlots()]);
   const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
-  const assignmentByOrderId = new Map<string, (typeof assignments)[number]>();
+  const assignedDatesByOrderId = new Map<string, string[]>();
   assignments.forEach((assignment) => {
-    if (assignmentByOrderId.has(assignment.order_id)) return;
-    assignmentByOrderId.set(assignment.order_id, assignment);
+    const date = slotMap.get(assignment.slot_id)?.slot_date;
+    if (date) assignedDatesByOrderId.set(assignment.order_id, [...(assignedDatesByOrderId.get(assignment.order_id) ?? []), date]);
   });
-  const todayKey = (() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = `${now.getMonth() + 1}`.padStart(2, "0");
-    const day = `${now.getDate()}`.padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  })();
+  const todayKey = perthDate(new Date().toISOString());
   const scheduleStatusById = new Map<string, string>();
   orders.forEach((order) => {
-    if (order.status === "archived") {
-      scheduleStatusById.set(order.id, "archived");
-      return;
-    }
-    const assignment = assignmentByOrderId.get(order.id);
-    if (!assignment) {
-      scheduleStatusById.set(order.id, "unassigned");
-      return;
-    }
-    const slotDate = slotMap.get(assignment.slot_id)?.slot_date;
-    if (slotDate && slotDate < todayKey) {
-      scheduleStatusById.set(order.id, "made");
-      return;
-    }
-    scheduleStatusById.set(order.id, "scheduled");
+    scheduleStatusById.set(order.id, getMultiAssignmentScheduleStatus(order, assignedDatesByOrderId.get(order.id) ?? [], todayKey));
   });
 
   const groupedOrders = new Map<
@@ -608,22 +590,20 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                   subgroup.isPremadeGroup && companionOrders.length > 0
                     ? (() => {
                         for (const companionOrder of companionOrders) {
-                          const assignment = assignmentByOrderId.get(companionOrder.id);
-                          const assignedSlotDate = assignment ? slotMap.get(assignment.slot_id)?.slot_date ?? null : null;
-                          const scheduleStatus = getScheduleStatus(companionOrder, assignedSlotDate, todayKey);
+                          const state = orderWorkflow(companionOrder, assignments, slots, todayKey);
                           const href = `/admin/orders?selected=${encodeURIComponent(companionOrder.id)}`;
 
-                          if (scheduleStatus === "unassigned") {
+                          if (!state.fullyAssigned && !state.recordedMade) {
                             return {
                               href,
-                              message: "Order is unassigned, please update the production schedule or cancel.",
+                              message: "The linked order is not fully allocated. Review all production batches before completing it.",
                             };
                           }
 
-                          if (scheduleStatus === "scheduled" && assignedSlotDate && assignedSlotDate > todayKey) {
+                          if (!state.canComplete) {
                             return {
                               href,
-                              message: "Order is scheduled for a future date, please update the production schedule or cancel.",
+                              message: "The linked order still needs a production or payment review before completion.",
                             };
                           }
                         }
@@ -692,10 +672,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                         ) : null}
                       </div>
                     </td>
-                    <td className={`w-44 max-w-44 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
+                    <td className={`w-64 max-w-64 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
                       {subgroup.isPremadeGroup ? (
                         <div className="space-y-2">
-                          {subgroup.status === "pending" && subgroupCompletablePremadeOrders.length > 0 ? (
+                          {subgroup.orders.map((order) => <OrderActions key={order.id} order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} />)}
+                          {session.user.canWrite && subgroup.status === "pending" && subgroupCompletablePremadeOrders.length > 0 ? (
                             <PremadeGroupShipButton
                               action={markAdditionalItemsShipped}
                               orderIds={subgroupCompletablePremadeOrders.map((order) => order.id).join(",")}
@@ -709,7 +690,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                               redirectTo={redirectTo}
                             />
                           ) : null}
-                          {subgroupResettableOrders.length > 0 ? (
+                          {session.user.canWrite && subgroupResettableOrders.length > 0 ? (
                             <form action={unarchiveOrder}>
                               <input type="hidden" name="order_id" value={subgroupResettableOrders[0]?.id ?? ""} />
                               <input
@@ -726,13 +707,13 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                               </button>
                             </form>
                           ) : null}
-                          {subgroupRefundableOrders.length > 0 ? (
+                          {session.user.canWrite && subgroupRefundableOrders.length > 0 ? (
                             <RefundForm
                               orderId={subgroupRefundableOrders[0]?.id ?? ""}
                               orderIds={subgroupRefundableOrders.map((order) => order.id)}
                               orderNumber={subgroupRefundableOrders[0]?.order_number}
                               amount={subgroupRefundAmount}
-                              buttonLabel={subgroup.partiallyRefunded ? "Partially refunded" : "Refund"}
+                              buttonLabel={subgroup.partiallyRefunded ? `Refund remaining $${subgroupRefundAmount.toFixed(2)}` : "Refund"}
                               action={refundOrder}
                               redirectTo={redirectTo}
                               compact
@@ -753,31 +734,23 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                             const hasRefund = isRefundableOrder(order);
                             const isFullyRefunded = isFullyRefundedOrder(order);
                             const isPartiallyRefunded = isPartiallyRefundedOrder(order);
-                            const assignedSlotDate = assignmentByOrderId.get(order.id)
-                              ? slotMap.get(assignmentByOrderId.get(order.id)!.slot_id)?.slot_date ?? null
-                              : null;
-                            const canComplete = getScheduleStatus(order, assignedSlotDate, todayKey) === "made" && !order.refunded_at;
+                            const canComplete = orderWorkflow(order, assignments, slots, todayKey).canComplete;
                             const premadeSiblingMeta = getPremadeSiblingMeta(orders, order);
 
                             return (
                               <div key={`actions-${order.id}`} className="space-y-1">
-                                <Link
-                                  href={adminOrderRemakeHref(order.id)}
-                                  className="inline-flex items-center rounded border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 hover:border-sky-300"
-                                >
-                                  Re-make
-                                </Link>
-                                {canComplete ? (
+                                <OrderActions order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} />
+                                {session.user.canWrite && canComplete ? (
                                   <SplitAwareActionForm
                                     action={archiveOrderInline}
                                     hiddenFields={[{ name: "order_id", value: order.id }]}
                                     buttonLabel={order.pickup ? "Mark as collected" : "Mark as shipped"}
                                     buttonClassName="inline-flex items-center rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
-                                    confirmMessage={`Confirm ${order.pickup ? "collection" : "delivery"} for this order?`}
+                                    confirmMessage={`Confirm the goods are made and ${order.pickup ? "collection" : "delivery"} is complete. A past production date alone does not confirm this.`}
                                     companionMeta={premadeSiblingMeta}
                                   />
                                 ) : null}
-                                {hasReset ? (
+                                {session.user.canWrite && hasReset ? (
                                   <form action={unarchiveOrder}>
                                     <input type="hidden" name="order_id" value={order.id} />
                                     <input type="hidden" name="redirect_to" value={redirectTo} />
@@ -789,12 +762,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                     </button>
                                   </form>
                                 ) : null}
-                                {hasRefund ? (
+                                {session.user.canWrite && hasRefund ? (
                                   <RefundForm
                                     orderId={order.id}
                                     orderNumber={order.order_number}
                                     amount={remainingRefundCentsForOrder(order) / 100}
-                                    buttonLabel={isPartiallyRefunded ? "Partially refunded" : "Refund"}
+                                    buttonLabel={isPartiallyRefunded ? `Refund remaining $${(remainingRefundCentsForOrder(order) / 100).toFixed(2)}` : "Refund"}
                                     action={refundOrder}
                                     redirectTo={redirectTo}
                                     compact

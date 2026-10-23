@@ -171,9 +171,6 @@ body {
 .admin-calendar-weekdays, .admin-calendar-empty { display: none; }
 .admin-calendar-days { grid-template-columns: minmax(0, 1fr); }
 @container production-calendar (min-width: 500px) {
-  .admin-calendar-days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@container production-calendar (min-width: 950px) {
   .admin-calendar-weekdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .admin-calendar-days { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .admin-calendar-empty { display: block; }

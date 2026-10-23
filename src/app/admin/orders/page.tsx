@@ -72,6 +72,7 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
         categories={categories}
         dayNotes={dayNotes}
         initialSelectedId={selectedOrderId}
+        canWrite={session.user.canWrite}
       />
 
       <details className="group rounded-2xl border border-zinc-200 bg-white shadow-sm">
