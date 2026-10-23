@@ -2,6 +2,9 @@ import "server-only";
 
 import sharp from "sharp";
 
+type SharpInstance = ReturnType<typeof sharp>;
+type SharpMetadata = Awaited<ReturnType<SharpInstance["metadata"]>>;
+
 export const OPTIMIZABLE_WEB_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -42,7 +45,7 @@ function extensionForMimeType(mimeType: OptimizedServerImage["contentType"]) {
   return "webp" as const;
 }
 
-function resolveOrientedDimensions(metadata: sharp.Metadata) {
+function resolveOrientedDimensions(metadata: SharpMetadata) {
   const width = metadata.width ?? null;
   const height = metadata.height ?? null;
   if (!width || !height) {
@@ -58,7 +61,7 @@ function resolveOrientedDimensions(metadata: sharp.Metadata) {
 }
 
 async function encodePipeline(
-  pipeline: sharp.Sharp,
+  pipeline: SharpInstance,
   mimeType: OptimizedServerImage["contentType"],
   quality: number
 ): Promise<OptimizedServerImage> {

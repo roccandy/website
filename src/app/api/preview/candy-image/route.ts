@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { createElement } from "react";
+import { safePreviewLogoSource } from "@/lib/previewImage";
 
 export const runtime = "edge";
 
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
   const showHeart = searchParams.get("showHeart") === "1";
   const showPinstripe = searchParams.get("showPinstripe") === "1";
   const isInitials = searchParams.get("isInitials") === "1";
-  const logoUrl = (searchParams.get("logoUrl") ?? "").trim();
+  const logoUrl = safePreviewLogoSource(searchParams.get("logoUrl"));
 
   const weddingSplit = !rawLineOne && !rawLineTwo ? splitWeddingNames(rawDesignText) : { lineOne: rawLineOne, lineTwo: rawLineTwo };
   const lineOne = weddingSplit.lineOne.toUpperCase();
