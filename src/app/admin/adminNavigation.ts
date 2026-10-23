@@ -85,6 +85,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       { label: "My Password", href: "/admin/settings/password", description: "Change your own sign-in password." },
       { label: "Stats", href: "/admin/stats", description: "Internal performance, revenue, and order stats." },
+      { label: "Stats v2 (demo)", href: "/admin/stats-v2", description: "Interactive sales trends, product insights, and order explorer." },
     ],
   },
 ];
