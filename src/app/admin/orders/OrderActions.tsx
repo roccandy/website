@@ -29,6 +29,8 @@ export function OrderActions({
   today,
   canWrite,
   summary = false,
+  menu = false,
+  showView = true,
 }: {
   order: OrderRow;
   orders: OrderRow[];
@@ -37,6 +39,8 @@ export function OrderActions({
   today: string;
   canWrite: boolean;
   summary?: boolean;
+  menu?: boolean;
+  showView?: boolean;
 }) {
   const state = orderWorkflow(order, assignments, slots, today);
   const style =
@@ -44,7 +48,7 @@ export function OrderActions({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        {!summary && (
+        {!summary && showView && (
           <AdminLink
             href={state.href}
             className={`${style} !border-emerald-200 !bg-emerald-50 !text-emerald-900`}
@@ -103,19 +107,16 @@ export function OrderActions({
         {!summary && canWrite && !state.closed && state.partialRefund && (
           <CloseRefundedOrderAction orderId={order.id} />
         )}
-        <details className="group">
-          <summary className={`${style} cursor-pointer list-none`}>
-            More actions
-          </summary>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {canWrite && !state.internal && (
+        {menu ? (
+          <>
+            {canWrite && !state.internal ? (
               <AdminLink
                 href={adminOrderRemakeHref(order.id)}
                 className={style}
               >
                 Re-make
               </AdminLink>
-            )}
+            ) : null}
             <AdminLink
               href={`${state.href}/print?id=${encodeURIComponent(order.id)}`}
               target="_blank"
@@ -124,10 +125,34 @@ export function OrderActions({
             >
               Print order
             </AdminLink>
-          </div>
-        </details>
+          </>
+        ) : (
+          <details className="group">
+            <summary className={`${style} cursor-pointer list-none`}>
+              More actions
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {canWrite && !state.internal && (
+                <AdminLink
+                  href={adminOrderRemakeHref(order.id)}
+                  className={style}
+                >
+                  Re-make
+                </AdminLink>
+              )}
+              <AdminLink
+                href={`${state.href}/print?id=${encodeURIComponent(order.id)}`}
+                target="_blank"
+                rel="noreferrer"
+                className={style}
+              >
+                Print order
+              </AdminLink>
+            </div>
+          </details>
+        )}
       </div>
-      {!summary && (
+      {!summary && !menu && (
         <p className="text-[10px] leading-4 text-zinc-500">{state.label}</p>
       )}
     </div>

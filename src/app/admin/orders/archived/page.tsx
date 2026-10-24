@@ -9,6 +9,8 @@ import SplitAwareActionForm from "../SplitAwareActionForm";
 import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButton";
 import { getPremadeSiblingMeta, getMultiAssignmentScheduleStatus } from "../productionScheduleShared";
 import { OrderActions } from "../OrderActions";
+import { OrderRowActionMenu } from "../OrderRowActionMenu";
+import { orderRowPrimaryAction } from "../orderRowPrimaryAction";
 import { orderWorkflow } from "../orderWorkflow";
 import { perthDate } from "../../stats-v2/statsModel";
 
@@ -545,12 +547,13 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <table className="min-w-full text-sm">
+      <div className="admin-order-history overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <table className="admin-order-history-table w-full min-w-[66rem] table-fixed text-sm">
+          <colgroup><col className="history-col-order"/><col/><col className="history-col-date"/><col className="history-col-weight"/><col className="history-col-customer"/><col className="history-col-status"/><col className="history-col-actions"/></colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               {SORT_OPTIONS.map((option) => renderSortHeader(option))}
-              <th className="w-44 px-3 py-3 text-left">Actions</th>
+              <th className="px-3 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -630,11 +633,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                 const companionOrderIds = companionOrders.map((order) => order.id).join(",");
 
                 return (
-                  <tr key={rowKey} className="bg-white">
+                  <tr key={rowKey} className="admin-order-history-row bg-white">
                     <td className={`px-3 py-2 font-semibold text-zinc-900 ${rowBorderClass}`}>
                       {showGroupCells ? group.orderNumber : ""}
                     </td>
-                    <td className={`px-3 py-2 text-zinc-800 ${rowBorderClass}`}>
+                    <td className={`break-words px-3 py-2 text-zinc-800 ${rowBorderClass}`}>
                       <div className="space-y-2">
                         {subgroup.orders.map((order) => {
                           const title = order.title ?? "Untitled";
@@ -655,7 +658,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                     </td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.dueDate : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.weight : ""}</td>
-                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.customer : ""}</td>
+                    <td className={`break-words px-3 py-2 text-zinc-700 ${rowBorderClass}`}>{showGroupCells ? group.customer : ""}</td>
                     <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
                       <div className="space-y-1">
                         <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge}`}>
@@ -672,10 +675,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                         ) : null}
                       </div>
                     </td>
-                    <td className={`w-64 max-w-64 px-3 py-2 align-top text-zinc-700 ${rowBorderClass}`}>
+                    <td className={`px-3 py-2 text-zinc-700 ${rowBorderClass}`}>
+                      <OrderRowActionMenu orderId={subgroup.orders[0].id} label={subgroup.orders[0].order_number ? `#${subgroup.orders[0].order_number}` : subgroup.orders[0].title || "order"} count={subgroup.orders.length} primary={orderRowPrimaryAction(subgroup.orders[0],assignments,slots,todayKey,session.user.canWrite)}>
                       {subgroup.isPremadeGroup ? (
                         <div className="space-y-2">
-                          {subgroup.orders.map((order) => <OrderActions key={order.id} order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} />)}
+                          {subgroup.orders.map((order) => <div key={order.id}>{subgroup.orders.length>1 ? <p className="mb-2 text-xs font-semibold">#{order.order_number} · {order.title}</p> : null}<OrderActions menu showView={subgroup.orders.length>1} order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} /></div>)}
                           {session.user.canWrite && subgroup.status === "pending" && subgroupCompletablePremadeOrders.length > 0 ? (
                             <PremadeGroupShipButton
                               action={markAdditionalItemsShipped}
@@ -739,7 +743,8 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
 
                             return (
                               <div key={`actions-${order.id}`} className="space-y-1">
-                                <OrderActions order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} />
+                                {subgroup.orders.length>1 ? <p className="mb-2 text-xs font-semibold">#{order.order_number} · {order.title}</p> : null}
+                                <OrderActions menu showView={subgroup.orders.length>1} order={order} orders={orders} assignments={assignments} slots={slots} today={todayKey} canWrite={session.user.canWrite} />
                                 {session.user.canWrite && canComplete ? (
                                   <SplitAwareActionForm
                                     action={archiveOrderInline}
@@ -779,6 +784,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                           })}
                         </div>
                       )}
+                      </OrderRowActionMenu>
                     </td>
                   </tr>
                 );

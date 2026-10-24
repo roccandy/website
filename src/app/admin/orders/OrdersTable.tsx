@@ -225,17 +225,17 @@ export function OrdersTable({
       <div aria-label="Payment colour legend" className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500"><span><i className="mr-1 inline-block h-2 w-2 bg-red-500"/>Payment not recorded</span><span><i className="mr-1 inline-block h-2 w-2 bg-emerald-500"/>Paid</span><span><i className="mr-1 inline-block h-2 w-2 bg-blue-500"/>Website order</span></div>
       <div className="admin-production-panels" data-view={workspaceView}>
       <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <table className="w-full min-w-[29rem] table-fixed text-[13px]">
-          <colgroup><col className="w-[5.5rem]"/><col/><col className="w-24"/><col className="w-28"/><col className="w-16"/><col className="w-14"/><col className="w-3"/></colgroup>
+        <div className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+          <table className="admin-production-orders-table w-full min-w-[29rem] table-fixed text-[13px]">
+          <colgroup><col className="production-col-order"/><col/><col className="production-col-date"/><col className="production-col-packaging"/><col className="production-col-kg"/><col className="production-col-state"/><col className="w-3"/></colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               <th className="whitespace-nowrap px-2 py-3 text-left">Order #</th>
-              <th className="px-3 py-3 text-left">Title</th>
-              <th className="px-3 py-3 text-left">Date required</th>
-              <th className="px-3 py-3 text-left">Packaging</th>
+              <th className="px-2 py-3 text-left">Title</th>
+              <th className="px-2 py-3 text-left">Date required</th>
+              <th className="px-2 py-3 text-left">Packaging</th>
               <th className="px-2 py-3 text-left">kg</th>
-              <th className="px-3 py-3 text-left">State</th>
+              <th className="px-2 py-3 text-left">State</th>
               <th className="w-3 p-0"><span className="sr-only">Payment and order source</span></th>
             </tr>
           </thead>
@@ -331,7 +331,7 @@ export function OrdersTable({
                       <PackagingDescription value={packagingDescription} />
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-zinc-700" title={formatBatchBreakdown(order) || `${order.total_weight_kg ?? "Unknown"} kg`}>{compactKg(order)}</td>
-                    <td className="truncate px-1 py-2 text-xs text-zinc-700" title={order.state ?? order.location ?? ""}>{order.state ?? order.location ?? ""}</td>
+                    <td className="truncate px-2 py-2 text-xs text-zinc-700" title={order.state ?? order.location ?? ""}>{order.state ?? order.location ?? ""}</td>
                     <td className="relative w-3 min-w-3 p-0"><Link href={paymentStrip.href} draggable={false} onClick={event=>event.stopPropagation()} aria-label={`${paymentStrip.label} · open ${source.invoiceHref ? "invoice" : "order"} for ${order.order_number || order.id}`} title={`${paymentStrip.label} — open ${source.invoiceHref ? "invoice" : "order details"}`} className={`absolute inset-0 block w-full ${paymentStrip.colour} hover:brightness-90 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-zinc-900`} /></td>
                   </tr>
                   {selectedId === order.id ? (

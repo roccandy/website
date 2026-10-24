@@ -168,8 +168,42 @@ body {
 }
 
 .admin-production-calendar { container: production-calendar / inline-size; }
+.admin-production-order-list { container: production-order-list / inline-size; }
+/* Let every information column share extra width, not only the title. Minimums
+   keep dates, batch weights and status badges readable in the split panel. */
+.admin-production-orders-table .production-col-order { width: 5.5rem; }
+.admin-production-orders-table .production-col-date { width: 6rem; }
+.admin-production-orders-table .production-col-packaging { width: 7rem; }
+.admin-production-orders-table .production-col-kg { width: 4rem; }
+.admin-production-orders-table .production-col-state { width: 3.5rem; }
+@container production-order-list (min-width: 700px) {
+  .admin-production-orders-table .production-col-order { width: 14%; }
+  .admin-production-orders-table .production-col-date { width: 16%; }
+  .admin-production-orders-table .production-col-packaging { width: 22%; }
+  .admin-production-orders-table .production-col-kg { width: 10%; }
+  .admin-production-orders-table .production-col-state { width: 8%; }
+}
+@container production-order-list (min-width: 800px) {
+  .admin-production-orders-table thead th:not(:last-child),
+  .admin-production-order-row > td:not(:last-child) { padding-inline: 1rem; }
+}
 .admin-production-order-row[draggable="true"] :where(a,button) { -webkit-user-drag: none; user-select: none; }
 .admin-production-order-row[draggable="true"] img { -webkit-user-drag: none; }
+.admin-order-history { container: order-history / inline-size; }
+.admin-order-history-table .history-col-order { width: 6rem; }
+.admin-order-history-table .history-col-date { width: 7rem; }
+.admin-order-history-table .history-col-weight { width: 5.5rem; }
+.admin-order-history-table .history-col-customer { width: 17%; }
+.admin-order-history-table .history-col-status { width: 10rem; }
+.admin-order-history-table .history-col-actions { width: 19rem; }
+@container order-history (min-width: 1450px) {
+  .admin-order-history-table .history-col-order { width: 7%; }
+  .admin-order-history-table .history-col-date { width: 10%; }
+  .admin-order-history-table .history-col-weight { width: 8%; }
+  .admin-order-history-table .history-col-customer { width: 17%; }
+  .admin-order-history-table .history-col-status { width: 14%; }
+  .admin-order-history-table .history-col-actions { width: 20%; }
+}
 .admin-calendar-weekdays, .admin-calendar-empty { display: none; }
 .admin-calendar-days { grid-template-columns: minmax(0, 1fr); }
 .admin-order-editor-pane { container: order-editor / inline-size; }

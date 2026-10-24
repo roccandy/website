@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AdminModalPortal } from "../AdminModalPortal";
 
 type RefundMode = "full" | "partial";
 type RefundStep = "mode" | "amount" | "reason";
@@ -115,6 +116,7 @@ export function RefundForm({
         {buttonLabel}
       </button>
       {isOpen ? (
+        <AdminModalPortal onClose={closeModal}>
         <div
           className="fixed inset-0 z-[80] flex items-center justify-center bg-zinc-950/35 px-4"
           role="dialog"
@@ -261,6 +263,7 @@ export function RefundForm({
             ) : null}
           </div>
         </div>
+        </AdminModalPortal>
       ) : null}
     </>
   );
