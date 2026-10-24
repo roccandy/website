@@ -168,6 +168,8 @@ body {
 }
 
 .admin-production-calendar { container: production-calendar / inline-size; }
+.admin-production-order-row[draggable="true"] :where(a,button) { -webkit-user-drag: none; user-select: none; }
+.admin-production-order-row[draggable="true"] img { -webkit-user-drag: none; }
 .admin-calendar-weekdays, .admin-calendar-empty { display: none; }
 .admin-calendar-days { grid-template-columns: minmax(0, 1fr); }
 .admin-order-editor-pane { container: order-editor / inline-size; }

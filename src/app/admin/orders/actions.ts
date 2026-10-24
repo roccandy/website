@@ -47,6 +47,7 @@ import { batchWeightsForOrder, findFirstAvailableSlotIndexForDate, productionKgF
 import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 import { buildOrderActivityChanges } from "./orderActivityChanges";
 import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
+import { buildInvoiceRecord } from "./invoices/invoiceModel";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -1726,6 +1727,10 @@ export async function sendAdminSquareInvoice(formData: FormData) {
     redirect(`${ORDERS_PATH}?${params.toString()}`);
   }
   const invoiceGroupOrders = await fetchInvoiceGroupOrders(existingOrder.square_invoice_id, existingOrder, client);
+  if (!buildInvoiceRecord(invoiceGroupOrders, new Date().toISOString()).canSend) {
+    const params = new URLSearchParams({ toast: "error", message: "This invoice is not an unsent draft. Review its payment, send and error records before taking action." });
+    redirect(`/admin/orders/${encodeURIComponent(orderId)}/invoice?${params.toString()}`);
+  }
   const localPatch = {
     square_invoice_title:
       invoiceTitle ?? existingOrder.square_invoice_title ?? sharedInvoiceTitle(existingOrder, invoiceGroupOrders),

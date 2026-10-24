@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
-import { GripVertical } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { orderSource } from "./orderSource";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import type {
   Category,
@@ -261,28 +262,30 @@ export function OrdersTable({
                   ? categoryLabelById.get(order.category_id) ?? order.category_id
                   : "-";
               const dragPlan = canWrite ? orderDropPlan(order, assignments, slots, scheduleTodayKey) : null;
+              const source = orderSource(order);
 
               return (
                 <Fragment key={order.id}>
                   <tr
                     id={`order-${order.id}`}
                     draggable={Boolean(dragPlan)}
+                    data-order-source={source.key}
+                    onMouseDown={(event) => { if (dragPlan && event.button === 0) window.getSelection()?.removeAllRanges(); }}
                     onDragStart={(event) => {
-                      if (!dragPlan || (event.target instanceof Element && event.target.closest("button, a, input, select, textarea"))) { event.preventDefault(); return; }
+                      if (!dragPlan) { event.preventDefault(); return; }
                       event.dataTransfer.setData(PRODUCTION_ORDER_DRAG_TYPE, order.id);
                       event.dataTransfer.setData("text/plain", order.order_number || order.title || "Order");
                       event.dataTransfer.effectAllowed = "move";
                       setDraggingOrderId(order.id);
                     }}
                     onDragEnd={() => setDraggingOrderId(null)}
-                    className={`cursor-pointer bg-white hover:bg-zinc-50 ${
+                    className={`admin-production-order-row bg-white hover:bg-zinc-50 ${dragPlan ? "select-none cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${
                       selectedId === order.id ? "bg-zinc-50" : ""
                     }`}
                     onClick={() => setSelectedId((prev) => (prev === order.id ? null : order.id))}
                   >
                     <td className="px-3 py-2 font-semibold text-zinc-900">
-                      <div className="flex items-center gap-2">
-                        {dragPlan && <span title={dragPlan.kind === "assign" ? `Drag next batch (${dragPlan.kg.toFixed(2)} kg) to the calendar` : "Drag to move an assigned batch"} className="shrink-0 cursor-grab text-zinc-300 active:cursor-grabbing"><GripVertical size={14} /></span>}
+                      <div className="flex flex-wrap items-center gap-2">
                         <span>
                           {order.order_number
                             ? `#${order.order_number}`
@@ -290,6 +293,7 @@ export function OrdersTable({
                               ? `#${order.id.slice(0, 8)}`
                               : "-"}
                         </span>
+                        {source.invoiceHref ? <Link href={source.invoiceHref} draggable={false} onClick={(event)=>event.stopPropagation()} aria-label={`Open invoice for order ${order.order_number || order.id}`} className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${source.tone}`}>{source.label}<ArrowUpRight size={10}/></Link> : <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${source.tone}`}>{source.label}</span>}
                         <button
                           type="button"
                           onClick={(event) => {
