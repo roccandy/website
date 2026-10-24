@@ -7,6 +7,7 @@ import { generateOrderNumber, normalizeBaseOrderNumber } from "@/lib/orderNumber
 import {
   getOrdersRecipients,
   sendEmail,
+  sendCustomerOrderConfirmationEmail,
   sendCustomerOrderSummaryEmail,
   sendCustomerRefundEmail,
   sendOrderEmail,
@@ -48,6 +49,7 @@ import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 import { buildOrderActivityChanges } from "./orderActivityChanges";
 import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
 import { buildInvoiceRecord } from "./invoices/invoiceModel";
+import { orderSource } from "./orderSource";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -193,7 +195,10 @@ const describeOrderTarget = (input: {
   return orderNumber ? `#${orderNumber} ${label}`.trim() : label;
 };
 
-async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>) {
+async function sendCustomerOrderEmail(
+  order: Record<string, unknown>,
+  send: typeof sendCustomerOrderConfirmationEmail | typeof sendCustomerOrderSummaryEmail,
+) {
   const customerEmail = typeof order.customer_email === "string" ? order.customer_email.trim() : "";
   if (!customerEmail) return;
   const orderPayloads =
@@ -236,7 +241,11 @@ async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>
     paymentAmount: Number.isFinite(paymentAmount) ? paymentAmount : 0,
     customPreviews: emailPreviews,
   });
-  return sendCustomerOrderSummaryEmail([customerEmail], summary);
+  return send([customerEmail], summary);
+}
+
+async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>) {
+  await sendCustomerOrderEmail(order, sendCustomerOrderConfirmationEmail);
 }
 
 const normalizeInvoiceCustomerEmail = (value: string | null | undefined) => value?.trim().toLowerCase() || "";
@@ -1134,12 +1143,12 @@ async function upsertOrderShared(formData: FormData) {
         if (!customerEmail) {
           throw new Error("A customer email address is required to resend the order confirmation.");
         }
-        const emailResult = await sendAdminCreatedCustomerOrderEmail({
+        const emailResult = await sendCustomerOrderEmail({
           ...(existing as Record<string, unknown>),
           ...basePayload,
           id,
           customer_email: customerEmail,
-        });
+        }, orderSource(existing as OrderRow).key === "website" ? sendCustomerOrderSummaryEmail : sendCustomerOrderConfirmationEmail);
         if (!emailResult || "skipped" in emailResult) {
           inlineTone = "error";
           inlineMessage = "Order saved, but the confirmation could not be sent because email is not configured.";

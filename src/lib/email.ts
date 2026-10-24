@@ -705,12 +705,24 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
   });
 }
 
-export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
+type CustomerOrderEmailKind = "paid" | "confirmation";
+
+async function sendCustomerOrderEmailWithStatus(
+  to: string[],
+  order: AdminOrderSummaryEmailPayload,
+  kind: CustomerOrderEmailKind,
+) {
   const orderNumber = order.orderNumber ?? null;
   const displayOrderNumber = orderNumber ?? "-";
-  const subject = orderNumber
-    ? `Roc Candy Tax Invoice #${orderNumber}`
-    : "Roc Candy Tax Invoice";
+  const isPaid = kind === "paid";
+  const documentTitle = isPaid ? "Tax Invoice" : "Order Confirmation";
+  const subject = orderNumber ? `Roc Candy ${documentTitle} #${orderNumber}` : `Roc Candy ${documentTitle}`;
+  const intro = isPaid
+    ? "Thanks for your order. It has been confirmed and is now being prepared."
+    : "Thanks for your order. Your order details are confirmed below.";
+  const dateLabel = isPaid ? "Invoice date" : "Order date";
+  const itemsLabel = isPaid ? "Invoice items" : "Order items";
+  const totalLabel = isPaid ? "Total paid" : "Order total";
   const paymentAmount = Number.isFinite(order.paymentAmount) ? `$${order.paymentAmount.toFixed(2)}` : "-";
   const gstIncluded = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount / 11).toFixed(2)}` : "-";
   const subtotalExGst = Number.isFinite(order.paymentAmount) ? `$${(order.paymentAmount - order.paymentAmount / 11).toFixed(2)}` : "-";
@@ -729,13 +741,13 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `${ROC_CANDY_EMAIL} | ${ROC_CANDY_PHONE}`,
     `ABN ${ROC_CANDY_ABN}`,
     "",
-    `Tax Invoice #${displayOrderNumber}`,
+    `${documentTitle} #${displayOrderNumber}`,
     "",
-    "Thanks for your order. It has been confirmed and is now being prepared.",
+    intro,
     ...buildCustomTextLines(customDetailsList, false),
     "",
-    `Invoice date: ${formatDate(order.dateOrderedIso)}`,
-    "Status: PAID",
+    `${dateLabel}: ${formatDate(order.dateOrderedIso)}`,
+    isPaid ? "Status: PAID" : null,
     "",
     "Bill to",
     `Customer: ${order.customerName ?? "-"}`,
@@ -747,11 +759,11 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     `Delivery address: ${order.deliveryAddress}`,
     `Payment method: ${order.paymentMethod ?? "-"}`,
     "",
-    "Invoice items",
+    itemsLabel,
     productsText || "-",
     `Subtotal (ex GST): ${subtotalExGst}`,
     `GST (10%): ${gstIncluded}`,
-    `Total paid: ${paymentAmount}`,
+    `${totalLabel}: ${paymentAmount}`,
   ].filter((line) => line !== null) as string[];
 
   const customSection = await buildCustomHtmlSections(customDetailsList, {
@@ -794,17 +806,17 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 10px;">
         <tr>
           <td style="vertical-align:top;padding:0 16px 0 0;">
-            <h1 style="margin:0;font-size:22px;line-height:1.2;">Tax Invoice #${escapeHtml(displayOrderNumber)}</h1>
+            <h1 style="margin:0;font-size:22px;line-height:1.2;">${escapeHtml(documentTitle)} #${escapeHtml(displayOrderNumber)}</h1>
           </td>
           <td style="vertical-align:top;text-align:right;color:#52525b;font-size:12px;line-height:1.3;">
-            <div><strong style="color:#18181b;">Invoice date</strong></div>
+            <div><strong style="color:#18181b;">${escapeHtml(dateLabel)}</strong></div>
             <div>${escapeHtml(formatDate(order.dateOrderedIso))}</div>
-            <div style="margin-top:3px;font-weight:700;color:#15803d;">PAID</div>
+            ${isPaid ? '<div style="margin-top:3px;font-weight:700;color:#15803d;">PAID</div>' : ""}
           </td>
         </tr>
       </table>
       <p style="margin:0 0 9px;font-size:14px;">
-        Thanks for your order. It has been confirmed and is now being prepared.
+        ${escapeHtml(intro)}
       </p>
       ${customSection.html}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-two-col" style="width:100%;border-collapse:collapse;margin:0 0 18px;background:#fafafa;border:1px solid #e4e4e7;">
@@ -824,7 +836,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
         </tr>
       </table>
 
-      <h2 style="margin:0 0 8px;font-size:18px;">Invoice items</h2>
+      <h2 style="margin:0 0 8px;font-size:18px;">${escapeHtml(itemsLabel)}</h2>
       <table class="rc-items" style="width:100%;border-collapse:collapse;margin-bottom:10px;">
         <thead>
           <tr>
@@ -839,7 +851,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
       <table role="presentation" cellpadding="0" cellspacing="0" class="rc-totals" style="margin:0 0 0 auto;border-collapse:collapse;min-width:280px;">
         <tr><td style="padding:5px 14px 5px 0;color:#52525b;">Subtotal (ex GST)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(subtotalExGst)}</td></tr>
         <tr><td style="padding:5px 14px 5px 0;color:#52525b;">GST (10%)</td><td style="padding:5px 0;text-align:right;">${escapeHtml(gstIncluded)}</td></tr>
-        <tr><td style="padding:10px 14px 0 0;border-top:2px solid #18181b;font-size:17px;font-weight:700;">Total paid</td><td style="padding:10px 0 0;border-top:2px solid #18181b;text-align:right;font-size:17px;font-weight:700;">${escapeHtml(paymentAmount)}</td></tr>
+        <tr><td style="padding:10px 14px 0 0;border-top:2px solid #18181b;font-size:17px;font-weight:700;">${escapeHtml(totalLabel)}</td><td style="padding:10px 0 0;border-top:2px solid #18181b;text-align:right;font-size:17px;font-weight:700;">${escapeHtml(paymentAmount)}</td></tr>
       </table>
     </div>
   `;
@@ -854,6 +866,16 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     attachments: attachments.length > 0 ? attachments : undefined,
     archive: order.emailArchive ? {...order.emailArchive, kind: order.emailArchive.kind ?? "confirmation"} : undefined,
   });
+}
+
+/** Sends the paid website-order confirmation and tax invoice. */
+export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
+  return sendCustomerOrderEmailWithStatus(to, order, "paid");
+}
+
+/** Confirms an admin-created order's details without making a payment-status claim. */
+export async function sendCustomerOrderConfirmationEmail(to: string[], order: AdminOrderSummaryEmailPayload) {
+  return sendCustomerOrderEmailWithStatus(to, order, "confirmation");
 }
 
 export function getOrdersRecipients() {

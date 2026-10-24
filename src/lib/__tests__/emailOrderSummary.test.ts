@@ -10,7 +10,7 @@ vi.mock("nodemailer", () => ({
   },
 }));
 
-import { sendCustomerOrderSummaryEmail } from "@/lib/email";
+import { sendCustomerOrderConfirmationEmail, sendCustomerOrderSummaryEmail } from "@/lib/email";
 import sharp from "sharp";
 
 describe("sendCustomerOrderSummaryEmail", () => {
@@ -182,8 +182,37 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(message?.html).toContain("Tax Invoice #0165");
     expect(message?.html).toContain("Subtotal (ex GST)");
     expect(message?.html).toContain("Total paid");
+    expect(message?.html).toContain('color:#15803d;">PAID</div>');
+    expect(message?.text).toContain("Status: PAID");
     expect(message?.html).not.toContain("Our website is new");
     expect(message?.text).not.toContain("Our website is new");
+  });
+
+  it.each(["Square invoice", "Bank transfer", "Cash"])("sends an admin confirmation without payment-status claims (%s)", async (paymentMethod) => {
+    await sendCustomerOrderConfirmationEmail(["customer@example.com"], {
+      orderNumber: "0166",
+      dateOrderedIso: "2026-08-19T00:00:00.000Z",
+      customerName: "Customer",
+      customerEmail: "customer@example.com",
+      customerPhone: null,
+      requestedDate: null,
+      deliveryAddress: "Pickup",
+      paymentMethod,
+      paymentAmount: 110,
+      items: [{ title: "Custom candy", quantity: 1, flavor: null, labelsCount: null, totalPrice: 110 }],
+      customDetails: null,
+      customDetailsList: [],
+    });
+
+    const message = sendMail.mock.calls[0]?.[0];
+    expect(message?.subject).toBe("Roc Candy Order Confirmation #0166");
+    expect(message?.html).not.toMatch(/PAID|UNPAID|PAYMENT PENDING/);
+    expect(message?.text).not.toMatch(/Status:|PAID|UNPAID|payment is pending/);
+    expect(message?.html).toContain("Your order details are confirmed below.");
+    expect(message?.html).toContain("Order total");
+    expect(message?.text).toContain("Order total: $110.00");
+    expect(message?.html).not.toContain("Tax Invoice");
+    expect(message?.html).not.toContain("Total paid");
   });
 
   it("stacks the candy preview above details and constrains uploaded label artwork", async () => {
