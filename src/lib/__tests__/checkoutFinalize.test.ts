@@ -164,6 +164,16 @@ describe("finalizePaidCheckoutOrder", () => {
     expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledTimes(1);
     expect(sendAdminOrderSummaryEmail).not.toHaveBeenCalled();
   });
+  it("preserves the server-validated test status during payment finalisation", async () => {
+    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const context = await buildCheckoutOrderContext();
+    context.totalAmount = 0.01;
+    context.taxAmount = 0;
+    context.orderPayloads = [{ title: "Test", status: "test", total_price: 0.01 }];
+    const result = await finalizePaidCheckoutOrder({ order: baseOrder, paymentProvider: "square", paymentMethod: "square", paymentMethodTitle: "Credit Card", transactionId: "test-transaction", checkoutContext: context });
+    expect(result.orderTotal).toBe(0.01);
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ status: "test", total_price: 0.01 })]);
+  });
 
   it("does not report success or send emails when the order insert fails", async () => {
     insert.mockResolvedValue({ error: { message: "insert failed" } });

@@ -121,6 +121,20 @@ describe("buildCheckoutOrderContext", () => {
     expect(context.orderNumbers.customOrderNumbers).toEqual(["0008-a", "0008-b"]);
     expect(context.orderPayloads.map((payload) => payload.order_number)).toEqual(["0008-a", "0008-b"]);
   });
+  it("charges one cent across a mixed cart and marks every stored line as a test", async () => {
+    premadeRows = [{ id: "premade-1", name: "Premade Candy", price: 12, weight_g: 100, description: "Premade" }];
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+    const context = await buildCheckoutOrderContext(buildOrder({ promoCode: "FH*#HK@NXsh83D=-S", customItems: [customItem("ONE")], premadeItems: [{ premadeId: "premade-1", quantity: 2 }] }));
+    expect(context.totalAmount).toBe(0.01);
+    expect(context.lineItems.map((item) => item.total)).toEqual(["0.01", "0.00"]);
+    expect(context.orderPayloads.map((item) => item.total_price)).toEqual([0.01, 0]);
+    expect(context.orderPayloads.every((item) => item.status === "test")).toBe(true);
+  });
+  it("rejects unrecognised codes instead of silently charging full price", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+    await expect(buildCheckoutOrderContext(buildOrder({ promoCode: "wrong-code", customItems: [customItem("ONE")] }))).rejects.toThrow("Checkout code is invalid");
+    expect(calculatePricing).not.toHaveBeenCalled();
+  });
 
   it("preserves custom plus premade a/b split behavior", async () => {
     premadeRows = [

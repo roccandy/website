@@ -1379,6 +1379,28 @@ export function CheckoutClient({
   const [suburb, setSuburb] = useState("");
   const [postcode, setPostcode] = useState("");
   const [stateValue, setStateValue] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [checkingPromo, setCheckingPromo] = useState(false);
+  const promoRequest = useRef(0);
+  const applyPromoCode = async () => {
+    const code = promoCode.trim();
+    if (!code || checkingPromo) return;
+    const request = ++promoRequest.current;
+    setCheckingPromo(true);
+    setPromoError(null);
+    try {
+      const response = await fetch("/api/checkout/code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+      const result = await response.json();
+      if (request !== promoRequest.current) return;
+      if (!response.ok) throw new Error(result.error || "Unable to check the code. Please try again.");
+      if (!result.valid) { setAppliedPromoCode(""); setPromoError("Code not recognised."); }
+      else setAppliedPromoCode(code);
+    } catch (error) {
+      if (request === promoRequest.current) { setAppliedPromoCode(""); setPromoError(error instanceof Error ? error.message : "Unable to check the code."); }
+    } finally { if (request === promoRequest.current) setCheckingPromo(false); }
+  };
   const customItems = useMemo(
     () => items.filter((item): item is CustomCartItem => item.type === "custom"),
     [items]
@@ -1580,10 +1602,11 @@ export function CheckoutClient({
       }
     }
 
-    const total = baseSubtotal + urgencyTotal;
-
-    return { total, count, itemLines, urgencyTotal, hasPending };
-  }, [items, pricingOverrides]);
+    const originalTotal = baseSubtotal + urgencyTotal;
+    const promoApplied = Boolean(appliedPromoCode) && count > 0 && originalTotal > 0;
+    const total = promoApplied ? 0.01 : originalTotal;
+    return { total, count, itemLines, urgencyTotal, hasPending, promoApplied, promoDiscount: promoApplied ? originalTotal - total : 0 };
+  }, [items, pricingOverrides, appliedPromoCode]);
 
   const analyticsItems = useMemo(() => buildAnalyticsItems(items, pricingOverrides), [items, pricingOverrides]);
 
@@ -1626,9 +1649,12 @@ export function CheckoutClient({
   };
 
   const missingFields = getMissingFields();
-  const canPlace = hasItems && missingFields.length === 0 && !pricingLoading && !pricingError && !cartPricing.hasPending;
+  const promoNeedsChecking = checkingPromo || Boolean(promoCode.trim() && appliedPromoCode !== promoCode.trim());
+  const canPlace = hasItems && missingFields.length === 0 && !pricingLoading && !pricingError && !cartPricing.hasPending && !promoNeedsChecking;
   const paymentValidationMessage =
-    pricingLoading || cartPricing.hasPending
+    promoNeedsChecking
+      ? "Apply or clear the code before paying."
+      : pricingLoading || cartPricing.hasPending
       ? "Please wait for the latest pricing to finish updating before paying."
       : pricingError
         ? "Please resolve the pricing issue in your cart before paying."
@@ -1642,6 +1668,7 @@ export function CheckoutClient({
     dueDate: dueDate || undefined,
     pickup,
     paymentPreference: selectedPaymentMethod,
+    promoCode: appliedPromoCode || null,
     customer: {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -1778,9 +1805,9 @@ export function CheckoutClient({
         phone: resolvedCustomer.phone.trim(),
         organizationName: organizationName.trim() || null,
       },
-      items: summaryItems,
-      subtotal: cartPricing.total - cartPricing.urgencyTotal,
-      urgencyTotal: cartPricing.urgencyTotal,
+      items: cartPricing.promoApplied ? summaryItems.map((item, index) => ({ ...item, lineTotal: index === 0 ? 0.01 : 0 })) : summaryItems,
+      subtotal: cartPricing.promoApplied ? cartPricing.total : cartPricing.total - cartPricing.urgencyTotal,
+      urgencyTotal: cartPricing.promoApplied ? 0 : cartPricing.urgencyTotal,
       total: cartPricing.total,
       adminEmailWarning: warning ?? null,
     });
@@ -2349,6 +2376,14 @@ export function CheckoutClient({
               <span>Total</span>
               <span>{pricingLoading ? "Updating..." : formatMoney(cartPricing.total)}</span>
             </div>
+            <div className="pt-2">
+              <label htmlFor="checkout-code" className="text-xs text-zinc-500">Code</label>
+              <div className="mt-1 flex items-center gap-2">
+                <input id="checkout-code" value={promoCode} onChange={(event) => { promoRequest.current++; setPromoCode(event.target.value); setAppliedPromoCode(""); setPromoError(null); setCheckingPromo(false); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void applyPromoCode(); } }} maxLength={128} autoComplete="off" spellCheck={false} aria-invalid={Boolean(promoError)} aria-describedby="checkout-code-status" className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-emerald-700" />
+                <button type="button" onClick={() => void applyPromoCode()} disabled={!promoCode.trim() || checkingPromo || Boolean(appliedPromoCode)} className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold disabled:opacity-50">{checkingPromo ? "Checking…" : "Apply code"}</button>
+              </div>
+              <p id="checkout-code-status" role={promoError ? "alert" : "status"} className={`mt-1 text-xs ${promoError ? "text-red-600" : "text-emerald-700"}`}>{promoError || (appliedPromoCode ? "Code applied — test total A$0.01." : "")}</p>
+            </div>
           </div>
           <button
             type="button"
@@ -2378,6 +2413,7 @@ export function CheckoutClient({
                   <span className="text-zinc-900">{formatMoney(cartPricing.urgencyTotal)}</span>
                 </div>
               ) : null}
+              {cartPricing.promoApplied ? <div className="flex items-center justify-between gap-3"><span>Code adjustment</span><span>-{formatMoney(cartPricing.promoDiscount)}</span></div> : null}
               {cartPricing.hasPending ? (
                 <p className="text-[11px] text-zinc-500">
                   Custom order pricing updates once a date is selected.

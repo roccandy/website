@@ -2,8 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from "crypto";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 
 function stableOrderJson(order: CheckoutOrderPayload) {
-  // Preserve the pre-removal signature shape so a PayPal order created just
-  // before deployment can still be captured. This value has no pricing effect.
+  // Preserve the historic signature shape and bind the validated code to the
+  // approved PayPal checkout, so it cannot be removed or swapped at capture.
   const legacyPromoCode = (order as CheckoutOrderPayload & { promoCode?: unknown }).promoCode;
   return JSON.stringify({
     dueDate: order.dueDate ?? null,

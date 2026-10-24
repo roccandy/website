@@ -32,4 +32,12 @@ describe("checkout fingerprint", () => {
     expect(verifyCheckoutFingerprint(fingerprint, legacyOrder, "0008")).toBe(true);
     expect(verifyCheckoutFingerprint(fingerprint, order, "0008")).toBe(false);
   });
+  it("rejects a code removed or changed after PayPal approval", () => {
+    process.env.PAYPAL_SECRET = "test-secret";
+    const codedOrder = { ...order, promoCode: "FH*#HK@NXsh83D=-S" };
+    const fingerprint = createCheckoutFingerprint(codedOrder, "0008");
+    expect(verifyCheckoutFingerprint(fingerprint, codedOrder, "0008")).toBe(true);
+    expect(verifyCheckoutFingerprint(fingerprint, { ...codedOrder, promoCode: null }, "0008")).toBe(false);
+    expect(verifyCheckoutFingerprint(fingerprint, { ...codedOrder, promoCode: "different" }, "0008")).toBe(false);
+  });
 });

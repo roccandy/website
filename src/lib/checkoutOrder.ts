@@ -11,6 +11,7 @@ import {
   type QuoteBlock,
 } from "@/lib/data";
 import type { CheckoutOrderPayload, CustomCartItemPayload, PremadeCartItemPayload } from "@/lib/checkoutTypes";
+import { CHECKOUT_TEST_PROMO_TOTAL, isCheckoutTestPromoCode } from "@/lib/checkoutPromo";
 import { formatPremadeFlavors } from "@/lib/premadeCatalog";
 
 const DEFAULT_COUNTRY = "AU";
@@ -301,6 +302,9 @@ export async function buildCheckoutOrderContext(
   } = {},
 ): Promise<CheckoutOrderContext> {
   assertBasePayload(body);
+  const hasCode = typeof body.promoCode === "string" && Boolean(body.promoCode.trim());
+  const isTestOrder = hasCode && isCheckoutTestPromoCode(body.promoCode);
+  if (hasCode && !isTestOrder) throw new Error("Checkout code is invalid or no longer available. Remove or reapply it before paying.");
 
   const customItems = body.customItems ?? [];
   const premadeItems = body.premadeItems ?? [];
@@ -435,6 +439,10 @@ export async function buildCheckoutOrderContext(
     });
   }
 
+  if (isTestOrder) {
+    lineItems.forEach((item, index) => { item.total = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL.toFixed(2) : "0.00"; });
+    orderPayloads.forEach((payload, index) => { payload.total_price = index === 0 ? CHECKOUT_TEST_PROMO_TOTAL : 0; payload.status = "test"; });
+  }
   const baseTotal = lineItems.reduce((sum, item) => sum + Number(item.total ?? 0), 0);
   const totalAmount = baseTotal;
   const shippingAmount = 0;

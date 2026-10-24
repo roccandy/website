@@ -81,7 +81,7 @@ function buildPaidOrderPayloads({
   return context.orderPayloads.map((payload) => ({
     ...payload,
     payment_method: paymentMethodTitle,
-    status: "pending",
+    status: payload.status === "test" ? "test" : "pending",
     paid_at: paidAt,
     payment_provider: paymentProvider,
     payment_transaction_id: transactionId,
