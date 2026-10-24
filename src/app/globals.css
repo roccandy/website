@@ -169,20 +169,8 @@ body {
 
 .admin-production-calendar { container: production-calendar / inline-size; }
 .admin-production-order-list { container: production-order-list / inline-size; }
-/* Let every information column share extra width, not only the title. Minimums
-   keep dates, batch weights and status badges readable in the split panel. */
-.admin-production-orders-table .production-col-order { width: 5.5rem; }
-.admin-production-orders-table .production-col-date { width: 6rem; }
-.admin-production-orders-table .production-col-packaging { width: 7rem; }
-.admin-production-orders-table .production-col-kg { width: 4rem; }
-.admin-production-orders-table .production-col-state { width: 3.5rem; }
-@container production-order-list (min-width: 700px) {
-  .admin-production-orders-table .production-col-order { width: 14%; }
-  .admin-production-orders-table .production-col-date { width: 16%; }
-  .admin-production-orders-table .production-col-packaging { width: 22%; }
-  .admin-production-orders-table .production-col-kg { width: 10%; }
-  .admin-production-orders-table .production-col-state { width: 8%; }
-}
+/* Column widths are measured and applied directly in OrdersTable so table
+   layout does not depend on container-query support for <col> elements. */
 @container production-order-list (min-width: 800px) {
   .admin-production-orders-table thead th:not(:last-child),
   .admin-production-order-row > td:not(:last-child) { padding-inline: 1rem; }

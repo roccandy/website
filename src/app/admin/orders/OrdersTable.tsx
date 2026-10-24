@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { productionColumnWidths } from "./productionColumnWidths";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AlertTriangle } from "lucide-react";
 import { compactKg, productionPaymentStrip, requiredDateUrgency } from "./productionRowPresentation";
@@ -111,6 +112,21 @@ export function OrdersTable({
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"both" | "calendar" | "orders">("both");
   const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
+  const orderListRef = useRef<HTMLDivElement>(null);
+  const [orderListWidth, setOrderListWidth] = useState(464);
+
+  useEffect(() => {
+    const element = orderListRef.current;
+    if (!element) return;
+    const measure = () => {
+      if (element.clientWidth > 0) setOrderListWidth(element.clientWidth);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const columnWidths = productionColumnWidths(orderListWidth);
 
   const packagingById = useMemo(
     () => new Map(packagingOptions.map((option) => [option.id, option])),
@@ -225,9 +241,9 @@ export function OrdersTable({
       <div aria-label="Payment colour legend" className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500"><span><i className="mr-1 inline-block h-2 w-2 bg-red-500"/>Payment not recorded</span><span><i className="mr-1 inline-block h-2 w-2 bg-emerald-500"/>Paid</span><span><i className="mr-1 inline-block h-2 w-2 bg-blue-500"/>Website order</span></div>
       <div className="admin-production-panels" data-view={workspaceView}>
       <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
-        <div className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
+        <div ref={orderListRef} className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <table className="admin-production-orders-table w-full min-w-[29rem] table-fixed text-[13px]">
-          <colgroup><col className="production-col-order"/><col/><col className="production-col-date"/><col className="production-col-packaging"/><col className="production-col-kg"/><col className="production-col-state"/><col className="w-3"/></colgroup>
+          <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }}/>)}</colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               <th className="whitespace-nowrap px-2 py-3 text-left">Order #</th>
