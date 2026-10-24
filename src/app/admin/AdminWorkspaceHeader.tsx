@@ -51,6 +51,11 @@ export function AdminWorkspaceHeader({
     }))
     .filter((section) => section.items.length);
   const closeTools = () => setToolsOpen(false);
+  useEffect(() => {
+    const closeForDraftPrompt = () => { dialog.current?.close(); setToolsOpen(false); };
+    window.addEventListener("admin:unsaved-prompt", closeForDraftPrompt);
+    return () => window.removeEventListener("admin:unsaved-prompt", closeForDraftPrompt);
+  }, []);
 
   useEffect(() => {
     if (toolsOpen) {

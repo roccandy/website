@@ -22,6 +22,7 @@ export default async function AdminInvoicesPage({
     <InvoiceHub
       {...data}
       initialFilters={parseInvoiceFilters(params ?? {})}
+      initialPage={Math.max(1, Math.min(10000, Math.floor(Number(params?.page) || 1)))}
       canWrite={session.user.canWrite}
     />
   );

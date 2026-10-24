@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useCallback, useMemo, useState } from "react";
 import { deleteTier, upsertTier } from "./actions";
 import type { Category, WeightTier } from "@/lib/data";
@@ -392,12 +393,12 @@ export function PricingTable({ categories, tiers, maxTotalKg }: Props) {
                             {!t.isNew && (
                               <form action={deleteTier}>
                                 <input type="hidden" name="id" value={t.id} />
-                                <button
+                                <AdminSubmitButton
                                   type="submit"
                                   className="text-xs font-semibold text-red-600 underline underline-offset-4"
                                 >
                                   Delete
-                                </button>
+                                </AdminSubmitButton>
                               </form>
                             )}
                           </td>

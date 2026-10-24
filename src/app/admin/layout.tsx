@@ -5,6 +5,7 @@ import { AdminBodyAttributes } from "@/app/admin/AdminBodyAttributes";
 import { AdminBirthdayRefresh } from "@/app/admin/AdminBirthdayRefresh";
 import { AdminQueryToast } from "@/app/admin/AdminQueryToast";
 import { AdminScrollRestoration } from "@/app/admin/AdminScrollRestoration";
+import { AdminUnsavedChanges } from "./AdminUnsavedChanges";
 import {
   buildAdminNavSections,
   isProductionUser,
@@ -108,6 +109,7 @@ export default async function AdminLayout({
       <ToastProvider>
         <AdminBodyAttributes />
         <AdminBirthdayRefresh />
+        <AdminUnsavedChanges />
         <AdminQueryToast />
         <AdminScrollRestoration />
         <div className="admin-workspace min-h-screen min-w-0 bg-zinc-50 text-zinc-900 print:min-h-0 print:bg-white">

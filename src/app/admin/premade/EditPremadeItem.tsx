@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import Image from "next/image";
 import { useEffect, useMemo, useState, type ButtonHTMLAttributes, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -702,7 +703,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <AdminSubmitButton
               type="submit"
               disabled={saving}
               className={`rounded-md px-3 py-2 text-xs font-semibold ${
@@ -710,7 +711,7 @@ export function EditPremadeItem({ item, imageUrl, flavorOptions, onToggleActive,
               }`}
             >
               {saving ? "Saving..." : "Save changes"}
-            </button>
+            </AdminSubmitButton>
             <button
               type="button"
               data-neutral-button

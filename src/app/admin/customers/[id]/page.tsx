@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import type { ReactNode } from "react";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { notFound } from "next/navigation";
@@ -216,9 +217,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     <form action={mergeCustomersAction} className="mt-2">
                       <input type="hidden" name="target_customer_id" value={customer.id} />
                       <input type="hidden" name="source_customer_id" value={candidate.id} />
-                      <button className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300">
+                      <AdminSubmitButton type="submit" confirmMessage="Merge these customer records? Check they are the same customer. This cannot be undone here." pendingLabel="Merging…" className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300">
                         Merge into this customer
-                      </button>
+                      </AdminSubmitButton>
                     </form>
                   ) : null}
                 </div>
@@ -380,9 +381,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   placeholder="Add an internal note"
                   className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
                 />
-                <button className="rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+                <AdminSubmitButton type="submit" pendingLabel="Saving note…" className="rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
                   Save note
-                </button>
+                </AdminSubmitButton>
               </form>
             ) : (
               <p className="mt-3 text-sm text-zinc-500">You have read-only access.</p>

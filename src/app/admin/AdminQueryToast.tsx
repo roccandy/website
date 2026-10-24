@@ -12,14 +12,14 @@ export function AdminQueryToast() {
   const message = searchParams.get("message");
 
   useEffect(() => {
-    if (!toast || !message) return;
+    if (!toast || !message) { handledRef.current = null; return; }
 
     const key = `${toast}:${message}:${pathname}`;
     if (handledRef.current === key) return;
     handledRef.current = key;
 
     if (toast === "success" || toast === "error") {
-      window.dispatchEvent(new CustomEvent("toast", { detail: { tone: toast, message } }));
+      window.dispatchEvent(new CustomEvent("toast", { detail: { tone: toast, message, scope: pathname } }));
     }
 
     const nextParams = new URLSearchParams(searchParams.toString());

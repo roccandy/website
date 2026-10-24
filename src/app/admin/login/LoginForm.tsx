@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -69,13 +70,13 @@ export function LoginForm() {
           {hasError && (
             <p className="text-sm text-red-600">{formError ?? "Incorrect email or password."}</p>
           )}
-          <button
+          <AdminSubmitButton
             type="submit"
             disabled={loading}
             className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
           >
             {loading ? "Signing in..." : "Sign in"}
-          </button>
+          </AdminSubmitButton>
         </form>
       </div>
     </main>

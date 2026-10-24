@@ -28,11 +28,13 @@ export function AdminNavigationProvider({ children }: { children: ReactNode }) {
 
   const navigate: NavigationContext["navigate"] = (href, options) => {
     if (destination === href) return;
-    startTransition(() => {
+    const proceed = () => startTransition(() => {
       setDestination(href);
       if (options?.replace) router.replace(href, { scroll: options.scroll });
       else router.push(href, { scroll: options?.scroll });
     });
+    if (typeof window !== "undefined" && !window.dispatchEvent(new CustomEvent("admin:before-navigation", { cancelable: true, detail: { proceed } }))) return;
+    proceed();
   };
 
   return (

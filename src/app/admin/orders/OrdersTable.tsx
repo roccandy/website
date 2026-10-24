@@ -1,7 +1,9 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { productionColumnWidths } from "./productionColumnWidths";
+import { useAdminViewState } from "../useAdminViewState";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AlertTriangle } from "lucide-react";
 import { compactKg, productionPaymentStrip, requiredDateUrgency } from "./productionRowPresentation";
@@ -110,7 +112,7 @@ export function OrdersTable({
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [assignmentModalOrderId, setAssignmentModalOrderId] = useState<string | null>(null);
-  const [workspaceView, setWorkspaceView] = useState<"both" | "calendar" | "orders">("both");
+  const [workspaceView, setWorkspaceView] = useAdminViewState<"both" | "calendar" | "orders">("production-view", "both", (value) => ["both", "calendar", "orders"].includes(value));
   const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
   const orderListRef = useRef<HTMLDivElement>(null);
   const [orderListWidth, setOrderListWidth] = useState(464);
@@ -366,7 +368,7 @@ export function OrdersTable({
                               </h3>
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2">
-                              {canWrite && isAdminManagedCustomUnpaid && !order.square_invoice_id ? <form action={markOrderAsPaid} onSubmit={event=>{if(!window.confirm("Confirm payment has been independently verified. This records payment; it does not charge the customer."))event.preventDefault();}}><input type="hidden" name="id" value={order.id}/><button type="submit" className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">Record payment received</button></form> : null}
+                              {canWrite && isAdminManagedCustomUnpaid && !order.square_invoice_id ? <form action={markOrderAsPaid} onSubmit={event=>{if(!window.confirm("Confirm payment has been independently verified. This records payment; it does not charge the customer."))event.preventDefault();}}><input type="hidden" name="id" value={order.id}/><AdminSubmitButton type="submit" className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">Record payment received</AdminSubmitButton></form> : null}
                               <Link
                                 href={`/admin/orders/${order.id}`}
                                 className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"

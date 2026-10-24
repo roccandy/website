@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { insertFlavor } from "./actions";
@@ -55,7 +56,7 @@ export function AddFlavorForm() {
           placeholder="e.g., Raspberry"
         />
       </label>
-      <button
+      <AdminSubmitButton
         type="submit"
         disabled={isSubmitting}
         className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold ${
@@ -63,7 +64,7 @@ export function AddFlavorForm() {
         }`}
       >
         {isSubmitting ? "Adding..." : "Add flavor"}
-      </button>
+      </AdminSubmitButton>
       {error && <p className="text-xs text-red-600">{error.message}</p>}
       {success && <p className="text-xs text-emerald-600">{success}</p>}
     </form>

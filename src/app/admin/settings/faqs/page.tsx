@@ -1,3 +1,4 @@
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -71,12 +72,12 @@ export default async function AdminFaqSettingsPage() {
             <span>Show on the main FAQ page</span>
           </label>
           <div className="flex justify-end">
-            <button
+            <AdminSubmitButton
               type="submit"
               className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
             >
               Add FAQ
-            </button>
+            </AdminSubmitButton>
           </div>
         </form>
       ) : (

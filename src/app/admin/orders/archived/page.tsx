@@ -1,3 +1,4 @@
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { getPremadeSiblingMeta, getMultiAssignmentScheduleStatus } from "../prod
 import { OrderActions } from "../OrderActions";
 import { OrderRowActionMenu } from "../OrderRowActionMenu";
 import { OrderListRow } from "../OrderListRow";
+import { OrderPaymentStrips } from "../OrderPaymentStrips";
 import { orderRowPrimaryAction } from "../orderRowPrimaryAction";
 import { orderWorkflow } from "../orderWorkflow";
 import { perthDate } from "../../stats-v2/statsModel";
@@ -523,12 +525,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
               placeholder="Search orders"
               className="w-56 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400"
             />
-            <button
+            <AdminSubmitButton
               type="submit"
               className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
             >
               Search
-            </button>
+            </AdminSubmitButton>
             {activeSearchQuery ? (
               <Link
                 href={buildOrdersHref(activeView, activeSort, activeDirection)}
@@ -550,11 +552,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
 
       <div className="admin-order-history overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <table className="admin-order-history-table w-full min-w-[66rem] table-fixed text-sm">
-          <colgroup><col className="history-col-order"/><col/><col className="history-col-date"/><col className="history-col-weight"/><col className="history-col-customer"/><col className="history-col-status"/><col className="history-col-actions"/></colgroup>
+          <colgroup><col className="history-col-order"/><col/><col className="history-col-date"/><col className="history-col-weight"/><col className="history-col-customer"/><col className="history-col-status"/><col className="history-col-actions"/><col style={{ width: 12 }}/></colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
               {SORT_OPTIONS.map((option) => renderSortHeader(option))}
               <th className="px-3 py-3 text-left">Actions</th>
+              <th className="p-0"><span className="sr-only">Payment and order source</span></th>
             </tr>
           </thead>
           <tbody>
@@ -704,12 +707,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                 value={subgroupResettableOrders.map((order) => order.id).join(",")}
                               />
                               <input type="hidden" name="redirect_to" value={redirectTo} />
-                              <button
+                              <AdminSubmitButton
                                 type="submit"
                                 className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                               >
                                 Mark as pending
-                              </button>
+                              </AdminSubmitButton>
                             </form>
                           ) : null}
                           {session.user.canWrite && subgroupRefundableOrders.length > 0 ? (
@@ -760,12 +763,12 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                                   <form action={unarchiveOrder}>
                                     <input type="hidden" name="order_id" value={order.id} />
                                     <input type="hidden" name="redirect_to" value={redirectTo} />
-                                    <button
+                                    <AdminSubmitButton
                                       type="submit"
                                       className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
                                     >
                                       Mark as pending
-                                    </button>
+                                    </AdminSubmitButton>
                                   </form>
                                 ) : null}
                                 {session.user.canWrite && hasRefund ? (
@@ -787,13 +790,14 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       )}
                       </OrderRowActionMenu>
                     </td>
+                    <td className={`relative p-0 ${rowBorderClass}`}><OrderPaymentStrips orders={subgroup.orders}/></td>
                   </OrderListRow>
                 );
               }),
             )}
             {groupedList.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-sm text-zinc-500">
+                <td colSpan={8} className="px-3 py-6 text-center text-sm text-zinc-500">
                   No orders in this view.
                 </td>
               </tr>

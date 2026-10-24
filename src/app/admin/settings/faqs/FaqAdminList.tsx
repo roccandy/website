@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
@@ -92,7 +93,7 @@ function SortableFaqItem({
             </label>
 
             {canWriteSeo ? (
-              <button
+              <AdminSubmitButton
                 type="submit"
                 form={formId}
                 className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -101,7 +102,7 @@ function SortableFaqItem({
                 disabled={isSaving}
               >
                 {isSaving ? "Saving..." : "Save"}
-              </button>
+              </AdminSubmitButton>
             ) : null}
 
             {canWriteSeo ? (
@@ -166,23 +167,23 @@ function SortableFaqItem({
 
           {canWriteSeo ? (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button
+              <AdminSubmitButton
                 type="submit"
                 form={formId}
                 className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isSaving}
               >
                 {isSaving ? "Saving..." : "Save"}
-              </button>
+              </AdminSubmitButton>
 
               <form action={deleteFaq} className="ml-auto">
                 <input type="hidden" name="id" value={item.id} />
-                <button
+                <AdminSubmitButton
                   type="submit"
                   className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                 >
                   Delete
-                </button>
+                </AdminSubmitButton>
               </form>
             </div>
           ) : null}

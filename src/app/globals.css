@@ -150,6 +150,10 @@ body {
   container: production-workspace / inline-size;
 }
 
+@media (max-width: 639px) {
+  body:has([data-admin-unsaved]) [data-toast-region] { bottom: 9rem; }
+}
+
 .admin-production-panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -1,13 +1,13 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 function Spinner() {
   return (
     <svg
       aria-hidden="true"
-      className="h-4 w-4 animate-spin"
+      className="h-4 w-4 animate-spin motion-reduce:animate-none"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -19,17 +19,22 @@ function Spinner() {
   );
 }
 
-type AdminSubmitButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type AdminSubmitButtonProps = ComponentProps<"button"> & {
   pendingLabel?: ReactNode;
+  confirmMessage?: string;
 };
 
-export function AdminSubmitButton({ children, className = "", pendingLabel, disabled, ...props }: AdminSubmitButtonProps) {
+export function AdminSubmitButton({ children, className = "", pendingLabel, disabled, confirmMessage, onClick, ...props }: AdminSubmitButtonProps) {
   const { pending } = useFormStatus();
   const isDisabled = disabled || pending;
 
   return (
     <button
       {...props}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented && confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
+      }}
       disabled={isDisabled}
       aria-busy={pending || undefined}
       className={`${className} ${pending ? "cursor-wait opacity-80" : ""}`.trim()}
@@ -37,7 +42,7 @@ export function AdminSubmitButton({ children, className = "", pendingLabel, disa
       {pending ? (
         <span className="inline-flex items-center gap-2">
           <Spinner />
-          <span>{pendingLabel ?? children}</span>
+          <span>{pendingLabel ?? "Working…"}</span>
         </span>
       ) : (
         children

@@ -39,17 +39,19 @@ export function InvoiceHub({
   invoices,
   loadedAt,
   initialFilters,
+  initialPage = 1,
   canWrite,
 }: {
   invoices: InvoiceRecord[];
   loadedAt: string;
   initialFilters: InvoiceFilters;
+  initialPage?: number;
   canWrite: boolean;
 }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [filters, setFilters] = useState(initialFilters);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const [expanded, setExpanded] = useState<string | null>(null);
   const filtered = filterInvoices(invoices, filters);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 25));
@@ -94,10 +96,11 @@ export function InvoiceHub({
         )
       )
         params.set(key, value);
+    if (page > 1) params.set("page", String(page));
     const url = `/admin/orders/invoices${params.size ? `?${params}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== url)
       window.history.replaceState(window.history.state, "", url);
-  }, [filters]);
+  }, [filters, page]);
   const exportCsv = () => {
     const rows = [
       [

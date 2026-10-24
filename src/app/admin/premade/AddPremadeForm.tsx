@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -420,7 +421,7 @@ export function AddPremadeForm({ flavorOptions }: Props) {
           </div>
         )}
       </div>
-      <button
+      <AdminSubmitButton
         type="submit"
         disabled={isSubmitting}
         className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold ${
@@ -428,7 +429,7 @@ export function AddPremadeForm({ flavorOptions }: Props) {
         }`}
       >
         {isSubmitting ? "Saving..." : "Add pre-made candy"}
-      </button>
+      </AdminSubmitButton>
       {error && <p className="text-xs text-red-600">{error.message}</p>}
       {success && <p className="text-xs text-emerald-600">{success}</p>}
     </form>

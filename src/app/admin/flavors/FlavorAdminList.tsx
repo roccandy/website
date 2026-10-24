@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
@@ -52,23 +53,23 @@ function SortableFlavorItem({ item, index }: { item: Flavor; index: number }) {
         <form action={toggleFlavorActive}>
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="next_active" value={isActive ? "false" : "true"} />
-          <button
+          <AdminSubmitButton
             type="submit"
             data-neutral-button
             className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold text-zinc-700 hover:text-zinc-900"
           >
             {isActive ? "Deactivate" : "Activate"}
-          </button>
+          </AdminSubmitButton>
         </form>
         <form action={deleteFlavor}>
           <input type="hidden" name="id" value={item.id} />
-          <button
+          <AdminSubmitButton
             type="submit"
             data-neutral-button
             className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold text-red-600 hover:text-red-700"
           >
             Delete
-          </button>
+          </AdminSubmitButton>
         </form>
       </div>
     </div>

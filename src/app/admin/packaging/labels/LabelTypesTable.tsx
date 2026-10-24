@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useMemo, useState } from "react";
 import type { LabelType } from "@/lib/data";
 import { deleteLabelType, upsertLabelType } from "./actions";
@@ -194,12 +195,12 @@ export function LabelTypesTable({ labelTypes }: Props) {
                       </form>
                       <form action={deleteLabelType}>
                         <input type="hidden" name="id" value={labelType.id} />
-                        <button
+                        <AdminSubmitButton
                           type="submit"
                           className="w-full rounded border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
                         >
                           Delete
-                        </button>
+                        </AdminSubmitButton>
                       </form>
                     </td>
                   )}

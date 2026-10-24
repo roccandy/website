@@ -1,18 +1,19 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useFormStatus } from "react-dom";
 import { markOrderAsPaid } from "./actions";
 
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button
+    <AdminSubmitButton
       type="submit"
       disabled={pending}
       className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-50"
     >
       {pending ? "Recording…" : "Record payment received"}
-    </button>
+    </AdminSubmitButton>
   );
 }
 export function OrderPaymentConfirmation({

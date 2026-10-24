@@ -1,4 +1,5 @@
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
+import { InvoiceReturnLink } from "../../OrderReturnLink";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -139,12 +140,7 @@ export default async function AdminInvoiceReviewPage({
               Cancel editing
             </Link>
           ) : null}
-          <Link
-            href="/admin/orders/invoices"
-            className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-          >
-            All invoices
-          </Link>
+          <InvoiceReturnLink />
           <Link
             href={`/admin/orders?selected=${encodeURIComponent(primaryOrder.id)}`}
             className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"

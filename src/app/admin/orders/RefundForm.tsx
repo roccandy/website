@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useState } from "react";
 import { AdminModalPortal } from "../AdminModalPortal";
 
@@ -252,12 +253,12 @@ export function RefundForm({
                   >
                     Cancel
                   </button>
-                  <button
+                  <AdminSubmitButton
                     type="submit"
                     className="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300 hover:text-rose-800"
                   >
                     Confirm refund
-                  </button>
+                  </AdminSubmitButton>
                 </div>
               </form>
             ) : null}

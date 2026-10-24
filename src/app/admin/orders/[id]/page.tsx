@@ -1,4 +1,5 @@
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
+import { OrderReturnLink } from "../OrderReturnLink";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -160,12 +161,7 @@ export default async function AdminOrderDetailPage({
           >
             Print
           </Link>
-          <Link
-            href="/admin/orders/archived"
-            className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-          >
-            Back to orders
-          </Link>
+          <OrderReturnLink />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { Fragment, useMemo, useState } from "react";
 import type { Category, LabelType, PackagingLidColor, PackagingOption } from "@/lib/data";
 import { sortPackagingOptions, sortPackagingTypes } from "@/lib/packaging";
@@ -75,7 +76,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
                 </label>
               </div>
               <div className="mt-2 flex gap-2">
-                <button type="submit" className="rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Save</button>
+                <AdminSubmitButton type="submit" className="rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Save</AdminSubmitButton>
                 <button type="button" onClick={() => setEditingId(null)} className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700">Cancel</button>
               </div>
             </form>
@@ -95,7 +96,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
                   }}
                 >
                   <input type="hidden" name="id" value={color.id} />
-                  <button type="submit" className="rounded border border-rose-200 bg-white px-2 py-1 text-xs font-semibold text-rose-700">Delete</button>
+                  <AdminSubmitButton type="submit" className="rounded border border-rose-200 bg-white px-2 py-1 text-xs font-semibold text-rose-700">Delete</AdminSubmitButton>
                 </form>
               </div>
             </div>
@@ -125,7 +126,7 @@ function LidColorLibrary({ lidColors }: { lidColors: PackagingLidColor[] }) {
               aria-label="New lid colour website swatch"
             />
           </label>
-          <button type="submit" className="min-h-9 rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Add colour</button>
+          <AdminSubmitButton type="submit" className="min-h-9 rounded bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white">Add colour</AdminSubmitButton>
         </form>
       </div>
     </details>
@@ -330,9 +331,9 @@ function PackagingOptionForm({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
-          <button type="submit" className="rounded bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800">
+          <AdminSubmitButton type="submit" className="rounded bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800">
             {option ? "Save changes" : "Create option"}
-          </button>
+          </AdminSubmitButton>
           <button type="button" onClick={onCancel} className="rounded border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700">
             Cancel
           </button>
@@ -347,7 +348,7 @@ function PackagingOptionForm({
           }}
         >
           <input type="hidden" name="id" value={option.id} />
-          <button type="submit" className="text-xs font-semibold text-rose-700 hover:underline">Delete packaging option</button>
+          <AdminSubmitButton type="submit" className="text-xs font-semibold text-rose-700 hover:underline">Delete packaging option</AdminSubmitButton>
         </form>
       ) : null}
     </div>
@@ -409,13 +410,13 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
           </div>
           <form action={updatePackagingTypeOrder}>
             <input type="hidden" name="ordered_types" value={JSON.stringify(orderedTypes)} />
-            <button
+            <AdminSubmitButton
               type="submit"
               disabled={!typeOrderChanged}
               className="rounded bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:bg-zinc-100 disabled:text-zinc-400"
             >
               Save type order
-            </button>
+            </AdminSubmitButton>
           </form>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -443,13 +444,13 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
               </div>
               <form action={updatePackagingOptionOrder}>
                 <input type="hidden" name="ordered_ids" value={JSON.stringify(orderedIds)} />
-                <button
+                <AdminSubmitButton
                   type="submit"
                   disabled={!optionOrderChanged}
                   className="rounded bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:bg-zinc-100 disabled:text-zinc-400"
                 >
                   Save item order
-                </button>
+                </AdminSubmitButton>
               </form>
             </div>
             <div className="overflow-x-auto">
@@ -533,7 +534,7 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                               <form action={togglePackagingActive}>
                                 <input type="hidden" name="id" value={option.id} />
                                 <input type="hidden" name="next_active" value={isActive ? "false" : "true"} />
-                                <button type="submit" className={`rounded border px-2 py-1 text-xs font-semibold ${isActive ? "border-amber-200 text-amber-700" : "border-emerald-200 text-emerald-700"}`}>{isActive ? "Disable" : "Enable"}</button>
+                                <AdminSubmitButton type="submit" className={`rounded border px-2 py-1 text-xs font-semibold ${isActive ? "border-amber-200 text-amber-700" : "border-emerald-200 text-emerald-700"}`}>{isActive ? "Disable" : "Enable"}</AdminSubmitButton>
                               </form>
                             </div>
                           </td>

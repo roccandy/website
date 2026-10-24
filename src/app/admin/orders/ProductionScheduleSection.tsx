@@ -1,8 +1,10 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useMemo, useState, useTransition, type DragEvent } from "react";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import { useRouter } from "next/navigation";
+import { useAdminViewState } from "../useAdminViewState";
 import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
@@ -78,7 +80,8 @@ export default function ProductionScheduleSection({
   onOrderDragEnd,
 }: Props) {
   const router = useRouter();
-  const [calendarMonth, setCalendarMonth] = useState(() => startOfWorkweek(new Date()));
+  const [calendarStart, setCalendarStart] = useAdminViewState("production-week", dateKey(startOfWorkweek(new Date())), (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(new Date(`${value}T00:00:00`).getTime()));
+  const calendarMonth = useMemo(() => new Date(`${calendarStart}T00:00:00`), [calendarStart]);
   const viewMode = "calendar";
   const [slotPicker, setSlotPicker] = useState<{ date: string; slotIndex: number } | null>(null);
   const [assignmentModalTarget, setAssignmentModalTarget] = useState<{
@@ -209,13 +212,13 @@ export default function ProductionScheduleSection({
   const movePrev = () => {
     const next = new Date(calendarMonth);
     next.setDate(calendarMonth.getDate() - 7);
-    setCalendarMonth(next);
+    setCalendarStart(dateKey(next));
   };
 
   const moveNext = () => {
     const next = new Date(calendarMonth);
     next.setDate(calendarMonth.getDate() + 7);
-    setCalendarMonth(next);
+    setCalendarStart(dateKey(next));
   };
 
   const closeSlotPicker = () => setSlotPicker(null);
@@ -328,7 +331,7 @@ export default function ProductionScheduleSection({
               compact ? "h-7 text-[10px]" : "h-8 text-xs"
             }`}
           />
-          <button
+          <AdminSubmitButton
             type="submit"
             disabled={isSaving || draft === savedNote}
             aria-label={isSaving ? "Saving note" : "Save note"}
@@ -341,7 +344,7 @@ export default function ProductionScheduleSection({
             ) : (
               "Save"
             )}
-          </button>
+          </AdminSubmitButton>
         </div>
       </form>
     );

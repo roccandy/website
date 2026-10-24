@@ -94,7 +94,7 @@ export default function SplitAwareActionForm({
           submitWithDecision(false);
         }}
       >
-        {buttonLabel}
+        {isPending ? "Working…" : buttonLabel}
       </button>
 
       {companionMeta ? (

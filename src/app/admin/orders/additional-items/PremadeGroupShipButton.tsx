@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductionScheduleReviewModal from "../ProductionScheduleReviewModal";
@@ -70,12 +71,12 @@ export function PremadeGroupShipButton({
         <input ref={includeCompanionRef} type="hidden" name="include_companion" value="" />
         <input ref={promptHandledRef} type="hidden" name="_split_prompt_handled" value="" />
         {redirectTo ? <input type="hidden" name="redirect_to" value={redirectTo} /> : null}
-        <button
+        <AdminSubmitButton
           type="submit"
           className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
         >
           {buttonLabel}
-        </button>
+        </AdminSubmitButton>
       </form>
 
       {companionOrderIds && companionLabel && companionActionLabel ? (

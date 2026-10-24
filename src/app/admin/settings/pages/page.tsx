@@ -792,18 +792,20 @@ function RedirectEditorCard({
         <div className="flex gap-2">
           {canWriteSeo ? (
             <>
-              <button
+              <AdminSubmitButton
                 type="submit"
                 className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800"
               >
                 Save
-              </button>
-              <button
+              </AdminSubmitButton>
+              <AdminSubmitButton
+                type="submit"
+                confirmMessage="Delete this URL redirect?"
                 formAction={deleteSiteRedirectAction}
                 className="rounded-md border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
               >
                 Delete
-              </button>
+              </AdminSubmitButton>
             </>
           ) : (
             <span className="rounded-md border border-zinc-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">

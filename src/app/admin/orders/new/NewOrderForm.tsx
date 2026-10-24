@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
+import { unstable_rethrow } from "next/navigation";
+import { useAdminNavigation } from "../../AdminNavigationFeedback";
 import { OrderEditWorkspace } from "./OrderEditWorkspace";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
@@ -37,7 +40,7 @@ import {
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
-import { upsertOrder } from "../actions";
+import { upsertOrder, upsertOrderInline } from "../actions";
 import { formatFullDateLabel, formatOrderDescription } from "../productionScheduleShared";
 import { paletteSections } from "@/app/admin/settings/palette";
 import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
@@ -48,6 +51,13 @@ const BULK_LABEL_COUNT_MAX = 1000;
 const WEDDING_HEART = "❤️";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+
+function ProductionNotesField({ initialValue }: { initialValue: string }) {
+  // React resets uncontrolled fields after an action resolves, including a
+  // handled failure. Keep notes controlled so a failed save cannot erase them.
+  const [value, setValue] = useState(initialValue);
+  return <textarea name="notes" value={value} onChange={(event) => setValue(event.target.value)} className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900" rows={5} placeholder="Internal notes for this order." />;
+}
 
 function appendPreviewOverlaySvg(baseSvg: SVGSVGElement, overlaySvg: SVGSVGElement) {
   const overlayGroup = document.createElementNS(SVG_NS, "g");
@@ -524,6 +534,9 @@ export function NewOrderForm({
   const [sharedState, setSharedState] = useState(customerDefaults?.state ?? "");
   const [sharedCustomerNote, setSharedCustomerNote] = useState(customerDefaults?.customer_note ?? "");
   const formRef = useRef<HTMLFormElement | null>(null);
+  const navigation = useAdminNavigation();
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const submitLock = useRef(false);
   const candyPreviewRef = useRef<HTMLElement | null>(null);
   const scheduleSubmitButtonRef = useRef<HTMLButtonElement | null>(null);
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
@@ -1580,9 +1593,36 @@ export function NewOrderForm({
   return (
     <form
       ref={formRef}
-      action={upsertOrder}
+      data-protect-unsaved
+      aria-busy={isSubmittingOrder || undefined}
+      action={async (formData) => {
+        try {
+          if (isEditMode) {
+            const result = await upsertOrderInline(formData);
+            if (!result?.ok) {
+              const message = result?.message || "The order could not be saved. Your changes are still here.";
+              setSaveError(message);
+              window.dispatchEvent(new CustomEvent("toast", { detail: { tone: "error", message, scope: "order-save" } }));
+            } else {
+              window.dispatchEvent(new Event("admin:form-saved"));
+              window.dispatchEvent(new CustomEvent("toast", { detail: { tone: result.tone, message: result.message || "Order saved.", scope: "order-save" } }));
+              if (navigation) navigation.navigate(cancelHref);
+              else window.location.assign(cancelHref);
+            }
+          } else await upsertOrder(formData);
+        } catch (error) {
+          unstable_rethrow(error);
+          const message = "We couldn’t confirm the save. Your changes are still here. Check the orders list before trying again, in case the save went through.";
+          setSaveError(message);
+          window.dispatchEvent(new CustomEvent("toast", { detail: { tone: "error", message, scope: "order-save" } }));
+        } finally {
+          submitLock.current = false;
+          setIsSubmittingOrder(false);
+        }
+      }}
       className="space-y-6"
       onSubmit={(event) => {
+        if (submitLock.current) { event.preventDefault(); return; }
         if (invoiceDraftMode && !isAdminPremadeOrder && !reviewMode) {
           event.preventDefault();
           openReview();
@@ -1646,17 +1686,19 @@ export function NewOrderForm({
             }
           }
         }
+        setSaveError(null);
+        submitLock.current = true;
         setIsSubmittingOrder(true);
       }}
     >
       {isSubmittingOrder ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/90 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-xl">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-zinc-200 border-t-zinc-900" />
-            <p className="mt-4 text-lg font-semibold text-zinc-900">
+        <div role="status" aria-live="polite" className="sticky top-2 z-20 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm">
+            <div aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-800 motion-reduce:animate-none" />
+          <div>
+            <p className="font-semibold">
               {isEditMode ? "Saving order" : isAdminPremadeOrder ? "Saving premade order" : "Creating invoice draft"}
             </p>
-            <p className="mt-2 text-sm text-zinc-600">
+            <p className="mt-1 text-xs text-emerald-800">
               {isEditMode
                 ? "Please wait while the order details and invoice records are updated."
                 : isAdminPremadeOrder
@@ -1666,6 +1708,7 @@ export function NewOrderForm({
           </div>
         </div>
       ) : null}
+      {saveError ? <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{saveError}</div> : null}
       {invoiceDraftMode && reviewMode ? (
         <input type="hidden" name="admin_invoice_orders_json" value={reviewPayload} />
       ) : null}
@@ -3079,13 +3122,9 @@ export function NewOrderForm({
               </label>
               <label className="block">
                 <span className="admin-card-title text-zinc-900">Production Notes</span>
-                <textarea
-                  name="notes"
+                <ProductionNotesField
                   key={`notes-${activeInvoiceDraftId}-${orderFieldsKey}`}
-                  defaultValue={draftValue(activeInvoiceDraft, "notes", initialOrder?.notes ?? "")}
-                  className="mt-4 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
-                  rows={5}
-                  placeholder="Internal notes for this order."
+                  initialValue={draftValue(activeInvoiceDraft, "notes", initialOrder?.notes ?? "")}
                 />
               </label>
             </div>
@@ -3364,7 +3403,7 @@ export function NewOrderForm({
           </button>
         ) : (
           <>
-            <button
+            <AdminSubmitButton pendingLabel={isEditMode ? "Saving order…" : "Creating order…"}
               type="submit"
               name="submit_intent"
               value={invoiceDraftMode && !isAdminPremadeOrder ? "create_tabbed_invoice" : "save"}
@@ -3382,9 +3421,9 @@ export function NewOrderForm({
                     : reviewMode
                       ? "Create Square draft invoice"
                       : "Create Invoice"}
-            </button>
+            </AdminSubmitButton>
             {isEditMode && !isAdminPremadeOrder ? (
-              <button
+              <AdminSubmitButton pendingLabel={isEditMode ? "Saving order…" : "Creating order…"}
                 type="submit"
                 name="submit_intent"
                 value="save_and_resend_confirmation"
@@ -3392,11 +3431,11 @@ export function NewOrderForm({
                 className="rounded border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:border-sky-400 hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400"
               >
                 Save &amp; resend confirmation
-              </button>
+              </AdminSubmitButton>
             ) : null}
           </>
         )}
-        <button
+        <AdminSubmitButton pendingLabel={isEditMode ? "Saving order…" : "Creating order…"}
           ref={scheduleSubmitButtonRef}
           type="submit"
           name="submit_intent"
@@ -3406,7 +3445,7 @@ export function NewOrderForm({
           aria-hidden="true"
         >
           Add to Calendar
-        </button>
+        </AdminSubmitButton>
       </div>
     </form>
   );

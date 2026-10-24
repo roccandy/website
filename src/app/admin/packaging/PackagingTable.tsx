@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import Image from "next/image";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { Loader2, Trash2 } from "lucide-react";
@@ -602,7 +603,7 @@ export function PackagingTable({
           </div>
           <form action={updatePackagingTypeOrder} className="shrink-0">
             <input type="hidden" name="ordered_types" value={JSON.stringify(orderedTypes)} readOnly />
-            <button
+            <AdminSubmitButton
               type="submit"
               disabled={!hasTypeOrderChanges}
               className={`inline-flex items-center rounded-md px-3 py-2 text-xs font-semibold ${
@@ -612,7 +613,7 @@ export function PackagingTable({
               }`}
             >
               Save type order
-            </button>
+            </AdminSubmitButton>
           </form>
         </div>
         <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -869,13 +870,13 @@ export function PackagingTable({
                           </form>
                           <form action={deletePackaging} className="absolute right-2 top-2">
                             <input type="hidden" name="id" value={opt.id} />
-                            <button
+                            <AdminSubmitButton
                               type="submit"
                               aria-label="Delete"
                               className="inline-flex h-6 w-6 items-center justify-center rounded-full text-red-500 hover:bg-red-50 hover:text-red-700"
                             >
                               ×
-                            </button>
+                            </AdminSubmitButton>
                           </form>
                         </>
                       )}
@@ -1638,14 +1639,14 @@ export function PackagingTable({
                               <input type="hidden" name="packaging_option_id" value={row.packagingOption.id} />
                               <input type="hidden" name="category_id" value={row.categoryId} />
                               <input type="hidden" name="lid_color" value={row.lidColor} />
-                              <button
+                              <AdminSubmitButton
                                 type="submit"
                                 aria-label={`Remove image for ${categoryName} ${row.packagingOption.type} ${row.packagingOption.size}`}
                                 title="Remove image"
                                 className="inline-flex h-8 w-8 items-center justify-center rounded border border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" aria-hidden="true" />
-                              </button>
+                              </AdminSubmitButton>
                             </form>
                           ) : null}
                         </div>

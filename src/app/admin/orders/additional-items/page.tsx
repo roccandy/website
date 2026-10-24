@@ -1,3 +1,4 @@
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { getOrders, getOrderSlots, getProductionSlots } from "@/lib/data";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -351,12 +352,12 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
                     ) : isShipped ? (
                       <form action={markAdditionalItemsPending}>
                         <input type="hidden" name="order_ids" value={orderIds} />
-                        <button
+                        <AdminSubmitButton
                           type="submit"
                           className="rounded border border-zinc-200 px-2 py-1 text-xs font-semibold text-zinc-600 hover:border-zinc-300 hover:text-zinc-800"
                         >
                           {completedButtonLabel}
-                        </button>
+                        </AdminSubmitButton>
                       </form>
                     ) : (
                       <PremadeGroupShipButton

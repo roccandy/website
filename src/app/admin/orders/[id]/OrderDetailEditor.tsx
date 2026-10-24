@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
@@ -1240,14 +1241,14 @@ export function OrderDetailEditor({
               <RotateCcw size={14} aria-hidden="true" />
               Reset
             </button>
-            <button
+            <AdminSubmitButton
               type="submit"
               disabled={saveDisabled}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white bg-white px-3 py-2 text-xs font-semibold text-zinc-950 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-45"
             >
               <Save size={14} aria-hidden="true" />
               Save
-            </button>
+            </AdminSubmitButton>
           </div>
         </div>
         {quoteError ? <p className="mt-2 text-xs font-semibold text-amber-200">{quoteError}</p> : null}
@@ -1861,14 +1862,14 @@ export function OrderDetailEditor({
         >
           Back
         </Link>
-        <button
+        <AdminSubmitButton
           type="submit"
           disabled={saveDisabled}
           className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Save size={16} aria-hidden="true" />
           Save order
-        </button>
+        </AdminSubmitButton>
       </div>
     </form>
   );
