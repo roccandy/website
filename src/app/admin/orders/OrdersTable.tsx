@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
-import { ArrowUpRight } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { compactKg, productionPaymentStrip, requiredDateUrgency } from "./productionRowPresentation";
 import { orderSource } from "./orderSource";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import type {
@@ -25,7 +26,6 @@ import {
   canCompleteOrderForSlotDates,
   formatBatchBreakdown,
   formatDate,
-  formatDueDateDistance,
   formatMoney,
   formatOrderDescription,
   formatScheduleStatusLabel,
@@ -40,7 +40,6 @@ import {
   dateKey,
 } from "./productionScheduleShared";
 import {
-  adminInvoicePaymentStatus,
   isAdminManagedCustomOrder,
   isAdminManagedCustomOrderUnpaid,
   isVisibleOnProductionScheduleWithAssignments,
@@ -66,11 +65,6 @@ const JACKET_LABELS = new Map([
   ["rainbow", "Rainbow"],
 ]);
 
-const invoicePaymentStatusStyle = (status: "draft" | "unpaid" | "paid") => {
-  if (status === "paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  if (status === "unpaid") return "border-rose-200 bg-rose-50 text-rose-700";
-  return "border-amber-200 bg-amber-50 text-amber-700";
-};
 
 function PackagingDescription({ value }: { value: string }) {
   const match = value.match(/^(\d+(?:\.\d+)?)\s+x\s+(.+)$/);
@@ -228,18 +222,21 @@ export function OrdersTable({
           {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
         </div>
       </div>
+      <div aria-label="Payment colour legend" className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500"><span><i className="mr-1 inline-block h-2 w-2 bg-red-500"/>Payment not recorded</span><span><i className="mr-1 inline-block h-2 w-2 bg-emerald-500"/>Paid</span><span><i className="mr-1 inline-block h-2 w-2 bg-blue-500"/>Website order</span></div>
       <div className="admin-production-panels" data-view={workspaceView}>
       <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
         <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <table className="min-w-full text-sm">
+          <table className="w-full min-w-[29rem] table-fixed text-[13px]">
+          <colgroup><col className="w-[5.5rem]"/><col/><col className="w-24"/><col className="w-28"/><col className="w-16"/><col className="w-14"/><col className="w-3"/></colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
-              <th className="px-3 py-3 text-left">Order #</th>
+              <th className="whitespace-nowrap px-2 py-3 text-left">Order #</th>
               <th className="px-3 py-3 text-left">Title</th>
               <th className="px-3 py-3 text-left">Date required</th>
               <th className="px-3 py-3 text-left">Packaging</th>
-              <th className="px-3 py-3 text-left">Weight</th>
+              <th className="px-2 py-3 text-left">kg</th>
               <th className="px-3 py-3 text-left">State</th>
+              <th className="w-3 p-0"><span className="sr-only">Payment and order source</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
@@ -252,10 +249,10 @@ export function OrdersTable({
               const isAdminPremade = isAdminPremadeOrder(order);
               const isAdminManagedCustom = isAdminManagedCustomOrder(order);
               const isAdminManagedCustomUnpaid = isAdminManagedCustomOrderUnpaid(order);
-              const invoicePaymentStatus = adminInvoicePaymentStatus(order);
               const packagingOption = packagingById.get(order.packaging_option_id ?? "") ?? null;
               const packagingDescription = formatOrderDescription(order, packagingOption);
-              const dueDateDistance = formatDueDateDistance(order.due_date);
+              const urgency = requiredDateUrgency(order.due_date, scheduleTodayKey);
+              const paymentStrip = productionPaymentStrip(order);
               const categoryLabel = isAdminPremade
                 ? ADMIN_PREMADE_ORDER_LABEL
                 : order.category_id
@@ -284,16 +281,15 @@ export function OrdersTable({
                     }`}
                     onClick={() => setSelectedId((prev) => (prev === order.id ? null : order.id))}
                   >
-                    <td className="px-3 py-2 font-semibold text-zinc-900">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span>
+                    <td className="px-2 py-2 font-semibold text-zinc-900">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="whitespace-nowrap">
                           {order.order_number
                             ? `#${order.order_number}`
                             : order.id
                               ? `#${order.id.slice(0, 8)}`
                               : "-"}
                         </span>
-                        {source.invoiceHref ? <Link href={source.invoiceHref} draggable={false} onClick={(event)=>event.stopPropagation()} aria-label={`Open invoice for order ${order.order_number || order.id}`} className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold ${source.tone}`}>{source.label}<ArrowUpRight size={10}/></Link> : <span className={`rounded-md border px-2 py-0.5 text-[10px] font-semibold ${source.tone}`}>{source.label}</span>}
                         <button
                           type="button"
                           onClick={(event) => {
@@ -306,53 +302,8 @@ export function OrdersTable({
                         >
                           {formatScheduleStatusLabel(scheduleStatus)}
                         </button>
-                        {invoicePaymentStatus && order.square_invoice_id ? (
-                          <Link
-                            href={`/admin/orders/${order.id}/invoice`}
-                            onClick={(event) => event.stopPropagation()}
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition hover:opacity-85 ${invoicePaymentStatusStyle(
-                              invoicePaymentStatus,
-                            )}`}
-                          >
-                            {invoicePaymentStatus}
-                          </Link>
-                        ) : invoicePaymentStatus ? (
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${invoicePaymentStatusStyle(
-                              invoicePaymentStatus,
-                            )}`}
-                          >
-                            {invoicePaymentStatus}
-                          </span>
-                        ) : null}
-                        {isAdminManagedCustomUnpaid && !order.square_invoice_id ? (
-                          <form
-                            action={markOrderAsPaid}
-                            className="inline-flex"
-                            onSubmit={(event) => {
-                              event.stopPropagation();
-                              if (!window.confirm("Mark order as paid?")) {
-                                event.preventDefault();
-                              }
-                            }}
-                          >
-                            <input type="hidden" name="id" value={order.id} />
-                            <button
-                              type="submit"
-                              onClick={(event) => event.stopPropagation()}
-                              className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                            >
-                              Mark paid
-                            </button>
-                          </form>
-                        ) : null}
                         {isAdminManagedCustom && order.square_invoice_error ? (
-                          <span
-                            className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"
-                            title={order.square_invoice_error}
-                          >
-                            Invoice warning
-                          </span>
+                          <span title="Invoice warning — open the invoice to review"><AlertTriangle size={12} className="text-rose-600" aria-label="Invoice warning" /></span>
                         ) : null}
                         {isAdminPremade ? (
                           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
@@ -369,22 +320,23 @@ export function OrdersTable({
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-3 py-2 text-zinc-800">
+                    <td className="min-w-0 break-words px-2 py-2 text-zinc-800">
                       <OrderTitleWithLogo order={order} title={order.title ?? "Untitled"} />
                     </td>
-                    <td className="px-3 py-2 text-zinc-700">
-                      {formatDate(order.due_date)}
-                      {dueDateDistance ? <span className="ml-2 text-zinc-400">{dueDateDistance}</span> : null}
+                    <td className="whitespace-nowrap px-2 py-2 text-zinc-700">
+                      <span className="block">{formatDate(order.due_date)}</span>
+                      {urgency ? <span className={`mt-0.5 block text-xs ${urgency.tone}`}>{urgency.label}</span> : null}
                     </td>
-                    <td className="px-3 py-2 text-zinc-700">
+                    <td className="break-words px-2 py-2 text-zinc-700">
                       <PackagingDescription value={packagingDescription} />
                     </td>
-                    <td className="px-3 py-2 text-zinc-700">{weightLabel(order.total_weight_kg)}</td>
-                    <td className="px-3 py-2 text-zinc-700">{order.state ?? order.location ?? ""}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-zinc-700" title={formatBatchBreakdown(order) || `${order.total_weight_kg ?? "Unknown"} kg`}>{compactKg(order)}</td>
+                    <td className="truncate px-1 py-2 text-xs text-zinc-700" title={order.state ?? order.location ?? ""}>{order.state ?? order.location ?? ""}</td>
+                    <td className="relative w-3 min-w-3 p-0"><Link href={paymentStrip.href} draggable={false} onClick={event=>event.stopPropagation()} aria-label={`${paymentStrip.label} · open ${source.invoiceHref ? "invoice" : "order"} for ${order.order_number || order.id}`} title={`${paymentStrip.label} — open ${source.invoiceHref ? "invoice" : "order details"}`} className={`absolute inset-0 block w-full ${paymentStrip.colour} hover:brightness-90 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-zinc-900`} /></td>
                   </tr>
                   {selectedId === order.id ? (
                     <tr className="bg-white">
-                      <td colSpan={6} className="px-3 pb-4">
+                      <td colSpan={7} className="px-3 pb-4">
                         <div
                           id={`order-detail-${order.id}`}
                           className="mt-2 rounded-lg border border-zinc-200 bg-white p-4 text-xs text-zinc-700 shadow-sm"
@@ -398,6 +350,7 @@ export function OrdersTable({
                               </h3>
                             </div>
                             <div className="flex flex-wrap items-center justify-end gap-2">
+                              {canWrite && isAdminManagedCustomUnpaid && !order.square_invoice_id ? <form action={markOrderAsPaid} onSubmit={event=>{if(!window.confirm("Confirm payment has been independently verified. This records payment; it does not charge the customer."))event.preventDefault();}}><input type="hidden" name="id" value={order.id}/><button type="submit" className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-800">Record payment received</button></form> : null}
                               <Link
                                 href={`/admin/orders/${order.id}`}
                                 className="inline-flex items-center rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"

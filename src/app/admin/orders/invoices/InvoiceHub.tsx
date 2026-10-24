@@ -427,9 +427,10 @@ export function InvoiceHub({
                             ? "Review & send"
                             : invoice.attention
                               ? "Review invoice"
-                              : "View invoice"}
+                              : "Invoice details"}
                         <ArrowUpRight size={12} />
                       </AdminLink>
+                      {invoice.originalPdf ? <a href={`/api/admin/emails/${invoice.originalPdf.emailId}/attachment/${invoice.originalPdf.index}?inline=1`} target="_blank" rel="noopener noreferrer" className={`${button} mt-2`}>View sent invoice PDF<ArrowUpRight size={12}/></a> : null}
                     </td>
                   </tr>
                   {expanded === invoice.id && (

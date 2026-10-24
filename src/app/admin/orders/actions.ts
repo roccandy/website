@@ -1793,6 +1793,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
       );
       const emailResult = await sendEmail({
         to: [localPatch.customer_email],
+        archive: {kind: "invoice-pdf", orderIds: invoiceGroupOrders.map(order => order.id), orderNumbers: invoiceGroupOrders.map(order => order.order_number).filter((number): number is string => Boolean(number))},
         bcc: ordersRecipients,
         subject: `Roc Candy tax invoice ${invoiceNumber}`,
         text: [
@@ -2073,6 +2074,8 @@ export async function refundOrder(formData: FormData) {
     const recipientEmails = Array.from(new Set(orders.map((order) => order.customer_email).filter(Boolean)));
     if (recipientEmails.length > 0) {
       await sendCustomerRefundEmail(recipientEmails, {
+        orderIds: orders.map(order => order.id),
+        orderNumbers: orders.map(order => order.order_number).filter((number): number is string => Boolean(number)),
         orderNumber: orders[0]?.order_number ?? null,
         amount,
         paymentMethod: orders[0]?.payment_method ?? orders[0]?.payment_provider ?? null,

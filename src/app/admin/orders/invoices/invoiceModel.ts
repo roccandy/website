@@ -52,6 +52,7 @@ export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   review: "Needs review",
 };
 export type InvoiceRecord = {
+  originalPdf?: {emailId:string; index:number};
   id: string;
   invoiceId: string | null;
   orderId: string;

@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { AdminCustomOrderDetails, AdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { enquiryInterestLabel, type WebsiteEnquiry } from "@/lib/enquiry";
+import type { EmailArchiveContext } from "@/lib/emailArchiveTypes";
 
 type EmailPayload = {
   from?: string;
@@ -14,9 +15,12 @@ type EmailPayload = {
   html?: string;
   replyTo?: string;
   attachments?: nodemailer.SendMailOptions["attachments"];
+  archive?: EmailArchiveContext;
 };
 
 type OrderEmailPayload = {
+  orderIds?: string[];
+  orderNumbers?: string[];
   orderNumber?: string | null;
   title?: string | null;
   designType?: string | null;
@@ -50,6 +54,8 @@ type CustomerOrderEmailPayload = {
 };
 
 type CustomerRefundEmailPayload = {
+  orderIds?: string[];
+  orderNumbers?: string[];
   orderNumber?: string | null;
   amount?: number | null;
   paymentMethod?: string | null;
@@ -178,7 +184,7 @@ export async function sendEmail(payload: EmailPayload) {
     return { skipped: true };
   }
 
-  await transporter.sendMail({
+  const message = {
     from,
     to,
     bcc,
@@ -187,7 +193,12 @@ export async function sendEmail(payload: EmailPayload) {
     html: payload.html,
     replyTo: payload.replyTo,
     attachments: payload.attachments,
-  });
+  };
+  if (payload.archive) {
+    const {sendArchivedEmail} = await import("@/lib/emailArchive");
+    return sendArchivedEmail(message, payload.archive, raw => transporter.sendMail(raw));
+  }
+  await transporter.sendMail(message);
 
   return { success: true };
 }
@@ -222,6 +233,7 @@ export async function sendOrderEmail(to: string[], order: OrderEmailPayload) {
     to,
     subject,
     text: lines.join("\n"),
+    archive: order.orderNumber || order.orderIds?.length ? {kind: "internal", orderIds: order.orderIds, orderNumbers: order.orderNumbers ?? (order.orderNumber ? [order.orderNumber] : [])} : undefined,
   });
 }
 
@@ -304,6 +316,7 @@ export async function sendCustomerRefundEmail(to: string[], refund: CustomerRefu
     to,
     subject,
     text: lines.join("\n"),
+    archive: {kind: "refund", orderIds: refund.orderIds, orderNumbers: refund.orderNumbers ?? (refund.orderNumber ? [refund.orderNumber] : [])},
   });
 }
 
@@ -688,6 +701,7 @@ export async function sendAdminOrderSummaryEmail(to: string[], order: AdminOrder
     text: lines.join("\n"),
     html,
     attachments: attachments.length > 0 ? attachments : undefined,
+    archive: order.emailArchive ? {...order.emailArchive, kind: "internal"} : undefined,
   });
 }
 
@@ -838,6 +852,7 @@ export async function sendCustomerOrderSummaryEmail(to: string[], order: AdminOr
     text: lines.join("\n"),
     html,
     attachments: attachments.length > 0 ? attachments : undefined,
+    archive: order.emailArchive ? {...order.emailArchive, kind: order.emailArchive.kind ?? "confirmation"} : undefined,
   });
 }
 

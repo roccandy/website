@@ -19,6 +19,7 @@ import {
   invoiceTone,
 } from "../../invoices/invoicePresentation";
 import { OrderPaymentConfirmation } from "../../OrderPaymentConfirmation";
+import { OrderCommunicationHistory } from "../../OrderCommunicationHistory";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -480,6 +481,7 @@ export default async function AdminInvoiceReviewPage({
           </aside>
         </form>
       )}
+      {!editing ? <OrderCommunicationHistory order={primaryOrder} /> : null}
     </section>
   );
 }

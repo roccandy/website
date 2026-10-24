@@ -124,6 +124,12 @@ const nextConfig: NextConfig = {
         headers: securityHeaders,
       },
       {
+        // Only the inert, authenticated email preview can be framed by this
+        // site. All other pages retain DENY; its own CSP also enforces this.
+        source: "/api/admin/emails/:id/preview",
+        headers: [{ key: "X-Frame-Options", value: "SAMEORIGIN" }],
+      },
+      {
         source: "/checkout/:path*",
         headers: [
           {

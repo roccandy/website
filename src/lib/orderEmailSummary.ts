@@ -1,6 +1,7 @@
 import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import sharp from "sharp";
+import type { EmailArchiveContext } from "./emailArchiveTypes";
 
 type OrderPayload = Record<string, unknown>;
 
@@ -38,6 +39,7 @@ export type AdminCustomOrderDetails = {
 };
 
 export type AdminOrderSummaryEmailPayload = {
+  emailArchive?: Omit<EmailArchiveContext, "kind"> & {kind?: "confirmation" | "order-update"};
   orderNumber: string | null;
   dateOrderedIso: string;
   customerName: string | null;
@@ -434,6 +436,10 @@ export async function buildAdminOrderSummaryEmailPayload({
 
   return {
     orderNumber,
+    emailArchive: {
+      orderIds: orderPayloads.map(item => typeof item.id === "string" ? item.id : "").filter(Boolean),
+      orderNumbers: orderPayloads.map(item => typeof item.order_number === "string" ? item.order_number : "").filter(Boolean),
+    },
     dateOrderedIso: new Date().toISOString(),
     customerName,
     customerEmail,

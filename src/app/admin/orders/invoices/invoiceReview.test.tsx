@@ -1,6 +1,9 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("../OrderCommunicationHistory", () => ({
+  OrderCommunicationHistory: () => null,
+}));
 const mocks = vi.hoisted(() => ({
   order: {} as Record<string, unknown>,
   canWrite: true,

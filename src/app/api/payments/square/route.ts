@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { buildCheckoutOrderContext } from "@/lib/checkoutOrder";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
@@ -104,6 +104,7 @@ export async function POST(request: Request) {
 
     const paymentMethodTitle = body.paymentMethodTitle?.trim() || "Square";
     const result = await finalizePaidCheckoutOrder({
+      continueAfterResponse: after,
       order: body.order,
       paymentProvider: "square",
       paymentMethod: "square",

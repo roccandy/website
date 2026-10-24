@@ -1,4 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/emailArchive", () => ({
+  getInvoiceOriginals: async () => new Map(),
+}));
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   range: vi.fn(),

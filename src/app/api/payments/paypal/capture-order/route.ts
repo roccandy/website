@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { finalizePaidCheckoutOrder } from "@/lib/checkoutFinalize";
 import { buildCheckoutOrderContext } from "@/lib/checkoutOrder";
 import { capturePayPalOrder, getPayPalOrder } from "@/lib/paypal";
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     }
 
     const result = await finalizePaidCheckoutOrder({
+      continueAfterResponse: after,
       order: body.order,
       paymentProvider: "paypal",
       paymentMethod: "paypal",

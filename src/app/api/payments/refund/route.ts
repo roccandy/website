@@ -87,6 +87,7 @@ export async function POST(request: Request) {
 
     if (order.customer_email) {
       await sendCustomerRefundEmail([order.customer_email], {
+        orderIds: [order.id],
         orderNumber: order.order_number ?? null,
         amount: refundAmount,
         paymentMethod: order.payment_method ?? order.payment_provider ?? null,

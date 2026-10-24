@@ -16,6 +16,7 @@ const EMAIL_WAIT_MS = 4000;
 const ORDER_INSERT_ATTEMPTS = 3;
 
 type FinalizePaidCheckoutInput = {
+  continueAfterResponse?: (task: Promise<unknown>) => void;
   order: CheckoutOrderPayload;
   paymentProvider: string;
   paymentMethod: string;
@@ -88,6 +89,7 @@ function buildPaidOrderPayloads({
 }
 
 export async function finalizePaidCheckoutOrder({
+  continueAfterResponse,
   order,
   paymentProvider,
   paymentMethodTitle,
@@ -284,8 +286,12 @@ export async function finalizePaidCheckoutOrder({
   }
 
   if (emailTasks.length > 0) {
+    const emailCompletion = Promise.allSettled(emailTasks);
+    // Keep archive/SMTP work alive if the quick checkout response wins the
+    // race. This does not enqueue another send or retry a timed-out message.
+    continueAfterResponse?.(emailCompletion);
     const emailResult = await Promise.race([
-      Promise.allSettled(emailTasks).then((results) => ({ kind: "results" as const, results })),
+      emailCompletion.then((results) => ({ kind: "results" as const, results })),
       new Promise<{ kind: "timeout" }>((resolve) => setTimeout(() => resolve({ kind: "timeout" }), EMAIL_WAIT_MS)),
     ]);
 

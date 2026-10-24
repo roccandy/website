@@ -47,6 +47,36 @@ const baseOrder = {
 } as unknown as CheckoutOrderPayload;
 
 describe("finalizePaidCheckoutOrder", () => {
+  it("keeps the same slow email promise alive after checkout without submitting twice", async () => {
+    vi.useFakeTimers();
+    try {
+      let complete!: () => void;
+      sendCustomerOrderSummaryEmail.mockReturnValue(
+        new Promise<void>((resolve) => {
+          complete = resolve;
+        }),
+      );
+      const continuation = vi.fn();
+      const { finalizePaidCheckoutOrder } =
+        await import("@/lib/checkoutFinalize");
+      const checkout = finalizePaidCheckoutOrder({
+        order: baseOrder,
+        paymentProvider: "square",
+        paymentMethod: "square",
+        paymentMethodTitle: "Credit Card",
+        transactionId: "txn_slow",
+        continueAfterResponse: continuation,
+      });
+      await vi.advanceTimersByTimeAsync(4001);
+      expect((await checkout).adminEmailWarning).toContain("timed out");
+      expect(continuation).toHaveBeenCalledOnce();
+      complete();
+      await continuation.mock.calls[0][0];
+      expect(sendCustomerOrderSummaryEmail).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -61,7 +91,9 @@ describe("finalizePaidCheckoutOrder", () => {
       taxAmount: 13.59,
       shippingAmount: 0,
     });
-    buildAdminOrderSummaryEmailPayload.mockResolvedValue({ subject: "Order 000123" });
+    buildAdminOrderSummaryEmailPayload.mockResolvedValue({
+      subject: "Order 000123",
+    });
     sendCustomerOrderSummaryEmail.mockResolvedValue(undefined);
     sendAdminOrderSummaryEmail.mockResolvedValue(undefined);
     sendPaidOrderSaveFailureEmail.mockResolvedValue({ success: true });
@@ -71,7 +103,8 @@ describe("finalizePaidCheckoutOrder", () => {
   });
 
   it("inserts Supabase rows and sends both emails without creating a Woo order", async () => {
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({
@@ -108,7 +141,8 @@ describe("finalizePaidCheckoutOrder", () => {
     isEmailConfigured.mockReturnValue(false);
     getOrdersRecipients.mockReturnValue([]);
 
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({
@@ -134,7 +168,8 @@ describe("finalizePaidCheckoutOrder", () => {
   it("does not report success or send emails when the order insert fails", async () => {
     insert.mockResolvedValue({ error: { message: "insert failed" } });
 
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({
@@ -175,7 +210,8 @@ describe("finalizePaidCheckoutOrder", () => {
   it("alerts admin when the order insert throws a network error", async () => {
     insert.mockRejectedValue(new Error("database network unavailable"));
 
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({
@@ -207,7 +243,9 @@ describe("finalizePaidCheckoutOrder", () => {
         dueDate: "2026-04-10",
         pickup: false,
         lineItems: [{ name: "Order item" }],
-        orderPayloads: [{ id: "line-1", order_number: "000123", title: "Custom Order" }],
+        orderPayloads: [
+          { id: "line-1", order_number: "000123", title: "Custom Order" },
+        ],
         orderNumbers: { baseOrderNumber: "000123" },
         totalAmount: 149.5,
         taxAmount: 13.59,
@@ -218,17 +256,25 @@ describe("finalizePaidCheckoutOrder", () => {
         dueDate: "2026-04-10",
         pickup: false,
         lineItems: [{ name: "Order item" }],
-        orderPayloads: [{ id: "line-1", order_number: "000124", title: "Custom Order" }],
+        orderPayloads: [
+          { id: "line-1", order_number: "000124", title: "Custom Order" },
+        ],
         orderNumbers: { baseOrderNumber: "000124" },
         totalAmount: 149.5,
         taxAmount: 13.59,
         shippingAmount: 0,
       });
     insert
-      .mockResolvedValueOnce({ error: { message: "duplicate key value violates unique constraint orders_order_number_unique_idx" } })
+      .mockResolvedValueOnce({
+        error: {
+          message:
+            "duplicate key value violates unique constraint orders_order_number_unique_idx",
+        },
+      })
       .mockResolvedValueOnce({ error: null });
 
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({
@@ -254,10 +300,16 @@ describe("finalizePaidCheckoutOrder", () => {
   it("returns the existing result without duplicating a captured payment", async () => {
     select.mockReturnValueOnce({
       eq: vi.fn(() => ({
-        eq: vi.fn().mockResolvedValue({ data: [{ order_number: "000123-a" }], error: null }),
+        eq: vi
+          .fn()
+          .mockResolvedValue({
+            data: [{ order_number: "000123-a" }],
+            error: null,
+          }),
       })),
     });
-    const { finalizePaidCheckoutOrder } = await import("@/lib/checkoutFinalize");
+    const { finalizePaidCheckoutOrder } =
+      await import("@/lib/checkoutFinalize");
 
     await expect(
       finalizePaidCheckoutOrder({

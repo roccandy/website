@@ -21,6 +21,7 @@ import { NewOrderForm } from "../new/NewOrderForm";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
 import { OrderSummary } from "./OrderSummary";
+import { OrderCommunicationHistory } from "../OrderCommunicationHistory";
 import { perthDate } from "../../stats-v2/statsModel";
 
 export const revalidate = 0;
@@ -278,6 +279,7 @@ export default async function AdminOrderDetailPage({
           canWrite={session.user.canWrite}
         />
       )}
+      {!editing ? <OrderCommunicationHistory order={order} /> : null}
     </section>
   );
 }

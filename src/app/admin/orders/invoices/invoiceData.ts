@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { buildInvoices, type InvoiceOrder } from "./invoiceModel";
+import { getInvoiceOriginals } from "@/lib/emailArchive";
 
 export async function getInvoices() {
   const loadedAt = new Date().toISOString();
@@ -19,5 +20,12 @@ export async function getInvoices() {
     rows.push(...(data as unknown as InvoiceOrder[]));
     if (data.length < 500) break;
   }
-  return { loadedAt, invoices: buildInvoices(rows, loadedAt) };
+  const originals = await getInvoiceOriginals();
+  const invoices = buildInvoices(rows, loadedAt).map((invoice) => ({
+    ...invoice,
+    originalPdf: invoice.orders
+      .map((order) => originals.get(order.id) ?? originals.get(order.number))
+      .find(Boolean),
+  }));
+  return { loadedAt, invoices };
 }
