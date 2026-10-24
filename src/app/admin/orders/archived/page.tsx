@@ -13,6 +13,7 @@ import { OrderActions } from "../OrderActions";
 import { OrderRowActionMenu } from "../OrderRowActionMenu";
 import { OrderListRow } from "../OrderListRow";
 import { OrderPaymentStrips } from "../OrderPaymentStrips";
+import { paymentStripRowSpans } from "../orderPaymentGroups";
 import { orderRowPrimaryAction } from "../orderRowPrimaryAction";
 import { orderWorkflow } from "../orderWorkflow";
 import { perthDate } from "../../stats-v2/statsModel";
@@ -561,8 +562,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             </tr>
           </thead>
           <tbody>
-            {groupedList.flatMap((group, groupIndex) =>
-              group.visibleSubgroups.map((subgroup, subgroupIndex) => {
+            {(() => {
+              const rows = groupedList.flatMap((group, groupIndex) => group.visibleSubgroups.map((subgroup, subgroupIndex) => ({ group, groupIndex, subgroup, subgroupIndex })));
+              const paymentSpans = paymentStripRowSpans(rows.map(({ subgroup }) => subgroup.orders));
+              return rows.map(({ group, groupIndex, subgroup, subgroupIndex }, rowIndex) => {
+                const paymentSpan = paymentSpans[rowIndex];
                 const rowBorderClass =
                   groupIndex > 0 && subgroupIndex === 0
                     ? "border-t-2 border-zinc-200"
@@ -790,11 +794,11 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       )}
                       </OrderRowActionMenu>
                     </td>
-                    <td className={`relative p-0 ${rowBorderClass}`}><OrderPaymentStrips orders={subgroup.orders}/></td>
+                    {paymentSpan ? <td rowSpan={paymentSpan.rowSpan} data-payment-row-span={paymentSpan.rowSpan} className={`relative p-0 ${rowBorderClass}`}><OrderPaymentStrips orders={paymentSpan.orders}/></td> : null}
                   </OrderListRow>
                 );
-              }),
-            )}
+              });
+            })()}
             {groupedList.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-3 py-6 text-center text-sm text-zinc-500">

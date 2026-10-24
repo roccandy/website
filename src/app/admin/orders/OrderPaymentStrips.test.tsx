@@ -33,4 +33,13 @@ describe("all-orders payment strips", () => {
     expect(html).toContain('href="/admin/orders/order"');
     expect(html).toContain('aria-label="#100 · Website order"');
   });
+  it("renders one continuous invoice link for matching split items", () => {
+    const html = renderToStaticMarkup(<OrderPaymentStrips orders={[
+      row({ id: "a", order_number: "100-a", square_invoice_id: "same", paid_at: "2026-10-01" }),
+      row({ id: "b", order_number: "100-b", square_invoice_id: "same", paid_at: "2026-10-01" }),
+    ]}/>);
+    expect(html.match(/<a /g)).toHaveLength(1);
+    expect(html).toContain("#100-a, #100-b · Invoice order · paid");
+    expect(html).toContain('href="/admin/orders/a/invoice"');
+  });
 });
