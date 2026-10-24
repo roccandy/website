@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OrderRow } from "@/lib/data";
-import { consecutivePaymentGroups, paymentStripRowSpans } from "./orderPaymentGroups";
+import { consecutivePaymentGroups, paymentStripRowSpans, productionPaymentStripRowSpans } from "./orderPaymentGroups";
 const row = (id: string, values: Partial<OrderRow> = {}) => ({ id, design_type: "branded", square_invoice_id: "invoice", paid_at: "2026-10-01", ...values }) as OrderRow;
 describe("shared invoice payment strips", () => {
   it("joins adjacent split rows with the same invoice and payment state", () => {
@@ -33,5 +33,18 @@ describe("shared invoice payment strips", () => {
     const partial = row("partial", { status: "archived", refunded_at: "2026-10-02", refunded_amount: 50, total_price: 100 });
     const full = row("full", { status: "archived", refunded_at: "2026-10-02", refunded_amount: 100, total_price: 100 });
     expect(paymentStripRowSpans([[partial], [full]])[1]?.rowSpan).toBe(1);
+  });
+  it("joins matching production rows in both split and full-width lists", () => {
+    const orders = [row("a"), row("b"), row("c")];
+    expect(productionPaymentStripRowSpans(orders, null)).toEqual([{ rowSpan: 3, orders }, null, null]);
+  });
+  it("breaks production strips around expanded details so full-width summaries stay aligned", () => {
+    const orders = [row("a"), row("b"), row("c"), row("d")];
+    expect(productionPaymentStripRowSpans(orders, "b")).toEqual([
+      { rowSpan: 2, orders: orders.slice(0, 2) }, null,
+      { rowSpan: 2, orders: orders.slice(2) }, null,
+    ]);
+    expect(productionPaymentStripRowSpans(orders, "a")[0]?.rowSpan).toBe(1);
+    expect(productionPaymentStripRowSpans(orders, "d")[0]?.rowSpan).toBe(4);
   });
 });

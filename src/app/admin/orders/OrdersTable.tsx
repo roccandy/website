@@ -6,7 +6,9 @@ import { productionColumnWidths } from "./productionColumnWidths";
 import { useAdminViewState } from "../useAdminViewState";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AlertTriangle } from "lucide-react";
-import { compactKg, productionPaymentStrip, requiredDateUrgency } from "./productionRowPresentation";
+import { compactKg, requiredDateUrgency } from "./productionRowPresentation";
+import { productionPaymentStripRowSpans } from "./orderPaymentGroups";
+import { OrderPaymentStrips } from "./OrderPaymentStrips";
 import { orderSource } from "./orderSource";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import type {
@@ -195,6 +197,7 @@ export function OrdersTable({
     [assignmentsByOrderId, listOrders],
   );
   const visibleListOrders = listOrders;
+  const paymentSpans = productionPaymentStripRowSpans(visibleListOrders, selectedId);
   const assignmentModalOrder = useMemo(
     () => orders.find((order) => order.id === assignmentModalOrderId) ?? null,
     [assignmentModalOrderId, orders],
@@ -258,7 +261,7 @@ export function OrdersTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {visibleListOrders.map((order) => {
+            {visibleListOrders.map((order, orderIndex) => {
               const printTarget = order.id ?? order.order_number;
               const assignedSlotDates = assignedSlotDatesByOrderId.get(order.id) ?? [];
               const scheduleStatus = getMultiAssignmentScheduleStatus(order, assignedSlotDates);
@@ -270,7 +273,7 @@ export function OrdersTable({
               const packagingOption = packagingById.get(order.packaging_option_id ?? "") ?? null;
               const packagingDescription = formatOrderDescription(order, packagingOption);
               const urgency = requiredDateUrgency(order.due_date, scheduleTodayKey);
-              const paymentStrip = productionPaymentStrip(order);
+              const paymentSpan = paymentSpans[orderIndex];
               const categoryLabel = isAdminPremade
                 ? ADMIN_PREMADE_ORDER_LABEL
                 : order.category_id
@@ -350,7 +353,15 @@ export function OrdersTable({
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 text-zinc-700" title={formatBatchBreakdown(order) || `${order.total_weight_kg ?? "Unknown"} kg`}>{compactKg(order)}</td>
                     <td className="truncate px-2 py-2 text-xs text-zinc-700" title={order.state ?? order.location ?? ""}>{order.state ?? order.location ?? ""}</td>
-                    <td className="relative w-3 min-w-3 p-0"><Link href={paymentStrip.href} draggable={false} onClick={event=>event.stopPropagation()} aria-label={`${paymentStrip.label} · open ${source.invoiceHref ? "invoice" : "order"} for ${order.order_number || order.id}`} title={`${paymentStrip.label} — open ${source.invoiceHref ? "invoice" : "order details"}`} className={`absolute inset-0 block w-full ${paymentStrip.colour} hover:brightness-90 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-zinc-900`} /></td>
+                    {paymentSpan ? <td rowSpan={paymentSpan.rowSpan} data-payment-row-span={paymentSpan.rowSpan} className="relative w-3 min-w-3 p-0" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => {
+                      // A shared invoice strip is a link, not an individual
+                      // order drag handle. Keep dragging on each order's cells.
+                      if (paymentSpan.rowSpan > 1) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.currentTarget.querySelector("a")?.focus();
+                      }
+                    }}><OrderPaymentStrips orders={paymentSpan.orders}/></td> : null}
                   </tr>
                   {selectedId === order.id ? (
                     <tr className="bg-white">

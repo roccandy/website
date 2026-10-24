@@ -11,7 +11,7 @@ export function OrderPaymentStrips({ orders }: { orders: OrderRow[] }) {
         const order = group[0];
         const strip = productionPaymentStrip(order);
         const label = `${group.map((item) => item.order_number ? `#${item.order_number}` : item.title || "Order").join(", ")} · ${strip.label}`;
-        return <AdminLink key={order.id} href={strip.href} aria-label={label} title={label} className={`block min-h-0 flex-1 ${strip.colour} hover:brightness-90 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-900`} />;
+        return <AdminLink key={order.id} href={strip.href} draggable={false} aria-label={label} title={label} className={`block min-h-0 flex-1 ${strip.colour} hover:brightness-90 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zinc-900`} />;
       })}
     </div>
   );

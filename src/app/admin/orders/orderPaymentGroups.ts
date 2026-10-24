@@ -46,3 +46,15 @@ export function paymentStripRowSpans(rows: OrderRow[][]): Array<{ rowSpan: numbe
   });
   return spans;
 }
+
+/** Expanded production details occupy a full-width row: never span across it. */
+export function productionPaymentStripRowSpans(orders: OrderRow[], selectedId: string | null) {
+  const tableRows = orders.flatMap((order) => order.id === selectedId ? [[order], []] : [[order]]);
+  const spans = paymentStripRowSpans(tableRows);
+  let index = 0;
+  return orders.map((order) => {
+    const span = spans[index];
+    index += order.id === selectedId ? 2 : 1;
+    return span;
+  });
+}
