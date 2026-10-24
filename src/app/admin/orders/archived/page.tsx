@@ -10,6 +10,7 @@ import { PremadeGroupShipButton } from "../additional-items/PremadeGroupShipButt
 import { getPremadeSiblingMeta, getMultiAssignmentScheduleStatus } from "../productionScheduleShared";
 import { OrderActions } from "../OrderActions";
 import { OrderRowActionMenu } from "../OrderRowActionMenu";
+import { OrderListRow } from "../OrderListRow";
 import { orderRowPrimaryAction } from "../orderRowPrimaryAction";
 import { orderWorkflow } from "../orderWorkflow";
 import { perthDate } from "../../stats-v2/statsModel";
@@ -633,9 +634,9 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                 const companionOrderIds = companionOrders.map((order) => order.id).join(",");
 
                 return (
-                  <tr key={rowKey} className="admin-order-history-row bg-white">
+                  <OrderListRow key={rowKey} orderId={subgroup.orders[0].id}>
                     <td className={`px-3 py-2 font-semibold text-zinc-900 ${rowBorderClass}`}>
-                      {showGroupCells ? group.orderNumber : ""}
+                      {showGroupCells ? <Link href={`/admin/orders/${encodeURIComponent(subgroup.orders[0].id)}`} className="rounded hover:text-emerald-800 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-700" aria-label={`View order ${group.orderNumber}`}>{group.orderNumber}</Link> : ""}
                     </td>
                     <td className={`break-words px-3 py-2 text-zinc-800 ${rowBorderClass}`}>
                       <div className="space-y-2">
@@ -644,7 +645,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                           return (
                             <div key={order.id} className="min-w-0 space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold text-zinc-900">{title}</p>
+                                <Link href={`/admin/orders/${encodeURIComponent(order.id)}`} className="rounded font-semibold text-zinc-900 hover:text-emerald-800 hover:underline focus-visible:outline-2 focus-visible:outline-emerald-700">{title}</Link>
                                 {order.refunded_at ? (
                                   <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
                                     {refundBadgeLabel(order)}
@@ -786,7 +787,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
                       )}
                       </OrderRowActionMenu>
                     </td>
-                  </tr>
+                  </OrderListRow>
                 );
               }),
             )}
