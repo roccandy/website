@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { AdminNotice } from "@/app/admin/AdminNotice";
 
 type Toast = { id: string; message: string; tone: "success" | "error"; scope?: string };
 
@@ -64,8 +65,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div data-toast-region className="pointer-events-none fixed inset-x-0 bottom-4 z-[110] flex justify-end px-4 sm:bottom-6 sm:px-6 print:hidden">
-        <div className="pointer-events-auto flex max-h-[50dvh] w-full max-w-md flex-col gap-2 overflow-y-auto">
+      <AdminNotice>
+      <div data-toast-region className="pointer-events-none w-full print:hidden">
+        <div className="pointer-events-auto flex max-h-[40dvh] w-full flex-col gap-2 overflow-y-auto">
           {toasts.map((toast) => (
             <div
               key={toast.id}
@@ -74,7 +76,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               onMouseEnter={() => { clearTimeout(timers.current.get(toast.id)); timers.current.delete(toast.id); }}
               onMouseLeave={() => { if (toast.tone === "success") timers.current.set(toast.id, setTimeout(() => removeToast(toast.id), 6000)); }}
               onFocus={() => { clearTimeout(timers.current.get(toast.id)); timers.current.delete(toast.id); }}
-              className={`pointer-events-auto flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${
+              className={`pointer-events-auto flex items-start gap-2 rounded-lg px-3 py-2 text-xs font-medium shadow-sm ${
                 toast.tone === "success"
                   ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
                   : "border border-red-200 bg-red-50 text-red-800"
@@ -86,6 +88,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           ))}
         </div>
       </div>
+      </AdminNotice>
     </ToastContext.Provider>
   );
 }

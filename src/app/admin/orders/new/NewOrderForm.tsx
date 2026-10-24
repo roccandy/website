@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
+import { AdminNotice } from "../../AdminNotice";
 import { unstable_rethrow } from "next/navigation";
 import { useAdminNavigation } from "../../AdminNavigationFeedback";
 import { OrderEditWorkspace } from "./OrderEditWorkspace";
@@ -1692,7 +1693,8 @@ export function NewOrderForm({
       }}
     >
       {isSubmittingOrder ? (
-        <div role="status" aria-live="polite" className="sticky top-2 z-20 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 shadow-sm">
+        <AdminNotice>
+        <div role="status" aria-live="polite" className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 shadow-sm">
             <div aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-800 motion-reduce:animate-none" />
           <div>
             <p className="font-semibold">
@@ -1707,6 +1709,7 @@ export function NewOrderForm({
             </p>
           </div>
         </div>
+        </AdminNotice>
       ) : null}
       {saveError ? <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{saveError}</div> : null}
       {invoiceDraftMode && reviewMode ? (

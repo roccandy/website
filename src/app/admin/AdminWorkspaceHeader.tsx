@@ -38,6 +38,7 @@ export function AdminWorkspaceHeader({
   const [query, setQuery] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const toolsButton = useRef<HTMLButtonElement>(null);
+  const accountMenu = useRef<HTMLDetailsElement>(null);
   const primary = getAdminPrimaryNavigation(user);
   const displayName = user.name?.trim() || user.email?.trim() || "Your account";
   const visibleSections = sections
@@ -52,7 +53,7 @@ export function AdminWorkspaceHeader({
     .filter((section) => section.items.length);
   const closeTools = () => setToolsOpen(false);
   useEffect(() => {
-    const closeForDraftPrompt = () => { dialog.current?.close(); setToolsOpen(false); };
+    const closeForDraftPrompt = () => { dialog.current?.close(); if (accountMenu.current) accountMenu.current.open = false; setToolsOpen(false); };
     window.addEventListener("admin:unsaved-prompt", closeForDraftPrompt);
     return () => window.removeEventListener("admin:unsaved-prompt", closeForDraftPrompt);
   }, []);
@@ -94,7 +95,7 @@ export function AdminWorkspaceHeader({
               className="h-9 w-9 shrink-0"
               priority
             />
-            <span className="hidden min-w-0 sm:block">
+            <span className="hidden min-w-0 sm:block lg:hidden xl:block">
               <span className="block text-sm font-semibold tracking-tight text-zinc-900">
                 Roc Candy
               </span>
@@ -103,7 +104,8 @@ export function AdminWorkspaceHeader({
               </span>
             </span>
           </AdminLink>
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+            <div id="admin-header-notices" className="admin-notice-anchor" />
             <AdminOrderSearch />
             {user.canWrite && (
               <AdminLink
@@ -115,7 +117,7 @@ export function AdminWorkspaceHeader({
                 <span className="min-[420px]:hidden">New</span>
               </AdminLink>
             )}
-            <details className="relative">
+            <details ref={accountMenu} className="relative">
               <summary
                 className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-2 text-xs text-zinc-600 hover:bg-zinc-50 [&::-webkit-details-marker]:hidden"
                 aria-label="Your account"
@@ -123,12 +125,12 @@ export function AdminWorkspaceHeader({
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600">
                   {displayName.charAt(0).toUpperCase()}
                 </span>
-                <span className="hidden max-w-32 truncate lg:block">
+                <span className="hidden max-w-32 truncate xl:block">
                   {displayName}
                 </span>
                 <ChevronDown size={12} />
               </summary>
-              <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
+              <div className="absolute right-0 top-full z-[120] mt-2 w-60 rounded-xl border border-zinc-200 bg-white p-4 shadow-lg">
                 <p className="break-words text-sm font-semibold text-zinc-800">
                   {displayName}
                 </p>

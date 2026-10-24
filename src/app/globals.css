@@ -150,8 +150,27 @@ body {
   container: production-workspace / inline-size;
 }
 
-@media (max-width: 639px) {
-  body:has([data-admin-unsaved]) [data-toast-region] { bottom: 9rem; }
+.admin-notice-anchor {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 1rem;
+  left: 1rem;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+.admin-notice-anchor > * { pointer-events: auto; }
+@media (min-width: 1024px) {
+  .admin-notice-anchor {
+    position: relative;
+    inset: auto;
+    height: 2.5rem;
+    min-width: 0;
+    max-width: 24rem;
+    flex: 1 1 0%;
+  }
 }
 
 .admin-production-panels {

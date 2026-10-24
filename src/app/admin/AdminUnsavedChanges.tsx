@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAdminNavigation } from "./AdminNavigationFeedback";
 import { draftFingerprint } from "./adminFormDraft";
+import { AdminNotice } from "./AdminNotice";
 
 export function formFingerprint(form: HTMLFormElement) {
   // Live quote results and submission metadata are not user edits. Otherwise
@@ -90,12 +91,14 @@ export function AdminUnsavedChanges() {
 
   if (!dirty) return null;
   return (
-    <section data-admin-unsaved aria-label="Unsaved changes" aria-live="polite" onKeyDown={(event) => { if (event.key === "Escape") setLeave(null); }} className="fixed bottom-4 left-4 z-[109] max-w-[calc(100vw-2rem)] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg print:hidden">
+    <AdminNotice>
+    <section data-admin-unsaved aria-label="Unsaved changes" aria-live="polite" onKeyDown={(event) => { if (event.key === "Escape") setLeave(null); }} className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow-sm print:hidden">
       <p className="font-medium">{leave ? "Leave without saving your changes?" : "You have unsaved changes"}</p>
       {leave ? <div className="mt-2 flex gap-2">
         <button ref={stay} type="button" onClick={() => setLeave(null)} className="rounded-lg bg-amber-950 px-3 py-1.5 font-semibold text-white">Keep editing</button>
         <button type="button" onClick={() => { const proceed = leave; forms.current.clear(); setDirty(false); setLeave(null); proceed(); }} className="rounded-lg border border-amber-300 px-3 py-1.5 font-semibold">Discard & leave</button>
       </div> : null}
     </section>
+    </AdminNotice>
   );
 }
