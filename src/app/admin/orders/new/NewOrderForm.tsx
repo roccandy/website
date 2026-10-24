@@ -3422,7 +3422,7 @@ export function NewOrderForm({
                   : isAdminPremadeOrder
                     ? "Add to Orders"
                     : reviewMode
-                      ? "Create Square draft invoice"
+                      ? "Create draft invoice & send order confirmation"
                       : "Create Invoice"}
             </AdminSubmitButton>
             {isEditMode && !isAdminPremadeOrder ? (
