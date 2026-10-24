@@ -170,6 +170,11 @@ body {
 .admin-production-calendar { container: production-calendar / inline-size; }
 .admin-calendar-weekdays, .admin-calendar-empty { display: none; }
 .admin-calendar-days { grid-template-columns: minmax(0, 1fr); }
+.admin-order-editor-pane { container: order-editor / inline-size; }
+.admin-edit-design-grid { grid-template-columns: minmax(0, 1fr); }
+@container order-editor (min-width: 840px) {
+  .admin-edit-design-grid { grid-template-columns: minmax(0, 1fr) 280px; }
+}
 @container production-calendar (min-width: 500px) {
   .admin-calendar-weekdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .admin-calendar-days { grid-template-columns: repeat(5, minmax(0, 1fr)); }

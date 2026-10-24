@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
+import { OrderEditWorkspace } from "./OrderEditWorkspace";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
@@ -1670,7 +1671,7 @@ export function NewOrderForm({
       ) : null}
       <input ref={sendUpdatedInvoiceInputRef} type="hidden" name="send_updated_invoice" defaultValue="" />
       <input ref={batchWeightMismatchApprovedInputRef} type="hidden" name="batch_weight_mismatch_approved" defaultValue="" />
-      {!reviewMode && !isAdminPremadeOrder && !invoiceDraftMode ? (
+      <OrderEditWorkspace editing={isEditMode} hasInvoice={!reviewMode && !isAdminPremadeOrder} invoice={!reviewMode && !isAdminPremadeOrder && !invoiceDraftMode ? (
         <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -1828,7 +1829,7 @@ export function NewOrderForm({
             />
           </label>
         </section>
-      ) : null}
+      ) : null}>
       {!reviewMode && invoiceDraftMode && !isAdminPremadeOrder ? renderInvoiceTabs("top") : null}
       {reviewMode ? (
         <section className="rounded-2xl border border-zinc-900 bg-white p-5 shadow-sm">
@@ -2116,7 +2117,7 @@ export function NewOrderForm({
       ) : null}
       {!reviewMode ? (
         <>
-      <div className="sticky top-20 z-20">
+      <div className={isEditMode ? "sticky top-32 z-20" : "sticky top-20 z-20"}>
         <div className="rounded-2xl border border-zinc-900 bg-zinc-900/95 p-4 text-white shadow-lg backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-4">
             {isAdminPremadeOrder ? (
@@ -2146,7 +2147,7 @@ export function NewOrderForm({
                     Price breakdown
                   </span>
                 </summary>
-                <div className="mt-3 min-w-64 rounded-xl border border-white/15 bg-black/20 p-3 text-xs shadow-lg">
+                <div className={`${isEditMode ? "min-w-0 max-w-full" : "min-w-64"} mt-3 rounded-xl border border-white/15 bg-black/20 p-3 text-xs shadow-lg`}>
                   {isPricing ? (
                     <p className="text-zinc-300">Calculating price...</p>
                   ) : pricingError ? (
@@ -2843,7 +2844,7 @@ export function NewOrderForm({
             }`}
           >
             <h3 className="admin-card-title text-zinc-900">Candy design & flavor</h3>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+            <div className={isEditMode ? "admin-edit-design-grid mt-4 grid min-w-0 gap-4" : "mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]"}>
               <div className="grid gap-4 md:grid-cols-2">
               {isWedding && (
                 <>
@@ -3041,7 +3042,7 @@ export function NewOrderForm({
                 </div>
               )}
               </div>
-              <aside ref={candyPreviewRef} className="flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40">
+              <aside ref={candyPreviewRef} className={isEditMode ? "flex min-w-0 min-h-[13rem] items-center justify-center overflow-hidden px-2 py-2" : "flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40"}>
                 <CandyPreview
                   designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
                   lineOne={isWedding ? weddingLineOne : undefined}
@@ -3096,6 +3097,7 @@ export function NewOrderForm({
         </>
       ) : null}
 
+      </OrderEditWorkspace>
       {productionSlotPickerOpen ? (
       <AssignmentCalendarModal
         order={productionCalendarOrder}
@@ -3322,7 +3324,7 @@ export function NewOrderForm({
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-3">
+      <div className={isEditMode ? "flex flex-wrap items-center justify-end gap-3" : "flex items-center justify-end gap-3"}>
         <Link
           href={cancelHref}
           className="rounded border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300"
