@@ -44,6 +44,23 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     getLabelTypes.mockResolvedValue([{ id: "label-1", shape: "circle", dimensions: "30mm" }]);
   });
 
+  it("preserves independent admin fill and pinstripe colours in email details and fallback previews", async () => {
+    process.env.SITE_URL = "https://roccandy.test";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [{ order_number: "local-colours", packaging_option_id: "pack-1", total_price: 100, quantity: 1,
+        jacket_type: "two_colour", jacket: "two_colour_pinstripe", candy_fill_color: "#ffffff", pinstripe_color: "#ff0000" }],
+      orderNumber: "local-colours", requestedDate: null, billing: {}, pickup: true, paymentMethod: "Square invoice", paymentAmount: 100,
+    });
+    expect(summary.customDetails?.fillColour).toBe("White");
+    expect(summary.customDetails?.pinstripeColour).toBe("Red");
+    const url = new URL(summary.customDetails!.imageUrl!);
+    expect(url.searchParams.get("fillColor")).toBe("#ffffff");
+    expect(url.searchParams.get("pinstripeColor")).toBe("#ff0000");
+    expect(url.searchParams.get("showPinstripe")).toBe("1");
+    expect(url.searchParams.get("mode")).toBe("two_colour");
+  });
+
   it("builds separate custom detail blocks for multiple custom order rows", async () => {
     const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
 

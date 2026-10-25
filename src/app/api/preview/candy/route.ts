@@ -28,6 +28,8 @@ export async function GET(request: Request) {
   const mode = (searchParams.get("mode") ?? "solid").toLowerCase();
   const colorOne = normalizeHex(searchParams.get("colorOne"), DEFAULT_COLOR);
   const colorTwo = normalizeHex(searchParams.get("colorTwo"), colorOne);
+  const fillColor = normalizeHex(searchParams.get("fillColor"), "#ffffff");
+  const pinstripeColor = normalizeHex(searchParams.get("pinstripeColor"), "#ffffff");
   const textColor = normalizeHex(searchParams.get("textColor"), DEFAULT_TEXT);
   const heartColor = normalizeHex(searchParams.get("heartColor"), textColor);
   const designText = (searchParams.get("designText") ?? "").trim().slice(0, 18).toUpperCase();
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
         : colorOne;
   const pinstripe =
     mode === "pinstripe" || showPinstripe
-      ? `<circle cx="300" cy="200" r="160" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="18" stroke-dasharray="2 16" />`
+      ? `<circle cx="300" cy="200" r="160" fill="none" stroke="${pinstripeColor}" stroke-opacity="0.9" stroke-width="18" stroke-dasharray="2 16" />`
       : "";
 
   const logoNode = logoUrl
@@ -106,7 +108,7 @@ export async function GET(request: Request) {
   <ellipse cx="300" cy="344" rx="210" ry="30" fill="rgba(20,20,20,0.12)" />
   <circle cx="300" cy="200" r="160" fill="${fill}" />
   ${pinstripe}
-  <circle cx="300" cy="200" r="126" fill="#ffffff" />
+  <circle cx="300" cy="200" r="126" fill="${fillColor}" />
   ${logoNode}
   ${weddingTextNode}
   ${singleTextNode}

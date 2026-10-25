@@ -28,6 +28,8 @@ export type AdminCustomOrderDetails = {
   orderNumber: string | null;
   weightKg: number | null;
   outerColours: string;
+  fillColour?: string;
+  pinstripeColour?: string | null;
   pinstripe: "Yes" | "No";
   flavor: string | null;
   textColour: string;
@@ -207,7 +209,7 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
   if (!baseUrl) return null;
 
   const designType = String(payload.design_type ?? "").toLowerCase();
-  const modeRaw = String(payload.jacket_type ?? payload.jacket ?? "").toLowerCase();
+  const modeRaw = `${payload.jacket_type ?? ""} ${payload.jacket ?? ""}`.toLowerCase();
   const mode = modeRaw.includes("rainbow")
     ? "rainbow"
     : modeRaw.includes("two_colour")
@@ -235,6 +237,8 @@ const buildCandyPreviewUrl = (payload: OrderPayload) => {
     mode,
     showPinstripe: modeRaw.includes("pinstripe") ? "1" : "0",
     colorOne: String(payload.jacket_color_one ?? "#b7b7b7"),
+    fillColor: String(payload.candy_fill_color ?? "#ffffff"),
+    pinstripeColor: String(payload.pinstripe_color ?? "#ffffff"),
     colorTwo: String(payload.jacket_color_two ?? payload.jacket_color_one ?? "#b7b7b7"),
     textColor: String(payload.text_color ?? "#5f5f5f"),
     heartColor: String(payload.heart_color ?? payload.text_color ?? "#5f5f5f"),
@@ -410,6 +414,8 @@ export async function buildAdminOrderSummaryEmailPayload({
       orderNumber: customOrderNumber,
       weightKg: customWeight > 0 ? customWeight : null,
       outerColours,
+      fillColour: customItem.candy_fill_color ? formatColour(customItem.candy_fill_color) : undefined,
+      pinstripeColour: pinstripe && customItem.pinstripe_color ? formatColour(customItem.pinstripe_color) : null,
       pinstripe: pinstripe ? "Yes" : "No",
       flavor,
       textColour: formatColour(customItem.text_color),

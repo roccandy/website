@@ -70,6 +70,8 @@ describe("sendCustomerOrderSummaryEmail", () => {
           orderNumber: "0135",
           weightKg: null,
           outerColours: "Pink",
+          fillColour: "Yellow",
+          pinstripeColour: "Red",
           pinstripe: "No",
           flavor: "Raspberry",
           textColour: "White",
@@ -82,6 +84,10 @@ describe("sendCustomerOrderSummaryEmail", () => {
       ],
     });
 
+    expect(sendMail.mock.calls[0]?.[0]?.html).toContain("Candy fill colour:</strong> Yellow");
+    expect(sendMail.mock.calls[0]?.[0]?.html).toContain("Pinstripe colour:</strong> Red");
+    expect(sendMail.mock.calls[0]?.[0]?.text).toContain("Candy fill colour: Yellow");
+    expect(sendMail.mock.calls[0]?.[0]?.text).toContain("Pinstripe colour: Red");
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: "Roc Candy Tax Invoice #0135",

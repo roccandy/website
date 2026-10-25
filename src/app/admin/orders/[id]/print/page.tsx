@@ -413,6 +413,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 mode={jacketPreview.mode}
                 showPinstripe={jacketPreview.showPinstripe}
                 colorOne={order.jacket_color_one || "#000000"}
+                fillColor={order.candy_fill_color || undefined}
+                pinstripeColor={order.pinstripe_color || undefined}
                 colorTwo={order.jacket_color_two || "#000000"}
                 logoUrl={isBranded ? order.logo_url : undefined}
                 textColor={textColorHex}
@@ -595,6 +597,16 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                   <span className={SPEC_LABEL_CLASS}>Jacket:</span>
                   <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
                 </p>
+                <p className={SPEC_ROW_CLASS}>
+                  <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
+                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color || "#ffffff", paletteHexMap))}</span>
+                </p>
+                {jacketPreview.showPinstripe ? (
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>
+                    <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.pinstripe_color || "#ffffff", paletteHexMap))}</span>
+                  </p>
+                ) : null}
                 {order.jacket !== "rainbow" && (
                   <div className="mt-2 space-y-1 text-zinc-700">
                     {showJacketColorOne && (

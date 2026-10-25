@@ -16,6 +16,8 @@ type ChangeField = {
 
 const CHANGE_FIELDS: ChangeField[] = [
   { key: "title", label: "Title" },
+  { key: "candy_fill_color", label: "Candy fill colour" },
+  { key: "pinstripe_color", label: "Pinstripe colour" },
   { key: "order_description", label: "Description" },
   { key: "category_id", label: "Order type" },
   { key: "packaging_option_id", label: "Packaging" },

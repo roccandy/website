@@ -587,6 +587,8 @@ export function NewOrderForm({
   );
   const [jacketColorOne, setJacketColorOne] = useState(initialOrder?.jacket_color_one ?? defaultJacketColor);
   const [jacketColorTwo, setJacketColorTwo] = useState(initialOrder?.jacket_color_two ?? defaultJacketColor);
+  const [fillColor, setFillColor] = useState(initialOrder?.candy_fill_color ?? "#ffffff");
+  const [pinstripeColor, setPinstripeColor] = useState(initialOrder?.pinstripe_color ?? "#ffffff");
   const [textColor, setTextColor] = useState(initialOrder?.text_color ?? defaultTextColor);
   const [heartColor, setHeartColor] = useState(initialOrder?.heart_color ?? defaultTextColor);
   const [flavor, setFlavor] = useState(initialOrder?.flavor ?? "");
@@ -619,7 +621,7 @@ export function NewOrderForm({
   const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? "" : "");
   const [adminPremadeCandyId, setAdminPremadeCandyId] = useState("");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
-  const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | null>(null);
+  const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | "fill" | "pinstripe" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
   const [customHexInput, setCustomHexInput] = useState(defaultJacketColor);
   const [submitAfterCalendarPick, setSubmitAfterCalendarPick] = useState(false);
@@ -944,6 +946,8 @@ export function NewOrderForm({
     addChange("Total", formatMoney(initialOrder.total_price), Number.isFinite(currentPrice) ? formatMoney(currentPrice) : "");
     addChange("Due date", dateInputValue(initialOrder.due_date), dueDate);
     addChange("Jacket", initialOrder.jacket ?? "", jacket);
+    addChange("Candy fill colour", initialOrder.candy_fill_color ?? "#ffffff", fillColor);
+    if (previewShowPinstripe) addChange("Pinstripe colour", initialOrder.pinstripe_color ?? "#ffffff", pinstripeColor);
     addChange("Custom labels", formatInputNumber(initialOrder.labels_count, 0), resolvedLabelsCount ? formatInputNumber(resolvedLabelsCount, 0) : "");
     addChange(
       "Ingredient labels",
@@ -1053,7 +1057,7 @@ export function NewOrderForm({
       setIsOptimisingLabelImage(false);
     }
   };
-  const openCustomPicker = (target: "heart" | "text" | "jacket1" | "jacket2", current: string) => {
+  const openCustomPicker = (target: "heart" | "text" | "jacket1" | "jacket2" | "fill" | "pinstripe", current: string) => {
     const normalized = normalizeHex(current, defaultJacketColor);
     setCustomTarget(target);
     setCustomHex(normalized);
@@ -1070,6 +1074,8 @@ export function NewOrderForm({
     if (customTarget === "text") setTextColor(normalized);
     if (customTarget === "jacket1") setJacketColorOne(normalized);
     if (customTarget === "jacket2") setJacketColorTwo(normalized);
+    if (customTarget === "fill") setFillColor(normalized);
+    if (customTarget === "pinstripe") setPinstripeColor(normalized);
     setCustomPickerOpen(false);
   };
   const captureCandyPreviewSvg = () => {
@@ -1169,6 +1175,8 @@ export function NewOrderForm({
         jacket,
         jacket_type: isAdminPremadeOrder ? "" : jacketTypeValue,
         jacket_color_one: isAdminPremadeOrder ? "" : jacketColorOne,
+        candy_fill_color: isAdminPremadeOrder ? "" : fillColor,
+        pinstripe_color: isAdminPremadeOrder ? "" : pinstripeColor,
         jacket_color_two: isAdminPremadeOrder ? "" : jacketColorTwo,
         text_color: !isBranded && !isAdminPremadeOrder ? textColor : "",
         heart_color: isWedding && !isAdminPremadeOrder ? heartColor : "",
@@ -1220,6 +1228,8 @@ export function NewOrderForm({
         : "",
     );
     setJacketColorOne(fields.jacket_color_one || defaultJacketColor);
+    setFillColor(fields.candy_fill_color || "#ffffff");
+    setPinstripeColor(fields.pinstripe_color || "#ffffff");
     setJacketColorTwo(fields.jacket_color_two || defaultJacketColor);
     setTextColor(fields.text_color || defaultTextColor);
     setHeartColor(fields.heart_color || defaultTextColor);
@@ -2875,6 +2885,8 @@ export function NewOrderForm({
       <input type="hidden" name="design_text" value={isAdminPremadeOrder ? adminPremadeSelectionLabel : designTextValue} />
       <input type="hidden" name="jacket_type" value={isAdminPremadeOrder ? "" : jacketTypeValue} />
       <input type="hidden" name="jacket_color_one" value={isAdminPremadeOrder ? "" : jacketColorOne} />
+      {!isAdminPremadeOrder ? <input type="hidden" name="candy_fill_color" value={fillColor} /> : null}
+      {!isAdminPremadeOrder ? <input type="hidden" name="pinstripe_color" value={pinstripeColor} /> : null}
       <input type="hidden" name="jacket_color_two" value={isAdminPremadeOrder ? "" : jacketColorTwo} />
       {!isBranded && !isAdminPremadeOrder ? <input type="hidden" name="text_color" value={textColor} /> : null}
       {isWedding && !isAdminPremadeOrder ? <input type="hidden" name="heart_color" value={heartColor} /> : null}
@@ -2988,8 +3000,9 @@ export function NewOrderForm({
                   })}
                 </div>
               </div>
+              <div className="grid gap-4 md:col-span-2 md:grid-cols-2">
               {jacket !== "rainbow" && (
-                <div className="md:col-span-2">
+                <div className="min-w-0">
                   <PalettePicker
                     label={showJacketColorTwo ? "Jacket colour 1" : "Jacket colour"}
                     value={jacketColorOne}
@@ -3000,7 +3013,7 @@ export function NewOrderForm({
                 </div>
               )}
               {showJacketColorTwo && (
-                <div className="md:col-span-2">
+                <div className="min-w-0">
                   <PalettePicker
                     label="Jacket colour 2"
                     value={jacketColorTwo}
@@ -3010,6 +3023,9 @@ export function NewOrderForm({
                   />
                 </div>
               )}
+              <PalettePicker label="Candy fill colour" value={fillColor} onChange={setFillColor} groups={paletteGroups} onCustom={() => openCustomPicker("fill", fillColor)} />
+              {previewShowPinstripe ? <PalettePicker label="Pinstripe colour" value={pinstripeColor} onChange={setPinstripeColor} groups={paletteGroups} onCustom={() => openCustomPicker("pinstripe", pinstripeColor)} /> : null}
+              </div>
               {!isBranded && (
                 <div className="md:col-span-2">
                   <PalettePicker
@@ -3097,6 +3113,8 @@ export function NewOrderForm({
                   mode={previewJacketMode}
                   showPinstripe={previewShowPinstripe}
                   colorOne={jacketColorOne || defaultJacketColor}
+                  fillColor={fillColor}
+                  pinstripeColor={pinstripeColor}
                   colorTwo={jacketColorTwo || jacketColorOne || defaultJacketColor}
                   logoUrl={isBranded ? logoUrl : undefined}
                   textColor={textColor || defaultTextColor}

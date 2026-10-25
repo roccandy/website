@@ -61,6 +61,8 @@ export async function GET(request: Request) {
   const mode = (searchParams.get("mode") ?? "solid").toLowerCase();
   const colorOne = normalizeHex(searchParams.get("colorOne"), DEFAULT_COLOR);
   const colorTwo = normalizeHex(searchParams.get("colorTwo"), colorOne);
+  const fillColor = normalizeHex(searchParams.get("fillColor"), "#ffffff");
+  const pinstripeColor = normalizeHex(searchParams.get("pinstripeColor"), "#ffffff");
   const textColor = normalizeHex(searchParams.get("textColor"), DEFAULT_TEXT);
   const heartColor = normalizeHex(searchParams.get("heartColor"), textColor);
   const customTextVariant = (searchParams.get("customTextVariant") ?? "").toLowerCase();
@@ -85,6 +87,16 @@ export async function GET(request: Request) {
       : mode === "two_colour"
         ? `linear-gradient(90deg, ${colorOne} 0%, ${colorOne} 50%, ${colorTwo} 50%, ${colorTwo} 100%)`
         : colorOne;
+
+  // ImageResponse does not support CSS dotted borders. Draw the pinstripes as
+  // SVG so both single- and two-colour jackets produce a valid email PNG.
+  const pinstripeRing = createElement("svg", {
+    width: 320, height: 320, viewBox: "0 0 320 320",
+    style: { position: "absolute", top: 0, left: 0 },
+  }, createElement("circle", {
+    cx: 160, cy: 160, r: 139, fill: "none", stroke: pinstripeColor,
+    strokeWidth: 14, strokeDasharray: "2 16",
+  }));
 
   const root = createElement(
     "div",
@@ -128,14 +140,7 @@ export async function GET(request: Request) {
         },
       },
       mode === "pinstripe"
-        ? createElement("div", {
-            style: {
-              position: "absolute",
-              inset: "14px",
-              borderRadius: "999px",
-              border: "14px dotted rgba(255,255,255,0.9)",
-            },
-          })
+        ? pinstripeRing
         : null,
       createElement(
         "div",
@@ -144,7 +149,7 @@ export async function GET(request: Request) {
             width: "250px",
             height: "250px",
             borderRadius: "999px",
-            background: "#ffffff",
+            background: fillColor,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -243,14 +248,7 @@ export async function GET(request: Request) {
                 )
       ),
       showPinstripe && mode !== "pinstripe"
-        ? createElement("div", {
-            style: {
-              position: "absolute",
-              inset: "14px",
-              borderRadius: "999px",
-              border: "14px dotted rgba(255,255,255,0.9)",
-            },
-          })
+        ? pinstripeRing
         : null
     )
   );

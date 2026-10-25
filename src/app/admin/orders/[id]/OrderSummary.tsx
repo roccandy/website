@@ -336,6 +336,8 @@ export function OrderSummary({
                     mode={jacket.mode}
                     showPinstripe={jacket.showPinstripe}
                     colorOne={order.jacket_color_one || "#b7b7b7"}
+                    fillColor={order.candy_fill_color || undefined}
+                    pinstripeColor={order.pinstripe_color || undefined}
                     colorTwo={order.jacket_color_two || "#b7b7b7"}
                     textColor={order.text_color || undefined}
                     heartColor={order.heart_color || undefined}
@@ -377,6 +379,8 @@ export function OrderSummary({
                 {color(order.jacket_color_two)}
               </Field>
               <Field label="Text colour">{color(order.text_color)}</Field>
+              <Field label="Candy fill colour">{color(order.candy_fill_color || "#ffffff")}</Field>
+              {jacket.showPinstripe ? <Field label="Pinstripe colour">{color(order.pinstripe_color || "#ffffff")}</Field> : null}
               <Field label="Heart colour">{color(order.heart_color)}</Field>
             </dl>
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

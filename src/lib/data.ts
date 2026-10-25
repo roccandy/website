@@ -148,6 +148,8 @@ export type OrderRow = {
   jacket_type: string | null;
   jacket_color_one: string | null;
   jacket_color_two: string | null;
+  candy_fill_color?: string | null;
+  pinstripe_color?: string | null;
   text_color: string | null;
   heart_color: string | null;
   flavor: string | null;

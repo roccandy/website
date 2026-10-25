@@ -529,6 +529,8 @@ function buildCustomTextLines(details: AdminCustomOrderDetails[], includeWeight:
   return details.flatMap((detail) => [
     includeWeight ? `Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}` : null,
     `Outer colour / colours: ${detail.outerColours}`,
+    detail.fillColour ? `Candy fill colour: ${detail.fillColour}` : null,
+    detail.pinstripeColour ? `Pinstripe colour: ${detail.pinstripeColour}` : null,
     `Pinstripe: ${detail.pinstripe}`,
     `Flavour: ${detail.flavor ?? "-"}`,
     `Text: ${detail.textColour}`,
@@ -572,6 +574,8 @@ async function buildCustomHtmlSections(
       const detailsHtml = `
         ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
         <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
+        ${detail.fillColour ? `<div><strong>Candy fill colour:</strong> ${escapeHtml(detail.fillColour)}</div>` : ""}
+        ${detail.pinstripeColour ? `<div><strong>Pinstripe colour:</strong> ${escapeHtml(detail.pinstripeColour)}</div>` : ""}
         <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
         <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
         <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>

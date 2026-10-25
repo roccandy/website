@@ -11,6 +11,8 @@ type Props = {
   showPinstripe?: boolean;
   colorOne: string;
   colorTwo: string;
+  fillColor?: string;
+  pinstripeColor?: string;
   logoUrl?: string | null;
   textColor?: string;
   heartColor?: string;
@@ -35,6 +37,8 @@ export function CandyPreview({
   showPinstripe,
   colorOne,
   colorTwo,
+  fillColor = "#ffffff",
+  pinstripeColor = "#ffffff",
   logoUrl,
   textColor,
   heartColor,
@@ -50,7 +54,7 @@ export function CandyPreview({
   const textColorValue = textColor || "#b7b7b7";
   const heartColorValue = heartColor || "#b7b7b7";
   const pinOpacity = showPinstripe || mode === "pinstripe" ? 1 : 0;
-  const pinFill = "#ffffff";
+  const pinFill = pinstripeColor;
   const gradientPrefix = useId().replace(/:/g, "");
   const previewTitleId = `${gradientPrefix}-title`;
 
@@ -263,7 +267,7 @@ export function CandyPreview({
           ))}
           {/* Inner circles */}
           <g transform="matrix(0.979136,0,0,0.979136,6.78919,16.7037)">
-            <circle cx="549.755" cy="656.823" r="444.797" style={{ fill: "#ffffff", stroke: "rgba(220,220,220,0.5)", strokeWidth: "4.18px" }} />
+            <circle cx="549.755" cy="656.823" r="444.797" style={{ fill: fillColor, stroke: "rgba(220,220,220,0.5)", strokeWidth: "4.18px" }} />
           </g>
           <g transform="matrix(0.997792,0,0,0.997792,4.06358,1.45654)">
             <circle cx="544.367" cy="659.802" r="532.08" style={{ fill: "none", stroke: "rgba(220,220,220,0.5)", strokeWidth: "4.18px" }} />

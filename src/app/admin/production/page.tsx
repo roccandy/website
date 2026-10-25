@@ -137,6 +137,8 @@ function previewPropsForOrder(order: OrderRow) {
     mode: jacketPreview.mode,
     showPinstripe: jacketPreview.showPinstripe,
     colorOne: order.jacket_color_one || "#b7b7b7",
+    fillColor: order.candy_fill_color || undefined,
+    pinstripeColor: order.pinstripe_color || undefined,
     colorTwo: order.jacket_color_two || order.jacket_color_one || "#b7b7b7",
     logoUrl: isBranded ? order.logo_url : undefined,
     textColor: order.text_color || "#b7b7b7",

@@ -50,6 +50,7 @@ import { buildOrderActivityChanges } from "./orderActivityChanges";
 import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
 import { buildInvoiceRecord } from "./invoices/invoiceModel";
 import { orderSource } from "./orderSource";
+import { adminCandyColor } from "@/lib/adminCandyColors";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -474,6 +475,8 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       square_invoice_title: null,
       text_color: !isBranded ? tabbedNullableField(input, "text_color") : null,
       heart_color: isWedding ? tabbedNullableField(input, "heart_color") : null,
+      candy_fill_color: adminCandyColor(tabbedNullableField(input, "candy_fill_color")),
+      pinstripe_color: adminCandyColor(tabbedNullableField(input, "pinstripe_color")),
     };
   });
 
@@ -1039,6 +1042,8 @@ async function upsertOrderShared(formData: FormData) {
             : null),
       text_color: resolvedTextColor,
       heart_color: resolvedHeartColor,
+      candy_fill_color: isAdminPremade ? null : adminCandyColor(formData.get("candy_fill_color"), existing?.candy_fill_color ?? "#ffffff"),
+      pinstripe_color: isAdminPremade ? null : adminCandyColor(formData.get("pinstripe_color"), existing?.pinstripe_color ?? "#ffffff"),
       created_at: created_at ?? undefined,
     };
     const orderChanges = existing ? buildOrderActivityChanges(existing as OrderRow, basePayload) : [];
