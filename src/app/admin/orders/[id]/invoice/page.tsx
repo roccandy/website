@@ -211,6 +211,8 @@ export default async function AdminInvoiceReviewPage({
                 <OrderPaymentConfirmation
                   id={primaryOrder.id}
                   combined={groupedOrders.length > 1}
+                  square={record.route === "square"}
+                  total={record.total / 100}
                 />
               ) : null}
             </div>

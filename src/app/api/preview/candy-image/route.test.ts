@@ -11,6 +11,10 @@ vi.mock("next/og", () => ({
 import { GET } from "./route";
 
 describe("email PNG candy colour tree", () => {
+  it.each([["W",51],["WWW",42],["WWWWW",36],["WWWWWW",30]])("matches short custom text scaling for %s",async(text,size)=>{
+    const html=await(await GET(new Request(`http://localhost/api/preview/candy-image?designText=${text}&customTextVariant=short`))).text();
+    expect(html).toContain(`font-size:${size}px`);
+  });
   it.each(["mode=pinstripe", "mode=two_colour&showPinstripe=1"])("uses renderer-supported SVG pinstripes (%s)", async mode => {
     const html = await (await GET(new Request(`http://localhost/api/preview/candy-image?${mode}&fillColor=%23ffee99&pinstripeColor=%23123456`))).text();
     expect(html).toContain("background:#ffee99");

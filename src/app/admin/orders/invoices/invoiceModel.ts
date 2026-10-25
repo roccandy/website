@@ -282,7 +282,7 @@ export function buildInvoiceRecord(
     hasError,
     canSend,
     canRecordPayment:
-      !hasError && route === "pdf" && ["awaiting", "overdue"].includes(status),
+      !hasError && ["pdf", "square"].includes(route) && ["awaiting", "overdue"].includes(status),
     externalUrl:
       route === "square"
         ? ordered

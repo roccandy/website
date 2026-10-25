@@ -1,5 +1,6 @@
 import type { OrderRow } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { invalidateAdminWorkspace } from "@/lib/adminWorkspaceCache";
 
 type ServerClient = typeof supabaseAdminClient;
 
@@ -42,7 +43,7 @@ async function updateRefundRecord(
     })
     .eq("id", orderId);
 
-  if (!refundUpdateWithReason.error) return;
+  if (!refundUpdateWithReason.error) { invalidateAdminWorkspace(); return; }
 
   const missingColumn = /refund_reason|refunded_amount/i.test(refundUpdateWithReason.error.message ?? "");
   if (!missingColumn) {
@@ -60,6 +61,7 @@ async function updateRefundRecord(
   if (refundUpdateFallback.error) {
     throw new Error(refundUpdateFallback.error.message);
   }
+  invalidateAdminWorkspace();
 }
 
 const toMoneyCents = (value: number) => Math.round(value * 100);

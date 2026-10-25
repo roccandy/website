@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { getOrdersRecipients, sendOrderEmail } from "@/lib/email";
 import { resolveSquareInvoicePaymentId } from "@/lib/refunds";
+import { invalidateAdminWorkspace } from "@/lib/adminWorkspaceCache";
 
 type SquareInvoiceWebhookPayload = {
   type?: string;
@@ -120,7 +121,8 @@ export async function POST(request: Request) {
     patch.square_invoice_sent_at = invoice.updatedAt ?? payload.created_at ?? new Date().toISOString();
   }
 
-  if (eventType === "invoice.payment_made") {
+  const fullyPaid = eventType === "invoice.payment_made" && invoice.status === "PAID";
+  if (fullyPaid) {
     let paymentTransactionId = invoice.id;
     try {
       paymentTransactionId = (await resolveSquareInvoicePaymentId(invoice.id, 1)).paymentId;
@@ -130,7 +132,6 @@ export async function POST(request: Request) {
     patch.paid_at = payload.created_at ?? new Date().toISOString();
     patch.payment_provider = "square_invoice";
     patch.payment_transaction_id = paymentTransactionId;
-    patch.status = "pending";
   }
 
   const { error: updateError } = await client.from("orders").update(patch).in("id", orderIds);
@@ -138,8 +139,9 @@ export async function POST(request: Request) {
     console.error("Square invoice webhook update failed:", updateError);
     return NextResponse.json({ error: "Update failed." }, { status: 500 });
   }
+  invalidateAdminWorkspace();
 
-  if (eventType === "invoice.payment_made") {
+  if (fullyPaid) {
     const unpaidOrders = orders.filter((order) => !order.paid_at);
     const recipients = getOrdersRecipients();
     if (recipients.length > 0) {

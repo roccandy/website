@@ -61,6 +61,9 @@ export function AdminLink({
     <Link
       {...props}
       href={href}
+      // Explicit true preloads the complete page, not only its loading skeleton.
+      // Scope this to the two frequently switched operational views.
+      prefetch={props.prefetch ?? (typeof href === "string" && ["/admin", "/admin/orders"].includes(href) ? true : undefined)}
       replace={replace}
       scroll={scroll}
       onNavigate={(event) => {

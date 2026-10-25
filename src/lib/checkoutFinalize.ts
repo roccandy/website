@@ -7,6 +7,7 @@ import {
   sendPaidOrderSaveFailureEmail,
 } from "@/lib/email";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { invalidateAdminWorkspace } from "@/lib/adminWorkspaceCache";
 import type { CheckoutOrderPayload } from "@/lib/checkoutTypes";
 import { buildAdminOrderSummaryEmailPayload } from "@/lib/orderEmailSummary";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
@@ -250,6 +251,7 @@ export async function finalizePaidCheckoutOrder({
     throw new Error("Order record could not be saved after payment.");
   }
 
+  invalidateAdminWorkspace();
   const recipients = getOrdersRecipients();
   const emailTasks: Array<Promise<unknown>> = [];
   const firstCustomItem = order.customItems?.[0];

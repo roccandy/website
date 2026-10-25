@@ -79,6 +79,7 @@ type SquareInvoice = {
   public_url?: string;
   created_at?: string;
   updated_at?: string;
+  payment_requests?: Array<{ computed_amount_money?: { amount?: number; currency?: string }; total_completed_amount_money?: { amount?: number; currency?: string } }>;
 };
 
 type SquareInvoiceAttachment = {
@@ -658,6 +659,13 @@ async function retrieveSquareInvoice(invoiceId: string) {
     throw new Error("Square invoice lookup failed.");
   }
   return data.invoice;
+}
+
+/** Read-only: Square requires externally received invoice payments to be recorded in its dashboard. */
+export async function getAdminSquareInvoicePaymentState(invoiceId: string) {
+  const invoice = await retrieveSquareInvoice(invoiceId);
+  if (invoice.id !== invoiceId) throw new Error("Square invoice reference did not match.");
+  return invoice;
 }
 
 async function deleteSquareInvoice(invoiceId: string, invoiceVersion: number) {

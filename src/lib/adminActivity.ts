@@ -1,6 +1,7 @@
 import type { AdminRole } from "@/types/next-auth";
 import { getAdminSession } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
+import { invalidateAdminWorkspace } from "@/lib/adminWorkspaceCache";
 
 const ADMIN_ACTIVITY_TABLE = "admin_activity_log";
 const ADMIN_ACTIVITY_SELECT =
@@ -139,6 +140,7 @@ function isMissingTableError(message: string) {
 }
 
 export async function logAdminActivity(input: AdminActivityInput) {
+  invalidateAdminWorkspace();
   try {
     const session = await getAdminSession();
     if (!session?.user) return;

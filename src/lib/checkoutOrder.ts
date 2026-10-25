@@ -211,10 +211,10 @@ function assertBasePayload(body: CheckoutOrderPayload) {
   if (customItems.length === 0 && premadeItems.length === 0) {
     throw new Error("Cart is empty.");
   }
-  if (!body.dueDate?.trim()) {
+  if (customItems.length > 0 && !body.dueDate?.trim()) {
     throw new Error("Requested date is required.");
   }
-  assertFutureDate(body.dueDate.trim());
+  if (customItems.length > 0) assertFutureDate(body.dueDate!.trim());
   if (!body.pickup) {
     if (
       !body.customer.addressLine1?.trim() ||
@@ -317,7 +317,7 @@ export async function buildCheckoutOrderContext(
     getPackagingOptions(),
     getFlavors(),
   ]);
-  const dueDate = body.dueDate?.trim() ?? null;
+  const dueDate = (body.customItems?.length ? body.dueDate?.trim() : null) || null;
   const pickup = Boolean(body.pickup);
   const paymentPreference = body.paymentPreference?.trim() || null;
   const maxTotalKg = Number(settings.max_total_kg);
@@ -430,7 +430,7 @@ export async function buildCheckoutOrderContext(
       design_text: premade.name,
       flavor: formatPremadeFlavors(premade.flavors) || null,
       payment_method: paymentPreference ?? null,
-      due_date: dueDate,
+      due_date: null,
       quantity: item.quantity,
       total_weight_kg: weightKg,
       total_price: totalPrice,

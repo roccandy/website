@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useMemo } from "react";
+import { shortCandyTextScale } from "@/lib/candyTextSizing";
 
 type Props = {
   designText?: string;
@@ -398,7 +399,7 @@ function OverlayText({
   const weddingArcFontSize = 130; // slightly larger for wedding arcs
   const singleArcFontSize = cappedDesign.length > 12 ? 106 : 114;
   const singleArcLetterSpacing = cappedDesign.length > 10 ? "0.08em" : "0.06em";
-  const straightFontSize = customTextLayout ? 132 : 122;
+  const straightFontSize = customTextLayout ? Math.round(132 * (customTextLayout.kind === "straight" ? shortCandyTextScale(cappedDesign) : 1)) : 122;
   const initialsFontSize = 180; // maps to ~35px at rendered size
   const heartScale = 9.49;
   const frontCircleCx = 549.755 * 0.979136 + 6.78919;

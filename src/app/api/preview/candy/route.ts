@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { shortCandyTextScale } from "@/lib/candyTextSizing";
 
 const DEFAULT_COLOR = "#b7b7b7";
 const DEFAULT_TEXT = "#5f5f5f";
@@ -70,7 +71,7 @@ export async function GET(request: Request) {
     `
       : "";
 
-  const singleTextSize = designText.length > 12 ? 34 : designText.length > 9 ? 38 : 42;
+  const singleTextSize = searchParams.get("customTextVariant") === "short" ? 42 * shortCandyTextScale(designText) : designText.length > 12 ? 34 : designText.length > 9 ? 38 : 42;
   const singleTextFitAttrs =
     designText.length > 9 ? ` textLength="260" lengthAdjust="spacingAndGlyphs"` : "";
   const singleTextNode =

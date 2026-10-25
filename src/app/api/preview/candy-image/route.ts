@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { shortCandyTextScale } from "@/lib/candyTextSizing";
 import { createElement } from "react";
 import { safePreviewLogoSource } from "@/lib/previewImage";
 
@@ -74,12 +75,14 @@ export async function GET(request: Request) {
   const isInitials = searchParams.get("isInitials") === "1";
   const logoUrl = safePreviewLogoSource(searchParams.get("logoUrl"));
 
-  const weddingSplit = !rawLineOne && !rawLineTwo ? splitWeddingNames(rawDesignText) : { lineOne: rawLineOne, lineTwo: rawLineTwo };
+  const weddingSplit = !rawLineOne && !rawLineTwo && customTextVariant !== "short" ? splitWeddingNames(rawDesignText) : { lineOne: rawLineOne, lineTwo: rawLineTwo };
   const lineOne = weddingSplit.lineOne.toUpperCase();
   const lineTwo = weddingSplit.lineTwo.toUpperCase();
   const designText = rawDesignText.toUpperCase();
   const isWedding = Boolean(lineOne || lineTwo);
-  const singleTextSize = designText.length > 12 ? "32px" : designText.length > 9 ? "36px" : "40px";
+  // Short custom text previously fell through the 30px single-name fallback.
+  // Keep that six-character baseline while scaling shorter designs explicitly.
+  const singleTextSize = customTextVariant === "short" ? `${30 * shortCandyTextScale(designText)}px` : designText.length > 12 ? "32px" : designText.length > 9 ? "36px" : "40px";
 
   const outerBackground =
     mode === "rainbow"

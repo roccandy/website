@@ -18,6 +18,9 @@ import {
   X,
 } from "lucide-react";
 import { AdminLink } from "../AdminNavigationFeedback";
+import { AdminDataFreshness } from "../AdminDataFreshness";
+import { refreshAdminWorkspace } from "../refreshWorkspace";
+import { useAdminViewState } from "../useAdminViewState";
 import { count, dateLabel, daysBetween } from "../stats-v2/statsModel";
 import type { TodayHubData, WorkCategory } from "./todayModel";
 
@@ -49,10 +52,10 @@ export function TodayHub({
 }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
-  const [category, setCategory] = useState<"all" | WorkCategory>("all");
+  const [category, setCategory] = useAdminViewState<"all" | WorkCategory>("today-category", "all", value => ["all", "schedule", "payments", "dispatch", "review"].includes(value));
   const [urgentOnly, setUrgentOnly] = useState(false);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("priority");
+  const [sort, setSort] = useAdminViewState<string>("today-sort", "priority", value => ["priority", "due"].includes(value));
   const [limit, setLimit] = useState(8);
   const [selectedDay, setSelectedDay] = useState(data.today);
   const day =
@@ -98,6 +101,7 @@ export function TodayHub({
 
   return (
     <section className="space-y-6">
+      <AdminDataFreshness loadedAt={data.loadedAt} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.17em] text-zinc-400">
@@ -114,7 +118,7 @@ export function TodayHub({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => startRefresh(() => router.refresh())}
+            onClick={() => startRefresh(async () => { await refreshAdminWorkspace(); router.refresh(); })}
             disabled={refreshing}
             className={button}
           >

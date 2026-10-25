@@ -244,7 +244,7 @@ describe("buildCheckoutOrderContext", () => {
     ).rejects.toThrow("Max total kg is 8.2.");
   });
 
-  it("rejects premade-only checkout without a requested date", async () => {
+  it.each([undefined, "2099-05-20", "2020-01-01"])("accepts premade-only checkout and ignores supplied dates (%s)", async dueDate => {
     premadeRows = [
       {
         id: "premade-1",
@@ -256,15 +256,15 @@ describe("buildCheckoutOrderContext", () => {
     ];
     const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
 
-    await expect(
-      buildCheckoutOrderContext(
+    const context = await buildCheckoutOrderContext(
         buildOrder({
           customItems: [],
           premadeItems: [{ premadeId: "premade-1", quantity: 1 }],
-          dueDate: undefined,
+          dueDate,
         })
-      )
-    ).rejects.toThrow("Requested date is required.");
+      );
+    expect(context.dueDate).toBeNull();
+    expect(context.orderPayloads[0].due_date).toBeNull();
   });
 
   it("assigns premade orders after multiple custom order suffixes", async () => {
@@ -291,6 +291,12 @@ describe("buildCheckoutOrderContext", () => {
       "0008-b",
       "0008-c",
     ]);
+    expect(context.orderPayloads.map(payload => payload.due_date)).toEqual(["2099-05-20", "2099-05-20", null]);
+  });
+
+  it("still requires a requested date for custom candy", async () => {
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+    await expect(buildCheckoutOrderContext(buildOrder({ dueDate: undefined, customItems: [customItem("ONE")] }))).rejects.toThrow("Requested date is required.");
   });
 
   it("rejects custom label artwork with a zero label count", async () => {

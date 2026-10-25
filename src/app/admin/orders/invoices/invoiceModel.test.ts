@@ -24,6 +24,13 @@ const row = (changes: Partial<InvoiceOrder> = {}) =>
     ...changes,
   }) as InvoiceOrder;
 describe("Invoice hub records", () => {
+  it("offers bank-transfer reconciliation for unpaid Square payment-link invoices", () => {
+    const result=buildInvoiceRecord([row({square_invoice_status:"UNPAID"})],now);
+    expect(result.route).toBe("square");
+    expect(result.canRecordPayment).toBe(true);
+    expect(buildInvoiceRecord([row({square_invoice_status:"PARTIALLY_PAID"})],now).canRecordPayment).toBe(false);
+    expect(buildInvoiceRecord([row({square_invoice_status:"UNPAID",square_invoice_error:"sync failed"})],now).canRecordPayment).toBe(false);
+  });
   it("groups combined invoices without counting the shared invoice twice", () => {
     const result = buildInvoices(
       [

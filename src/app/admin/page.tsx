@@ -6,7 +6,7 @@ import { AdminActivityFeed } from "./AdminActivityFeed";
 import { buildAdminNavSections, isSeoFocusedUser } from "./adminNavigation";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { listRecentAdminActivity } from "@/lib/adminActivity";
-import { getTodayHub } from "./today/todayData";
+import { getCachedTodayHub } from "./adminWorkspaceData";
 import { TodayHub } from "./today/TodayHub";
 
 export const metadata: Metadata = { title: "Today | Roc Candy Admin" };
@@ -56,7 +56,7 @@ export default async function AdminHome() {
   }
 
   const [data, activity] = await Promise.all([
-    getTodayHub(),
+    getCachedTodayHub(),
     session.user.role === "admin"
       ? listRecentAdminActivity(12)
           .then((entries) => ({ entries, unavailable: false }))

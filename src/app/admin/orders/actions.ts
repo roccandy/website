@@ -51,6 +51,8 @@ import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
 import { buildInvoiceRecord } from "./invoices/invoiceModel";
 import { orderSource } from "./orderSource";
 import { adminCandyColor } from "@/lib/adminCandyColors";
+import { manualPaymentDetails, verifiedSquarePaymentPatch } from "@/lib/adminManualPayment";
+import { getAdminSquareInvoicePaymentState } from "@/lib/adminOrderIntegrations";
 
 const ORDERS_PATH = "/admin/orders";
 const ADDITIONAL_ITEMS_PATH = "/admin/orders/additional-items";
@@ -1900,6 +1902,8 @@ export async function sendAdminSquareInvoice(formData: FormData) {
 export async function markOrderAsPaid(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const orderId = formData.get("id")?.toString() || formData.get("order_id")?.toString() || null;
+  const invoiceReturn = orderId ? `/admin/orders/${encodeURIComponent(orderId)}/invoice` : null;
+  const returnPath = invoiceReturn && formData.get("return_to") === invoiceReturn ? invoiceReturn : ORDERS_PATH;
   let successRedirect: string | null = null;
   const errorRedirect = (message: string) => {
     const params = new URLSearchParams({
@@ -1909,7 +1913,7 @@ export async function markOrderAsPaid(formData: FormData) {
     if (orderId) {
       params.set("selected", orderId);
     }
-    redirect(`${ORDERS_PATH}?${params.toString()}`);
+    redirect(`${returnPath}?${params.toString()}`);
   };
 
   try {
@@ -1919,7 +1923,7 @@ export async function markOrderAsPaid(formData: FormData) {
     const { data: existing, error: existingError } = await client
       .from("orders")
       .select(
-        "id,order_number,title,customer_name,design_type,woo_order_id,woo_payment_url,paid_at,payment_method,payment_provider,square_invoice_id,status",
+        "id,order_number,title,customer_name,design_type,woo_order_id,woo_payment_url,paid_at,payment_method,payment_provider,square_invoice_id,status,total_price",
       )
       .eq("id", orderId)
       .maybeSingle();
@@ -1932,8 +1936,6 @@ export async function markOrderAsPaid(formData: FormData) {
       throw new Error("Order is already marked as paid.");
     }
 
-    const paidAt = new Date().toISOString();
-    const paymentMethod = existing.payment_method?.trim() || "Manual payment";
     const targetOrders = existing.square_invoice_id
       ? await fetchInvoiceGroupOrders(existing.square_invoice_id, existing as OrderRow, client)
       : [existing as OrderRow];
@@ -1941,13 +1943,37 @@ export async function markOrderAsPaid(formData: FormData) {
     if (unpaidTargetIds.length === 0) {
       throw new Error("Order is already marked as paid.");
     }
+    let paidAt = new Date().toISOString();
+    let paymentMethod = existing.payment_method?.trim() || "Manual payment";
+    let paymentReference = "";
+    const squarePatch: Record<string, unknown> = {};
+    if (existing.square_invoice_id) {
+      const invoice = await getAdminSquareInvoicePaymentState(existing.square_invoice_id);
+      const pdfDraft = invoice.status === "DRAFT" && targetOrders.every(order => Boolean(order.square_invoice_sent_at) && /direct.deposit|bank.transfer|pdf/i.test(order.payment_method || ""));
+      if (!pdfDraft) {
+        const expected = targetOrders.reduce((sum, order) => sum + Math.round(Number(order.total_price || 0) * 100), 0);
+        Object.assign(squarePatch, verifiedSquarePaymentPatch(invoice, expected));
+        paidAt = invoice.updated_at || paidAt;
+      } else {
+        const details = manualPaymentDetails(targetOrders, { amount: formData.get("payment_amount"), date: formData.get("payment_date"), reference: formData.get("payment_reference") });
+        paidAt = details.paidAt;
+        paymentReference = details.reference;
+        paymentMethod = DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL;
+      }
+    } else {
+      const details = manualPaymentDetails(targetOrders, { amount: formData.get("payment_amount"), date: formData.get("payment_date"), reference: formData.get("payment_reference") });
+      paidAt = details.paidAt;
+      paymentReference = details.reference;
+    }
     const { error } = await client
       .from("orders")
       .update({
         paid_at: paidAt,
         payment_method: paymentMethod,
+        ...squarePatch,
       })
-      .in("id", unpaidTargetIds);
+      .in("id", unpaidTargetIds)
+      .is("paid_at", null);
     if (error) throw new Error(error.message);
 
     await logAdminActivity({
@@ -1969,6 +1995,7 @@ export async function markOrderAsPaid(formData: FormData) {
       changedFields: ["Payment status"],
       metadata: {
         paidAt,
+        paymentReference,
         orderIds: unpaidTargetIds,
       },
     });
@@ -1981,7 +2008,9 @@ export async function markOrderAsPaid(formData: FormData) {
       toast: "success",
       message: "Order marked as paid.",
     });
-    successRedirect = `${ORDERS_PATH}?${params.toString()}`;
+    if (invoiceReturn) revalidatePath(invoiceReturn);
+    revalidatePath("/admin/orders/invoices");
+    successRedirect = `${returnPath}?${params.toString()}`;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to mark order as paid.";
     errorRedirect(message);

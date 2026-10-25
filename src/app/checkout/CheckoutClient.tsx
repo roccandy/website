@@ -1632,7 +1632,7 @@ export function CheckoutClient({
       missing.push("items");
       return missing;
     }
-    if (!dueDate) missing.push(hasCustomItems ? "date required" : "delivery or pickup date");
+    if (hasCustomItems && !dueDate) missing.push("date required");
     if (hasCustomItems && isDueDateBlocked) missing.push("available date");
     if (!firstName.trim()) missing.push("first name");
     if (!lastName.trim()) missing.push("surname");
@@ -1665,7 +1665,7 @@ export function CheckoutClient({
           .join(", ")}.`;
 
   const buildOrderPayload = (): CheckoutOrderPayload => ({
-    dueDate: dueDate || undefined,
+    dueDate: hasCustomItems ? dueDate || undefined : undefined,
     pickup,
     paymentPreference: selectedPaymentMethod,
     promoCode: appliedPromoCode || null,
@@ -1796,7 +1796,7 @@ export function CheckoutClient({
       orderNumber: orderNumber ?? null,
       orderDateIso: new Date().toISOString(),
       paymentMethod: paymentMethodLabel,
-      requestedDate: dueDate || null,
+      requestedDate: hasCustomItems ? dueDate || null : null,
       pickup,
       deliveryAddress: resolvedDeliveryAddress,
       customer: {
@@ -1868,7 +1868,7 @@ export function CheckoutClient({
     setAdminEmailWarning(null);
     if (stage === "validation") {
       const firstIncompleteField =
-        (!dueDate || (hasCustomItems && isDueDateBlocked)
+        (hasCustomItems && (!dueDate || isDueDateBlocked)
           ? dateSectionRef.current?.querySelector<HTMLButtonElement>("[aria-haspopup='dialog']")
           : null) ||
         (!firstName.trim() ? firstNameRef.current : null) ||
@@ -2028,8 +2028,8 @@ export function CheckoutClient({
                     <p className="mt-2 normal-case tracking-[0.08em] text-zinc-500">Pickup in North Perth</p>
                   ) : null}
                 </div>
-                <div className="min-w-0 flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500 sm:min-w-[280px]">
-                  <p>{hasCustomItems ? "Date required" : "Delivery or pickup date"}</p>
+                {hasCustomItems ? <div className="min-w-0 flex-1 text-xs normal-case tracking-[0.08em] text-zinc-500 sm:min-w-[280px]">
+                  <p>Date required for custom candy</p>
                   <div className="mt-2">
                     <CheckoutDatePicker
                       value={dueDate}
@@ -2043,12 +2043,7 @@ export function CheckoutClient({
                       }
                     />
                   </div>
-                  {!hasCustomItems && hasPremadeItems ? (
-                    <p className="mt-2 leading-5">
-                      Choose when you would like your order delivered or ready for pickup.
-                    </p>
-                  ) : null}
-                </div>
+                </div> : <p className="min-w-0 flex-1 text-sm text-zinc-500">{pickup ? "We’ll let you know when your candy is ready to collect." : "Your candy will be dispatched when ready."}</p>}
               </div>
               <div className="text-xs normal-case tracking-[0.08em] text-zinc-500">
                 {dueDate && isUrgencyWindow && !isDueDateBlocked && (

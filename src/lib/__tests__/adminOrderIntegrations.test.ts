@@ -10,6 +10,14 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("admin Square invoice removal", () => {
+  it("only reads invoice status when checking an externally recorded bank transfer", async () => {
+    const fetchMock=vi.fn().mockResolvedValue(jsonResponse({invoice:{id:"inv_123",status:"PAID",version:4}}));
+    vi.stubGlobal("fetch",fetchMock);
+    const {getAdminSquareInvoicePaymentState}=await import("@/lib/adminOrderIntegrations");
+    await expect(getAdminSquareInvoicePaymentState("inv_123")).resolves.toMatchObject({status:"PAID"});
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].method).toBe("GET");
+  });
   beforeEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
