@@ -7,8 +7,8 @@ import {
   getPremadeCandies,
   getProductionSlots,
   getSettings,
-  getOrders,
 } from "@/lib/data";
+import { readProductionOrders,readOrderForRemake } from "../../adminWorkspaceData";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
@@ -38,14 +38,16 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
     getColorPalette(),
     getPremadeCandies(),
     getSettings(),
-    getOrders(),
+    readProductionOrders(),
     getProductionSlots(),
     getOrderSlots(),
   ]);
   const remakeRequested = Boolean(
     (Array.isArray(resolvedSearchParams?.remake) ? resolvedSearchParams?.remake[0] : resolvedSearchParams?.remake)?.trim(),
   );
-  const remakeOrder = resolveAdminOrderRemakeSource(orders, resolvedSearchParams?.remake);
+  const remakeId = (Array.isArray(resolvedSearchParams?.remake) ? resolvedSearchParams.remake[0] : resolvedSearchParams?.remake)?.trim();
+  const fullRemakeOrder = remakeId ? await readOrderForRemake(remakeId) : null;
+  const remakeOrder = resolveAdminOrderRemakeSource(fullRemakeOrder ? [fullRemakeOrder] : [], resolvedSearchParams?.remake);
   if (remakeRequested && !remakeOrder) notFound();
   const initialOrder = remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;

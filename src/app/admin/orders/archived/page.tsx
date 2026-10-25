@@ -1,5 +1,6 @@
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
-import { getOrders, getOrderSlots, getProductionSlots, type OrderRow } from "@/lib/data";
+import type { OrderRow } from "@/lib/data";
+import { getOrderHistoryPage } from "./orderHistoryData";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -31,6 +32,7 @@ type SearchParams = {
   sort?: string | string[] | undefined;
   dir?: string | string[] | undefined;
   q?: string | string[] | undefined;
+  page?: string | string[] | undefined;
 };
 
 type FilterView = "all" | "archived" | "uncompleted";
@@ -66,7 +68,6 @@ const SORT_OPTIONS: { value: SortKey; label: string; className?: string }[] = [
   { value: "customer", label: "Customer" },
   { value: "status", label: "Status" },
 ];
-const textCollator = new Intl.Collator("en-AU", { numeric: true, sensitivity: "base" });
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "";
@@ -112,7 +113,7 @@ const isPartiallyRefundedOrder = (order: OrderRow) =>
   Boolean(order.refunded_at) && remainingRefundCentsForOrder(order) > 0;
 const refundBadgeLabel = (order: OrderRow) => (isPartiallyRefundedOrder(order) ? "Partially refunded" : "Fully refunded");
 const getOrderSuffix = (orderNumber: string | null | undefined) => {
-  const match = orderNumber?.match(/-(a|b)$/i);
+  const match = orderNumber?.match(/-([a-z]+)$/i);
   return match ? match[1].toLowerCase() : null;
 };
 
@@ -145,7 +146,7 @@ const resolveScheduleGroupStatus = (statuses: string[]) => {
 
 const normalizeOrderNumber = (value: string | null | undefined) => {
   if (!value) return null;
-  return value.replace(/-(a|b)$/i, "");
+  return value.replace(/-[a-z]+$/i, "");
 };
 
 const weightLabel = (kg: number | null | undefined) => {
@@ -164,13 +165,6 @@ const latestIsoValue = (values: (string | null | undefined)[]) =>
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => compareNullableDesc(toTime(a), toTime(b)))[0] ?? null;
 
-const compareNullableAsc = (a: number | null, b: number | null) => {
-  if (a === null && b === null) return 0;
-  if (a === null) return 1;
-  if (b === null) return -1;
-  return a - b;
-};
-
 const compareNullableDesc = (a: number | null, b: number | null) => {
   if (a === null && b === null) return 0;
   if (a === null) return 1;
@@ -178,8 +172,6 @@ const compareNullableDesc = (a: number | null, b: number | null) => {
   return b - a;
 };
 
-const compareText = (a: string | null | undefined, b: string | null | undefined) =>
-  textCollator.compare((a ?? "").trim(), (b ?? "").trim());
 
 const resolveFilterView = (value: string | string[] | undefined): FilterView => {
   const firstValue = Array.isArray(value) ? value[0] : value;
@@ -202,10 +194,7 @@ const resolveSearchQuery = (value: string | string[] | undefined) => {
   return firstValue?.trim().slice(0, 100) ?? "";
 };
 
-const normalizedIncludes = (value: string | number | null | undefined, query: string) =>
-  String(value ?? "").toLowerCase().includes(query);
-
-const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "desc", searchQuery = "") => {
+const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: SortDirection = "desc", searchQuery = "", page = 1) => {
   const params = new URLSearchParams();
   if (view !== "all") params.set("view", view);
   if (sort !== "order" || direction !== "desc") {
@@ -214,6 +203,7 @@ const buildOrdersHref = (view: FilterView, sort: SortKey = "order", direction: S
   }
   const trimmedSearch = searchQuery.trim();
   if (trimmedSearch) params.set("q", trimmedSearch);
+  if (page > 1) params.set("page", String(page));
   const query = params.toString();
   return query ? `/admin/orders/archived?${query}` : "/admin/orders/archived";
 };
@@ -229,11 +219,10 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
   const activeView = resolveFilterView(resolvedSearchParams?.view);
   const activeSort = resolveSortKey(resolvedSearchParams?.sort);
   const activeDirection = resolveSortDirection(resolvedSearchParams?.dir);
-  const activeSearchQuery = resolveSearchQuery(resolvedSearchParams?.q);
-  const normalizedSearchQuery = activeSearchQuery.toLowerCase();
-  const redirectTo = buildOrdersHref(activeView, activeSort, activeDirection, activeSearchQuery);
-
-  const [orders, slots, assignments] = await Promise.all([getOrders(), getProductionSlots(), getOrderSlots()]);
+  const activeSearchQuery = resolveSearchQuery(resolvedSearchParams?.q).slice(0,200);
+  const requestedPage = Math.max(1,Math.min(100000,Math.floor(Number(Array.isArray(resolvedSearchParams?.page)?resolvedSearchParams.page[0]:resolvedSearchParams?.page)||1)));
+  const { orders,slots,assignments,total,page:activePage,pageSize,groupKeys } = await getOrderHistoryPage(activeView,activeSort,activeDirection,activeSearchQuery,requestedPage);
+  const redirectTo = buildOrdersHref(activeView, activeSort, activeDirection, activeSearchQuery,activePage);
   const slotMap = new Map(slots.map((slot) => [slot.id, slot]));
   const assignedDatesByOrderId = new Map<string, string[]>();
   assignments.forEach((assignment) => {
@@ -389,6 +378,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
       );
 
       return {
+        groupKey: group.baseOrderNumber ? `order:${group.baseOrderNumber}` : `id:${firstOrder?.id}`,
         groupIndex,
         orderNumber,
         orderNumberSort: group.baseOrderNumber ?? firstOrder?.order_number ?? firstOrder?.id ?? "",
@@ -408,61 +398,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
       };
     })
     .filter((group): group is NonNullable<typeof group> => group !== null)
-    .filter((group) => {
-      if (!normalizedSearchQuery) return true;
-      const groupFields = [
-        group.orderNumber,
-        group.orderNumberSort,
-        group.customer,
-        group.dueDate,
-        group.titleSort,
-        group.weight,
-        group.statusSort,
-      ];
-      const orderFields = group.visibleOrders.flatMap((order) => [
-        order.order_number,
-        normalizeOrderNumber(order.order_number),
-        order.title,
-        order.order_description,
-        order.customer_name,
-        order.first_name,
-        order.last_name,
-        order.customer_email,
-        order.phone,
-        order.organization_name,
-        order.due_date,
-        formatDate(order.due_date),
-        weightLabel(order.total_weight_kg),
-        order.status,
-        order.woo_order_status,
-        order.payment_method,
-        order.payment_provider,
-        order.payment_transaction_id,
-        order.refund_reason,
-      ]);
-      return [...groupFields, ...orderFields].some((value) => normalizedIncludes(value, normalizedSearchQuery));
-    })
-    .sort((a, b) => {
-      let result = 0;
-      if (activeSort === "order") {
-        result = compareText(a.orderNumberSort, b.orderNumberSort);
-      } else if (activeSort === "title") {
-        result = compareText(a.titleSort, b.titleSort);
-      } else if (activeSort === "date") {
-        result =
-          activeDirection === "desc"
-            ? compareNullableDesc(a.earliestDueAt, b.earliestDueAt)
-            : compareNullableAsc(a.earliestDueAt, b.earliestDueAt);
-      } else if (activeSort === "weight") {
-        result = a.totalWeight - b.totalWeight;
-      } else if (activeSort === "customer") {
-        result = compareText(a.customer, b.customer);
-      } else if (activeSort === "status") {
-        result = compareText(a.statusSort, b.statusSort);
-      }
-      const directedResult = activeSort !== "date" && activeDirection === "desc" ? -result : result;
-      return directedResult || compareText(a.orderNumberSort, b.orderNumberSort);
-    });
+    .sort((a, b) => groupKeys.indexOf(a.groupKey)-groupKeys.indexOf(b.groupKey));
 
   const renderSortHeader = (option: (typeof SORT_OPTIONS)[number]) => {
     const isActive = activeSort === option.value;
@@ -541,7 +477,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
               </Link>
             ) : null}
           </form>
-          <span className="text-sm text-zinc-500">{groupedList.length} orders</span>
+          <span className="text-sm text-zinc-500">{total} {total===1 ? "order" : "orders"} · {total ? (activePage-1)*pageSize+1 : 0}–{Math.min(activePage*pageSize,total)} shown</span>
           <Link
             href="/admin/orders"
             className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
@@ -809,6 +745,13 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
           </tbody>
         </table>
       </div>
+      <nav aria-label="Order history pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+        <span className="text-zinc-500">Page {activePage} of {Math.max(1,Math.ceil(total/pageSize))} · 50 order groups per page</span>
+        <div className="flex gap-2">
+          {activePage>1 ? <Link href={buildOrdersHref(activeView,activeSort,activeDirection,activeSearchQuery,activePage-1)} className="rounded-lg border bg-white px-4 py-2">Previous page</Link> : <span aria-disabled="true" className="rounded-lg border px-4 py-2 text-zinc-300">Previous page</span>}
+          {activePage*pageSize<total ? <Link href={buildOrdersHref(activeView,activeSort,activeDirection,activeSearchQuery,activePage+1)} className="rounded-lg border bg-white px-4 py-2">Next page</Link> : <span aria-disabled="true" className="rounded-lg border px-4 py-2 text-zinc-300">Next page</span>}
+        </div>
+      </nav>
     </section>
   );
 }

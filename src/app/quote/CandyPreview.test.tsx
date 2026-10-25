@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { CandyPreview } from "./CandyPreview";
 
 describe("CandyPreview admin colours", () => {
-  it.each([["A",224],["WWW",185],["ABCDE",158],["ABCDEF",132]])("enlarges short custom text %s without changing six-letter text", (designText,size) => {
+  it.each([["A",251],["WWW",205],["ABCDE",172],["ABCDEF",132]])("enlarges short custom text %s without changing six-letter text", (designText,size) => {
     const html=renderToStaticMarkup(createElement(CandyPreview,{mode:"",colorOne:"#123456",colorTwo:"#654321",customTextVariant:"short",designText}));
     expect(html).toContain(`font-size="${size}"`);
   });

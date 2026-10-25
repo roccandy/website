@@ -39,3 +39,7 @@ Run these before merging or deploying application changes:
 - [Operations and release guide](docs/launch-steps.md) — safe release checks, maintenance, monitoring, and incident handling.
 
 These are the only two general documents that should be supplied to an LLM for current site context. Other files under `docs/` are implementation records, SQL references, or dated historical snapshots unless one of these guides explicitly links to them.
+
+## Future plans
+
+- [Admin automation and operations autopilot](docs/admin-automation-plan.md) — a proposed roadmap for reducing email, scheduling, purchasing, packing, and dispatch administration. It is not current system behavior.

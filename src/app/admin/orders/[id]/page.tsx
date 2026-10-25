@@ -9,13 +9,13 @@ import {
   getFlavors,
   getLabelTypes,
   getOrderSlots,
-  getOrders,
   getPackagingOptions,
   getPremadeCandies,
   getProductionSlots,
   getSettings,
   type OrderRow,
 } from "@/lib/data";
+import { readProductionOrders } from "../../adminWorkspaceData";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { formatDate, formatMoney } from "../productionScheduleShared";
 import { NewOrderForm } from "../new/NewOrderForm";
@@ -93,15 +93,15 @@ export default async function AdminOrderDetailPage({
     getSettings(),
     getColorPalette(),
     getPremadeCandies(),
-    getOrders(),
+    readProductionOrders(),
     getProductionSlots(),
     getOrderSlots(),
     getLabelTypes(),
   ]);
+  const { data:fullInvoiceOrders,error:invoiceOrdersError } = order.square_invoice_id ? await supabaseAdminClient.from("orders").select("*").eq("square_invoice_id",order.square_invoice_id) : {data:[],error:null};
+  if(invoiceOrdersError) throw new Error("Unable to load linked invoice orders.");
   const invoiceGroupOrders = order.square_invoice_id
-    ? orders
-        .filter((item) => item.square_invoice_id === order.square_invoice_id)
-        .sort((a, b) => {
+    ? (fullInvoiceOrders as OrderRow[]).sort((a, b) => {
           const aNumber = a.order_number ?? "";
           const bNumber = b.order_number ?? "";
           return (

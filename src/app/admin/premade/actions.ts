@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import type { PremadeCandy } from "@/lib/data";
 import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminWriteAccess } from "@/lib/adminAuth";

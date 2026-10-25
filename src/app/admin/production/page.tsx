@@ -2,14 +2,11 @@ import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import Image from "next/image";
 import { requireAdminSession } from "@/lib/adminAuth";
 import {
-  getOrders,
-  getOrderSlots,
-  getProductionDayNotes,
-  getProductionSlots,
   type OrderRow,
   type OrderSlot,
   type ProductionSlot,
 } from "@/lib/data";
+import { getCachedProductionDay } from "../adminReadModels";
 import OrderTitleWithLogo from "@/app/admin/orders/OrderTitleWithLogo";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import {
@@ -166,12 +163,7 @@ function printHref(order: OrderRow) {
 export default async function ProductionOrdersPage() {
   await requireAdminSession();
 
-  const [orders, assignments, slots, dayNotes] = await Promise.all([
-    getOrders(),
-    getOrderSlots(),
-    getProductionSlots(),
-    getProductionDayNotes(),
-  ]);
+  const {orders,assignments,slots,notes:dayNotes} = await getCachedProductionDay();
 
   const slotById = new Map(slots.map((slot) => [slot.id, slot]));
   const orderById = new Map(orders.map((order) => [order.id, order]));

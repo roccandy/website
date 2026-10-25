@@ -11,7 +11,7 @@ import {
   normalizePackagingLidColorHex,
   normalizePackagingLidColorName,
 } from "@/lib/packagingLidColors";
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 
 const PACKAGING_IMAGE_BUCKET = "packaging-images";

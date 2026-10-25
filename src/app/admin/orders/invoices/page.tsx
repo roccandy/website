@@ -1,5 +1,5 @@
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getInvoices } from "./invoiceData";
+import { getCachedInvoices } from "../../adminReadModels";
 import { InvoiceHub } from "./InvoiceHub";
 import { parseInvoiceFilters } from "./invoiceModel";
 
@@ -15,7 +15,7 @@ export default async function AdminInvoicesPage({
 }) {
   const session = await requireAdminSession();
   const [data, params] = await Promise.all([
-    getInvoices(),
+    getCachedInvoices(),
     Promise.resolve(searchParams),
   ]);
   return (

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSeoWriteAccess } from "@/lib/adminAuth";
 import { getManagedTermsItems, saveManagedTermsItems } from "@/lib/terms";

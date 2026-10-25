@@ -12,7 +12,7 @@ import {
   sendCustomerRefundEmail,
   sendOrderEmail,
 } from "@/lib/email";
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 import { getSettings, type OrderRow } from "@/lib/data";
 import { buildPricingContext } from "@/lib/pricing";
@@ -1811,7 +1811,7 @@ export async function sendAdminSquareInvoice(formData: FormData) {
         to: [localPatch.customer_email],
         archive: {kind: "invoice-pdf", orderIds: invoiceGroupOrders.map(order => order.id), orderNumbers: invoiceGroupOrders.map(order => order.order_number).filter((number): number is string => Boolean(number))},
         bcc: ordersRecipients,
-        subject: `Roc Candy tax invoice ${invoiceNumber}`,
+        subject: `Roc Candy Tax Invoice #${invoiceNumber}`,
         text: [
           "Please find your Roc Candy tax invoice attached.",
           "This invoice is payable by direct deposit using the bank details and reference shown in the PDF.",

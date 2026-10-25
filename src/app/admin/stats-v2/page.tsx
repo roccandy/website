@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getStatsDataset } from "./statsData";
+import { getCachedStatsDataset } from "../adminReadModels";
 import StatsHub from "./StatsHub";
 import { parseFilters } from "./statsModel";
 
@@ -21,7 +21,7 @@ export default async function StatsDemoPage({
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params))
     if (typeof value === "string") query.set(key, value);
-  const dataset = await getStatsDataset();
+  const dataset = await getCachedStatsDataset();
   return (
     <StatsHub
       dataset={dataset}

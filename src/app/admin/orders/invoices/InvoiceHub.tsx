@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
+import { refreshAdminWorkspace } from "../../refreshWorkspace";
 import {
   ArrowUpRight,
   Search,
@@ -161,7 +162,7 @@ export function InvoiceHub({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => startRefresh(() => router.refresh())}
+            onClick={() => startRefresh(async () => { await refreshAdminWorkspace(); router.refresh(); })}
             disabled={refreshing}
             className={button}
           >

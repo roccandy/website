@@ -1,5 +1,4 @@
 import { getProductionWorkspaceData } from "../adminWorkspaceData";
-import { AdminDataFreshness } from "../AdminDataFreshness";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -24,11 +23,10 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
 
-  const { orders, slots, assignments, dayNotes, pricingContext, categories, activityLog, loadedAt } = await getProductionWorkspaceData();
+  const { orders, slots, assignments, dayNotes, pricingContext, categories, activityLog } = await getProductionWorkspaceData();
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   return (
     <section className="admin-production-schedule space-y-6">
-      <AdminDataFreshness loadedAt={loadedAt} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>

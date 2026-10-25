@@ -5,18 +5,17 @@ import { Search, Users, Repeat2, MessageSquareText, CircleDollarSign, AlertTrian
 import { assertCustomerCrmAccess } from "./actions";
 import {
   customerSourceLabel,
-  getCustomerHistoryStats,
   isCustomerFilter,
   isCustomerSourceSystem,
   isCustomerSortDirection,
   isCustomerSortField,
-  listCustomerSummaries,
   type CustomerFilter,
   type CustomerSourceSystem,
   type CustomerSortDirection,
   type CustomerSortField,
   type CustomerSummary,
 } from "@/lib/customerHistory";
+import { getCachedCustomerList,getCachedCustomerTotals } from "../adminReadModels";
 
 export const metadata: Metadata = {
   title: "Customers | Roc Candy Admin",
@@ -148,12 +147,12 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
   const direction = isCustomerSortDirection(directionParam) ? directionParam : defaultSortDirection(sort);
 
   const [listResult, statsResult] = await Promise.all([
-    listCustomerSummaries({ query, filter, source, sort, direction }),
-    getCustomerHistoryStats(),
+    getCachedCustomerList({ query, filter, source, sort, direction }),
+    getCachedCustomerTotals(),
   ]);
   const customers = listResult.data;
   const stats = statsResult.data;
-  const schemaMissing = !listResult.ok || !statsResult.ok;
+  const schemaMissing = !listResult.ok;
 
   return (
     <section className="space-y-6">

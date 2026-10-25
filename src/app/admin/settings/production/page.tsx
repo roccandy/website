@@ -2,7 +2,7 @@ import { getProductionBlocks, getSettings } from "@/lib/data";
 import { logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSession, requireAdminWriteAccess } from "@/lib/adminAuth";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";

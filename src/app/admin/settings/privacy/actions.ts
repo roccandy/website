@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import { requireAdminSeoWriteAccess } from "@/lib/adminAuth";

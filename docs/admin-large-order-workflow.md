@@ -87,7 +87,7 @@ Subscribe the Square webhook to:
 
 When `invoice.payment_made` is received, the Supabase order is marked paid with `payment_provider = square_invoice`, and the orders inbox receives a paid-invoice notification.
 
-Admin-created customer confirmation emails use the same email summary as website orders. Because the admin form does not capture a browser-rendered preview image, the email generates a static preview from the saved order fields, including branded logos, wedding hearts, initials mode, and two-colour pinstripe jackets.
+Admin-created customer orders receive an **Order Confirmation** marked **Payment pending**. The payment invoice is sent separately by Square or as the direct-deposit tax-invoice PDF. Because the admin form does not capture a browser-rendered preview image, the confirmation generates a static preview from the saved order fields, including branded logos, wedding hearts, initials mode, and two-colour pinstripe jackets.
 
 ## Operational Notes
 

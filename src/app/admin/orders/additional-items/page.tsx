@@ -1,5 +1,5 @@
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
-import { getOrders, getOrderSlots, getProductionSlots } from "@/lib/data";
+import { getCachedProductionDay } from "../../adminReadModels";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -118,7 +118,7 @@ export default async function AdditionalItemsPage({ searchParams }: { searchPara
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const focusedGroup = resolvedSearchParams?.focus?.trim() || null;
 
-  const [orders, assignments, slots] = await Promise.all([getOrders(), getOrderSlots(), getProductionSlots()]);
+  const {orders,assignments,slots} = await getCachedProductionDay();
   const todayKey = dateKey(new Date());
   const slotById = new Map(slots.map((slot) => [slot.id, slot]));
   const assignmentByOrderId = new Map<string, (typeof assignments)[number]>();

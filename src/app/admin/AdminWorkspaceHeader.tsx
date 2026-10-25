@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import {
   AdminLink,
+  AdminTabLink,
   AdminOrderSearch,
   useAdminNavigation,
 } from "./AdminNavigationFeedback";
@@ -163,7 +164,8 @@ export function AdminWorkspaceHeader({
               const opening =
                 navigation?.destination?.split(/[?#]/)[0] === item.href;
               return (
-                <AdminLink
+                <AdminTabLink
+                  eager
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
@@ -177,7 +179,7 @@ export function AdminWorkspaceHeader({
                       className="h-2 w-2 rounded-full bg-emerald-500 motion-safe:animate-pulse"
                     />
                   )}
-                </AdminLink>
+                </AdminTabLink>
               );
             })}
           </nav>
@@ -266,7 +268,7 @@ export function AdminWorkspaceHeader({
                 </h3>
                 <div className="space-y-1">
                   {section.items.map((item) => (
-                    <AdminLink
+                    <AdminTabLink
                       key={item.href}
                       href={item.href}
                       onClick={closeTools}
@@ -285,7 +287,7 @@ export function AdminWorkspaceHeader({
                         size={14}
                         className="shrink-0 text-zinc-300 group-hover:text-emerald-700"
                       />
-                    </AdminLink>
+                    </AdminTabLink>
                   ))}
                 </div>
               </section>

@@ -3,6 +3,7 @@
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { refreshAdminWorkspace } from "../refreshWorkspace";
 import {
   ArrowDownRight,
   ArrowRight,
@@ -595,7 +596,7 @@ export default function StatsHub({
             Original stats <ArrowUpRight size={14} />
           </Link>
           <button
-            onClick={() => startRefresh(() => router.refresh())}
+            onClick={() => startRefresh(async () => { await refreshAdminWorkspace(); router.refresh(); })}
             disabled={refreshing}
             className={quietButton}
           >

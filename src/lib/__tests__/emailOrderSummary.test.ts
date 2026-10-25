@@ -90,8 +90,8 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(sendMail.mock.calls[0]?.[0]?.text).toContain("Pinstripe colour: Red");
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: "Roc Candy Tax Invoice #0135",
-        html: expect.stringMatching(/Tax Invoice #0135[\s\S]*src="cid:candy-design-0@roccandy"/),
+        subject: "Roc Candy Order Confirmation / Tax Invoice #0135",
+        html: expect.stringMatching(/Order Confirmation \/ Tax Invoice #0135[\s\S]*src="cid:candy-design-0@roccandy"/),
         attachments: expect.arrayContaining([
           expect.objectContaining({
             filename: "roc-candy-logo.png",
@@ -185,7 +185,7 @@ describe("sendCustomerOrderSummaryEmail", () => {
     expect(message?.html).toContain("admin@roccandy.com.au");
     expect(message?.html).toContain("0411 810 538");
     expect(message?.html).toContain("ABN 61 076 609 035");
-    expect(message?.html).toContain("Tax Invoice #0165");
+    expect(message?.html).toContain("Order Confirmation / Tax Invoice #0165");
     expect(message?.html).toContain("Subtotal (ex GST)");
     expect(message?.html).toContain("Total paid");
     expect(message?.html).toContain('color:#15803d;">PAID</div>');

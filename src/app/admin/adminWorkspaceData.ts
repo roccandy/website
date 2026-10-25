@@ -22,6 +22,14 @@ export async function readProductionOrders(): Promise<OrderRow[]> {
   }
 }
 
+/** Full artwork is only needed for the one order being edited/re-made. */
+export async function readOrderForRemake(id: string): Promise<OrderRow|null> {
+  if(!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const {data,error}=await supabaseAdminClient.from("orders").select("*").eq("id",id).maybeSingle();
+  if(error)throw new Error("Unable to load the original order.");
+  return data as OrderRow|null;
+}
+
 // Only call after the page's authentication/role checks. No sessions or per-user
 // permissions are cached. Other pages and checkout continue to read fresh data.
 export const getProductionWorkspaceData = unstable_cache(async () => {

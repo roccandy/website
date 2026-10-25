@@ -18,7 +18,6 @@ import {
   X,
 } from "lucide-react";
 import { AdminLink } from "../AdminNavigationFeedback";
-import { AdminDataFreshness } from "../AdminDataFreshness";
 import { refreshAdminWorkspace } from "../refreshWorkspace";
 import { useAdminViewState } from "../useAdminViewState";
 import { count, dateLabel, daysBetween } from "../stats-v2/statsModel";
@@ -101,7 +100,6 @@ export function TodayHub({
 
   return (
     <section className="space-y-6">
-      <AdminDataFreshness loadedAt={data.loadedAt} />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.17em] text-zinc-400">

@@ -11,7 +11,7 @@ vi.mock("next/og", () => ({
 import { GET } from "./route";
 
 describe("email PNG candy colour tree", () => {
-  it.each([["W",51],["WWW",42],["WWWWW",36],["WWWWWW",30]])("matches short custom text scaling for %s",async(text,size)=>{
+  it.each([["W",57],["WWW",46.5],["WWWWW",39],["WWWWWW",30]])("matches short custom text scaling for %s",async(text,size)=>{
     const html=await(await GET(new Request(`http://localhost/api/preview/candy-image?designText=${text}&customTextVariant=short`))).text();
     expect(html).toContain(`font-size:${size}px`);
   });

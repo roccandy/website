@@ -15,6 +15,7 @@ export function LogoutButton() {
         const callbackUrl =
           typeof window !== "undefined" ? `${window.location.origin}/admin/login` : "/admin/login";
         const proceed = () => {
+          window.dispatchEvent(new Event("admin:session-ended"));
           setPending(true);
           void signOut({ callbackUrl }).catch(() => {
             setPending(false);

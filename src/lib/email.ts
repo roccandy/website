@@ -719,7 +719,7 @@ async function sendCustomerOrderEmailWithStatus(
   const orderNumber = order.orderNumber ?? null;
   const displayOrderNumber = orderNumber ?? "-";
   const isPaid = kind === "paid";
-  const documentTitle = isPaid ? "Tax Invoice" : "Order Confirmation";
+  const documentTitle = isPaid ? "Order Confirmation / Tax Invoice" : "Order Confirmation";
   const subject = orderNumber ? `Roc Candy ${documentTitle} #${orderNumber}` : `Roc Candy ${documentTitle}`;
   const intro = isPaid
     ? "Thanks for your order. It has been confirmed and is now being prepared."

@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { BarChart3, CircleDollarSign, Clock3, MapPinned, Sparkles, Users, WalletCards } from "lucide-react";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { getCategories, getOrders, getPackagingOptions, type OrderRow } from "@/lib/data";
+import { getCategories, getPackagingOptions, type OrderRow } from "@/lib/data";
+import { getCachedOrderSummaries } from "../adminReadModels";
 import { normalizeBaseOrderNumber } from "@/lib/orderNumbers";
 import { canAccessCustomerCrm } from "@/lib/customerHistory";
 
@@ -423,7 +424,7 @@ export default async function OrderStatsPage() {
   const session = await requireAdminSession();
 
   const [orders, categories, packagingOptions] = await Promise.all([
-    getOrders(),
+    getCachedOrderSummaries(),
     getCategories(),
     getPackagingOptions(),
   ]);
