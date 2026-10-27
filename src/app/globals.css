@@ -184,6 +184,22 @@ body {
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
     align-items: start;
   }
+
+  /* In the split workspace, the order list can be much taller than the
+     calendar. Give it its own viewport-bound scroll area so reviewing the
+     last order does not carry the calendar out of view. */
+  .admin-production-panels[data-view="both"] .admin-production-order-list {
+    max-block-size: calc(100dvh - 14rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .admin-production-panels[data-view="both"] .admin-production-orders-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
 }
 
 .admin-production-panels:not([data-view="both"]) {

@@ -212,6 +212,28 @@ export function OrdersTable({
       const detail = document.getElementById(`order-detail-${selectedId}`);
       if (!detail) return;
       const rect = detail.getBoundingClientRect();
+      const orderList = orderListRef.current;
+      const orderListRect = orderList?.getBoundingClientRect();
+      const listMargin = 16;
+
+      // In the split workspace, the order list has its own scroll area. Keep
+      // an expanded row visible there rather than moving the whole page (and
+      // therefore the calendar) to reveal it.
+      if (orderList && orderListRect && orderList.scrollHeight > orderList.clientHeight) {
+        if (rect.top < orderListRect.top + listMargin) {
+          orderList.scrollBy({
+            top: rect.top - orderListRect.top - listMargin,
+            behavior: "smooth",
+          });
+        } else if (rect.bottom > orderListRect.bottom - listMargin) {
+          orderList.scrollBy({
+            top: rect.bottom - orderListRect.bottom + listMargin,
+            behavior: "smooth",
+          });
+        }
+        return;
+      }
+
       const viewportHeight = window.innerHeight;
       const margin = 16;
       const topInset = (document.querySelector(".admin-workspace-header")?.getBoundingClientRect().height ?? 0) + margin;
