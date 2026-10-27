@@ -2481,7 +2481,7 @@ export async function shiftProductionSchedule(formData: FormData) {
       action: "updated",
       entityType: "production-schedule",
       entityLabel: `From ${startDate}`,
-      summary: `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} from ${startDate} forward ${days} day${days === 1 ? "" : "s"}.`,
+      summary: `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} from ${startDate} forward ${days} valid production day${days === 1 ? "" : "s"}.`,
       path: ORDERS_PATH,
       changedFields: ["Production dates"],
       metadata: { startDate, days, movedCount },
@@ -2493,11 +2493,11 @@ export async function shiftProductionSchedule(formData: FormData) {
         ok: true,
         tone: "success" as const,
         message: movedCount > 0
-          ? `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} forward.`
+          ? `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} forward to valid production dates.`
           : "No production assignments were scheduled from that date onward.",
       };
     }
-    redirect(toastRedirect(ORDERS_PATH, "success", `Moved ${movedCount} production assignments forward.`));
+    redirect(toastRedirect(ORDERS_PATH, "success", `Moved ${movedCount} production assignments to valid production dates.`));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to move the production schedule.";
     if (inlineResponse) return { ok: false, tone: "error" as const, message };

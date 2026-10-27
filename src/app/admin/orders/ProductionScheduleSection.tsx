@@ -806,10 +806,10 @@ export default function ProductionScheduleSection({
             >
               <h3 className="text-lg font-semibold text-zinc-900">Move production schedule</h3>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Move every scheduled production assignment on or after {formatDate(scheduleShift.date)} forward by the number of calendar days below. Slot positions stay the same.
+                Move every scheduled production assignment on or after {formatDate(scheduleShift.date)} forward by the number of valid production days below. Blocked days, including weekends, are skipped. Slot positions stay the same.
               </p>
               <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Days forward
+                Valid production days forward
                 <input
                   type="number"
                   min={1}
