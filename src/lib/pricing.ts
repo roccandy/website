@@ -81,7 +81,9 @@ export async function buildPricingContext(
     tiers,
     packagingOptions: options.includeInactivePackaging
       ? packagingOptions
-      : packagingOptions.filter((option) => option.is_active !== false),
+      : packagingOptions.filter(
+          (option) => option.is_active !== false && option.is_website_visible !== false,
+        ),
     labelRanges,
     settings,
   };

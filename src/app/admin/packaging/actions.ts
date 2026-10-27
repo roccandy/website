@@ -140,6 +140,11 @@ function isMissingActiveColumnError(message: string) {
   return normalized.includes("is_active") && (normalized.includes("column") || normalized.includes("schema cache"));
 }
 
+function isMissingWebsiteVisibilityColumnError(message: string) {
+  const normalized = message.toLowerCase();
+  return normalized.includes("is_website_visible") && (normalized.includes("column") || normalized.includes("schema cache"));
+}
+
 function isMissingOptionSortOrderColumnError(message: string) {
   const normalized = message.toLowerCase();
   return normalized.includes("sort_order") &&
@@ -157,6 +162,9 @@ function stripUnsupportedPackagingColumns<T extends Record<string, unknown>>(pay
   }
   if (isMissingActiveColumnError(message)) {
     delete next.is_active;
+  }
+  if (isMissingWebsiteVisibilityColumnError(message)) {
+    delete next.is_website_visible;
   }
   if (isMissingOptionSortOrderColumnError(message)) {
     delete next.sort_order;
@@ -180,6 +188,7 @@ export async function upsertPackaging(formData: FormData) {
     const type_sort_order = Number(formData.get("type_sort_order"));
     const sort_order = Number(formData.get("sort_order"));
     const is_active = formData.get("is_active")?.toString() !== "false";
+    const is_website_visible = formData.get("is_website_visible")?.toString() === "true";
 
     if (!type || !size) throw new Error("Missing type or size");
     const isJar = type.toLowerCase().includes("jar");
@@ -215,6 +224,7 @@ export async function upsertPackaging(formData: FormData) {
       type_sort_order: Number.isFinite(type_sort_order) ? type_sort_order : 0,
       sort_order: Number.isFinite(sort_order) ? Math.max(0, Math.floor(sort_order)) : 0,
       is_active,
+      is_website_visible,
     };
     if (id) {
       const result = await client.from("packaging_options").update(payload).eq("id", id);
@@ -223,6 +233,7 @@ export async function upsertPackaging(formData: FormData) {
           !isMissingDimensionsColumnError(result.error.message) &&
           !isMissingTypeSortOrderColumnError(result.error.message) &&
           !isMissingActiveColumnError(result.error.message) &&
+          !isMissingWebsiteVisibilityColumnError(result.error.message) &&
           !isMissingOptionSortOrderColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
@@ -238,6 +249,7 @@ export async function upsertPackaging(formData: FormData) {
           !isMissingDimensionsColumnError(result.error.message) &&
           !isMissingTypeSortOrderColumnError(result.error.message) &&
           !isMissingActiveColumnError(result.error.message) &&
+          !isMissingWebsiteVisibilityColumnError(result.error.message) &&
           !isMissingOptionSortOrderColumnError(result.error.message)
         ) {
           throw new Error(result.error.message);
@@ -266,6 +278,7 @@ export async function upsertPackaging(formData: FormData) {
     });
 
     revalidatePath("/design");
+    revalidatePath("/checkout");
 
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to save packaging.";
@@ -447,6 +460,57 @@ export async function togglePackagingActive(formData: FormData) {
     redirect(appendAdminToast("/admin/packaging", "error", message));
   }
   redirect(appendAdminToast("/admin/packaging", "success", "Packaging status updated."));
+}
+
+export async function togglePackagingWebsiteVisibility(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/packaging" });
+  try {
+    const id = formData.get("id")?.toString().trim();
+    if (!id) throw new Error("Missing packaging option id.");
+    const nextVisible = formData.get("next_visible")?.toString() === "true";
+    const client = supabaseAdminClient;
+    const { data: existing, error: existingError } = await client
+      .from("packaging_options")
+      .select("id,type,size,is_website_visible")
+      .eq("id", id)
+      .maybeSingle();
+    if (existingError) {
+      if (isMissingWebsiteVisibilityColumnError(existingError.message)) {
+        throw new Error("Run the packaging website-visibility SQL migration in Supabase first.");
+      }
+      throw new Error(existingError.message);
+    }
+    if (!existing) throw new Error("Packaging option not found.");
+
+    const { error } = await client
+      .from("packaging_options")
+      .update({ is_website_visible: nextVisible })
+      .eq("id", id);
+    if (error) {
+      if (isMissingWebsiteVisibilityColumnError(error.message)) {
+        throw new Error("Run the packaging website-visibility SQL migration in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+
+    await logAdminActivity({
+      area: "commercial",
+      action: "updated",
+      entityType: "packaging-option",
+      entityId: existing.id,
+      entityLabel: `${existing.type} ${existing.size}`,
+      summary: `${nextVisible ? "Published" : "Hidden from the website"} packaging option "${existing.type} ${existing.size}".`,
+      path: "/admin/packaging",
+      changedFields: ["Website visibility"],
+    });
+    revalidatePath("/admin/packaging");
+    revalidatePath("/design");
+    revalidatePath("/checkout");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to update packaging visibility.";
+    redirect(appendAdminToast("/admin/packaging", "error", message));
+  }
+  redirect(appendAdminToast("/admin/packaging", "success", "Website visibility updated."));
 }
 
 export async function updatePackagingTypeOrder(formData: FormData) {

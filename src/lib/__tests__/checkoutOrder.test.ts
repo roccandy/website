@@ -383,4 +383,22 @@ describe("buildCheckoutOrderContext", () => {
       buildCheckoutOrderContext(buildOrder({ customItems: [customItem("ONE")] })),
     ).rejects.toThrow("Custom packaging is no longer available");
   });
+
+  it("rejects an admin-only packaging option at checkout", async () => {
+    getPackagingOptions.mockResolvedValue([
+      {
+        id: "pack-1",
+        is_active: true,
+        is_website_visible: false,
+        allowed_categories: ["custom-1-6"],
+        lid_colors: [],
+        label_type_ids: ["label-1"],
+      },
+    ]);
+    const { buildCheckoutOrderContext } = await import("@/lib/checkoutOrder");
+
+    await expect(
+      buildCheckoutOrderContext(buildOrder({ customItems: [customItem("ONE")] })),
+    ).rejects.toThrow("Custom packaging is no longer available");
+  });
 });

@@ -283,7 +283,9 @@ export default async function QuotePage({ searchParams }: QuotePageProps) {
             ) : null}
             <QuoteBuilder
               categories={categories}
-              packagingOptions={packagingOptions.filter((option) => option.is_active !== false)}
+              packagingOptions={packagingOptions.filter(
+                (option) => option.is_active !== false && option.is_website_visible !== false,
+              )}
               packagingImages={packagingImages}
               lidColors={lidColors}
               settings={settings}

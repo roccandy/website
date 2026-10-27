@@ -14,6 +14,7 @@ import {
   deletePackagingLidColor,
   deletePackaging,
   togglePackagingActive,
+  togglePackagingWebsiteVisibility,
   updatePackagingLidColor,
   updatePackagingOptionOrder,
   updatePackagingTypeOrder,
@@ -281,6 +282,17 @@ function PackagingOptionForm({
           </div>
         </fieldset>
 
+        <label className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-700">
+          <input
+            type="checkbox"
+            name="is_website_visible"
+            value="true"
+            defaultChecked={option?.is_website_visible !== false}
+          />
+          Visible on the website
+        </label>
+        <input type="hidden" name="is_website_visible" value="false" />
+
         <fieldset>
           <legend className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">Allowed labels</legend>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -454,7 +466,7 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
               </form>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-sm">
+              <table className="w-full min-w-[1080px] text-sm">
                 <thead className="bg-zinc-50 text-left text-xs text-zinc-500">
                   <tr>
                     <th className="w-14 px-3 py-2">Order</th>
@@ -466,12 +478,14 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                     <th className="px-3 py-2">Price</th>
                     <th className="px-3 py-2">Max</th>
                     <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Website</th>
                     <th className="px-3 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {typeOptions.map((option) => {
                     const isActive = option.is_active !== false;
+                    const isWebsiteVisible = option.is_website_visible !== false;
                     return (
                       <Fragment key={option.id}>
                         <tr
@@ -528,6 +542,7 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                           <td className="px-3 py-2">${Number(option.unit_price).toFixed(2)}</td>
                           <td className="px-3 py-2">{option.max_packages}</td>
                           <td className="px-3 py-2"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isActive ? "bg-emerald-50 text-emerald-700" : "bg-zinc-200 text-zinc-600"}`}>{isActive ? "Enabled" : "Disabled"}</span></td>
+                          <td className="px-3 py-2"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${isWebsiteVisible ? "bg-sky-50 text-sky-700" : "bg-zinc-200 text-zinc-600"}`}>{isWebsiteVisible ? "Visible" : "Admin only"}</span></td>
                           <td className="px-3 py-2">
                             <div className="flex justify-end gap-2">
                               <button type="button" onClick={() => setEditingId((current) => current === option.id ? null : option.id)} className="rounded border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700">{editingId === option.id ? "Close" : "Edit"}</button>
@@ -536,12 +551,17 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                                 <input type="hidden" name="next_active" value={isActive ? "false" : "true"} />
                                 <AdminSubmitButton type="submit" className={`rounded border px-2 py-1 text-xs font-semibold ${isActive ? "border-amber-200 text-amber-700" : "border-emerald-200 text-emerald-700"}`}>{isActive ? "Disable" : "Enable"}</AdminSubmitButton>
                               </form>
+                              <form action={togglePackagingWebsiteVisibility}>
+                                <input type="hidden" name="id" value={option.id} />
+                                <input type="hidden" name="next_visible" value={isWebsiteVisible ? "false" : "true"} />
+                                <AdminSubmitButton type="submit" className={`rounded border px-2 py-1 text-xs font-semibold ${isWebsiteVisible ? "border-zinc-300 text-zinc-700" : "border-sky-200 text-sky-700"}`}>{isWebsiteVisible ? "Make admin only" : "Show on website"}</AdminSubmitButton>
+                              </form>
                             </div>
                           </td>
                         </tr>
                         {editingId === option.id ? (
                           <tr className="border-t border-zinc-100">
-                            <td colSpan={10} className="p-3">
+                            <td colSpan={11} className="p-3">
                               <PackagingOptionForm option={option} packageType={type} typeSortOrder={typeIndex} optionSortOrder={orderedIds.indexOf(option.id)} categories={categories} labelTypes={labelTypes} lidColors={lidColors} onCancel={() => setEditingId(null)} />
                             </td>
                           </tr>
@@ -550,7 +570,7 @@ export function PackagingOptionsManager({ options, categories, labelTypes, lidCo
                     );
                   })}
                   <tr className="border-t border-zinc-100 bg-zinc-50/60">
-                    <td colSpan={10} className="p-2">
+                    <td colSpan={11} className="p-2">
                       {addingType === type ? (
                         <PackagingOptionForm packageType={type} typeSortOrder={typeIndex} optionSortOrder={typeOptions.length} categories={categories} labelTypes={labelTypes} lidColors={lidColors} onCancel={() => setAddingType(null)} />
                       ) : (

@@ -81,7 +81,9 @@ export default async function CheckoutPage() {
             palette={palette}
             quoteBlocks={quoteBlocks}
             labelTypes={labelTypes}
-            packagingOptions={packagingOptions.filter((option) => option.is_active !== false)}
+            packagingOptions={packagingOptions.filter(
+              (option) => option.is_active !== false && option.is_website_visible !== false,
+            )}
             urgencyFeePercent={Number(settings?.urgency_fee ?? 0)}
             urgencyPeriodDays={Number(settings?.lead_time_days ?? 0)}
             productionBlockoutMessage={productionBlockoutMessage}

@@ -130,7 +130,10 @@ function assertCustomItemSelections(
 ) {
   assertWholePositiveQuantity(item.quantity, "Custom item");
   const packaging = packagingOptions.find(
-    (option) => option.id === item.packagingOptionId && option.is_active !== false,
+    (option) =>
+      option.id === item.packagingOptionId &&
+      option.is_active !== false &&
+      option.is_website_visible !== false,
   );
   if (!packaging || !item.categoryId || !packaging.allowed_categories.includes(item.categoryId)) {
     throw new Error("Custom packaging is no longer available.");
