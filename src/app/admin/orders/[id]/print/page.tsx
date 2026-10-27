@@ -149,6 +149,11 @@ const resolveColorDisplay = (hex: string | null | undefined, paletteHexMap: Map<
   return { label: "Custom", cmyk: cmyk ?? undefined };
 };
 
+const isDefaultWhiteFill = (value: string | null | undefined) => {
+  const normalized = value?.trim().toLowerCase();
+  return !normalized || normalized === "#fff" || normalized === "#ffffff" || normalized === "white";
+};
+
 const formatTokenLabel = (value: string) =>
   value
     .replace(/[-_]+/g, " ")
@@ -597,10 +602,12 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                   <span className={SPEC_LABEL_CLASS}>Jacket:</span>
                   <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
                 </p>
-                <p className={SPEC_ROW_CLASS}>
-                  <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
-                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color || "#ffffff", paletteHexMap))}</span>
-                </p>
+                {!isDefaultWhiteFill(order.candy_fill_color) ? (
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
+                    <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color, paletteHexMap))}</span>
+                  </p>
+                ) : null}
                 {jacketPreview.showPinstripe ? (
                   <p className={SPEC_ROW_CLASS}>
                     <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>

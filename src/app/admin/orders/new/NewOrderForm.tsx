@@ -38,6 +38,8 @@ import {
 } from "@/lib/adminPremadeOrder";
 import {
   MAX_ADMIN_BATCH_COUNT,
+  MAX_ADMIN_CUSTOM_LABEL_COUNT,
+  MAX_ADMIN_INGREDIENT_LABEL_COUNT,
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
@@ -48,7 +50,6 @@ import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
-const BULK_LABEL_COUNT_MAX = 1000;
 const WEDDING_HEART = "❤️";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
@@ -765,12 +766,12 @@ export function NewOrderForm({
   const labelsNumber = Number(labelsCount);
   const resolvedLabelsCount =
     customLabelsOptIn && Number.isFinite(labelsNumber) && labelsNumber > 0
-      ? Math.min(labelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+      ? Math.min(labelsNumber, MAX_ADMIN_CUSTOM_LABEL_COUNT)
       : 0;
   const ingredientLabelsNumber = Number(ingredientLabelsCount);
   const resolvedIngredientLabelsCount =
     ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
-      ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+      ? Math.min(ingredientLabelsNumber, MAX_ADMIN_INGREDIENT_LABEL_COUNT)
       : 0;
   const applyEqualBatchSplit = () => {
     const weights = suggestedAdminBatchWeights(customOrderTotalWeightKg, Number(settings.max_total_kg));
@@ -1530,12 +1531,12 @@ export function NewOrderForm({
     const labelsNumber = Number(labelsCount);
     const resolvedLabels =
       customLabelsOptIn && Number.isFinite(labelsNumber) && labelsNumber > 0
-        ? Math.min(labelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+        ? Math.min(labelsNumber, MAX_ADMIN_CUSTOM_LABEL_COUNT)
         : 0;
     const ingredientLabelsNumber = Number(ingredientLabelsCount);
     const resolvedIngredientLabels =
       ingredientLabelsOptIn && Number.isFinite(ingredientLabelsNumber) && ingredientLabelsNumber > 0
-        ? Math.min(ingredientLabelsNumber, settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)
+        ? Math.min(ingredientLabelsNumber, MAX_ADMIN_INGREDIENT_LABEL_COUNT)
         : 0;
     let active = true;
     setIsPricing(true);
@@ -2689,7 +2690,7 @@ export function NewOrderForm({
                         type="number"
                         name="labels_count"
                         min={0}
-                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        max={MAX_ADMIN_CUSTOM_LABEL_COUNT}
                         value={labelsCount}
                         onChange={(event) => {
                           if (!event.target.value.trim()) {
@@ -2702,8 +2703,7 @@ export function NewOrderForm({
                               ? String(
                                   Math.min(
                                     Math.max(0, Math.floor(parsed)),
-                                    settings.labels_max_bulk,
-                                    BULK_LABEL_COUNT_MAX,
+                                    MAX_ADMIN_CUSTOM_LABEL_COUNT,
                                   )
                                 )
                               : "",
@@ -2733,7 +2733,7 @@ export function NewOrderForm({
                       <input
                         type="number"
                         min={0}
-                        max={Math.min(settings.labels_max_bulk, BULK_LABEL_COUNT_MAX)}
+                        max={MAX_ADMIN_INGREDIENT_LABEL_COUNT}
                         value={ingredientLabelsCount}
                         onChange={(event) => {
                           if (!event.target.value.trim()) {
@@ -2745,8 +2745,7 @@ export function NewOrderForm({
                             ? String(
                                 Math.min(
                                   Math.max(0, Math.floor(parsed)),
-                                  settings.labels_max_bulk,
-                                  BULK_LABEL_COUNT_MAX,
+                                  MAX_ADMIN_INGREDIENT_LABEL_COUNT,
                                 )
                               )
                             : "";

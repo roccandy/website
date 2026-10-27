@@ -3,6 +3,8 @@ import type { WeightTier } from "@/lib/data";
 import { buildJacketExtras, type JacketExtraSelection } from "@/lib/customPricingInput";
 
 export const MAX_ADMIN_BATCH_COUNT = 20;
+export const MAX_ADMIN_CUSTOM_LABEL_COUNT = 5000;
+export const MAX_ADMIN_INGREDIENT_LABEL_COUNT = 5000;
 const KG_TOLERANCE = 0.02;
 
 export type AdminDiscountType = "none" | "percent" | "fixed";
@@ -202,7 +204,7 @@ export function calculateAdminLargeOrderPricingWithContext(
 
   const labelsCountRaw = Number(input.labelsCount ?? 0);
   const labelsCount = Number.isFinite(labelsCountRaw) && labelsCountRaw > 0 ? Math.floor(labelsCountRaw) : 0;
-  if (labelsCount > Number(context.settings.labels_max_bulk)) {
+  if (labelsCount > MAX_ADMIN_CUSTOM_LABEL_COUNT) {
     throw new Error("Label count exceeds maximum");
   }
   const labelRange = labelsCount > 0 ? findLabelRange(context, labelsCount) : null;
@@ -217,7 +219,7 @@ export function calculateAdminLargeOrderPricingWithContext(
     Number.isFinite(ingredientLabelsCountRaw) && ingredientLabelsCountRaw > 0
       ? Math.floor(ingredientLabelsCountRaw)
       : 0;
-  if (ingredientLabelsCount > Number(context.settings.labels_max_bulk)) {
+  if (ingredientLabelsCount > MAX_ADMIN_INGREDIENT_LABEL_COUNT) {
     throw new Error("Ingredient label count exceeds maximum");
   }
   const ingredientLabelPrice = Number(context.settings.ingredient_label_price ?? 0);

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_ADMIN_BATCH_COUNT,
+  MAX_ADMIN_CUSTOM_LABEL_COUNT,
+  MAX_ADMIN_INGREDIENT_LABEL_COUNT,
   calculateAdminLargeOrderPricingWithContext,
   suggestedAdminBatchWeights,
   validateAdminBatchWeights,
@@ -97,6 +99,58 @@ describe("admin large order batching", () => {
     expect(pricing.basePrice).toBe(460);
     expect(pricing.packagingPrice).toBe(20);
     expect(pricing.total).toBe(480);
+  });
+
+  it("allows up to 5,000 custom labels for admin orders regardless of the public bulk limit", () => {
+    expect(() =>
+      calculateAdminLargeOrderPricingWithContext(
+        {
+          categoryId: "custom-1-6",
+          packagingOptionId: "bulk-bag",
+          quantity: 1,
+          labelsCount: MAX_ADMIN_CUSTOM_LABEL_COUNT,
+        },
+        pricingContext,
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      calculateAdminLargeOrderPricingWithContext(
+        {
+          categoryId: "custom-1-6",
+          packagingOptionId: "bulk-bag",
+          quantity: 1,
+          labelsCount: MAX_ADMIN_CUSTOM_LABEL_COUNT + 1,
+        },
+        pricingContext,
+      ),
+    ).toThrow("Label count exceeds maximum");
+  });
+
+  it("allows up to 5,000 ingredient labels for admin orders regardless of the public bulk limit", () => {
+    expect(() =>
+      calculateAdminLargeOrderPricingWithContext(
+        {
+          categoryId: "custom-1-6",
+          packagingOptionId: "bulk-bag",
+          quantity: 1,
+          ingredientLabelsCount: MAX_ADMIN_INGREDIENT_LABEL_COUNT,
+        },
+        pricingContext,
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      calculateAdminLargeOrderPricingWithContext(
+        {
+          categoryId: "custom-1-6",
+          packagingOptionId: "bulk-bag",
+          quantity: 1,
+          ingredientLabelsCount: MAX_ADMIN_INGREDIENT_LABEL_COUNT + 1,
+        },
+        pricingContext,
+      ),
+    ).toThrow("Ingredient label count exceeds maximum");
   });
 
   it("calculates urgency from the supplied order-time reference date", () => {

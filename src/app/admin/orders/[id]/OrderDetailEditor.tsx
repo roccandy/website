@@ -14,6 +14,8 @@ import {
 import type { Category, ColorPaletteRow, Flavor, OrderRow, PackagingOption, SettingsRow } from "@/lib/data";
 import {
   MAX_ADMIN_BATCH_COUNT,
+  MAX_ADMIN_CUSTOM_LABEL_COUNT,
+  MAX_ADMIN_INGREDIENT_LABEL_COUNT,
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
@@ -46,7 +48,6 @@ import {
   splitWeddingOrderDesign,
 } from "./orderDetailCalculations";
 
-const BULK_LABEL_COUNT_MAX = 1000;
 
 const STATES = ["", "ACT", "NSW", "NT", "QLD", "SA", "TAS", "VIC", "WA"];
 
@@ -903,7 +904,6 @@ export function OrderDetailEditor({
   ].filter((line): line is string => Boolean(line));
   const saveDisabled =
     dirtyCount === 0 || isSubmitting || (priceAffectingChanged && (!batchWeightsValid || isQuoteLoading || Boolean(quoteError)));
-  const labelMax = Math.min(Number(settings.labels_max_bulk) || BULK_LABEL_COUNT_MAX, BULK_LABEL_COUNT_MAX);
   const shownPaymentMethod = draft.paymentMethod || order.payment_provider || "-";
 
   if (!isEditing) {
@@ -1716,7 +1716,7 @@ export function OrderDetailEditor({
               type="number"
               name="labels_count"
               min={0}
-              max={labelMax}
+              max={MAX_ADMIN_CUSTOM_LABEL_COUNT}
               value={draft.labelsCount}
               disabled={!draft.labelsEnabled}
               onChange={(event) => setField("labelsCount", event.target.value)}
@@ -1738,7 +1738,7 @@ export function OrderDetailEditor({
               type="number"
               name="ingredient_labels_count"
               min={0}
-              max={labelMax}
+              max={MAX_ADMIN_INGREDIENT_LABEL_COUNT}
               value={draft.ingredientLabelsCount}
               disabled={!draft.ingredientLabelsEnabled}
               onChange={(event) => setField("ingredientLabelsCount", event.target.value)}
