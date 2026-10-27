@@ -89,13 +89,12 @@ begin
   where slot.slot_date >= p_start_date
   for update of assignment, slot;
 
-  insert into public.production_slots (slot_date, slot_index, capacity_kg, status, notes)
+  insert into public.production_slots (slot_date, slot_index, capacity_kg, status)
   select distinct
     public.next_valid_production_date(slot.slot_date, p_days),
     slot.slot_index,
     slot.capacity_kg,
-    slot.status,
-    slot.notes
+    slot.status
   from public.production_slots slot
   join public.order_slots assignment on assignment.slot_id = slot.id
   where slot.slot_date >= p_start_date

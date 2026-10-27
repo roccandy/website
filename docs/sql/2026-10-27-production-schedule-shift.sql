@@ -1,5 +1,5 @@
 -- Atomically shift all production assignments from a date onward while
--- retaining each assignment's slot number and production-slot settings.
+-- retaining each assignment's slot number and supported production-slot settings.
 
 create or replace function public.shift_production_schedule(
   p_start_date date,
@@ -27,14 +27,13 @@ begin
   for update of assignment, slot;
 
   -- Create missing destination slots. Existing destination slots retain their
-  -- own capacity, status and notes.
-  insert into public.production_slots (slot_date, slot_index, capacity_kg, status, notes)
+  -- own capacity and status.
+  insert into public.production_slots (slot_date, slot_index, capacity_kg, status)
   select distinct
     slot.slot_date + p_days,
     slot.slot_index,
     slot.capacity_kg,
-    slot.status,
-    slot.notes
+    slot.status
   from public.production_slots slot
   join public.order_slots assignment on assignment.slot_id = slot.id
   where slot.slot_date >= p_start_date
