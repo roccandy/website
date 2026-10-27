@@ -30,6 +30,7 @@ import {
   isScheduleDateBlocked,
   nextAssignableKgForOrder,
   productionCompletionActionLabel,
+  productionDueLeadFromSlot,
   statusCard,
   weightLabel,
 } from "./productionScheduleShared";
@@ -464,7 +465,16 @@ export default function ProductionScheduleSection({
                         const assignment = assignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const title = productionScheduleTitle(order);
-                        const stateLabel = order?.state?.trim();
+                        const stateLabel = order?.pickup ? "Pickup" : order?.state?.trim();
+                        const dueLead = order
+                          ? productionDueLeadFromSlot({
+                              dueDate: order.due_date,
+                              slotDate: key,
+                              pickup: order.pickup,
+                              state: order.state,
+                              settings,
+                            })
+                          : null;
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canDragSlotOrder = key >= todayKey;
                         const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
@@ -517,11 +527,16 @@ export default function ProductionScheduleSection({
                                     {stateLabel}
                                   </span>
                                 ) : null}
+                                {dueLead ? (
+                                  <span className={`absolute right-2 top-4.5 max-w-[45%] truncate text-[9px] font-medium ${dueLead.urgent ? "text-rose-600" : "text-zinc-500"}`}>
+                                    {dueLead.label}
+                                  </span>
+                                ) : null}
                                 {isCollapsedCompletedCalendarOrder ? (
                                   <button
                                     type="button"
                                     onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
-                                    className="block w-full truncate whitespace-nowrap pr-10 text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                    className="block w-full truncate whitespace-nowrap pr-16 text-left text-[13px] font-semibold leading-tight text-zinc-900"
                                     aria-expanded="false"
                                     title={title}
                                   >
@@ -539,7 +554,7 @@ export default function ProductionScheduleSection({
                                       <button
                                         type="button"
                                         onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
-                                        className="block w-full truncate whitespace-nowrap pr-10 text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                        className="block w-full truncate whitespace-nowrap pr-16 text-left text-[13px] font-semibold leading-tight text-zinc-900"
                                         aria-expanded="true"
                                         title={title}
                                       >
@@ -553,7 +568,7 @@ export default function ProductionScheduleSection({
                                       </button>
                                     ) : (
                                       <p
-                                        className="truncate whitespace-nowrap pr-10 text-[13px] font-semibold leading-tight text-zinc-900"
+                                        className="truncate whitespace-nowrap pr-16 text-[13px] font-semibold leading-tight text-zinc-900"
                                         title={title}
                                       >
                                         <OrderTitleWithLogo
@@ -571,12 +586,6 @@ export default function ProductionScheduleSection({
                                         {Number(assignment.kg_assigned) !== Number(order.total_weight_kg)
                                           ? ` of ${calendarWeightLabel(order.total_weight_kg)}`
                                           : ""}
-                                      </p>
-                                      <p className="flex flex-wrap gap-x-1">
-                                        <span className="whitespace-nowrap">{formatDate(order.due_date)}</span>
-                                        {dueDateDistance ? (
-                                          <span className="whitespace-nowrap text-zinc-400">{dueDateDistance}</span>
-                                        ) : null}
                                       </p>
                                     </div>
                                   </div>

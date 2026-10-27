@@ -22,6 +22,30 @@ const DEFAULT_NO_PRODUCTION_DAYS = [
   { name: "no_production_sun", label: "Sunday" },
 ] as const;
 
+const PRODUCTION_DUE_LEAD_DEFAULTS: Record<string, number> = {
+  pickup: 3,
+  WA: 3,
+  ACT: 7,
+  NSW: 7,
+  NT: 7,
+  QLD: 7,
+  SA: 7,
+  TAS: 7,
+  VIC: 7,
+};
+
+const PRODUCTION_DUE_LEAD_OPTIONS = [
+  { key: "pickup", label: "Pickup" },
+  { key: "WA", label: "WA" },
+  { key: "ACT", label: "ACT" },
+  { key: "NSW", label: "NSW" },
+  { key: "NT", label: "NT" },
+  { key: "QLD", label: "QLD" },
+  { key: "SA", label: "SA" },
+  { key: "TAS", label: "TAS" },
+  { key: "VIC", label: "VIC" },
+] as const;
+
 function revalidateProductionBlockoutPages() {
   revalidatePath("/admin/settings/production");
   revalidatePath("/");
@@ -111,6 +135,38 @@ async function updateBlockoutBannerSettings(formData: FormData) {
       showQuoteBlockoutBanner: show_quote_blockout_banner,
       quoteBlockoutMonths: quote_blockout_months,
     },
+  });
+  redirect("/admin/settings/production");
+}
+
+async function updateProductionDueLeadDays(formData: FormData) {
+  "use server";
+  await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
+
+  const production_due_lead_days = Object.fromEntries(
+    PRODUCTION_DUE_LEAD_OPTIONS.map(({ key }) => {
+      const submitted = Number(formData.get(`due_lead_${key}`));
+      const fallback = PRODUCTION_DUE_LEAD_DEFAULTS[key];
+      return [key, Number.isFinite(submitted) ? Math.min(365, Math.max(0, Math.floor(submitted))) : fallback];
+    }),
+  );
+  const { error } = await supabaseAdminClient
+    .from("settings")
+    .update({ production_due_lead_days })
+    .eq("id", 1);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin/settings/production");
+  await logAdminActivity({
+    area: "operations",
+    action: "updated",
+    entityType: "production-settings",
+    entityLabel: "Production due lead times",
+    summary: "Updated production due lead times by state and pickup.",
+    path: "/admin/settings/production",
+    changedFields: ["Production due lead times"],
+    metadata: { productionDueLeadDays: production_due_lead_days },
   });
   redirect("/admin/settings/production");
 }
@@ -285,6 +341,12 @@ export default async function SettingsProductionPage() {
   const invoiceDueDays = Number.isFinite(invoiceDueDaysRaw)
     ? Math.min(90, Math.max(0, Math.floor(invoiceDueDaysRaw)))
     : 7;
+  const productionDueLeadDays = Object.fromEntries(
+    PRODUCTION_DUE_LEAD_OPTIONS.map(({ key }) => {
+      const configured = Number(settings.production_due_lead_days?.[key]);
+      return [key, Number.isFinite(configured) && configured >= 0 ? Math.floor(configured) : PRODUCTION_DUE_LEAD_DEFAULTS[key]];
+    }),
+  ) as Record<string, number>;
 
   return (
     <section className="space-y-6">
@@ -361,6 +423,41 @@ export default async function SettingsProductionPage() {
           </AdminSubmitButton>
         </div>
       </form>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div>
+          <h3 className="admin-card-title text-zinc-900">Calendar due lead times</h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            The production calendar flags an order red when its due date is fewer than this many days after its allocated production day.
+          </p>
+        </div>
+        <form action={updateProductionDueLeadDays} className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            {PRODUCTION_DUE_LEAD_OPTIONS.map(({ key, label }) => (
+              <label key={key} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-700">
+                <span>{label}</span>
+                <span className="mt-0.5 block text-[11px] font-normal text-zinc-500">Days after production</span>
+                <input
+                  type="number"
+                  name={`due_lead_${key}`}
+                  min={0}
+                  max={365}
+                  defaultValue={productionDueLeadDays[key]}
+                  required
+                  className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                />
+              </label>
+            ))}
+          </div>
+          <AdminSubmitButton
+            type="submit"
+            pendingLabel="Saving..."
+            className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+          >
+            Save calendar lead times
+          </AdminSubmitButton>
+        </form>
+      </section>
 
       <div className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="space-y-1">

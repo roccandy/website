@@ -69,6 +69,7 @@ export type SettingsRow = {
   urgency_fee: number;
   quote_blockout_months: number | null;
   show_quote_blockout_banner?: boolean | null;
+  production_due_lead_days?: Record<string, number> | null;
   invoice_due_days: number | null;
   production_slots_per_day: number;
   no_production_mon: boolean;

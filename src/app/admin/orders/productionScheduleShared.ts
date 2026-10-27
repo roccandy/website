@@ -44,6 +44,47 @@ export const formatDueDateDistance = (iso: string | null | undefined, today = ne
   return `${Math.abs(days)} days ago`;
 };
 
+const DEFAULT_PRODUCTION_DUE_LEAD_DAYS: Record<string, number> = {
+  pickup: 3,
+  WA: 3,
+  ACT: 7,
+  NSW: 7,
+  NT: 7,
+  QLD: 7,
+  SA: 7,
+  TAS: 7,
+  VIC: 7,
+};
+
+export const productionDueLeadFromSlot = ({
+  dueDate,
+  slotDate,
+  pickup,
+  state,
+  settings,
+}: {
+  dueDate: string | null | undefined;
+  slotDate: string;
+  pickup: boolean;
+  state: string | null | undefined;
+  settings: SettingsRow;
+}) => {
+  const due = parseCalendarDate(dueDate);
+  const slot = parseCalendarDate(slotDate);
+  if (!due || !slot) return null;
+
+  const days = Math.round((due.getTime() - slot.getTime()) / DAY_MS);
+  const key = pickup ? "pickup" : state?.trim().toUpperCase() || "";
+  const defaultLeadDays = DEFAULT_PRODUCTION_DUE_LEAD_DAYS[key] ?? 7;
+  const configuredLeadDays = Number(settings.production_due_lead_days?.[key]);
+  const leadDays = Number.isFinite(configuredLeadDays) && configuredLeadDays >= 0
+    ? Math.floor(configuredLeadDays)
+    : defaultLeadDays;
+  const label = days === 0 ? "due today" : days === 1 ? "in 1 day" : days > 1 ? `in ${days} days` : `${Math.abs(days)} day${days === -1 ? "" : "s"} late`;
+
+  return { days, leadDays, label, urgent: days < leadDays };
+};
+
 export const formatDateInput = (iso: string | null | undefined) => {
   if (!iso) return "";
   const date = new Date(iso);
