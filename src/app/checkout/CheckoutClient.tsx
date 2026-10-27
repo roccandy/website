@@ -799,6 +799,12 @@ const buildDateKey = (date: Date) => {
 const formatMonthLabel = (date: Date) =>
   date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
+const formatDeliveryDate = (date: Date) => {
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const month = date.toLocaleDateString("en-AU", { month: "long" }).toUpperCase();
+  return `${day} ${month} ${date.getFullYear()}`;
+};
+
 
 function normalizeHex(value: string) {
   const trimmed = value.trim();
@@ -1214,6 +1220,26 @@ function CheckoutDatePicker({
     const today = new Date();
     return buildDateKey(today);
   }, []);
+  const nextAvailableDeliveryDate = useMemo(() => {
+    if (!blocks.some((block) => block.end_date >= todayKey)) return null;
+    const nextDate = new Date();
+    nextDate.setHours(0, 0, 0, 0);
+    nextDate.setDate(nextDate.getDate() + 1);
+    let blockingWindow = blocks.find((block) => {
+      const dateKey = buildDateKey(nextDate);
+      return dateKey >= block.start_date && dateKey <= block.end_date;
+    });
+    while (blockingWindow) {
+      const dayAfterBlock = new Date(`${blockingWindow.end_date}T00:00:00`);
+      dayAfterBlock.setDate(dayAfterBlock.getDate() + 1);
+      nextDate.setTime(dayAfterBlock.getTime());
+      blockingWindow = blocks.find((block) => {
+        const dateKey = buildDateKey(nextDate);
+        return dateKey >= block.start_date && dateKey <= block.end_date;
+      });
+    }
+    return formatDeliveryDate(nextDate);
+  }, [blocks, todayKey]);
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -1262,11 +1288,16 @@ function CheckoutDatePicker({
               </button>
             </div>
             {showUrgencyNotice && (
-              <p className="mt-3 text-xs text-zinc-500">
-                {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge needed within ${urgencyPeriodDays} day${
-                  urgencyPeriodDays === 1 ? "" : "s"
-                }.`}
-              </p>
+              <div className="mt-3 space-y-1 text-xs">
+                <p className="text-zinc-500">
+                  {`${Math.round(urgencyFeePercent * 100) / 100}% surcharge needed within ${urgencyPeriodDays} day${
+                    urgencyPeriodDays === 1 ? "" : "s"
+                  }.`}
+                </p>
+                {nextAvailableDeliveryDate ? (
+                  <p className="font-semibold text-red-600">Next available delivery date: {nextAvailableDeliveryDate}</p>
+                ) : null}
+              </div>
             )}
 
             <div className="mt-4 rounded-xl border border-zinc-200 p-3">
