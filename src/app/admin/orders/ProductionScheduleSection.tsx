@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
-import { useMemo, useState, useTransition, type DragEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type DragEvent } from "react";
 import { ArrowRight } from "lucide-react";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import { useRouter } from "next/navigation";
@@ -52,6 +52,13 @@ const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
 
 const WORKWEEK_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 
+type OptimisticAssignment = {
+  id: string;
+  orderId: string;
+  kgAssigned: number;
+  sourceSlotKey?: string;
+};
+
 const startOfWorkweek = (date: Date) => {
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
@@ -92,6 +99,7 @@ export default function ProductionScheduleSection({
   } | null>(null);
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
   const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
+  const [optimisticAssignments, setOptimisticAssignments] = useState<Record<string, OptimisticAssignment>>({});
   const [isDropPending, startDropTransition] = useTransition();
   const [isScheduleShiftPending, startScheduleShiftTransition] = useTransition();
   const [dropChoice, setDropChoice] = useState<{ orderId: string; date: string; slotIndex: number; assignments: OrderSlot[] } | null>(null);
@@ -109,6 +117,35 @@ export default function ProductionScheduleSection({
   const assignmentBySlotKey = useMemo(() => buildAssignmentBySlotKey(assignments, slots), [assignments, slots]);
   const slotIdByKey = useMemo(() => buildSlotIdByKey(slots), [slots]);
   const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
+  const displayedAssignmentBySlotKey = useMemo(() => {
+    const displayed = new Map(assignmentBySlotKey);
+    Object.entries(optimisticAssignments).forEach(([destinationSlotKey, optimistic]) => {
+      if (optimistic.sourceSlotKey) displayed.delete(optimistic.sourceSlotKey);
+      displayed.set(destinationSlotKey, {
+        id: optimistic.id,
+        order_id: optimistic.orderId,
+        slot_id: "",
+        kg_assigned: optimistic.kgAssigned,
+        created_at: "",
+      });
+    });
+    return displayed;
+  }, [assignmentBySlotKey, optimisticAssignments]);
+
+  useEffect(() => {
+    setOptimisticAssignments((current) => {
+      let changed = false;
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([destinationSlotKey, optimistic]) => {
+          const confirmedAssignment = assignmentBySlotKey.get(destinationSlotKey);
+          const keep = confirmedAssignment?.order_id !== optimistic.orderId;
+          if (!keep) changed = true;
+          return keep;
+        }),
+      );
+      return changed ? next : current;
+    });
+  }, [assignmentBySlotKey]);
   const dayNoteByDate = useMemo(() => new Map(dayNotes.map((note) => [note.note_date, note])), [dayNotes]);
   const assignmentByOrderId = useMemo(() => {
     const map = new Map<string, { assignment: OrderSlot; slot: ProductionSlot | null }>();
@@ -243,11 +280,30 @@ export default function ProductionScheduleSection({
     if (result?.ok) {
       refreshAfterAssignment();
     }
+    return result;
   };
   const commitDrop = (orderId: string, date: string, slotIndex: number, kg: number, assignmentId?: string) => {
     setDraggingAssignmentId(null);
     setHoveredDropSlotKey(null);
     onOrderDragEnd();
+    const destinationSlotKey = `${date}:${slotIndex}`;
+    const sourceSlot = assignmentId ? slotMap.get(assignmentById.get(assignmentId)?.slot_id ?? "") : null;
+    const optimisticAssignmentId = assignmentId ?? `optimistic-${orderId}-${destinationSlotKey}`;
+    setOptimisticAssignments((current) => ({
+      ...current,
+      [destinationSlotKey]: {
+        id: optimisticAssignmentId,
+        orderId,
+        kgAssigned: kg,
+        sourceSlotKey: sourceSlot ? `${sourceSlot.slot_date}:${sourceSlot.slot_index}` : undefined,
+      },
+    }));
+    const discardOptimisticAssignment = () => {
+      setOptimisticAssignments((current) => {
+        const { [destinationSlotKey]: _discarded, ...remaining } = current;
+        return remaining;
+      });
+    };
     startDropTransition(async () => {
       const formData = new FormData();
       formData.set("order_id", orderId);
@@ -256,7 +312,13 @@ export default function ProductionScheduleSection({
       formData.set("slot_id", slotIdByKey.get(`${date}:${slotIndex}`) ?? "");
       formData.set("kg_assigned", String(kg));
       if (assignmentId) formData.set("assignment_id", assignmentId);
-      try { await runAssignmentAction(formData); } catch { emitToast("error", "Unable to update the schedule. No success was confirmed; refresh and check the slot before retrying."); }
+      try {
+        const result = await runAssignmentAction(formData);
+        if (!result?.ok) discardOptimisticAssignment();
+      } catch {
+        discardOptimisticAssignment();
+        emitToast("error", "Unable to update the schedule. No success was confirmed; refresh and check the slot before retrying.");
+      }
     });
   };
   const submitScheduleShift = () => {
@@ -462,7 +524,7 @@ export default function ProductionScheduleSection({
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
                         const slotIndex = idx + 1;
                         const slotKey = `${key}:${slotIndex}`;
-                        const assignment = assignmentBySlotKey.get(slotKey);
+                        const assignment = displayedAssignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const title = productionScheduleTitle(order);
                         const stateLabel = order?.pickup ? "Pickup" : order?.state?.trim();
@@ -478,6 +540,7 @@ export default function ProductionScheduleSection({
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canDragSlotOrder = key >= todayKey;
                         const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
+                        const isOptimisticAssignment = assignment?.id.startsWith("optimistic-") ?? false;
                         const isCollapsedCompletedCalendarOrder =
                           Boolean(assignment) &&
                           isCompletedCalendarOrder &&
@@ -507,7 +570,7 @@ export default function ProductionScheduleSection({
                           >
                             {assignment && order ? (
                               <div
-                                draggable={canWrite && canDragSlotOrder && !isCompletedCalendarOrder && !order.made && !order.refunded_at}
+                                draggable={canWrite && !isOptimisticAssignment && canDragSlotOrder && !isCompletedCalendarOrder && !order.made && !order.refunded_at}
                                 onDragStart={(event) => {
                                   event.dataTransfer.effectAllowed = "move";
                                   event.dataTransfer.setData("text/plain", order.order_number || "Production batch");
@@ -518,7 +581,7 @@ export default function ProductionScheduleSection({
                                   setDraggingAssignmentId(null);
                                   setHoveredDropSlotKey(null);
                                 }}
-                                className={`relative rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
+                                className={`relative rounded-md border px-2 py-1.5 text-[10px] ${isOptimisticAssignment ? "opacity-70" : ""} ${statusCard(
                                   getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
                                 )}`}
                               >
@@ -646,7 +709,7 @@ export default function ProductionScheduleSection({
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
                         const slotIndex = idx + 1;
                         const slotKey = `${key}:${slotIndex}`;
-                        const assignment = assignmentBySlotKey.get(slotKey);
+                        const assignment = displayedAssignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const isAdminPremade = order ? isAdminPremadeOrder(order) : false;
                         const printTarget = order?.id ?? order?.order_number;
