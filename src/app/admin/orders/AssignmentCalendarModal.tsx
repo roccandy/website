@@ -102,6 +102,7 @@ export default function AssignmentCalendarModal({
   });
   const [isPending, startTransition] = useTransition();
   const [splitPromptOpen, setSplitPromptOpen] = useState(false);
+  const [unassignPromptOpen, setUnassignPromptOpen] = useState(false);
   const [pendingSlotSelections, setPendingSlotSelections] = useState<PendingSlotSelection[]>([]);
   const todayKey = dateKey(new Date());
   const slotsPerDay = Math.max(1, Number(settings.production_slots_per_day) || 1);
@@ -219,6 +220,24 @@ export default function AssignmentCalendarModal({
       }
     });
   };
+  const unassign = (allBatches: boolean) => {
+    if (!assignment?.assignment.id) return;
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("assignment_id", assignment.assignment.id);
+      if (allBatches) formData.set("unassign_all", "on");
+      formData.set("response_mode", "inline");
+      const result = await deleteAssignment(formData);
+      if (result?.message) {
+        emitToast(result.tone, result.message);
+      }
+      if (result?.ok) {
+        setUnassignPromptOpen(false);
+        onClose();
+        router.refresh();
+      }
+    });
+  };
   const savePendingSlotSelections = () => {
     if (!stagedAssignMode || pendingSlotSelections.length === 0) return;
     startTransition(async () => {
@@ -305,19 +324,11 @@ export default function AssignmentCalendarModal({
                 type="button"
                 disabled={isPending}
                 onClick={() => {
-                  startTransition(async () => {
-                    const formData = new FormData();
-                    formData.set("assignment_id", assignment.assignment.id);
-                    formData.set("response_mode", "inline");
-                    const result = await deleteAssignment(formData);
-                    if (result?.message) {
-                      emitToast(result.tone, result.message);
-                    }
-                    if (result?.ok) {
-                      onClose();
-                      router.refresh();
-                    }
-                  });
+                  if (orderAssignments.length > 1) {
+                    setUnassignPromptOpen(true);
+                    return;
+                  }
+                  unassign(false);
                 }}
                 className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300 disabled:opacity-50"
               >
@@ -499,6 +510,50 @@ export default function AssignmentCalendarModal({
           onNo={() => completeOrder(false)}
           onCancel={() => setSplitPromptOpen(false)}
         />
+      ) : null}
+      {unassignPromptOpen ? (
+        <AdminModalPortal onClose={() => !isPending && setUnassignPromptOpen(false)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => !isPending && setUnassignPromptOpen(false)}>
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-label="Choose batches to unassign"
+              className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold text-zinc-900">Unassign production batches</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                This order has {orderAssignments.length} scheduled batches. Choose whether to remove just the selected batch or every batch from the production schedule.
+              </p>
+              <div className="mt-5 grid gap-2">
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => unassign(false)}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-left text-sm font-semibold text-rose-800 hover:border-rose-300 disabled:opacity-50"
+                >
+                  Unassign this batch only
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => unassign(true)}
+                  className="rounded-lg border border-rose-300 bg-rose-600 px-3 py-3 text-left text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                >
+                  Unassign all {orderAssignments.length} batches
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setUnassignPromptOpen(false)}
+                  className="mt-1 rounded px-3 py-2 text-sm font-semibold text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </section>
+          </div>
+        </AdminModalPortal>
       ) : null}
     </AdminModalPortal>
   );

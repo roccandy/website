@@ -2509,9 +2509,12 @@ export async function deleteAssignment(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
   let orderIdForLog: string | null = null;
+  let removedCount = 0;
+  let removedAll = false;
   try {
     const assignmentId = formData.get("assignment_id")?.toString();
     if (!assignmentId) throw new Error("Missing assignment id");
+    removedAll = formData.get("unassign_all") === "on";
 
     const client = supabaseAdminClient;
     const { data: orderSlot, error: slotLookupError } = await client
@@ -2520,17 +2523,30 @@ export async function deleteAssignment(formData: FormData) {
       .eq("id", assignmentId)
       .maybeSingle();
     if (slotLookupError) throw new Error(slotLookupError.message);
+    if (!orderSlot) throw new Error("Production assignment not found.");
     orderIdForLog = orderSlot?.order_id ?? null;
 
-    const { error } = await client.from("order_slots").delete().eq("id", assignmentId);
+    const deleteQuery = client.from("order_slots").delete();
+    const { data: deletedAssignments, error } = removedAll
+      ? await deleteQuery.eq("order_id", orderSlot.order_id).select("id")
+      : await deleteQuery.eq("id", assignmentId).select("id");
     if (error) throw new Error(error.message);
+    removedCount = deletedAssignments?.length ?? 0;
 
     if (orderSlot?.order_id) {
-      const { error: statusError } = await client
-        .from("orders")
-        .update({ status: "unassigned" })
-        .eq("id", orderSlot.order_id);
-      if (statusError) throw new Error(statusError.message);
+      const { data: remainingAssignments, error: remainingAssignmentsError } = await client
+        .from("order_slots")
+        .select("id")
+        .eq("order_id", orderSlot.order_id)
+        .limit(1);
+      if (remainingAssignmentsError) throw new Error(remainingAssignmentsError.message);
+      if ((remainingAssignments?.length ?? 0) === 0) {
+        const { error: statusError } = await client
+          .from("orders")
+          .update({ status: "unassigned" })
+          .eq("id", orderSlot.order_id);
+        if (statusError) throw new Error(statusError.message);
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to unassign order.";
@@ -2547,15 +2563,23 @@ export async function deleteAssignment(formData: FormData) {
     entityType: "order",
     entityId: orderIdForLog,
     entityLabel: orderIdForLog ?? "Order",
-    summary: "Removed an order from its production slot.",
+    summary: removedAll
+      ? `Removed all ${removedCount} production batch${removedCount === 1 ? "" : "es"} from the schedule.`
+      : "Removed one production batch from the schedule.",
     path: ORDERS_PATH,
     changedFields: ["Production slot"],
   });
   if (inlineResponse) {
     revalidatePath(ORDERS_PATH);
-    return { ok: true, tone: "success" as const, message: "Order unassigned." };
+    return {
+      ok: true,
+      tone: "success" as const,
+      message: removedAll
+        ? `Unassigned all ${removedCount} batch${removedCount === 1 ? "" : "es"}.`
+        : "Batch unassigned.",
+    };
   }
-  redirect(toastRedirect(ORDERS_PATH, "success", "Order unassigned."));
+  redirect(toastRedirect(ORDERS_PATH, "success", removedAll ? `Unassigned all ${removedCount} batches.` : "Batch unassigned."));
 }
 
 async function deleteOrderShared(formData: FormData, inlineResponse: boolean) {
