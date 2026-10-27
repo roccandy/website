@@ -527,7 +527,7 @@ export default function ProductionScheduleSection({
                                     {stateLabel}
                                   </span>
                                 ) : null}
-                                {dueLead ? (
+                                {dueLead && key >= todayKey ? (
                                   <span className={`absolute right-2 top-4.5 max-w-[45%] truncate text-[9px] font-medium ${dueLead.urgent ? "text-rose-600" : "text-zinc-500"}`}>
                                     {dueLead.label}
                                   </span>
