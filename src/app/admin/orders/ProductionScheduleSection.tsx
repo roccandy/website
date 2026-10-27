@@ -9,7 +9,7 @@ import { useAdminViewState } from "../useAdminViewState";
 import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
-import { archiveOrderInline, assignOrderToSlot, shiftProductionSchedule, upsertProductionDayNote } from "./actions";
+import { archiveOrderInline, assignOrderToSlot, shiftProductionSchedule, swapProductionAssignments, upsertProductionDayNote } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
@@ -119,8 +119,10 @@ export default function ProductionScheduleSection({
   const assignmentById = useMemo(() => new Map(assignments.map((assignment) => [assignment.id, assignment])), [assignments]);
   const displayedAssignmentBySlotKey = useMemo(() => {
     const displayed = new Map(assignmentBySlotKey);
-    Object.entries(optimisticAssignments).forEach(([destinationSlotKey, optimistic]) => {
+    Object.values(optimisticAssignments).forEach((optimistic) => {
       if (optimistic.sourceSlotKey) displayed.delete(optimistic.sourceSlotKey);
+    });
+    Object.entries(optimisticAssignments).forEach(([destinationSlotKey, optimistic]) => {
       displayed.set(destinationSlotKey, {
         id: optimistic.id,
         order_id: optimistic.orderId,
@@ -321,6 +323,57 @@ export default function ProductionScheduleSection({
       }
     });
   };
+  const commitSwap = (firstAssignmentId: string, secondAssignmentId: string) => {
+    const firstAssignment = assignmentById.get(firstAssignmentId);
+    const secondAssignment = assignmentById.get(secondAssignmentId);
+    const firstSlot = firstAssignment ? slotMap.get(firstAssignment.slot_id) : null;
+    const secondSlot = secondAssignment ? slotMap.get(secondAssignment.slot_id) : null;
+    if (!firstAssignment || !secondAssignment || !firstSlot || !secondSlot) {
+      emitToast("error", "Unable to identify both production slots. Refresh and try again.");
+      return;
+    }
+    const firstSlotKey = `${firstSlot.slot_date}:${firstSlot.slot_index}`;
+    const secondSlotKey = `${secondSlot.slot_date}:${secondSlot.slot_index}`;
+    setDraggingAssignmentId(null);
+    setHoveredDropSlotKey(null);
+    onOrderDragEnd();
+    setOptimisticAssignments((current) => ({
+      ...current,
+      [firstSlotKey]: {
+        id: `optimistic-${secondAssignment.id}`,
+        orderId: secondAssignment.order_id,
+        kgAssigned: Number(secondAssignment.kg_assigned),
+        sourceSlotKey: secondSlotKey,
+      },
+      [secondSlotKey]: {
+        id: `optimistic-${firstAssignment.id}`,
+        orderId: firstAssignment.order_id,
+        kgAssigned: Number(firstAssignment.kg_assigned),
+        sourceSlotKey: firstSlotKey,
+      },
+    }));
+    const discardOptimisticSwap = () => {
+      setOptimisticAssignments((current) => {
+        const { [firstSlotKey]: _first, [secondSlotKey]: _second, ...remaining } = current;
+        return remaining;
+      });
+    };
+    startDropTransition(async () => {
+      const formData = new FormData();
+      formData.set("first_assignment_id", firstAssignmentId);
+      formData.set("second_assignment_id", secondAssignmentId);
+      formData.set("response_mode", "inline");
+      try {
+        const result = await swapProductionAssignments(formData);
+        if (result?.message) emitToast(result.tone, result.message);
+        if (result?.ok) router.refresh();
+        else discardOptimisticSwap();
+      } catch {
+        discardOptimisticSwap();
+        emitToast("error", "Unable to swap production batches. No change was confirmed; refresh and check before retrying.");
+      }
+    });
+  };
   const submitScheduleShift = () => {
     if (!scheduleShift) return;
     const { date, days } = scheduleShift;
@@ -343,7 +396,14 @@ export default function ProductionScheduleSection({
   };
   const handleSlotDrop = (event: DragEvent<HTMLDivElement>, date: string, slotIndex: number, occupied: boolean) => {
     event.preventDefault();
-    if (!canWrite || occupied || date < todayKey || isDropPending) return;
+    if (!canWrite || date < todayKey || isDropPending) return;
+    const targetAssignment = assignmentBySlotKey.get(`${date}:${slotIndex}`);
+    if (occupied) {
+      if (draggingAssignmentId && targetAssignment && draggingAssignmentId !== targetAssignment.id) {
+        commitSwap(draggingAssignmentId, targetAssignment.id);
+      }
+      return;
+    }
     const orderId = draggingOrderId || event.dataTransfer.getData(PRODUCTION_ORDER_DRAG_TYPE);
     if (orderId) {
       const order = ordersById.get(orderId);
@@ -552,12 +612,13 @@ export default function ProductionScheduleSection({
                               hoveredDropSlotKey === slotKey && Boolean(draggingOrderId || draggingAssignmentId)
                                 ? "border-blue-500 ring-2 ring-blue-200"
                                     : "border-zinc-200"
-                            } ${(draggingAssignmentId || draggingOrderId) && !assignment && !isDropPending ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
+                            } ${(draggingAssignmentId || draggingOrderId) && !isDropPending && (!assignment || draggingAssignmentId) ? "hover:border-blue-300 hover:bg-blue-50/40" : ""}`}
                             data-production-date={key}
                             data-production-slot={slotIndex}
                             data-occupied={Boolean(assignment)}
                             onDragOver={(event) => {
-                              if (!canWrite || (!draggingAssignmentId && !draggingOrderId) || assignment || key < todayKey || isDropPending) return;
+                              const canSwap = Boolean(draggingAssignmentId && assignment && assignment.id !== draggingAssignmentId);
+                              if (!canWrite || (!draggingAssignmentId && !draggingOrderId) || key < todayKey || isDropPending || (assignment && !canSwap)) return;
                               event.preventDefault();
                               event.dataTransfer.dropEffect = "move";
                               if (hoveredDropSlotKey !== slotKey) setHoveredDropSlotKey(slotKey);
@@ -571,7 +632,11 @@ export default function ProductionScheduleSection({
                             {assignment && order ? (
                               <div
                                 draggable={canWrite && !isOptimisticAssignment && canDragSlotOrder && !isCompletedCalendarOrder && !order.made && !order.refunded_at}
+                                onMouseDown={(event) => {
+                                  if (event.button === 0) window.getSelection()?.removeAllRanges();
+                                }}
                                 onDragStart={(event) => {
+                                  window.getSelection()?.removeAllRanges();
                                   event.dataTransfer.effectAllowed = "move";
                                   event.dataTransfer.setData("text/plain", order.order_number || "Production batch");
                                   setDraggingAssignmentId(assignment.id);
@@ -581,7 +646,7 @@ export default function ProductionScheduleSection({
                                   setDraggingAssignmentId(null);
                                   setHoveredDropSlotKey(null);
                                 }}
-                                className={`relative rounded-md border px-2 py-1.5 text-[10px] ${isOptimisticAssignment ? "opacity-70" : ""} ${statusCard(
+                                className={`relative select-none rounded-md border px-2 py-1.5 text-[10px] ${isOptimisticAssignment ? "opacity-70" : ""} ${statusCard(
                                   getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
                                 )}`}
                               >

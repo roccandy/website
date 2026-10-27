@@ -2505,6 +2505,46 @@ export async function shiftProductionSchedule(formData: FormData) {
   }
 }
 
+export async function swapProductionAssignments(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const inlineResponse = isInlineResponse(formData);
+  try {
+    const firstAssignmentId = formData.get("first_assignment_id")?.toString();
+    const secondAssignmentId = formData.get("second_assignment_id")?.toString();
+    if (!firstAssignmentId || !secondAssignmentId || firstAssignmentId === secondAssignmentId) {
+      throw new Error("Choose two different production batches to swap.");
+    }
+    const { error } = await supabaseAdminClient.rpc("swap_production_assignments", {
+      p_first_assignment_id: firstAssignmentId,
+      p_second_assignment_id: secondAssignmentId,
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes("swap_production_assignments")) {
+        throw new Error("Run the production assignment swap SQL migration in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "production-schedule",
+      entityLabel: "Production batches",
+      summary: "Swapped two production batch slots.",
+      path: ORDERS_PATH,
+      changedFields: ["Production slots"],
+      metadata: { firstAssignmentId, secondAssignmentId },
+    });
+    revalidatePath(ORDERS_PATH);
+    revalidatePath("/admin/production");
+    if (inlineResponse) return { ok: true, tone: "success" as const, message: "Production batches swapped." };
+    redirect(toastRedirect(ORDERS_PATH, "success", "Production batches swapped."));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to swap production batches.";
+    if (inlineResponse) return { ok: false, tone: "error" as const, message };
+    redirect(toastRedirect(ORDERS_PATH, "error", message));
+  }
+}
+
 export async function deleteAssignment(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
