@@ -2,13 +2,14 @@
 
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { useMemo, useState, useTransition, type DragEvent } from "react";
+import { ArrowRight } from "lucide-react";
 import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import { useRouter } from "next/navigation";
 import { useAdminViewState } from "../useAdminViewState";
 import { AdminModalPortal } from "../AdminModalPortal";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
-import { archiveOrderInline, assignOrderToSlot, upsertProductionDayNote } from "./actions";
+import { archiveOrderInline, assignOrderToSlot, shiftProductionSchedule, upsertProductionDayNote } from "./actions";
 import AssignmentCalendarModal from "./AssignmentCalendarModal";
 import OrderTitleWithLogo from "./OrderTitleWithLogo";
 import SplitAwareActionForm from "./SplitAwareActionForm";
@@ -91,7 +92,9 @@ export default function ProductionScheduleSection({
   const [draggingAssignmentId, setDraggingAssignmentId] = useState<string | null>(null);
   const [hoveredDropSlotKey, setHoveredDropSlotKey] = useState<string | null>(null);
   const [isDropPending, startDropTransition] = useTransition();
+  const [isScheduleShiftPending, startScheduleShiftTransition] = useTransition();
   const [dropChoice, setDropChoice] = useState<{ orderId: string; date: string; slotIndex: number; assignments: OrderSlot[] } | null>(null);
+  const [scheduleShift, setScheduleShift] = useState<{ date: string; days: string } | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [savingNoteDate, setSavingNoteDate] = useState<string | null>(null);
   const [isNotePending, startNoteTransition] = useTransition();
@@ -255,6 +258,26 @@ export default function ProductionScheduleSection({
       try { await runAssignmentAction(formData); } catch { emitToast("error", "Unable to update the schedule. No success was confirmed; refresh and check the slot before retrying."); }
     });
   };
+  const submitScheduleShift = () => {
+    if (!scheduleShift) return;
+    const { date, days } = scheduleShift;
+    startScheduleShiftTransition(async () => {
+      const formData = new FormData();
+      formData.set("start_date", date);
+      formData.set("days", days);
+      formData.set("response_mode", "inline");
+      try {
+        const result = await shiftProductionSchedule(formData);
+        if (result?.message) emitToast(result.tone, result.message);
+        if (result?.ok) {
+          setScheduleShift(null);
+          router.refresh();
+        }
+      } catch {
+        emitToast("error", "Unable to move the production schedule. No change was confirmed; refresh and check before retrying.");
+      }
+    });
+  };
   const handleSlotDrop = (event: DragEvent<HTMLDivElement>, date: string, slotIndex: number, occupied: boolean) => {
     event.preventDefault();
     if (!canWrite || occupied || date < todayKey || isDropPending) return;
@@ -413,7 +436,7 @@ export default function ProductionScheduleSection({
                       key={key}
                       className={`min-w-0 rounded-lg border bg-white px-2.5 py-2 ${isToday ? "border-slate-900 ring-2 ring-slate-900" : "border-zinc-200"}`}
                     >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                           {formatWeekdayShortLabel(day)}
@@ -422,6 +445,17 @@ export default function ProductionScheduleSection({
                           {formatDayMonthLabel(day)}
                         </p>
                       </div>
+                      {canWrite ? (
+                        <button
+                          type="button"
+                          onClick={() => setScheduleShift({ date: key, days: "1" })}
+                          className="ml-auto inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 hover:text-zinc-900"
+                          aria-label={`Move all scheduled orders from ${formatDayMonthLabel(day)} forward`}
+                          title="Move all scheduled orders from this date forward"
+                        >
+                          <ArrowRight size={13} aria-hidden="true" />
+                        </button>
+                      ) : null}
                     </div>
                     <div className="mt-2 space-y-1.5">
                       {Array.from({ length: slotsPerDay }, (_, idx) => {
@@ -760,6 +794,54 @@ export default function ProductionScheduleSection({
         )}
       </div>
       {dropChoice && <AdminModalPortal onClose={() => setDropChoice(null)}><div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDropChoice(null)}><section role="dialog" aria-modal="true" aria-label="Choose batch to move" className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onClick={(event) => event.stopPropagation()}><h3 className="text-lg font-semibold">Which batch should move?</h3><p className="mt-2 text-xs leading-5 text-zinc-500">{ordersById.get(dropChoice.orderId)?.title} has multiple allocated batches. Move one to {formatDate(dropChoice.date)}, slot {dropChoice.slotIndex}. Other batches stay where they are.</p><div className="mt-4 space-y-2">{dropChoice.assignments.map((assignment) => { const slot = slotMap.get(assignment.slot_id);return <button key={assignment.id} type="button" className="block w-full rounded-lg border border-zinc-200 px-3 py-3 text-left text-sm hover:border-emerald-500" onClick={() => { const choice = dropChoice; setDropChoice(null); commitDrop(choice.orderId, choice.date, choice.slotIndex, Number(assignment.kg_assigned), assignment.id); }}>{Number(assignment.kg_assigned).toFixed(2)} kg · {slot ? `${formatDate(slot.slot_date)} · Slot ${slot.slot_index}` : "Unknown date"}</button>; })}</div><button type="button" onClick={() => setDropChoice(null)} className="mt-4 text-xs font-semibold text-zinc-500">Cancel</button></section></div></AdminModalPortal>}
+      {scheduleShift ? (
+        <AdminModalPortal onClose={() => !isScheduleShiftPending && setScheduleShift(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !isScheduleShiftPending && setScheduleShift(null)}>
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-label="Move production schedule forward"
+              className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold text-zinc-900">Move production schedule</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Move every scheduled production assignment on or after {formatDate(scheduleShift.date)} forward by the number of calendar days below. Slot positions stay the same.
+              </p>
+              <label className="mt-4 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Days forward
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={scheduleShift.days}
+                  onChange={(event) => setScheduleShift((current) => current ? { ...current, days: event.target.value } : current)}
+                  disabled={isScheduleShiftPending}
+                  className="mt-2 w-full rounded border border-zinc-200 px-3 py-2 text-sm font-normal text-zinc-900"
+                />
+              </label>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScheduleShift(null)}
+                  disabled={isScheduleShiftPending}
+                  className="rounded border border-zinc-300 px-3 py-2 text-xs font-semibold text-zinc-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={submitScheduleShift}
+                  disabled={isScheduleShiftPending}
+                  className="rounded bg-zinc-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  {isScheduleShiftPending ? "Moving…" : "Move schedule"}
+                </button>
+              </div>
+            </section>
+          </div>
+        </AdminModalPortal>
+      ) : null}
       {slotPicker && (
         <AdminModalPortal onClose={closeSlotPicker}>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeSlotPicker}>

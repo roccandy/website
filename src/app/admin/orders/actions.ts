@@ -2453,6 +2453,58 @@ export async function assignOrderToSlot(formData: FormData) {
   redirect(toastRedirect(ORDERS_PATH, "success", "Order assigned."));
 }
 
+export async function shiftProductionSchedule(formData: FormData) {
+  await requireAdminWriteAccess({ onDenied: "redirect" });
+  const inlineResponse = isInlineResponse(formData);
+  try {
+    const startDate = formData.get("start_date")?.toString().trim() ?? "";
+    const days = Math.floor(Number(formData.get("days")));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) throw new Error("Choose a production date to start from.");
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      throw new Error("Choose between 1 and 365 days to move the schedule forward.");
+    }
+
+    const { data, error } = await supabaseAdminClient.rpc("shift_production_schedule", {
+      p_start_date: startDate,
+      p_days: days,
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes("shift_production_schedule")) {
+        throw new Error("Run the production schedule shift SQL migration in Supabase first.");
+      }
+      throw new Error(error.message);
+    }
+
+    const movedCount = Number(data) || 0;
+    await logAdminActivity({
+      area: "operations",
+      action: "updated",
+      entityType: "production-schedule",
+      entityLabel: `From ${startDate}`,
+      summary: `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} from ${startDate} forward ${days} day${days === 1 ? "" : "s"}.`,
+      path: ORDERS_PATH,
+      changedFields: ["Production dates"],
+      metadata: { startDate, days, movedCount },
+    });
+    revalidatePath(ORDERS_PATH);
+    revalidatePath("/admin/production");
+    if (inlineResponse) {
+      return {
+        ok: true,
+        tone: "success" as const,
+        message: movedCount > 0
+          ? `Moved ${movedCount} production assignment${movedCount === 1 ? "" : "s"} forward.`
+          : "No production assignments were scheduled from that date onward.",
+      };
+    }
+    redirect(toastRedirect(ORDERS_PATH, "success", `Moved ${movedCount} production assignments forward.`));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to move the production schedule.";
+    if (inlineResponse) return { ok: false, tone: "error" as const, message };
+    redirect(toastRedirect(ORDERS_PATH, "error", message));
+  }
+}
+
 export async function deleteAssignment(formData: FormData) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
