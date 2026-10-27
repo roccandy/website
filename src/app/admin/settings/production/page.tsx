@@ -6,6 +6,7 @@ import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
+import { WebsiteBlockoutBannerSettings } from "./WebsiteBlockoutBannerSettings";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -74,10 +75,11 @@ async function updateProductionSettings(formData: FormData) {
   redirect("/admin/settings/production");
 }
 
-async function updateBlockoutVisibilityWindow(formData: FormData) {
+async function updateBlockoutBannerSettings(formData: FormData) {
   "use server";
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: "/admin/settings/production" });
 
+  const show_quote_blockout_banner = formData.get("show_quote_blockout_banner") === "on";
   const monthsRaw = Number(formData.get("quote_blockout_months"));
   const quote_blockout_months = Number.isFinite(monthsRaw)
     ? Math.min(12, Math.max(1, Math.floor(monthsRaw)))
@@ -88,6 +90,7 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
     .from("settings")
     .update({
       quote_blockout_months,
+      show_quote_blockout_banner,
     })
     .eq("id", 1);
 
@@ -101,10 +104,11 @@ async function updateBlockoutVisibilityWindow(formData: FormData) {
     action: "updated",
     entityType: "quote-blockout-window",
     entityLabel: "Quote blockout window",
-    summary: "Updated the quote blockout visibility window.",
+    summary: "Updated the website blockout banner settings.",
     path: "/admin/settings/production",
-    changedFields: ["Quote blockout window"],
+    changedFields: ["Website blockout banner", "Quote blockout window"],
     metadata: {
+      showQuoteBlockoutBanner: show_quote_blockout_banner,
       quoteBlockoutMonths: quote_blockout_months,
     },
   });
@@ -276,6 +280,7 @@ export default async function SettingsProductionPage() {
   const quoteBlockoutMonths = Number.isFinite(quoteBlockoutMonthsRaw)
     ? Math.min(12, Math.max(1, Math.floor(quoteBlockoutMonthsRaw)))
     : 3;
+  const showQuoteBlockoutBanner = settings.show_quote_blockout_banner !== false;
   const invoiceDueDaysRaw = Number(settings.invoice_due_days ?? 7);
   const invoiceDueDays = Number.isFinite(invoiceDueDaysRaw)
     ? Math.min(90, Math.max(0, Math.floor(invoiceDueDaysRaw)))
@@ -391,41 +396,14 @@ export default async function SettingsProductionPage() {
           <div>
             <h4 className="admin-card-title text-zinc-900">Website blockouts</h4>
             <p className="text-xs text-zinc-500">
-              Block dates for holidays etc. Customers will see these dates as unavailable, and the
-              {" "}
-              <span className="font-semibold text-zinc-700">&quot;Deliveries paused between [date] and [date]&quot;</span>
-              {" "}
-              banner will appear on the website X months before the blocked period starts, then switch to
-              {" "}
-              <span className="font-semibold text-zinc-700">&quot;Deliveries resume [date]&quot;</span>
-              {" "}
-              during the blocked period.
+              Block dates for holidays etc. Customers will always see these dates as unavailable. The website banner is optional.
             </p>
           </div>
-          <form action={updateBlockoutVisibilityWindow} className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              X months
-              <input
-                type="number"
-                name="quote_blockout_months"
-                min={1}
-                max={12}
-                defaultValue={quoteBlockoutMonths}
-                className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-sm"
-                required
-              />
-            </label>
-            <div className="flex flex-wrap items-center gap-3">
-              <AdminSubmitButton
-                type="submit"
-                pendingLabel="Saving..."
-                className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-              >
-                Save website window
-              </AdminSubmitButton>
-              <p className="text-xs text-zinc-500">Current value: {quoteBlockoutMonths} month{quoteBlockoutMonths === 1 ? "" : "s"}.</p>
-            </div>
-          </form>
+          <WebsiteBlockoutBannerSettings
+            enabled={showQuoteBlockoutBanner}
+            months={quoteBlockoutMonths}
+            action={updateBlockoutBannerSettings}
+          />
           <form action={addBlock} className="grid gap-3 md:grid-cols-4">
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
               Start date

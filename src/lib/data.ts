@@ -68,6 +68,7 @@ export type SettingsRow = {
   lead_time_days: number;
   urgency_fee: number;
   quote_blockout_months: number | null;
+  show_quote_blockout_banner?: boolean | null;
   invoice_due_days: number | null;
   production_slots_per_day: number;
   no_production_mon: boolean;

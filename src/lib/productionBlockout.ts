@@ -55,6 +55,7 @@ type ActiveBlock = {
 
 export async function getActiveProductionBlockoutMessage() {
   const [settings, blocks] = await Promise.all([getSettings(), getProductionBlocks()]);
+  if (settings.show_quote_blockout_banner === false) return null;
   const monthsRaw = Number(settings.quote_blockout_months ?? 3);
   const visibilityMonths = Number.isFinite(monthsRaw) ? Math.min(12, Math.max(1, Math.floor(monthsRaw))) : 3;
 
