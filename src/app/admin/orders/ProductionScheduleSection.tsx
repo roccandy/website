@@ -430,6 +430,7 @@ export default function ProductionScheduleSection({
                         const assignment = assignmentBySlotKey.get(slotKey);
                         const order = assignment ? ordersById.get(assignment.order_id) : null;
                         const title = productionScheduleTitle(order);
+                        const stateLabel = order?.state?.trim();
                         const dueDateDistance = order ? formatDueDateDistance(order.due_date) : "";
                         const canDragSlotOrder = key >= todayKey;
                         const isCompletedCalendarOrder = order ? isCompletedProductionOrder(order) : false;
@@ -473,15 +474,20 @@ export default function ProductionScheduleSection({
                                   setDraggingAssignmentId(null);
                                   setHoveredDropSlotKey(null);
                                 }}
-                                className={`rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
+                                className={`relative rounded-md border px-2 py-1.5 text-[10px] ${statusCard(
                                   getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
                                 )}`}
                               >
+                                {stateLabel ? (
+                                  <span className="absolute right-2 top-1.5 max-w-[45%] truncate text-[9px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
+                                    {stateLabel}
+                                  </span>
+                                ) : null}
                                 {isCollapsedCompletedCalendarOrder ? (
                                   <button
                                     type="button"
                                     onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
-                                    className="block w-full truncate whitespace-nowrap text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                    className="block w-full truncate whitespace-nowrap pr-10 text-left text-[13px] font-semibold leading-tight text-zinc-900"
                                     aria-expanded="false"
                                     title={title}
                                   >
@@ -499,7 +505,7 @@ export default function ProductionScheduleSection({
                                       <button
                                         type="button"
                                         onClick={() => toggleCompletedCalendarAssignment(assignment.id)}
-                                        className="block w-full truncate whitespace-nowrap text-left text-[13px] font-semibold leading-tight text-zinc-900"
+                                        className="block w-full truncate whitespace-nowrap pr-10 text-left text-[13px] font-semibold leading-tight text-zinc-900"
                                         aria-expanded="true"
                                         title={title}
                                       >
@@ -513,7 +519,7 @@ export default function ProductionScheduleSection({
                                       </button>
                                     ) : (
                                       <p
-                                        className="truncate whitespace-nowrap text-[13px] font-semibold leading-tight text-zinc-900"
+                                        className="truncate whitespace-nowrap pr-10 text-[13px] font-semibold leading-tight text-zinc-900"
                                         title={title}
                                       >
                                         <OrderTitleWithLogo
