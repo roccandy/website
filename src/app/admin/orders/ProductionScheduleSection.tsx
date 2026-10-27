@@ -528,9 +528,14 @@ export default function ProductionScheduleSection({
                                   </span>
                                 ) : null}
                                 {dueLead && key >= todayKey ? (
-                                  <span className={`absolute right-2 top-4.5 max-w-[45%] truncate text-[9px] font-medium ${dueLead.urgent ? "text-rose-600" : "text-zinc-500"}`}>
-                                    {dueLead.label}
-                                  </span>
+                                  <>
+                                    <span className={`absolute right-2 top-4.5 max-w-[45%] truncate text-[9px] font-medium ${dueLead.urgent ? "text-rose-600" : "text-zinc-500"}`}>
+                                      {dueLead.label}
+                                    </span>
+                                    <span className="absolute right-2 top-7 max-w-[45%] truncate text-[9px] text-zinc-500">
+                                      Due {formatDate(order.due_date)}
+                                    </span>
+                                  </>
                                 ) : null}
                                 {isCollapsedCompletedCalendarOrder ? (
                                   <button
