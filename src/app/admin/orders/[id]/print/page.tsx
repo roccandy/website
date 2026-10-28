@@ -348,17 +348,9 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     packagingWeightG: packaging?.candy_weight_g,
     batchCount: batchWeights.length,
   });
-  const packagingSummary = (() => {
-    const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
-    const summaryParts = [];
-    if (printQuantity) {
-      summaryParts.push(`Qty: ${printQuantity}`);
-    }
-    if (packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay) {
-      summaryParts.push(`Lid colour: ${jarLidColorDisplay.label}`);
-    }
-    return summaryParts.length > 0 ? `${packagingLabel} (${summaryParts.join(", ")})` : packagingLabel;
-  })();
+  const packagingLabel = formatPackagingOptionLabel(packaging) || "N/A";
+  const hasPackagingDetails =
+    Boolean(printQuantity) || (packaging?.type?.toLowerCase() === "jar" && Boolean(jarLidColorDisplay));
   const ingredientLabelsToPrint = (() => {
     const storedCount = Number(order.ingredient_labels_count);
     if (Number.isFinite(storedCount) && storedCount > 0) {
@@ -546,7 +538,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       </span>
                     </p>
                     {batchWeightGroups.length > 1 ? (
-                      <div className="mt-2 space-y-1 text-[16px] font-semibold leading-tight text-zinc-700 print:mt-1 print:text-[11px]">
+                      <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
                         {batchWeightGroups.map((group) => (
                           <p key={group.weight}>- {group.count} x {formatPrintKg(group.weight)}kg</p>
                         ))}
@@ -607,10 +599,20 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
 
               <section>
                 <div className="space-y-3 print:space-y-2">
-                  <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
-                    <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
-                  </p>
+                  <div>
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
+                      <span className={SPEC_VALUE_CLASS}>{packagingLabel}</span>
+                    </p>
+                    {hasPackagingDetails ? (
+                      <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
+                        {printQuantity ? <p>- {printQuantity} Qty</p> : null}
+                        {packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay ? (
+                          <p>- {jarLidColorDisplay.label} Lid</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                   <div className="flex items-center justify-between gap-3">
                     <p className={SPEC_ROW_CLASS}>
                       <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
