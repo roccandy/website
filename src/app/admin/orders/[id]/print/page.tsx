@@ -529,13 +529,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <section>
                 <div className="space-y-3 print:space-y-2">
                   <div>
-                    <p className={INLINE_ROW_CLASS}>
-                      <span className={INLINE_LABEL_CLASS}>Order weight:</span>
-                      <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
-                        {batchWeights.length > 1
-                          ? `${formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg`
-                          : `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`}
-                      </span>
+                    <h3 className={SECTION_HEADING_CLASS}>Order weight</h3>
+                    <p className={`${INLINE_VALUE_CLASS} mt-2 print:mt-1`} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
+                      {batchWeights.length > 1
+                        ? `${formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg`
+                        : `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`}
                     </p>
                     {batchWeightGroups.length > 1 ? (
                       <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
@@ -553,10 +551,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </section>
 
               <section>
-                <div className="space-y-3 print:space-y-2">
+                <h3 className={SECTION_HEADING_CLASS}>Colours</h3>
+                <div className="mt-2 space-y-3 print:mt-1 print:space-y-2">
                   {!isBranded && (
                     <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Text colour:</span>
+                      <span className={SPEC_LABEL_CLASS}>Text:</span>
                       <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
                     </p>
                   )}
@@ -598,12 +597,10 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </section>
 
               <section>
-                <div className="space-y-3 print:space-y-2">
+                <h3 className={SECTION_HEADING_CLASS}>Packaging</h3>
+                <div className="mt-2 space-y-3 print:mt-1 print:space-y-2">
                   <div>
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
-                      <span className={SPEC_VALUE_CLASS}>{packagingLabel}</span>
-                    </p>
+                    <p className={SPEC_VALUE_CLASS}>{packagingLabel}</p>
                     {hasPackagingDetails ? (
                       <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
                         {printQuantity ? <p>- {printQuantity} Qty</p> : null}
