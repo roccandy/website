@@ -532,45 +532,27 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         </div>
 
         <div className="space-y-8 print:space-y-4">
-          {labelImageUrl ? (
-            <div className="print:hidden">
-              {labelImageIsImage ? (
-                <a
-                  href={labelImageUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block w-full max-w-xs overflow-hidden rounded border border-zinc-200 bg-white"
-                >
-                  <Image
-                    src={labelImageUrl}
-                    alt="Label preview"
-                    width={320}
-                    height={320}
-                    className="h-auto w-full object-contain"
-                  />
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-
           <div>
             <div className={`${SECTION_BODY_CLASS} space-y-10 print:space-y-7`}>
               <section>
                 <div className="space-y-3 print:space-y-2">
-                  <p className={INLINE_ROW_CLASS}>
-                    <span className={INLINE_LABEL_CLASS}>Order weight:</span>
-                    <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
-                      {batchWeightGroups.length > 1 || batchWeights.length > 1 ? (
-                        <span className="whitespace-nowrap">
-                          {formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg ({batchWeightGroups
-                            .map((group) => `${group.count} x ${formatPrintKg(group.weight)}kg`)
-                            .join(" + ")})
-                        </span>
-                      ) : (
-                        `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`
-                      )}
-                    </span>
-                  </p>
+                  <div>
+                    <p className={INLINE_ROW_CLASS}>
+                      <span className={INLINE_LABEL_CLASS}>Order weight:</span>
+                      <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
+                        {batchWeights.length > 1
+                          ? `${formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg`
+                          : `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`}
+                      </span>
+                    </p>
+                    {batchWeightGroups.length > 1 ? (
+                      <div className="mt-2 space-y-1 text-[16px] font-semibold leading-tight text-zinc-700 print:mt-1 print:text-[11px]">
+                        {batchWeightGroups.map((group) => (
+                          <p key={group.weight}>- {group.count} x {formatPrintKg(group.weight)}kg</p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   <p className={SPEC_ROW_CLASS}>
                     <span className={SPEC_LABEL_CLASS}>Flavour:</span>
                     <span className={SPEC_VALUE_CLASS}>{order.flavor || "-"}</span>
@@ -629,10 +611,28 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
                     <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
                   </p>
-                  <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
-                    <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
-                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
+                      <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
+                    </p>
+                    {labelImageUrl && labelImageIsImage ? (
+                      <a
+                        href={labelImageUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-16 w-16 shrink-0 overflow-hidden rounded border border-zinc-200 bg-white print:h-12 print:w-12"
+                      >
+                        <Image
+                          src={labelImageUrl}
+                          alt="Label preview"
+                          width={96}
+                          height={96}
+                          className="h-full w-full object-contain"
+                        />
+                      </a>
+                    ) : null}
+                  </div>
                   <p className={SPEC_ROW_CLASS}>
                     <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
                     <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
