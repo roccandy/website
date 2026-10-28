@@ -556,7 +556,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
           ) : null}
 
           <div>
-            <div className={`${SECTION_BODY_CLASS} space-y-7 print:space-y-5`}>
+            <div className={`${SECTION_BODY_CLASS} space-y-10 print:space-y-7`}>
               <section>
                 <div className="space-y-3 print:space-y-2">
                   <p className={INLINE_ROW_CLASS}>
