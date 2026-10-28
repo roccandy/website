@@ -156,22 +156,6 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Insight</p>
-          <h1 className="admin-page-title text-zinc-900">Customers</h1>
-          <p className="max-w-3xl text-sm leading-6 text-zinc-600">
-            Search customer profiles across historic orders, current orders, and enquiry history.
-          </p>
-        </div>
-        <Link
-          href="/admin/stats"
-          className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-        >
-          View stats
-        </Link>
-      </div>
-
       {schemaMissing ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <div className="flex gap-3">
@@ -226,7 +210,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
               name="q"
               defaultValue={query}
               placeholder="Search name, email, phone, company, suburb, postcode, or order number"
-              className="w-full rounded-lg border border-zinc-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-zinc-400"
+              className="h-10 w-full rounded-lg border border-zinc-200 pl-9 pr-3 text-sm outline-none focus:border-zinc-400"
             />
           </label>
           <label className="block">
@@ -234,7 +218,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
             <select
               name="filter"
               defaultValue={filter}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
             >
               {FILTERS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -248,7 +232,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
             <select
               name="source"
               defaultValue={source}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
             >
               {SOURCES.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -262,7 +246,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
             <select
               name="sort"
               defaultValue={sort}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
             >
               {SORTS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -276,7 +260,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
             <select
               name="direction"
               defaultValue={direction}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
             >
               {sortDirectionOptions(sort).map((option) => (
                 <option key={option.value} value={option.value}>
@@ -285,7 +269,7 @@ export default async function CustomersPage({ searchParams }: { searchParams?: S
               ))}
             </select>
           </label>
-          <button className="rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800">
+          <button className="h-10 rounded-lg border border-zinc-900 bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800">
             Search
           </button>
         </div>

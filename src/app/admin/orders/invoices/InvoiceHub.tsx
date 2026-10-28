@@ -7,7 +7,6 @@ import {
   Search,
   RefreshCw,
   Download,
-  Plus,
   ChevronLeft,
   ChevronRight,
   X,
@@ -147,39 +146,6 @@ export function InvoiceHub({
   };
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-emerald-700">
-            Payments, without the guesswork
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
-            Invoices
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            All invoices, clear payment states, and the next thing to do.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => startRefresh(async () => { await refreshAdminWorkspace(); router.refresh(); })}
-            disabled={refreshing}
-            className={button}
-          >
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-            {refreshing ? "Refreshing…" : "Refresh records"}
-          </button>
-          {canWrite && (
-            <AdminLink
-              href="/admin/orders/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2 text-xs font-semibold text-white"
-            >
-              <Plus size={14} />
-              Create invoice order
-            </AdminLink>
-          )}
-        </div>
-      </header>
       <div className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {
@@ -232,10 +198,21 @@ export function InvoiceHub({
             <h2 className="text-lg font-semibold text-zinc-900">
               {filters.view === "all" ? "All invoices" : "Invoice work queue"}
             </h2>
-            <button type="button" className={button} onClick={exportCsv}>
-              <Download size={13} />
-              Export this list
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={button} onClick={exportCsv}>
+                <Download size={13} />
+                Export this list
+              </button>
+              <button
+                type="button"
+                onClick={() => startRefresh(async () => { await refreshAdminWorkspace(); router.refresh(); })}
+                disabled={refreshing}
+                className={button}
+              >
+                <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+                {refreshing ? "Refreshing…" : "Refresh records"}
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5" aria-label="Invoice views">
             {tabs.map(([view, label]) => (

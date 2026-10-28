@@ -423,12 +423,6 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-        <h2 className="admin-page-title">All Orders</h2>
-        <p className="text-sm text-zinc-600">Custom and pre-made order history.</p>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="inline-flex max-w-full flex-wrap rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
           {FILTER_OPTIONS.map((option) => {
@@ -478,12 +472,6 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
             ) : null}
           </form>
           <span className="text-sm text-zinc-500">{total} {total===1 ? "order" : "orders"} · {total ? (activePage-1)*pageSize+1 : 0}–{Math.min(activePage*pageSize,total)} shown</span>
-          <Link
-            href="/admin/orders"
-            className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-          >
-            Back to schedule
-          </Link>
         </div>
       </div>
 

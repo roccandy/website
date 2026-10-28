@@ -572,25 +572,7 @@ export default function StatsHub({
 
   return (
     <div className="space-y-6 pb-8">
-      <header className="flex flex-wrap items-start justify-between gap-5">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-            Roc Candy · business insights
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
-              A clearer view of business.
-            </h1>
-            <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-emerald-800">
-              V2 demo
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-zinc-500">
-            See what’s growing, what’s selling, and what needs a little
-            attention.
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-end gap-5">
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin/stats" className={quietButton}>
             Original stats <ArrowUpRight size={14} />

@@ -84,10 +84,10 @@ export type StatsFilters = {
 };
 export type DateRange = { from: string; to: string };
 export const defaultFilters: StatsFilters = {
-  period: "90d",
+  period: "all",
   from: "",
   to: "",
-  comparison: "previous",
+  comparison: "none",
   kind: "all",
   fulfillment: "all",
   payment: "all",
