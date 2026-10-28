@@ -12,11 +12,10 @@ const user = (role: Session["user"]["role"]): Session["user"] => ({
   canManageUsers: role === "admin",
 });
 describe("Compact admin navigation", () => {
-  it("keeps daily tasks in the primary navigation and infrequent tools in the directory", () => {
+  it("keeps core operations in the primary navigation and infrequent tools in the directory", () => {
     expect(
       getAdminPrimaryNavigation(user("admin")).map((item) => item.label),
     ).toEqual([
-      "Today",
       "Production",
       "Orders",
       "Customers",
