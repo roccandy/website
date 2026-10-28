@@ -349,7 +349,7 @@ export default async function SettingsProductionPage() {
   ) as Record<string, number>;
 
   return (
-    <section className="space-y-6">
+    <section className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="admin-page-title">Production settings</h2>
@@ -362,46 +362,41 @@ export default async function SettingsProductionPage() {
         </Link>
       </div>
 
-      <form
-        action={updateProductionSettings}
-        className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-      >
-        <div>
-          <h3 className="admin-card-title text-zinc-900">Capacity and invoices</h3>
+      <div className="grid gap-6 xl:grid-cols-2">
+      <form action={updateProductionSettings} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-5 py-4">
+          <h3 className="text-sm font-semibold text-zinc-900">Capacity</h3>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-            <span className="font-semibold text-zinc-900">Production slots</span>
-            <span className="mt-1 block text-xs text-zinc-500">Available slots on each production day.</span>
+        <div className="divide-y divide-zinc-100">
+          <label className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
+            <span><span className="block text-sm font-medium text-zinc-900">Slots per day</span><span className="mt-0.5 block text-xs text-zinc-500">Number of production slots on an open day.</span></span>
             <input
               type="number"
               name="production_slots_per_day"
               defaultValue={settings.production_slots_per_day}
-              className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
               min={1}
             />
           </label>
-          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-            <span className="font-semibold text-zinc-900">Daily capacity (kg)</span>
-            <span className="mt-1 block text-xs text-zinc-500">Maximum production weight per day.</span>
+          <label className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
+            <span><span className="block text-sm font-medium text-zinc-900">Daily capacity</span><span className="mt-0.5 block text-xs text-zinc-500">Maximum total weight produced per day.</span></span>
             <input
               type="number"
               step="0.1"
               name="max_total_kg"
               defaultValue={settings.max_total_kg}
-              className="mt-3 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
               min={0}
             />
           </label>
-          <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
-            <span className="font-semibold text-zinc-900">Invoice due in</span>
-            <span className="mt-1 block text-xs text-zinc-500">Calendar days from the day an admin invoice is created.</span>
-            <div className="mt-3 flex items-center gap-2">
+          <label className="grid gap-2 px-5 py-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
+            <span><span className="block text-sm font-medium text-zinc-900">Invoice due in</span><span className="mt-0.5 block text-xs text-zinc-500">Days after creating an admin invoice.</span></span>
+            <div className="flex items-center gap-2">
               <input
                 type="number"
                 name="invoice_due_days"
                 defaultValue={invoiceDueDays}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
                 min={0}
                 max={90}
                 required
@@ -410,7 +405,7 @@ export default async function SettingsProductionPage() {
             </div>
           </label>
         </div>
-        <div>
+        <div className="border-t border-zinc-100 px-5 py-3">
           <AdminSubmitButton
             type="submit"
             pendingLabel="Saving..."
@@ -421,17 +416,16 @@ export default async function SettingsProductionPage() {
         </div>
       </form>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div>
-          <h3 className="admin-card-title text-zinc-900">Calendar due lead times</h3>
-          <p className="mt-1 text-xs text-zinc-500">Days between production and the required date before the calendar flags an order.</p>
+      <section className="rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-5 py-4">
+          <h3 className="text-sm font-semibold text-zinc-900">Calendar warning lead time</h3>
+          <p className="mt-1 text-xs text-zinc-500">Flag orders when the required date is too close to their production day.</p>
         </div>
-        <form action={updateProductionDueLeadDays} className="mt-4 space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <form action={updateProductionDueLeadDays}>
+          <div className="grid divide-y divide-zinc-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
             {PRODUCTION_DUE_LEAD_OPTIONS.map(({ key, label }) => (
-              <label key={key} className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs font-semibold text-zinc-700">
-                <span>{label}</span>
-                <span className="mt-0.5 block text-[11px] font-normal text-zinc-500">Days after production</span>
+              <label key={key} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                <span className="font-medium text-zinc-900">{label}</span>
                 <input
                   type="number"
                   name={`due_lead_${key}`}
@@ -439,20 +433,15 @@ export default async function SettingsProductionPage() {
                   max={365}
                   defaultValue={productionDueLeadDays[key]}
                   required
-                  className="mt-2 w-full rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900"
+                  className="w-16 rounded border border-zinc-300 bg-white px-2 py-1.5 text-right text-sm text-zinc-900"
                 />
               </label>
             ))}
           </div>
-          <AdminSubmitButton
-            type="submit"
-            pendingLabel="Saving..."
-            className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-          >
-            Save calendar lead times
-          </AdminSubmitButton>
+          <div className="border-t border-zinc-100 px-5 py-3"><AdminSubmitButton type="submit" pendingLabel="Saving..." className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800">Save lead times</AdminSubmitButton></div>
         </form>
       </section>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
         <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
