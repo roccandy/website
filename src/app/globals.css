@@ -223,21 +223,21 @@ body {
 .admin-production-order-row[draggable="true"] :where(a,button) { -webkit-user-drag: none; user-select: none; }
 .admin-production-order-row[draggable="true"] img { -webkit-user-drag: none; }
 .admin-order-history { container: order-history / inline-size; }
-.admin-order-history-table .history-col-order { width: 6rem; }
-.admin-order-history-table .history-col-title { width: 22rem; }
-.admin-order-history-table .history-col-date { width: 7rem; }
-.admin-order-history-table .history-col-weight { width: 5.5rem; }
-.admin-order-history-table .history-col-customer { width: 15rem; }
-.admin-order-history-table .history-col-status { width: 9rem; }
-.admin-order-history-table .history-col-actions { width: 16rem; }
+.admin-order-history-table .history-col-order { width: 7%; }
+.admin-order-history-table .history-col-title { width: 27%; }
+.admin-order-history-table .history-col-date { width: 10%; }
+.admin-order-history-table .history-col-weight { width: 7%; }
+.admin-order-history-table .history-col-customer { width: 17%; }
+.admin-order-history-table .history-col-status { width: 13%; }
+.admin-order-history-table .history-col-actions { width: 18%; }
 @container order-history (min-width: 1450px) {
   .admin-order-history-table .history-col-order { width: 7%; }
-  .admin-order-history-table .history-col-title { width: 28%; }
+  .admin-order-history-table .history-col-title { width: 27%; }
   .admin-order-history-table .history-col-date { width: 9%; }
   .admin-order-history-table .history-col-weight { width: 7%; }
   .admin-order-history-table .history-col-customer { width: 17%; }
-  .admin-order-history-table .history-col-status { width: 12%; }
-  .admin-order-history-table .history-col-actions { width: 18%; }
+  .admin-order-history-table .history-col-status { width: 13%; }
+  .admin-order-history-table .history-col-actions { width: 19%; }
 }
 .admin-calendar-weekdays, .admin-calendar-empty { display: none; }
 .admin-calendar-days { grid-template-columns: minmax(0, 1fr); }

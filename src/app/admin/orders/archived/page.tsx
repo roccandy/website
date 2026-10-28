@@ -476,7 +476,7 @@ export default async function AllOrdersPage({ searchParams }: { searchParams?: S
       </div>
 
       <div className="admin-order-history overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <table className="admin-order-history-table w-max min-w-[74rem] table-fixed text-sm">
+        <table className="admin-order-history-table w-full min-w-[66rem] table-fixed text-sm">
           <colgroup><col className="history-col-order"/><col className="history-col-title"/><col className="history-col-date"/><col className="history-col-weight"/><col className="history-col-customer"/><col className="history-col-status"/><col className="history-col-actions"/><col style={{ width: 12 }}/></colgroup>
           <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
             <tr>
