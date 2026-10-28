@@ -613,7 +613,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       </div>
                     ) : null}
                   </div>
-                  <div className="flex items-center justify-between gap-3">
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
+                    <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
+                  </p>
+                  <div className="space-y-2 print:space-y-1">
                     <p className={SPEC_ROW_CLASS}>
                       <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
                       <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
@@ -635,10 +639,6 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                       </a>
                     ) : null}
                   </div>
-                  <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
-                    <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
-                  </p>
                 </div>
               </section>
 
