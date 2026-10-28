@@ -566,90 +566,100 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
 
           <div className={CARD_CLASS}>
             <h2 className={SECTION_HEADING_CLASS}>Order summary</h2>
-            <div className={SECTION_BODY_CLASS}>
-              <p className={INLINE_ROW_CLASS}>
-                <span className={INLINE_LABEL_CLASS}>Order weight:</span>
-                <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
-                  {batchWeightGroups.length > 1 || batchWeights.length > 1 ? (
-                    <span className="whitespace-nowrap">
-                      {formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg ({batchWeightGroups
-                        .map((group) => `${group.count} x ${formatPrintKg(group.weight)}kg`)
-                        .join(" + ")})
+            <div className={`${SECTION_BODY_CLASS} space-y-5 print:space-y-3`}>
+              <section>
+                <h3 className={SECTION_HEADING_CLASS}>Production</h3>
+                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                  <p className={INLINE_ROW_CLASS}>
+                    <span className={INLINE_LABEL_CLASS}>Order weight:</span>
+                    <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
+                      {batchWeightGroups.length > 1 || batchWeights.length > 1 ? (
+                        <span className="whitespace-nowrap">
+                          {formatPrintKg(batchWeights.reduce((sum, weight) => sum + weight, 0))}kg ({batchWeightGroups
+                            .map((group) => `${group.count} x ${formatPrintKg(group.weight)}kg`)
+                            .join(" + ")})
+                        </span>
+                      ) : (
+                        `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`
+                      )}
                     </span>
-                  ) : (
-                    `${formatPrintKg(batchWeights[0] ?? Number(order.total_weight_kg))}kg`
-                  )}
-                </span>
-              </p>
-              <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Flavour:</span>
-                <span className={SPEC_VALUE_CLASS}>{order.flavor || "-"}</span>
-              </p>
-              {!isBranded && (
-                <p className={SPEC_ROW_CLASS}>
-                  <span className={SPEC_LABEL_CLASS}>Text colour:</span>
-                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
-                </p>
-              )}
-              {isWedding && (
-                <p className={SPEC_ROW_CLASS}>
-                  <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
-                  <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
-                </p>
-              )}
-              <div>
-                <p className={SPEC_ROW_CLASS}>
-                  <span className={SPEC_LABEL_CLASS}>Jacket:</span>
-                  <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
-                </p>
-                {!isDefaultWhiteFill(order.candy_fill_color) ? (
-                  <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
-                    <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color, paletteHexMap))}</span>
                   </p>
-                ) : null}
-                {jacketPreview.showPinstripe ? (
                   <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>
-                    <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.pinstripe_color || "#ffffff", paletteHexMap))}</span>
-                  </p>
-                ) : null}
-                {order.jacket !== "rainbow" && (
-                  <div className="mt-2 space-y-1 text-zinc-700">
-                    {showJacketColorOne && (
-                      <p className={SPEC_ROW_CLASS}>
-                        <span className={SPEC_LABEL_CLASS}>Colour 1:</span>
-                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
-                      </p>
-                    )}
-                    {showJacketColorTwo && (
-                      <p className={SPEC_ROW_CLASS}>
-                        <span className={SPEC_LABEL_CLASS}>Colour 2:</span>
-                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorTwoDisplay)}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
-                <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
-              </p>
-              <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Custom Labels:</span>
-                <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
-              </p>
-              <p className={SPEC_ROW_CLASS}>
-                <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
-                <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
-              </p>
-              {order.notes ? (
-                <div className="rounded border border-zinc-200 bg-zinc-50 p-3 print:p-2">
-                  <p className={SPEC_LABEL_CLASS}>Production Notes</p>
-                  <p className="mt-1 whitespace-pre-wrap text-[15px] font-semibold leading-snug text-zinc-900 print:text-[12px]">
-                    {order.notes}
+                    <span className={SPEC_LABEL_CLASS}>Flavour:</span>
+                    <span className={SPEC_VALUE_CLASS}>{order.flavor || "-"}</span>
                   </p>
                 </div>
+              </section>
+
+              <section>
+                <h3 className={SECTION_HEADING_CLASS}>Candy specification</h3>
+                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                  {!isBranded && (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Text colour:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
+                    </p>
+                  )}
+                  {isWedding && (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
+                    </p>
+                  )}
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Jacket:</span>
+                    <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
+                  </p>
+                  {order.jacket !== "rainbow" && showJacketColorOne && (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Colour 1:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
+                    </p>
+                  )}
+                  {order.jacket !== "rainbow" && showJacketColorTwo && (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Colour 2:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorTwoDisplay)}</span>
+                    </p>
+                  )}
+                  {!isDefaultWhiteFill(order.candy_fill_color) ? (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color, paletteHexMap))}</span>
+                    </p>
+                  ) : null}
+                  {jacketPreview.showPinstripe ? (
+                    <p className={SPEC_ROW_CLASS}>
+                      <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>
+                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.pinstripe_color || "#ffffff", paletteHexMap))}</span>
+                    </p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section>
+                <h3 className={SECTION_HEADING_CLASS}>Packaging and labels</h3>
+                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
+                    <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
+                  </p>
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
+                    <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
+                  </p>
+                  <p className={SPEC_ROW_CLASS}>
+                    <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
+                    <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
+                  </p>
+                </div>
+              </section>
+
+              {order.notes ? (
+                <section>
+                  <h3 className={SECTION_HEADING_CLASS}>Production notes</h3>
+                  <p className={`${SPEC_VALUE_CLASS} mt-2 whitespace-pre-wrap leading-snug print:mt-1`}>{order.notes}</p>
+                </section>
               ) : null}
             </div>
           </div>
