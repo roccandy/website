@@ -354,7 +354,7 @@ export default async function SettingsProductionPage() {
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Settings</p>
           <h2 className="admin-page-title">Production settings</h2>
-          <p className="text-sm text-zinc-600">Capacity, invoice timing, working days and website blockouts.</p>
+          <p className="text-sm text-zinc-600">Set daily capacity, scheduling rules and the availability customers see online.</p>
         </div>
         <Link
           href="/admin/orders"
@@ -370,7 +370,7 @@ export default async function SettingsProductionPage() {
       >
         <div>
           <h3 className="admin-card-title text-zinc-900">Capacity and invoices</h3>
-          <p className="mt-1 text-xs text-zinc-500">The everyday limits used for scheduling and new admin invoices.</p>
+          <p className="mt-1 text-xs text-zinc-500">These values set the capacity available when production days are scheduled.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-700">
@@ -459,15 +459,15 @@ export default async function SettingsProductionPage() {
         </form>
       </section>
 
-      <div className="space-y-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="space-y-1">
-          <h3 className="admin-card-title text-zinc-900">Blocked dates</h3>
-          <p className="text-xs text-zinc-500">Choose the regular working week, then add exceptions only when needed.</p>
-        </div>
-        <div className="space-y-3">
-          <h4 className="admin-card-title text-zinc-900">Default no-production days</h4>
+      <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Weekly schedule</p>
+            <h3 className="admin-card-title text-zinc-900">Regular days off</h3>
+            <p className="text-xs leading-5 text-zinc-500">Choose the days Roc Candy does not normally produce. They are unavailable by default; add a date-specific block only for exceptions.</p>
+          </div>
           <form action={updateDefaultNoProduction} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {DEFAULT_NO_PRODUCTION_DAYS.map((day) => (
                 <label key={day.name} className="flex items-center gap-2 rounded border border-zinc-200 px-3 py-2 text-xs">
                   <input
@@ -487,21 +487,34 @@ export default async function SettingsProductionPage() {
               Save default days
             </AdminSubmitButton>
           </form>
-        </div>
+        </section>
 
-        <div className="space-y-3">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <div>
-            <h4 className="admin-card-title text-zinc-900">Website blockouts</h4>
-            <p className="text-xs text-zinc-500">
-              Block dates for holidays etc. Customers will always see these dates as unavailable. The website banner is optional.
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Customer availability</p>
+            <h3 className="mt-1 admin-card-title text-zinc-900">Date-specific production blocks</h3>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">Use these for holidays, shutdowns or one-off capacity closures.</p>
           </div>
-          <WebsiteBlockoutBannerSettings
-            enabled={showQuoteBlockoutBanner}
-            months={quoteBlockoutMonths}
-            action={updateBlockoutBannerSettings}
-          />
-          <form action={addBlock} className="grid gap-3 md:grid-cols-4">
+          <div className="mt-4 grid gap-3 rounded-xl border border-sky-100 bg-sky-50 p-4 text-xs leading-5 text-sky-950 md:grid-cols-3">
+            <div><strong className="block text-sky-900">1. Add a block</strong>The dates are unavailable for production and customers cannot choose them.</div>
+            <div><strong className="block text-sky-900">2. Keep the reason internal</strong>The reason helps your team identify the closure; it is not shown to customers.</div>
+            <div><strong className="block text-sky-900">3. Choose whether to show a notice</strong>The website banner is optional and only explains an upcoming or active block.</div>
+          </div>
+          <div className="mt-5 border-t border-zinc-100 pt-5">
+            <h4 className="text-sm font-semibold text-zinc-900">Website notice</h4>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">This never creates or removes a block. It only replaces the normal website banner while a saved block is approaching or active.</p>
+            <div className="mt-3">
+              <WebsiteBlockoutBannerSettings
+                enabled={showQuoteBlockoutBanner}
+                months={quoteBlockoutMonths}
+                action={updateBlockoutBannerSettings}
+              />
+            </div>
+          </div>
+          <div className="mt-5 border-t border-zinc-100 pt-5">
+            <h4 className="text-sm font-semibold text-zinc-900">Add a production block</h4>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">Leave the end date blank for a one-day closure.</p>
+          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-4">
             <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
               Start date
               <input
@@ -539,9 +552,14 @@ export default async function SettingsProductionPage() {
               </AdminSubmitButton>
             </div>
           </form>
-        </div>
+          </div>
 
-        <div className="overflow-x-auto">
+        <div className="mt-5 border-t border-zinc-100 pt-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h4 className="text-sm font-semibold text-zinc-900">Saved production blocks</h4>
+            <span className="text-xs text-zinc-500">{blocks.length} saved</span>
+          </div>
+        <div className="overflow-x-auto rounded-xl border border-zinc-200">
           <table className="min-w-full text-sm">
             <thead className="bg-zinc-50 text-[11px] uppercase tracking-[0.2em] text-zinc-500">
               <tr>
@@ -629,6 +647,8 @@ export default async function SettingsProductionPage() {
             </tbody>
           </table>
         </div>
+        </div>
+        </section>
       </div>
     </section>
   );

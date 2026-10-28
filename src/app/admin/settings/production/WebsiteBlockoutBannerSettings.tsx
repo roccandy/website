@@ -23,9 +23,9 @@ export function WebsiteBlockoutBannerSettings({ enabled, months, action }: Props
           className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
         />
         <span>
-          <span className="block font-semibold text-zinc-900">Show a website blockout banner</span>
+          <span className="block font-semibold text-zinc-900">Show an availability notice on the website</span>
           <span className="mt-0.5 block text-xs text-zinc-500">
-            Displays delivery-paused and delivery-resumes messages. Blocked calendar dates remain unavailable either way.
+            Shows a delivery-paused or delivery-resumes message for saved production blocks. It does not change which dates are available.
           </span>
         </span>
       </label>
@@ -33,7 +33,7 @@ export function WebsiteBlockoutBannerSettings({ enabled, months, action }: Props
       {showBanner ? (
         <div className="grid gap-3 md:grid-cols-[260px_auto] md:items-end">
           <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-            Show banner X months before
+            Start showing the notice this many months before a block begins
             <input
               type="number"
               name="quote_blockout_months"
@@ -44,7 +44,7 @@ export function WebsiteBlockoutBannerSettings({ enabled, months, action }: Props
               required
             />
           </label>
-          <p className="text-xs text-zinc-500">Current value: {months} month{months === 1 ? "" : "s"}.</p>
+          <p className="text-xs leading-5 text-zinc-500">The notice appears for any saved block that begins within this window, and remains visible during the block.</p>
         </div>
       ) : null}
       <AdminSubmitButton
@@ -52,7 +52,7 @@ export function WebsiteBlockoutBannerSettings({ enabled, months, action }: Props
         pendingLabel="Saving..."
         className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
       >
-        Save website banner settings
+        Save website notice
       </AdminSubmitButton>
     </form>
   );
