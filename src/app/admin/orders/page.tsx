@@ -2,7 +2,6 @@ import { getProductionWorkspaceData } from "../adminWorkspaceData";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
 import { isProductionActivity } from "@/lib/adminActivity";
@@ -27,27 +26,6 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   return (
     <section className="admin-production-schedule space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Admin / Production</p>
-          <h2 className="admin-page-title">Production Schedule</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/admin/orders/new"
-            className="rounded border border-zinc-900 bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
-          >
-            Create order
-          </Link>
-          <Link
-            href="/admin/settings/production"
-            className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-          >
-            Production settings
-          </Link>
-        </div>
-      </div>
-
       <OrdersTable
         orders={orders}
         slots={slots}

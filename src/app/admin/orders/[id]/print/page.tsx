@@ -418,7 +418,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
       <div className="print-grid-two grid gap-8 md:grid-cols-2 print:gap-3">
         <div className="space-y-8 print:space-y-4">
           <div>
-            <div className="flex items-center justify-center print:scale-[0.85]" style={{ fontFamily: PRINT_FONT_FAMILY }}>
+            <div className="flex items-center justify-center" style={{ fontFamily: PRINT_FONT_FAMILY }}>
               <CandyPreview
                 designText={!isBranded && !isWedding ? designText : undefined}
                 lineOne={isWedding ? lineOne : undefined}

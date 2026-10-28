@@ -7,6 +7,7 @@ import { orderDropPlan, PRODUCTION_ORDER_DRAG_TYPE } from "./productionDrag";
 import { useRouter } from "next/navigation";
 import { useAdminViewState } from "../useAdminViewState";
 import { AdminModalPortal } from "../AdminModalPortal";
+import { AdminNotice } from "../AdminNotice";
 import type { OrderRow, OrderSlot, ProductionDayNote, ProductionSlot, SettingsRow } from "@/lib/data";
 import { isAdminPremadeOrder } from "@/lib/adminPremadeOrder";
 import { archiveOrderInline, assignOrderToSlot, shiftProductionSchedule, swapProductionAssignments, upsertProductionDayNote } from "./actions";
@@ -45,6 +46,7 @@ type Props = {
   canWrite: boolean;
   draggingOrderId: string | null;
   onOrderDragEnd: () => void;
+  onOrderSelect: (orderId: string) => void;
 };
 
 const isCompletedProductionOrder = (order: Pick<OrderRow, "status">) =>
@@ -87,6 +89,7 @@ export default function ProductionScheduleSection({
   canWrite,
   draggingOrderId,
   onOrderDragEnd,
+  onOrderSelect,
 }: Props) {
   const router = useRouter();
   const [calendarStart, setCalendarStart] = useAdminViewState("production-week", dateKey(startOfWorkweek(new Date())), (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(new Date(`${value}T00:00:00`).getTime()));
@@ -498,8 +501,14 @@ export default function ProductionScheduleSection({
 
   return (
     <>
+      {isDropPending ? (
+        <AdminNotice>
+          <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+            Updating production slot…
+          </p>
+        </AdminNotice>
+      ) : null}
       <div id="production-calendar" aria-busy={isDropPending} className="admin-production-calendar min-w-0 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm sm:p-4">
-        {isDropPending && <p role="status" className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">Updating production slot…</p>}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="admin-card-title text-zinc-900">Production Calendar</h3>
@@ -646,6 +655,7 @@ export default function ProductionScheduleSection({
                                   setDraggingAssignmentId(null);
                                   setHoveredDropSlotKey(null);
                                 }}
+                                onClick={() => onOrderSelect(order.id)}
                                 className={`relative select-none rounded-md border px-2 py-1.5 text-[10px] ${isOptimisticAssignment ? "opacity-70" : ""} ${statusCard(
                                   getMultiAssignmentScheduleStatus(order, assignedSlotDatesByOrderId.get(order.id) ?? [], todayKey),
                                 )}`}

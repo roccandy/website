@@ -183,6 +183,14 @@ export function AdminWorkspaceHeader({
               );
             })}
           </nav>
+          {pathname === "/admin/orders" ? (
+            <AdminLink
+              href="/admin/settings/production"
+              className="inline-flex shrink-0 items-center rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+            >
+              Production settings
+            </AdminLink>
+          ) : null}
           <button
             ref={toolsButton}
             type="button"

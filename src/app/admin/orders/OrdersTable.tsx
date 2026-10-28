@@ -255,17 +255,20 @@ export function OrdersTable({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [selectedId]);
+  }, [selectedId, workspaceView]);
+
+  const selectOrderFromCalendar = (orderId: string) => {
+    setWorkspaceView("both");
+    setSelectedId(orderId);
+  };
 
   return (
     <div className="admin-production-workspace space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><p className="text-xs text-zinc-500">{visibleListOrders.length} active order items · {unassignedOrders.length} need scheduling</p>{canWrite && workspaceView === "both" && <p className="mt-1 text-[11px] text-zinc-400">Drag an order onto an empty calendar slot. Multi-batch orders allocate the next batch, or ask which assigned batch to move.</p>}</div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div aria-label="Production workspace view" className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1">
           {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
         </div>
       </div>
-      <div aria-label="Payment colour legend" className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-zinc-500"><span><i className="mr-1 inline-block h-2 w-2 bg-red-500"/>Payment not recorded</span><span><i className="mr-1 inline-block h-2 w-2 bg-emerald-500"/>Paid</span><span><i className="mr-1 inline-block h-2 w-2 bg-blue-500"/>Website order</span></div>
       <div className="admin-production-panels" data-view={workspaceView}>
       <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
         <div ref={orderListRef} className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -554,6 +557,7 @@ export function OrdersTable({
           canWrite={canWrite}
           draggingOrderId={draggingOrderId}
           onOrderDragEnd={() => setDraggingOrderId(null)}
+          onOrderSelect={selectOrderFromCalendar}
         />
       </div>
       </div>
