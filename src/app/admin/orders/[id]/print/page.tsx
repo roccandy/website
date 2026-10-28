@@ -108,9 +108,8 @@ const getFileExtensionFromUrl = (value: string) => {
   }
 };
 
-const CARD_CLASS = "rounded-2xl border border-zinc-200 p-4 print:p-2";
 const SECTION_HEADING_CLASS = "text-[11px] uppercase tracking-[0.22em] text-zinc-500";
-const SECTION_BODY_CLASS = "mt-3 space-y-2 print:mt-1 print:space-y-1";
+const SECTION_BODY_CLASS = "space-y-2 print:space-y-1";
 const INLINE_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1";
 const INLINE_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
 const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
@@ -402,14 +401,24 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
       `}</style>
       <div className="flex items-center justify-between print:hidden">
         <h1 className="admin-section-title">Order printout</h1>
-        <PrintButton className="rounded border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300" />
+        <div className="flex items-center gap-2">
+          {order.logo_url ? (
+            <a
+              href={order.logo_url}
+              download={logoDownloadName}
+              className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+            >
+              Download logo
+            </a>
+          ) : null}
+          <PrintButton className="rounded border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 hover:border-zinc-300" />
+        </div>
       </div>
 
       <div className="print-grid-two grid gap-6 md:grid-cols-2 print:gap-2">
         <div className="space-y-6 print:space-y-2">
-          <div className={CARD_CLASS}>
-            <h2 className={SECTION_HEADING_CLASS}>Candy design</h2>
-            <div className="mt-4 flex items-center justify-center print:mt-1 print:scale-[0.85]" style={{ fontFamily: PRINT_FONT_FAMILY }}>
+          <div>
+            <div className="flex items-center justify-center print:scale-[0.85]" style={{ fontFamily: PRINT_FONT_FAMILY }}>
               <CandyPreview
                 designText={!isBranded && !isWedding ? designText : undefined}
                 lineOne={isWedding ? lineOne : undefined}
@@ -436,9 +445,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
             </div>
           </div>
 
-          <div className={CARD_CLASS}>
-            <h2 className={SECTION_HEADING_CLASS}>Customer details</h2>
-            <div className="mt-3 space-y-4 print:mt-1 print:space-y-2">
+          <div>
+            <div className="space-y-4 print:space-y-2">
               <div>
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Requested date:</span>
@@ -515,10 +523,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         </div>
 
         <div className="space-y-6 print:space-y-2">
-          <div className={`${CARD_CLASS} print:hidden`}>
-            <h2 className={SECTION_HEADING_CLASS}>Downloads</h2>
-            <div className="mt-3 space-y-3">
-              {labelImageUrl && (
+          {labelImageUrl ? (
+            <div className="print:hidden">
                 <div className="flex items-center gap-3">
                   {labelImageIsImage ? (
                     <a
@@ -546,26 +552,10 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     </a>
                   </div>
                 </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-              {order.logo_url && (
-                <a
-                  href={order.logo_url}
-                  download={logoDownloadName}
-                  className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
-                >
-                  Download logo
-                </a>
-              )}
-              {!labelImageUrl && !order.logo_url && (
-                <p className="text-xs text-zinc-500">No uploaded images for this order.</p>
-              )}
-              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className={CARD_CLASS}>
-            <h2 className={SECTION_HEADING_CLASS}>Order summary</h2>
+          <div>
             <div className={`${SECTION_BODY_CLASS} space-y-5 print:space-y-3`}>
               <section>
                 <h3 className={SECTION_HEADING_CLASS}>Production</h3>
