@@ -489,39 +489,39 @@ export default async function SettingsProductionPage() {
           </div>
           <div className="mt-5 border-t border-zinc-100 pt-5">
             <h4 className="text-sm font-semibold text-zinc-900">Add a production block</h4>
-          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-4">
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-[15rem_15rem_minmax(0,1fr)_auto] md:items-end">
+            <label className="text-xs font-medium text-zinc-700">
               Start date
               <input
                 type="date"
                 name="start_date"
                 required
-                className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-sm"
+                className="mt-1 h-10 w-full rounded border border-zinc-200 px-3 text-sm"
               />
             </label>
-            <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-              End date (optional)
+            <label className="text-xs font-medium text-zinc-700">
+              End date
               <input
                 type="date"
                 name="end_date"
-                className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-sm"
+                className="mt-1 h-10 w-full rounded border border-zinc-200 px-3 text-sm"
               />
             </label>
-            <label className="md:col-span-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
+            <label className="text-xs font-medium text-zinc-700">
               Reason
               <input
                 type="text"
                 name="reason"
                 required
                 placeholder="e.g., Christmas shutdown"
-                className="mt-1 w-full rounded border border-zinc-200 px-2 py-1 text-sm"
+                className="mt-1 h-10 w-full rounded border border-zinc-200 px-3 text-sm"
               />
             </label>
-            <div className="md:col-span-4">
+            <div>
               <AdminSubmitButton
                 type="submit"
                 pendingLabel="Saving..."
-                className="rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800"
+                className="h-10 whitespace-nowrap rounded-md border border-zinc-900 bg-zinc-900 px-4 text-xs font-semibold text-white hover:bg-zinc-800"
               >
                 Add block
               </AdminSubmitButton>
