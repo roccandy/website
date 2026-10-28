@@ -1,7 +1,8 @@
 "use client";
 
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { productionColumnWidths } from "./productionColumnWidths";
 import { useAdminViewState } from "../useAdminViewState";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
@@ -70,6 +71,19 @@ const JACKET_LABELS = new Map([
   ["rainbow", "Rainbow"],
 ]);
 
+const getProductionControlsHost = () => document.getElementById("admin-production-view-controls");
+const subscribeToProductionControlsHost = (listener: () => void) => {
+  if (getProductionControlsHost()) return () => {};
+  const observer = new MutationObserver(() => {
+    if (getProductionControlsHost()) {
+      listener();
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => observer.disconnect();
+};
+
 
 function PackagingDescription({ value }: { value: string }) {
   const match = value.match(/^(\d+(?:\.\d+)?)\s+x\s+(.+)$/);
@@ -118,6 +132,11 @@ export function OrdersTable({
   const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
   const orderListRef = useRef<HTMLDivElement>(null);
   const [orderListWidth, setOrderListWidth] = useState(464);
+  const productionControlsHost = useSyncExternalStore(
+    subscribeToProductionControlsHost,
+    getProductionControlsHost,
+    () => null,
+  );
 
   useEffect(() => {
     const element = orderListRef.current;
@@ -262,13 +281,15 @@ export function OrdersTable({
     setSelectedId(orderId);
   };
 
+  const productionViewControl = (
+    <div aria-label="Production workspace view" className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1">
+      {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
+    </div>
+  );
+
   return (
     <div className="admin-production-workspace space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div aria-label="Production workspace view" className="inline-flex gap-1 rounded-lg border border-zinc-200 bg-white p-1">
-          {([ ["both", "Both panels"], ["calendar", "Calendar only"], ["orders", "Order list"] ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={workspaceView === value} onClick={() => setWorkspaceView(value)} className={`rounded-md px-3 py-1.5 text-xs font-medium ${workspaceView === value ? "bg-emerald-800 text-white" : "text-zinc-500 hover:bg-zinc-50"}`}>{label}</button>)}
-        </div>
-      </div>
+      {productionControlsHost ? createPortal(productionViewControl, productionControlsHost) : null}
       <div className="admin-production-panels" data-view={workspaceView}>
       <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
         <div ref={orderListRef} className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">

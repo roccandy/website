@@ -183,6 +183,7 @@ export function AdminWorkspaceHeader({
               );
             })}
           </nav>
+          {pathname === "/admin/orders" ? <div id="admin-production-view-controls" className="flex shrink-0 items-center" /> : null}
           {pathname === "/admin/orders" ? (
             <AdminLink
               href="/admin/settings/production"
