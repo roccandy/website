@@ -37,6 +37,7 @@ import {
 } from "../productionScheduleShared";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { upsertOrder } from "../actions";
+import { isDirectDepositPdfInvoicePaymentMethod } from "@/lib/invoiceDelivery";
 import {
   batchWeightsMatchTotal,
   calculatePackagingWeightKg,
@@ -879,6 +880,7 @@ export function OrderDetailEditor({
   const replacementInvoiceAllowed = Boolean(
     order.square_invoice_id &&
       isAdminManagedCustomOrder(order) &&
+      !isDirectDepositPdfInvoicePaymentMethod(order.payment_method) &&
       !order.paid_at &&
       order.square_invoice_status?.toUpperCase() !== "PAID",
   );

@@ -1,5 +1,8 @@
 import { getPackagingOptions, type OrderRow, type PackagingOption } from "@/lib/data";
 import { defaultSquareInvoiceNumber, squareInvoiceNumberWithSuffix } from "@/lib/squareInvoiceNumbers";
+import { DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL } from "@/lib/invoiceDelivery";
+
+export { DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL } from "@/lib/invoiceDelivery";
 
 export type AdminIntegrationOrder = Pick<
   OrderRow,
@@ -126,7 +129,6 @@ const DEFAULT_COUNTRY = "AU";
 const CANCELABLE_INVOICE_STATUSES = new Set(["SCHEDULED", "UNPAID", "PARTIALLY_PAID"]);
 const SKIPPABLE_INVOICE_STATUSES = new Set(["CANCELED", "FAILED", "REFUNDED"]);
 const BANK_TRANSFER_PAYMENT_METHOD_LABEL = "Square bank transfer invoice";
-export const DIRECT_DEPOSIT_PDF_PAYMENT_METHOD_LABEL = "Direct deposit PDF via Square";
 
 function moneyToCents(value: number | null | undefined) {
   const amount = Number(value);

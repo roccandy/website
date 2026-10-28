@@ -50,6 +50,7 @@ import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
+import { isDirectDepositPdfInvoicePaymentMethod } from "@/lib/invoiceDelivery";
 const WEDDING_HEART = "❤️";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
@@ -968,6 +969,7 @@ export function NewOrderForm({
         isEditMode &&
         isAdminManagedCustomOrder(initialOrder) &&
         initialOrder.square_invoice_id &&
+        !isDirectDepositPdfInvoicePaymentMethod(initialOrder.payment_method) &&
         !initialOrder.paid_at &&
         initialOrder.square_invoice_status?.toUpperCase() !== "PAID",
     );

@@ -48,6 +48,7 @@ import { batchWeightsForOrder, findFirstAvailableSlotIndexForDate, productionKgF
 import { isAdminManagedCustomOrder } from "./scheduleVisibility";
 import { buildOrderActivityChanges } from "./orderActivityChanges";
 import { buildDirectDepositInvoicePdf } from "@/lib/directDepositInvoicePdf";
+import { isDirectDepositPdfInvoicePaymentMethod } from "@/lib/invoiceDelivery";
 import { buildInvoiceRecord } from "./invoices/invoiceModel";
 import { orderSource } from "./orderSource";
 import { adminCandyColor } from "@/lib/adminCandyColors";
@@ -249,6 +250,88 @@ async function sendCustomerOrderEmail(
 
 async function sendAdminCreatedCustomerOrderEmail(order: Record<string, unknown>) {
   await sendCustomerOrderEmail(order, sendCustomerOrderConfirmationEmail);
+}
+
+async function resendDirectDepositPdfInvoice(input: {
+  order: OrderRow;
+  client: typeof supabaseAdminClient;
+  invoiceDueDays: number | null | undefined;
+}) {
+  const { order, client, invoiceDueDays } = input;
+  if (!order.square_invoice_id) {
+    throw new Error("The original PDF invoice record could not be found.");
+  }
+  const customerEmail = order.customer_email?.trim();
+  if (!customerEmail) {
+    throw new Error("A customer email address is required to resend the PDF invoice.");
+  }
+
+  const invoiceOrders = await fetchInvoiceGroupOrders(order.square_invoice_id, order, client);
+  const primaryOrder = invoiceOrders.find((invoiceOrder) => invoiceOrder.id === order.id) ?? invoiceOrders[0] ?? order;
+  const invoiceTitle = primaryOrder.square_invoice_title ?? sharedInvoiceTitle(primaryOrder, invoiceOrders);
+  const invoiceNumber = primaryOrder.order_number || primaryOrder.id.slice(0, 8);
+  const filename = `roc-candy-tax-invoice-${invoiceNumber.replace(/[^a-z0-9_-]/gi, "-")}.pdf`;
+  const dueDate = primaryOrder.square_invoice_due_date ?? adminInvoiceDueDateFromToday(invoiceDueDays);
+  const integrationOrder = {
+    ...primaryOrder,
+    invoiceDueDays,
+    square_invoice_title: invoiceTitle,
+    invoiceOrders: invoiceOrders.map((invoiceOrder) => ({
+      ...invoiceOrder,
+      square_invoice_title: invoiceTitle,
+    })),
+  } satisfies AdminInvoiceOrderInput;
+  const pdf = await buildDirectDepositInvoicePdf({
+    invoiceNumber,
+    invoiceTitle,
+    customerName: primaryOrder.customer_name,
+    customerEmail,
+    dueDate,
+    orders: invoiceOrders,
+  });
+  const invoiceResult = await updateAdminSquareInvoiceDraftAndAttachPdf(integrationOrder, { filename, pdf });
+  const sentAt = new Date().toISOString();
+  const { error: updateError } = await client
+    .from("orders")
+    .update({
+      square_invoice_version: invoiceResult.invoiceVersion,
+      square_invoice_status: invoiceResult.invoiceStatus,
+      square_invoice_url: invoiceResult.invoiceUrl,
+      square_invoice_due_date: dueDate,
+      square_invoice_sent_at: sentAt,
+      square_invoice_error: null,
+    })
+    .in("id", invoiceOrders.map((invoiceOrder) => invoiceOrder.id));
+  if (updateError) throw new Error(updateError.message);
+
+  const ordersRecipients = getOrdersRecipients().filter((recipient) => recipient.toLowerCase() !== customerEmail.toLowerCase());
+  const emailResult = await sendEmail({
+    to: [customerEmail],
+    bcc: ordersRecipients,
+    archive: {
+      kind: "invoice-pdf",
+      orderIds: invoiceOrders.map((invoiceOrder) => invoiceOrder.id),
+      orderNumbers: invoiceOrders
+        .map((invoiceOrder) => invoiceOrder.order_number)
+        .filter((orderNumber): orderNumber is string => Boolean(orderNumber)),
+    },
+    subject: `Updated Roc Candy Tax Invoice #${invoiceNumber}`,
+    text: [
+      "Please find your updated Roc Candy tax invoice attached.",
+      "This invoice is payable by direct deposit using the bank details and reference shown in the PDF.",
+      "Please email your remittance advice to admin@roccandy.com.au.",
+    ].join("\n\n"),
+    attachments: [
+      {
+        filename,
+        content: Buffer.from(pdf),
+        contentType: "application/pdf",
+      },
+    ],
+  });
+  if ("skipped" in emailResult) {
+    throw new Error("Updated PDF invoice email could not be sent because SMTP is not configured.");
+  }
 }
 
 const normalizeInvoiceCustomerEmail = (value: string | null | undefined) => value?.trim().toLowerCase() || "";
@@ -817,6 +900,7 @@ async function upsertOrderShared(formData: FormData) {
           existing?.square_invoice_id &&
           sendUpdatedInvoice &&
           isAdminManagedCustomOrder(existing) &&
+          !isDirectDepositPdfInvoicePaymentMethod(existing.payment_method) &&
           !existing.paid_at &&
           existingInvoiceStatus !== "PAID",
       );
@@ -1052,6 +1136,7 @@ async function upsertOrderShared(formData: FormData) {
 
     if (id) {
       let customerConfirmationResent = false;
+      let customerPdfInvoiceResent = false;
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
       if (error) throw new Error(error.message);
       await syncOrderSlotWeightsWithBatches(
@@ -1150,18 +1235,42 @@ async function upsertOrderShared(formData: FormData) {
         if (!customerEmail) {
           throw new Error("A customer email address is required to resend the order confirmation.");
         }
-        const emailResult = await sendCustomerOrderEmail({
-          ...(existing as Record<string, unknown>),
+        const updatedOrder = {
+          ...(existing as OrderRow),
           ...basePayload,
           id,
           customer_email: customerEmail,
+        } as OrderRow;
+        if (isDirectDepositPdfInvoicePaymentMethod(existing?.payment_method)) {
+          try {
+            await resendDirectDepositPdfInvoice({
+              order: updatedOrder,
+              client,
+              invoiceDueDays: invoiceDueDaysFromSettings(settings),
+            });
+            customerPdfInvoiceResent = true;
+          } catch (pdfError) {
+            inlineTone = "error";
+            inlineMessage = `Order saved, but the updated PDF invoice could not be sent: ${
+              pdfError instanceof Error ? pdfError.message : "Unknown error"
+            }`;
+          }
+        }
+        const emailResult = await sendCustomerOrderEmail({
+          ...(updatedOrder as Record<string, unknown>),
         }, orderSource(existing as OrderRow).key === "website" ? sendCustomerOrderSummaryEmail : sendCustomerOrderConfirmationEmail);
         if (!emailResult || "skipped" in emailResult) {
           inlineTone = "error";
-          inlineMessage = "Order saved, but the confirmation could not be sent because email is not configured.";
+          inlineMessage = customerPdfInvoiceResent
+            ? "Order saved and updated PDF invoice sent, but the confirmation could not be sent because email is not configured."
+            : "Order saved, but the confirmation could not be sent because email is not configured.";
         } else {
           customerConfirmationResent = true;
-          inlineMessage = "Order saved and confirmation resent.";
+          if (customerPdfInvoiceResent) {
+            inlineMessage = "Order saved, confirmation resent and updated PDF invoice sent.";
+          } else if (inlineTone !== "error") {
+            inlineMessage = "Order saved and confirmation resent.";
+          }
         }
       }
       activity = {
@@ -1190,6 +1299,7 @@ async function upsertOrderShared(formData: FormData) {
           status: basePayload.status,
           dueDate: basePayload.due_date,
           replacedSquareInvoice: shouldReplaceSquareInvoice,
+          resentPdfInvoice: customerPdfInvoiceResent,
           orderChanges,
         },
       };
