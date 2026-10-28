@@ -67,6 +67,11 @@ export function getAdminPrimaryNavigation(
       description: "All orders and refunds.",
     },
     {
+      label: "Pre-made",
+      href: "/admin/orders/additional-items",
+      description: "Pre-made orders awaiting fulfilment.",
+    },
+    {
       label: "Customers",
       href: "/admin/customers",
       description: "Customer history.",

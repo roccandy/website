@@ -18,6 +18,7 @@ describe("Compact admin navigation", () => {
     ).toEqual([
       "Production",
       "Orders",
+      "Pre-made",
       "Customers",
       "Invoices",
       "Insights",

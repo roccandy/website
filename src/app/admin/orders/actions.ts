@@ -3131,6 +3131,7 @@ export async function markAdditionalItemsShipped(formData: FormData) {
   }
 
   revalidatePath(ORDERS_PATH);
+  revalidatePath(ADDITIONAL_ITEMS_PATH);
   revalidatePath("/admin/orders/archived");
   await logAdminActivity({
     area: "operations",
@@ -3172,6 +3173,7 @@ export async function markAdditionalItemsPending(formData: FormData) {
     .eq("design_type", "premade");
   if (error) throw new Error(error.message);
 
+  revalidatePath(ADDITIONAL_ITEMS_PATH);
   await logAdminActivity({
     area: "operations",
     action: "updated",

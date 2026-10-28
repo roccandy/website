@@ -17,6 +17,8 @@ import {
   AdminPageContent,
 } from "./AdminNavigationFeedback";
 import { AdminWorkspaceHeader } from "./AdminWorkspaceHeader";
+import { getCachedProductionDay } from "./adminReadModels";
+import { isVisibleOnPremadeOrders } from "./orders/scheduleVisibility";
 
 const PAYMENTS_SANDBOX_MODE =
   (process.env.NEXT_PUBLIC_SQUARE_ENV ?? "production").toLowerCase() ===
@@ -103,6 +105,10 @@ export default async function AdminLayout({
     : null;
   const navSections = buildAdminNavSections(session.user);
   const productionUser = isProductionUser(session.user);
+  const activePremadeCount =
+    !productionUser && session.user.role !== "seo"
+      ? (await getCachedProductionDay()).orders.filter(isVisibleOnPremadeOrders).length
+      : 0;
 
   return (
     <AdminNavigationProvider>
@@ -123,6 +129,7 @@ export default async function AdminLayout({
             user={session.user}
             sections={navSections}
             birthdayGreeting={birthdayGreeting}
+            activePremadeCount={activePremadeCount}
           />
           {PAYMENTS_SANDBOX_MODE && (
             <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-center text-[11px] font-medium text-amber-800 sm:px-6 print:hidden">

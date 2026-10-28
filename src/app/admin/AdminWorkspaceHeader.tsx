@@ -28,10 +28,12 @@ export function AdminWorkspaceHeader({
   user,
   sections,
   birthdayGreeting,
+  activePremadeCount,
 }: {
   user: Session["user"];
   sections: AdminNavSection[];
   birthdayGreeting: string | null;
+  activePremadeCount: number;
 }) {
   const pathname = usePathname();
   const navigation = useAdminNavigation();
@@ -160,7 +162,9 @@ export function AdminWorkspaceHeader({
               const active =
                 pathname === item.href ||
                 (item.href === "/admin/customers" &&
-                  pathname.startsWith("/admin/customers/"));
+                  pathname.startsWith("/admin/customers/")) ||
+                (item.href === "/admin/orders/additional-items" &&
+                  pathname.startsWith("/admin/orders/additional-items"));
               const opening =
                 navigation?.destination?.split(/[?#]/)[0] === item.href;
               return (
@@ -173,6 +177,14 @@ export function AdminWorkspaceHeader({
                   className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition sm:px-4 sm:text-sm ${active || opening ? "border-emerald-800 text-emerald-900" : "border-transparent text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"}`}
                 >
                   {item.label}
+                  {item.href === "/admin/orders/additional-items" && activePremadeCount > 0 ? (
+                    <span
+                      aria-label={`${activePremadeCount} active pre-made orders`}
+                      className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white"
+                    >
+                      {activePremadeCount}
+                    </span>
+                  ) : null}
                   {opening && (
                     <span
                       aria-label="Opening"
