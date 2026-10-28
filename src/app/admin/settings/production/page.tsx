@@ -489,7 +489,7 @@ export default async function SettingsProductionPage() {
           </div>
           <div className="mt-5 border-t border-zinc-100 pt-5">
             <h4 className="text-sm font-semibold text-zinc-900">Add a production block</h4>
-          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-[15rem_15rem_minmax(0,1fr)_auto] md:items-end">
+          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-[10rem_10rem_minmax(0,1fr)_auto] md:items-end">
             <label className="text-xs font-medium text-zinc-700">
               Start date
               <input
