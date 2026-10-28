@@ -56,7 +56,6 @@ export function getAdminPrimaryNavigation(
       },
     ];
   return [
-    { label: "Today", href: "/admin", description: "Your daily work hub." },
     {
       label: "Production",
       href: "/admin/orders",
