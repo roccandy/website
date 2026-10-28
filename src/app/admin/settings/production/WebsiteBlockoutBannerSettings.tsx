@@ -13,7 +13,7 @@ export function WebsiteBlockoutBannerSettings({ enabled, months, action }: Props
   const [showBanner, setShowBanner] = useState(enabled);
 
   return (
-    <form action={action} className="flex flex-wrap items-center gap-3">
+    <form data-protect-unsaved action={action} className="flex flex-wrap items-center gap-3">
       <label className="flex items-center gap-2 text-sm text-zinc-700">
         <input
           type="checkbox"

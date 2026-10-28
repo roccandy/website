@@ -363,7 +363,7 @@ export default async function SettingsProductionPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-      <form action={updateProductionSettings} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <form data-protect-unsaved action={updateProductionSettings} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-5 py-4">
           <h3 className="text-sm font-semibold text-zinc-900">Capacity</h3>
         </div>
@@ -421,7 +421,7 @@ export default async function SettingsProductionPage() {
           <h3 className="text-sm font-semibold text-zinc-900">Calendar warning lead time</h3>
           <p className="mt-1 text-xs text-zinc-500">Flag orders when the required date is too close to their production day.</p>
         </div>
-        <form action={updateProductionDueLeadDays}>
+        <form data-protect-unsaved action={updateProductionDueLeadDays}>
           <div className="grid divide-y divide-zinc-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
             {PRODUCTION_DUE_LEAD_OPTIONS.map(({ key, label }) => (
               <label key={key} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
@@ -449,7 +449,7 @@ export default async function SettingsProductionPage() {
             <h3 className="admin-card-title text-zinc-900">Regular closed days</h3>
             <p className="mt-1 text-xs text-zinc-500">These days are unavailable every week.</p>
           </div>
-          <form action={updateDefaultNoProduction} className="space-y-3">
+          <form data-protect-unsaved action={updateDefaultNoProduction} className="space-y-3">
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {DEFAULT_NO_PRODUCTION_DAYS.map((day) => (
                 <label key={day.name} className="flex items-center gap-2 rounded border border-zinc-200 px-3 py-2 text-xs">
@@ -489,7 +489,7 @@ export default async function SettingsProductionPage() {
           </div>
           <div className="mt-5 border-t border-zinc-100 pt-5">
             <h4 className="text-sm font-semibold text-zinc-900">Add a production block</h4>
-          <form action={addBlock} className="mt-3 grid gap-3 md:grid-cols-[10rem_10rem_minmax(0,1fr)_auto] md:items-end">
+          <form data-protect-unsaved action={addBlock} className="mt-3 grid gap-3 md:grid-cols-[10rem_10rem_minmax(0,1fr)_auto] md:items-end">
             <label className="text-xs font-medium text-zinc-700">
               Start date
               <input
@@ -564,6 +564,7 @@ export default async function SettingsProductionPage() {
                           Edit
                         </summary>
                         <form
+                          data-protect-unsaved
                           action={updateBlock}
                           className="mt-2 grid gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-left text-xs text-zinc-600 shadow-sm"
                         >
