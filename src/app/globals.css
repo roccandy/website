@@ -195,6 +195,12 @@ body {
     scrollbar-gutter: stable;
   }
 
+  .admin-production-panels[data-view="both"] .admin-production-order-panel {
+    position: sticky;
+    top: 8rem;
+    align-self: start;
+  }
+
   .admin-production-panels[data-view="both"] .admin-production-orders-table thead {
     position: sticky;
     top: 0;

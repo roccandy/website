@@ -291,7 +291,7 @@ export function OrdersTable({
     <div className="admin-production-workspace space-y-4">
       {productionControlsHost ? createPortal(productionViewControl, productionControlsHost) : null}
       <div className="admin-production-panels" data-view={workspaceView}>
-      <div hidden={workspaceView === "calendar"} className="min-w-0 space-y-4">
+      <div hidden={workspaceView === "calendar"} className="admin-production-order-panel min-w-0 space-y-4">
         <div ref={orderListRef} className="admin-production-order-list overflow-x-auto rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <table className="admin-production-orders-table w-full min-w-[29rem] table-fixed text-[13px]">
           <colgroup>{columnWidths.map((width, index) => <col key={index} style={{ width }}/>)}</colgroup>
