@@ -108,14 +108,14 @@ const getFileExtensionFromUrl = (value: string) => {
   }
 };
 
-const SECTION_HEADING_CLASS = "text-[11px] uppercase tracking-[0.22em] text-zinc-500";
+const SECTION_HEADING_CLASS = "text-[12px] uppercase tracking-[0.22em] text-zinc-500";
 const SECTION_BODY_CLASS = "space-y-2 print:space-y-1";
 const INLINE_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1";
-const INLINE_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
+const INLINE_LABEL_CLASS = "text-[11px] tracking-[0.04em] text-zinc-500";
 const INLINE_VALUE_CLASS = "font-semibold text-zinc-900";
-const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[20px] leading-[1.15]";
-const SPEC_LABEL_CLASS = "text-[10px] tracking-[0.04em] text-zinc-500";
-const SPEC_VALUE_CLASS = "text-[20px] font-semibold text-zinc-900";
+const SPEC_ROW_CLASS = "flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[22px] leading-[1.2]";
+const SPEC_LABEL_CLASS = "text-[11px] tracking-[0.04em] text-zinc-500";
+const SPEC_VALUE_CLASS = "text-[22px] font-semibold text-zinc-900";
 const PRINT_FONT_FAMILY = "Helvetica, Arial, sans-serif";
 
 type ColorDisplay = {
@@ -392,11 +392,11 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 bg-white px-6 py-8 text-[13px] leading-[1.45] text-zinc-900 print:mx-0 print:max-w-none print:space-y-2 print:px-0 print:py-0 print:text-[10.5px] print:leading-[1.3]">
+    <div className="mx-auto max-w-4xl space-y-8 bg-white px-6 py-8 text-[14px] leading-[1.5] text-zinc-900 print:mx-0 print:max-w-none print:space-y-4 print:px-0 print:py-0 print:text-[12px] print:leading-[1.4]">
       <style>{`
         @media print {
           @page { size: A4; margin: 6mm; }
-          .print-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .print-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         }
       `}</style>
       <div className="flex items-center justify-between print:hidden">
@@ -415,8 +415,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         </div>
       </div>
 
-      <div className="print-grid-two grid gap-6 md:grid-cols-2 print:gap-2">
-        <div className="space-y-6 print:space-y-2">
+      <div className="print-grid-two grid gap-8 md:grid-cols-2 print:gap-3">
+        <div className="space-y-8 print:space-y-4">
           <div>
             <div className="flex items-center justify-center print:scale-[0.85]" style={{ fontFamily: PRINT_FONT_FAMILY }}>
               <CandyPreview
@@ -446,7 +446,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
           </div>
 
           <div>
-            <div className="space-y-4 print:space-y-2">
+            <div className="space-y-5 print:space-y-3">
               <div>
                 <p className={INLINE_ROW_CLASS}>
                   <span className={INLINE_LABEL_CLASS}>Requested date:</span>
@@ -522,7 +522,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
           </div>
         </div>
 
-        <div className="space-y-6 print:space-y-2">
+        <div className="space-y-8 print:space-y-4">
           {labelImageUrl ? (
             <div className="print:hidden">
                 <div className="flex items-center gap-3">
@@ -556,10 +556,9 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
           ) : null}
 
           <div>
-            <div className={`${SECTION_BODY_CLASS} space-y-5 print:space-y-3`}>
+            <div className={`${SECTION_BODY_CLASS} space-y-7 print:space-y-5`}>
               <section>
-                <h3 className={SECTION_HEADING_CLASS}>Production</h3>
-                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                <div className="space-y-3 print:space-y-2">
                   <p className={INLINE_ROW_CLASS}>
                     <span className={INLINE_LABEL_CLASS}>Order weight:</span>
                     <span className={INLINE_VALUE_CLASS} style={{ fontSize: "32pt", lineHeight: 1.1 }}>
@@ -582,8 +581,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </section>
 
               <section>
-                <h3 className={SECTION_HEADING_CLASS}>Candy specification</h3>
-                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                <div className="space-y-3 print:space-y-2">
                   {!isBranded && (
                     <p className={SPEC_ROW_CLASS}>
                       <span className={SPEC_LABEL_CLASS}>Text colour:</span>
@@ -628,8 +626,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               </section>
 
               <section>
-                <h3 className={SECTION_HEADING_CLASS}>Packaging and labels</h3>
-                <div className="mt-2 space-y-2 print:mt-1 print:space-y-1">
+                <div className="space-y-3 print:space-y-2">
                   <p className={SPEC_ROW_CLASS}>
                     <span className={SPEC_LABEL_CLASS}>Packaging type:</span>
                     <span className={SPEC_VALUE_CLASS}>{packagingSummary}</span>
