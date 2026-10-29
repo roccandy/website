@@ -384,10 +384,19 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 bg-white px-6 py-8 text-[14px] leading-[1.5] text-zinc-900 print:mx-0 print:max-w-none print:space-y-4 print:px-0 print:py-0 print:text-[12px] print:leading-[1.4]">
+    <div className="order-printout mx-auto max-w-4xl space-y-8 bg-white px-6 py-8 text-[14px] leading-[1.5] text-zinc-900 print:mx-0 print:max-w-none print:space-y-4 print:px-0 print:py-0 print:text-[12px] print:leading-[1.4]">
       <style>{`
         @media print {
           @page { size: A4; margin: 6mm; }
+          html:has(.order-printout),
+          body:has(.order-printout),
+          body:has(.order-printout) > div,
+          body:has(.order-printout) .admin-workspace,
+          body:has(.order-printout) .admin-page-shell,
+          body:has(.order-printout) .admin-page-content {
+            min-height: 0 !important;
+            height: auto !important;
+          }
           .print-grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         }
       `}</style>
@@ -553,46 +562,50 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               <section>
                 <h3 className={SECTION_HEADING_CLASS}>Colours</h3>
                 <div className="mt-2 space-y-3 print:mt-1 print:space-y-2">
-                  {!isBranded && (
+                  <div className="space-y-3 print:space-y-2">
+                    {!isBranded && (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Text:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
+                      </p>
+                    )}
+                    {isWedding && (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-3 pt-2 print:space-y-2 print:pt-1">
                     <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Text:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(textColorDisplay)}</span>
+                      <span className={SPEC_LABEL_CLASS}>Jacket:</span>
+                      <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
                     </p>
-                  )}
-                  {isWedding && (
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
-                    </p>
-                  )}
-                  <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Jacket:</span>
-                    <span className={SPEC_VALUE_CLASS}>{jacketLabel}</span>
-                  </p>
-                  {order.jacket !== "rainbow" && showJacketColorOne && (
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Colour 1:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
-                    </p>
-                  )}
-                  {order.jacket !== "rainbow" && showJacketColorTwo && (
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Colour 2:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorTwoDisplay)}</span>
-                    </p>
-                  )}
-                  {!isDefaultWhiteFill(order.candy_fill_color) ? (
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color, paletteHexMap))}</span>
-                    </p>
-                  ) : null}
-                  {jacketPreview.showPinstripe ? (
-                    <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>
-                      <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.pinstripe_color || "#ffffff", paletteHexMap))}</span>
-                    </p>
-                  ) : null}
+                    {order.jacket !== "rainbow" && showJacketColorOne && (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>{jacketLabel === "Single Colour" ? "Colour:" : "Colour 1:"}</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
+                      </p>
+                    )}
+                    {order.jacket !== "rainbow" && showJacketColorTwo && (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Colour 2:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorTwoDisplay)}</span>
+                      </p>
+                    )}
+                    {!isDefaultWhiteFill(order.candy_fill_color) ? (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Candy fill:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.candy_fill_color, paletteHexMap))}</span>
+                      </p>
+                    ) : null}
+                    {jacketPreview.showPinstripe && !isDefaultWhiteFill(order.pinstripe_color) ? (
+                      <p className={SPEC_ROW_CLASS}>
+                        <span className={SPEC_LABEL_CLASS}>Pinstripe:</span>
+                        <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(resolveColorDisplay(order.pinstripe_color, paletteHexMap))}</span>
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               </section>
 
