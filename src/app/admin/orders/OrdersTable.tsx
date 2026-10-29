@@ -432,6 +432,14 @@ export function OrdersTable({
                               >
                                 View details
                               </Link>
+                              {canWrite ? (
+                                <Link
+                                  href={`/admin/orders/${order.id}?edit=1`}
+                                  className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 hover:border-emerald-300"
+                                >
+                                  Edit order
+                                </Link>
+                              ) : null}
                               {!isAdminPremade ? (
                                 <Link
                                   href={adminOrderRemakeHref(order.id)}
