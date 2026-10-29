@@ -220,11 +220,11 @@ export default function AssignmentCalendarModal({
       }
     });
   };
-  const unassign = (allBatches: boolean) => {
-    if (!assignment?.assignment.id) return;
+  const unassign = (assignmentId: string, allBatches = false) => {
+    if (!assignmentId) return;
     startTransition(async () => {
       const formData = new FormData();
-      formData.set("assignment_id", assignment.assignment.id);
+      formData.set("assignment_id", assignmentId);
       if (allBatches) formData.set("unassign_all", "on");
       formData.set("response_mode", "inline");
       const result = await deleteAssignment(formData);
@@ -328,7 +328,7 @@ export default function AssignmentCalendarModal({
                     setUnassignPromptOpen(true);
                     return;
                   }
-                  unassign(false);
+                  unassign(assignment.assignment.id);
                 }}
                 className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:border-rose-300 disabled:opacity-50"
               >
@@ -523,21 +523,33 @@ export default function AssignmentCalendarModal({
             >
               <h3 className="text-lg font-semibold text-zinc-900">Unassign production batches</h3>
               <p className="mt-2 text-sm leading-6 text-zinc-600">
-                This order has {orderAssignments.length} scheduled batches. Choose whether to remove just the selected batch or every batch from the production schedule.
+                This order has {orderAssignments.length} scheduled batches. Pick one batch to remove, or remove every batch from the production schedule.
               </p>
               <div className="mt-5 grid gap-2">
+                {orderAssignments.map((orderAssignment, index) => {
+                  const slot = slots.find((entry) => entry.id === orderAssignment.slot_id);
+                  const batchLabel = weightLabel(orderAssignment.kg_assigned) || "Weight not set";
+                  const scheduleLabel = slot
+                    ? `${formatDayMonthLabel(new Date(`${slot.slot_date}T00:00:00`))} · Slot ${slot.slot_index}`
+                    : "Schedule slot unavailable";
+
+                  return (
+                    <button
+                      key={orderAssignment.id}
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => unassign(orderAssignment.id)}
+                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-left text-sm font-semibold text-rose-800 hover:border-rose-300 disabled:opacity-50"
+                    >
+                      Unassign batch {index + 1} · {batchLabel}
+                      <span className="mt-1 block text-xs font-medium text-rose-700">{scheduleLabel}</span>
+                    </button>
+                  );
+                })}
                 <button
                   type="button"
                   disabled={isPending}
-                  onClick={() => unassign(false)}
-                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3 text-left text-sm font-semibold text-rose-800 hover:border-rose-300 disabled:opacity-50"
-                >
-                  Unassign this batch only
-                </button>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => unassign(true)}
+                  onClick={() => unassign(assignment?.assignment.id ?? orderAssignments[0]?.id ?? "", true)}
                   className="rounded-lg border border-rose-300 bg-rose-600 px-3 py-3 text-left text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
                   Unassign all {orderAssignments.length} batches
