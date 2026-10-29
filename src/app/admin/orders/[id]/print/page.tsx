@@ -229,7 +229,7 @@ const resolvePrintQuantity = ({
 
 const formatLabelPrintCount = (count: number | null) => {
   if (!count || !Number.isFinite(count) || count <= 0) return "No";
-  return `Yes - ${Math.floor(count)}`;
+  return `${Math.floor(count)} Qty`;
 };
 
 export default async function PrintOrderPage({ params, searchParams }: Params) {
@@ -598,25 +598,29 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
 
               <section>
                 <h3 className={SECTION_HEADING_CLASS}>Packaging</h3>
+                <div className="mt-2 print:mt-1">
+                  <p className={SPEC_VALUE_CLASS}>{packagingLabel}</p>
+                  {hasPackagingDetails ? (
+                    <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
+                      {printQuantity ? <p>- {printQuantity} Qty</p> : null}
+                      {packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay ? (
+                        <p>- {jarLidColorDisplay.label} Lid</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
+              <section>
+                <h3 className={SECTION_HEADING_CLASS}>Labels</h3>
                 <div className="mt-2 space-y-3 print:mt-1 print:space-y-2">
-                  <div>
-                    <p className={SPEC_VALUE_CLASS}>{packagingLabel}</p>
-                    {hasPackagingDetails ? (
-                      <div className={`${SPEC_VALUE_CLASS} mt-2 space-y-1 leading-tight print:mt-1`}>
-                        {printQuantity ? <p>- {printQuantity} Qty</p> : null}
-                        {packaging?.type?.toLowerCase() === "jar" && jarLidColorDisplay ? (
-                          <p>- {jarLidColorDisplay.label} Lid</p>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
                   <p className={SPEC_ROW_CLASS}>
-                    <span className={SPEC_LABEL_CLASS}>Ingredient labels:</span>
+                    <span className={SPEC_LABEL_CLASS}>Ingredient:</span>
                     <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(ingredientLabelsToPrint)}</span>
                   </p>
                   <div className="space-y-2 print:space-y-1">
                     <p className={SPEC_ROW_CLASS}>
-                      <span className={SPEC_LABEL_CLASS}>Custom labels:</span>
+                      <span className={SPEC_LABEL_CLASS}>Custom:</span>
                       <span className={SPEC_VALUE_CLASS}>{formatLabelPrintCount(labelsToPrint)}</span>
                     </p>
                     {labelImageUrl && labelImageIsImage ? (
