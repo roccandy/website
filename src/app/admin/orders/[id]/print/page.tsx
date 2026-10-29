@@ -583,7 +583,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     </p>
                     {order.jacket !== "rainbow" && showJacketColorOne && (
                       <p className={SPEC_ROW_CLASS}>
-                        <span className={SPEC_LABEL_CLASS}>{showJacketColorTwo ? "Colour 1:" : "Colour:"}</span>
+                        <span className={SPEC_LABEL_CLASS}>{showJacketColorTwo ? "Colour 1:" : "Jacket Colour:"}</span>
                         <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
                       </p>
                     )}
