@@ -571,7 +571,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     )}
                     {isWedding && (
                       <p className={SPEC_ROW_CLASS}>
-                        <span className={SPEC_LABEL_CLASS}>Heart colour:</span>
+                        <span className={SPEC_LABEL_CLASS}>Heart:</span>
                         <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(heartColorDisplay)}</span>
                       </p>
                     )}
@@ -583,7 +583,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                     </p>
                     {order.jacket !== "rainbow" && showJacketColorOne && (
                       <p className={SPEC_ROW_CLASS}>
-                        <span className={SPEC_LABEL_CLASS}>{jacketLabel === "Single Colour" ? "Colour:" : "Colour 1:"}</span>
+                        <span className={SPEC_LABEL_CLASS}>{showJacketColorTwo ? "Colour 1:" : "Colour:"}</span>
                         <span className={SPEC_VALUE_CLASS}>{renderColorDisplay(jacketColorOneDisplay)}</span>
                       </p>
                     )}
