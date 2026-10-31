@@ -243,6 +243,29 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     expect(summary.customDetails?.labelImageUrl).toBeNull();
   });
 
+  it.each([
+    { count: null, type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "Circle 30mm", expectedImage: "https://cdn.test/label.png" },
+    { count: undefined, type: "label-1", image: null, expectedLabel: "Circle 30mm", expectedImage: null },
+    { count: null, type: null, image: "https://cdn.test/label.png", expectedLabel: "Artwork attached", expectedImage: "https://cdn.test/label.png" },
+    { count: null, type: null, image: "  ", expectedLabel: "No", expectedImage: null },
+    { count: 0, type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "No", expectedImage: null },
+    { count: "0", type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "No", expectedImage: null },
+    { count: 20, type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "Circle 30mm", expectedImage: "https://cdn.test/label.png" },
+    { count: 200, type: null, image: "https://cdn.test/label.png", expectedLabel: "Artwork attached", expectedImage: "https://cdn.test/label.png" },
+    { count: "20", type: "label-1", image: null, expectedLabel: "Circle 30mm", expectedImage: null },
+    { count: -1, type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "No", expectedImage: null },
+    { count: "invalid", type: "label-1", image: "https://cdn.test/label.png", expectedLabel: "No", expectedImage: null },
+  ])("resolves label details for count=$count, type=$type, artwork=$image", async ({ count, type, image, expectedLabel, expectedImage }) => {
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+    const summary = await buildAdminOrderSummaryEmailPayload({
+      orderPayloads: [{ packaging_option_id: "pack-1", labels_count: count, label_type_id: type, label_image_url: image }],
+      orderNumber: "label-regression", requestedDate: null, billing: {}, pickup: true,
+      paymentMethod: "Credit Card", paymentAmount: 100,
+    });
+    expect(summary.customDetails?.labels).toBe(expectedLabel);
+    expect(summary.customDetails?.labelImageUrl).toBe(expectedImage);
+  });
+
   it("rasterizes the exact captured designer SVG to a public PNG", async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://storage.example.com";
     process.env.SITE_URL = "https://roccandy.test";

@@ -365,9 +365,15 @@ export async function buildAdminOrderSummaryEmailPayload({
         ? "Yes"
         : "No";
     const labelsCount = toNumber(customItem.labels_count);
-    const hasCustomLabels = Number.isFinite(labelsCount) && (labelsCount ?? 0) > 0;
+    const hasLabelArtwork = typeof customItem.label_image_url === "string" && Boolean(customItem.label_image_url.trim());
+    const hasLabelType = typeof customItem.label_type_id === "string" && Boolean(customItem.label_type_id.trim());
+    // Legacy orders may have artwork/type without a count. An explicitly saved
+    // zero still means no labels, even if stale artwork remains on the order.
+    const hasCustomLabels = customItem.labels_count == null
+      ? hasLabelArtwork || hasLabelType
+      : Number.isFinite(labelsCount) && (labelsCount ?? 0) > 0;
     const labelType = hasCustomLabels
-      ? labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? "No label selected"
+      ? labelTypeMap.get(String(customItem.label_type_id ?? "")) ?? (hasLabelArtwork ? "Artwork attached" : "No label selected")
       : "No";
     const labelImageUrl =
       hasCustomLabels && typeof customItem.label_image_url === "string" && customItem.label_image_url.trim()
