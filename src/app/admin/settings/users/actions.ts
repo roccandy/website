@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getChangedFieldLabels, logAdminActivity } from "@/lib/adminActivity";
 import {
   createAdminUser,
+  countActiveAdminUsers,
   deleteAdminUser,
   getAdminUserById,
   getAdminUserByEmail,
@@ -12,6 +13,7 @@ import {
   updateAdminUserPassword,
   updateAdminUserProfile,
 } from "@/lib/adminUsers";
+import { removesActiveAdmin } from "@/lib/adminUserGuards";
 import { requireAdminManageUsersAccess } from "@/lib/adminAuth";
 import type { AdminRole } from "@/types/next-auth";
 
@@ -82,6 +84,13 @@ export async function updateAdminUserAction(formData: FormData) {
   }
 
   const previousUser = await getAdminUserById(id);
+  if (!previousUser) throw new Error("Admin user was not found.");
+  if (
+    removesActiveAdmin(previousUser, { role, is_active: isActive }) &&
+    (await countActiveAdminUsers()) <= 1
+  ) {
+    throw new Error("Keep at least one active admin account. Create another admin before changing this account's role or status.");
+  }
   await updateAdminUserProfile({ id, displayName, birthday, role, isActive });
   const nextUser = await getAdminUserById(id);
   if (previousUser && nextUser) {
@@ -154,6 +163,10 @@ export async function deleteAdminUserAction(formData: FormData) {
   }
 
   const deletedUser = await getAdminUserById(id);
+  if (!deletedUser) throw new Error("Admin user was not found.");
+  if (removesActiveAdmin(deletedUser, null) && (await countActiveAdminUsers()) <= 1) {
+    throw new Error("Keep at least one active admin account. Create another admin before deleting this account.");
+  }
   await deleteAdminUser(id);
   if (deletedUser) {
     await logAdminActivity({

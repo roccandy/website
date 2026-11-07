@@ -1,9 +1,9 @@
 # Roc Candy Operations and Release Guide
 
 Status: authoritative current operations document
-Last verified against the repository and production: 2026-08-26
+Last reviewed against the repository: 2026-11-07
 
-The site is launched and in production. This document replaces the old pre-launch checklist. Use it with `docs/architecture-notes.md`; old audits and rollout plans are historical evidence, not open launch work.
+The site is launched and in production. Use it with `docs/architecture-notes.md`. Deferred or optional work belongs only in `docs/future-improvements.md`.
 
 ## Current Production Baseline
 
@@ -74,27 +74,6 @@ The current production dependency audit has known findings. The safest policy is
 
 Leaving the tree untouched avoids update-induced regressions today, but retains known denial-of-service, middleware/auth-token, image-processing, and transitive-library risk and makes a later upgrade larger. The application’s actual exposure varies: some reported Nodemailer, OAuth/email-provider, custom-server, rewrite, or low-level library APIs are not used here. Record a deliberate deferral; do not treat “the site still works” as vulnerability remediation.
 
-## Automated Checks: Sensible Baseline
-
-The recommended baseline is additive and does not change production application behavior:
-
-- On pull requests and pushes, run `npm ci`, `npm test`, `npm run lint`, and `npm run build` in GitHub Actions.
-- Enable Dependabot alerts and security-update PRs without auto-merge.
-- Add a small Playwright/browser suite for public navigation, cart/pricing behavior, checkout validation before payment, and unauthenticated admin redirects. Mock or sandbox payment providers; never automate real production charges.
-- Add an independent read-only uptime check for the homepage and one health endpoint. Alert on repeated failure rather than mutating production.
-- Add an environment-variable validation module or documented example containing names only, never secret values.
-
-Risk and cost:
-
-- CI runs against a checked-out build and cannot break the already deployed site. A failing check can block a future merge only if branch rules make it required.
-- Dependabot opens reviewable PRs; it changes nothing until a human merges one.
-- Browser tests can only create business state if they are pointed at production and allowed to submit real actions. Keep them on local/preview with provider mocks or sandbox credentials.
-- Standard GitHub-hosted Actions are free for public repositories. Private repositories receive a monthly minute allowance based on the GitHub plan; excess usage can cost money. A modest Linux-only baseline usually fits the included allowance, but confirm the repository owner’s billing budget.
-- Dependabot security updates are available for all repositories.
-- Manual maintenance is limited to reviewing failures/PRs and occasionally updating brittle assertions. Budget roughly 15–30 minutes per week during active development and a monthly security review when the site is quiet.
-
-Do not add these workflows automatically as part of an unrelated site change. Introduce them in a dedicated PR so a workflow mistake can be corrected without touching production code.
-
 ## Supabase Paid Plan and Keepalive
 
 Supabase paid-plan projects are not automatically paused for inactivity. The daily `.github/workflows/supabase-keepalive.yml` ping is therefore not needed to keep this paid project awake.
@@ -109,20 +88,6 @@ Paid Supabase reduces inactivity risk but does not remove operational work:
 - Review usage and spend-cap behavior.
 - Confirm automated backup availability and retention in the project dashboard; use PITR only if the business recovery objective justifies the extra cost.
 - Periodically test a documented restore/export process without overwriting production.
-
-## Image Fetching Safety
-
-Next.js customer-facing optimized images are already restricted to the configured Supabase public-storage host. The remaining concern is server-side preview/email code that can fetch a supplied HTTP(S) image URL.
-
-A safe future restriction should:
-
-1. Allow `data:` images used by normal customer uploads.
-2. Allow the production Roc Candy domain and the configured Supabase public-storage origin.
-3. Inventory/log any existing order image hosts before enforcement.
-4. For an unapproved legacy URL, render a placeholder or safe text link rather than failing checkout, order saving, or email sending.
-5. Enforce response timeout, byte limit, content type, and redirect limits.
-
-With that design, ordinary customers will still see their uploaded images. The only likely visible difference is for a legacy saved order/cart whose logo or label points directly to an unrelated third-party host; it would show a placeholder until migrated or explicitly allowed. Do not implement a blanket “Supabase only” rejection without first checking legacy data.
 
 ## Payment and Order Recovery
 
@@ -183,6 +148,6 @@ For future LLM work, provide only:
 - `docs/launch-steps.md`
 - the specific code/schema/migration file relevant to the requested change
 
-The following are useful history but are not current general context: `infrastructure-map.md`, `admin-simple-map.*`, `README_Roadmap.rtf`, dated SEO/performance/mobile audits, rollback references, and old pricing/schema snapshots. They may describe WooCommerce, pre-launch tasks, old test counts, old routes, or temporary file paths that are no longer valid.
+The following are useful history but are not current general context: `infrastructure-map.md`, `admin-simple-map.*`, rollback references, and old pricing/schema snapshots. They may describe WooCommerce, pre-launch tasks, old test counts, old routes, or temporary file paths that are no longer valid.
 
 When behavior changes, update the two authoritative guides in the same PR. Do not duplicate a third full architecture or launch checklist.

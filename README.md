@@ -37,9 +37,7 @@ Run these before merging or deploying application changes:
 
 - [System guide](docs/architecture-notes.md) — current architecture, behavior, data, integrations, and environment variables.
 - [Operations and release guide](docs/launch-steps.md) — safe release checks, maintenance, monitoring, and incident handling.
+- [Handover guide](docs/handover.md) — secret-free transfer of the website, providers, data, and operational responsibility.
+- [Future improvements control](docs/future-improvements.md) — the sole record of deferred, optional, and externally verified work.
 
-These are the only two general documents that should be supplied to an LLM for current site context. Other files under `docs/` are implementation records, SQL references, or dated historical snapshots unless one of these guides explicitly links to them.
-
-## Future plans
-
-- [Admin automation and operations autopilot](docs/admin-automation-plan.md) — a proposed roadmap for reducing email, scheduling, purchasing, packing, and dispatch administration. It is not current system behavior.
+The system and operations guides are the only general documents that should be supplied to an LLM for current site context. Consult the future-improvements control only when planning new work. Other files under `docs/` are implementation records, SQL references, or dated historical snapshots unless one of these guides explicitly links to them.

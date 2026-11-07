@@ -95,6 +95,17 @@ export async function hasAnyAdminUsers() {
   return (count ?? 0) > 0;
 }
 
+export async function countActiveAdminUsers() {
+  const { count, error } = await supabaseAdminClient
+    .from(ADMIN_USERS_TABLE)
+    .select("id", { count: "exact", head: true })
+    .eq("role", "admin")
+    .eq("is_active", true);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 export async function createAdminUser(input: {
   email: string;
   displayName?: string | null;

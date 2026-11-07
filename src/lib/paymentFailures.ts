@@ -1,5 +1,17 @@
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 
+export type PaymentFailureRecord = {
+  id: string;
+  provider: "square" | "paypal";
+  stage: string;
+  message: string;
+  customer_email: string | null;
+  order_total: number | null;
+  payment_transaction_id: string | null;
+  order_number: string | null;
+  created_at: string;
+};
+
 type PaymentFailurePayload = {
   provider: "square" | "paypal";
   stage: string;
@@ -26,4 +38,32 @@ export async function logPaymentFailure(payload: PaymentFailurePayload) {
   } catch (error) {
     console.error("Failed to log payment failure:", error);
   }
+}
+
+export async function listOpenPaymentFailures() {
+  const { data, error } = await supabaseAdminClient
+    .from("payment_failures")
+    .select("id,provider,stage,message,customer_email,order_total,payment_transaction_id,order_number,created_at")
+    .is("resolved_at", null)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error("Unable to load payment recovery items. Apply the payment-recovery SQL migration, then try again.");
+  return (data ?? []) as PaymentFailureRecord[];
+}
+
+export async function resolvePaymentFailure(input: {
+  id: string;
+  resolvedByEmail: string | null;
+  note: string | null;
+}) {
+  const { error } = await supabaseAdminClient
+    .from("payment_failures")
+    .update({
+      resolved_at: new Date().toISOString(),
+      resolved_by_email: input.resolvedByEmail,
+      resolution_note: input.note,
+    })
+    .eq("id", input.id)
+    .is("resolved_at", null);
+  if (error) throw new Error("Unable to close this payment recovery item.");
 }

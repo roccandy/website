@@ -1,7 +1,7 @@
 # Roc Candy System Guide
 
 Status: authoritative current-state document
-Last verified against the repository and production: 2026-08-26
+Last reviewed against the repository: 2026-11-07
 
 This is one of two general source-of-truth documents. Use it with `docs/launch-steps.md` when giving the project to an LLM. If a dated audit, plan, diagram, rollback note, or old roadmap conflicts with this guide, this guide wins.
 
@@ -136,10 +136,10 @@ Never put secret values in documentation or commit `.env.local`.
 ## Known Operational/Security Constraints
 
 - Rate limiting is process-memory based. It reduces simple abuse but is not a durable distributed limit across Vercel instances.
-- Server-rendered email/preview helpers can fetch external image URLs. Restricting them safely requires allowing current Roc Candy/Supabase hosts and handling legacy external URLs with a placeholder; see the operations guide before changing this.
+- Server-rendered email/preview helpers can fetch external image URLs. The optional hardening approach is recorded in `docs/future-improvements.md`.
 - Dependency alerts exist in the current tree. Update packages only through a preview-tested, reviewed dependency change; do not auto-merge dependency updates to production.
 - There is currently no broad pull-request CI gate, browser end-to-end suite, or independent uptime alert. The repository has substantial Vitest coverage plus lint/build commands, but those checks depend on a developer running them.
 
 ## Documentation Rule
 
-Update this guide whenever architecture, active integrations, checkout/order behavior, auth roles, data ownership, or required environment-variable groups change. Update `docs/launch-steps.md` whenever release, monitoring, backup, or incident procedures change. Keep dated implementation notes for history, but add a clear historical banner if their old behavior could be mistaken for current behavior.
+Update this guide whenever architecture, active integrations, checkout/order behavior, auth roles, data ownership, or required environment-variable groups change. Update `docs/launch-steps.md` whenever release, monitoring, backup, or incident procedures change. Record deferred or optional work only in `docs/future-improvements.md`.

@@ -67,8 +67,6 @@ Untracked files captured in the archive:
 - `docs/admin-simple-map.png`
 - `docs/admin-simple-map.svg`
 - `docs/infrastructure-map.md`
-- `docs/seo-technical-check-2026-06-10.md`
-- `docs/site-performance-conversion-audit-2026-06-10.md`
 
 The rollback reference was also copied into `.rollback/2026-06-14-pre-admin-large-order/` so the instructions survive local doc resets. The `.rollback/` directory is local and untracked. Do not delete it while rollback may still be needed.
 

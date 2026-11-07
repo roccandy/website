@@ -113,6 +113,12 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
           "Square invoice drafts, sent invoices, and payment status.",
       },
       {
+        label: "Payment Recovery",
+        href: "/admin/orders/recovery",
+        description:
+          "Paid checkout failures that need manual reconciliation.",
+      },
+      {
         label: "All Orders / Refunds",
         href: "/admin/orders/archived",
         description: "Full order history, refunds, and archived records.",
