@@ -10,6 +10,9 @@ export type PaymentFailureRecord = {
   payment_transaction_id: string | null;
   order_number: string | null;
   created_at: string;
+  resolved_at: string | null;
+  resolved_by_email: string | null;
+  resolution_note: string | null;
 };
 
 type PaymentFailurePayload = {
@@ -41,14 +44,25 @@ export async function logPaymentFailure(payload: PaymentFailurePayload) {
 }
 
 export async function listOpenPaymentFailures() {
-  const { data, error } = await supabaseAdminClient
+  return listPaymentFailures("open");
+}
+
+export async function listResolvedPaymentFailures() {
+  return listPaymentFailures("resolved");
+}
+
+async function listPaymentFailures(status: "open" | "resolved") {
+  let query = supabaseAdminClient
     .from("payment_failures")
-    .select("id,provider,stage,message,customer_email,order_total,payment_transaction_id,order_number,created_at")
+    .select("id,provider,stage,message,customer_email,order_total,payment_transaction_id,order_number,created_at,resolved_at,resolved_by_email,resolution_note")
     // Browser-side setup, validation, and declined-payment telemetry is useful
     // for engineering but is not an order-recovery task. This queue is only
     // for a payment which succeeded before order finalisation failed.
-    .eq("stage", "order_finalization")
-    .is("resolved_at", null)
+    .eq("stage", "order_finalization");
+  query = status === "open"
+    ? query.is("resolved_at", null)
+    : query.not("resolved_at", "is", null);
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw new Error("Unable to load payment recovery items. Apply the payment-recovery SQL migration, then try again.");

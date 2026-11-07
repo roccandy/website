@@ -102,3 +102,5 @@ customer communications. Re-open any of these only with a new approved brief.
 - 2026-11-07 — Limited payment recovery to successful-payment order-finalisation
   failures, excluding browser payment telemetry that does not require order
   reconciliation.
+- 2026-11-07 — Added resolved payment-recovery history, including resolution
+  date, resolver, and reconciliation note.
