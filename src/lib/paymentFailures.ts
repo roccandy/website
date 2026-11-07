@@ -44,6 +44,10 @@ export async function listOpenPaymentFailures() {
   const { data, error } = await supabaseAdminClient
     .from("payment_failures")
     .select("id,provider,stage,message,customer_email,order_total,payment_transaction_id,order_number,created_at")
+    // Browser-side setup, validation, and declined-payment telemetry is useful
+    // for engineering but is not an order-recovery task. This queue is only
+    // for a payment which succeeded before order finalisation failed.
+    .eq("stage", "order_finalization")
     .is("resolved_at", null)
     .order("created_at", { ascending: false })
     .limit(100);

@@ -11,7 +11,7 @@ export async function resolvePaymentRecoveryAction(formData: FormData) {
   const session = await requireAdminWriteAccess();
   const id = formData.get("id")?.toString().trim() ?? "";
   const note = formData.get("resolution_note")?.toString().trim().slice(0, 1_000) || null;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) {
+  if (!/^(?:\d+|[0-9a-f-]{36})$/i.test(id)) {
     redirect(appendAdminToast(RECOVERY_PATH, "error", "Invalid payment recovery item."));
   }
 
