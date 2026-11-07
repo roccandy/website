@@ -11,6 +11,8 @@ import type {
   ProductionSlot,
 } from "@/lib/data";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { readCandyDesign, designSummary, DESIGN_JACKETS } from "@/lib/candyDesign";
+import { DesignDownloads } from "@/app/admin/design/DesignDownloads";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { resolveCandyPreviewJacket } from "../orderColorUtils";
 import {
@@ -84,6 +86,7 @@ export function OrderSummary({
   canWrite: boolean;
 }) {
   const state = orderWorkflow(order, assignments, slots, today);
+  const studioDesign = readCandyDesign(order.candy_design);
   const packaging = packagingOptions.find(
     (option) => option.id === order.packaging_option_id,
   );
@@ -325,10 +328,12 @@ export function OrderSummary({
         </div>
         <div className="min-w-0 space-y-5">
           <Card title="Design & artwork">
+            {studioDesign && <div className="mb-4"><DesignDownloads design={studioDesign}/></div>}
             <div className="flex min-w-0 flex-wrap items-center gap-5">
               {!state.premade && (
                 <div className="max-w-full overflow-hidden rounded-xl bg-zinc-50 p-1">
                   <CandyPreview
+                    design={studioDesign}
                     designText={!wedding ? order.design_text || "" : undefined}
                     lineOne={wedding ? weddingText.lineOne : undefined}
                     lineTwo={wedding ? weddingText.lineTwo : undefined}
@@ -363,7 +368,7 @@ export function OrderSummary({
                 <Field label="Design text">{order.design_text}</Field>
                 <Field label="Flavour">{order.flavor}</Field>
                 <Field label="Jacket">
-                  {(
+                  {studioDesign ? DESIGN_JACKETS[studioDesign.jacket.mode] : (
                     order.jacket ||
                     order.jacket_type ||
                     "Single colour"
@@ -372,6 +377,8 @@ export function OrderSummary({
               </dl>
             </div>
             <dl className={`${fields} mt-5`}>
+              {studioDesign && <Field label="Studio design specification"><ul className="space-y-1">{designSummary(studioDesign, true).map((line, i) => <li key={i}>{line}</li>)}</ul></Field>}
+              {!studioDesign && <>
               <Field label="Jacket colour one">
                 {color(order.jacket_color_one)}
               </Field>
@@ -382,11 +389,12 @@ export function OrderSummary({
               <Field label="Candy fill colour">{color(order.candy_fill_color || "#ffffff")}</Field>
               {jacket.showPinstripe ? <Field label="Pinstripe colour">{color(order.pinstripe_color || "#ffffff")}</Field> : null}
               <Field label="Heart colour">{color(order.heart_color)}</Field>
+              </>}
             </dl>
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
                 {
-                  label: "Uploaded logo",
+                  label: studioDesign ? "Original uploaded logo" : "Uploaded logo",
                   url: order.logo_url,
                   filename: logoDownloadNameForOrder(order),
                 },

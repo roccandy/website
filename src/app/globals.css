@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@font-face { font-family: "Roboto"; src: url("/design-fonts/Roboto.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto"; src: url("/design-fonts/Roboto-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+@font-face { font-family: "Roboto Slab"; src: url("/design-fonts/RobotoSlab.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Mono"; src: url("/design-fonts/RobotoMono.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Roboto Mono"; src: url("/design-fonts/RobotoMono-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

@@ -528,13 +528,14 @@ function getCustomDetailsList(order: AdminOrderSummaryEmailPayload) {
 function buildCustomTextLines(details: AdminCustomOrderDetails[], includeWeight: boolean) {
   return details.flatMap((detail) => [
     includeWeight ? `Weight: ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}` : null,
-    `Outer colour / colours: ${detail.outerColours}`,
-    detail.fillColour ? `Candy fill colour: ${detail.fillColour}` : null,
-    detail.pinstripeColour ? `Pinstripe colour: ${detail.pinstripeColour}` : null,
-    `Pinstripe: ${detail.pinstripe}`,
+    ...(detail.studioDesignSummary || []),
+    !detail.studioDesignSummary ? `Outer colour / colours: ${detail.outerColours}` : null,
+    !detail.studioDesignSummary && detail.fillColour ? `Candy fill colour: ${detail.fillColour}` : null,
+    !detail.studioDesignSummary && detail.pinstripeColour ? `Pinstripe colour: ${detail.pinstripeColour}` : null,
+    !detail.studioDesignSummary ? `Pinstripe: ${detail.pinstripe}` : null,
     `Flavour: ${detail.flavor ?? "-"}`,
-    `Text: ${detail.textColour}`,
-    detail.heartColour ? `Heart: ${detail.heartColour}` : null,
+    !detail.studioDesignSummary ? `Text: ${detail.textColour}` : null,
+    !detail.studioDesignSummary && detail.heartColour ? `Heart: ${detail.heartColour}` : null,
     `Packaging: ${detail.packaging}`,
     `Custom label type: ${detail.labels}`,
     `Ingredient labels: ${detail.ingredientLabels}`,
@@ -572,14 +573,15 @@ async function buildCustomHtmlSections(
       if (labelPreview.attachment) attachments.push(labelPreview.attachment);
 
       const detailsHtml = `
+        ${detail.studioDesignSummary ? `<div style="margin-bottom:8px;"><strong>Candy design</strong>${detail.studioDesignSummary.map(line => `<div>${escapeHtml(line)}</div>`).join("")}</div>` : ""}
         ${options.includeWeight ? `<div><strong>Weight:</strong> ${detail.weightKg ? `${detail.weightKg.toFixed(2)} kg` : "-"}</div>` : ""}
-        <div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
+        ${!detail.studioDesignSummary ? `<div><strong>Outer colour/colours:</strong> ${escapeHtml(detail.outerColours)}</div>
         ${detail.fillColour ? `<div><strong>Candy fill colour:</strong> ${escapeHtml(detail.fillColour)}</div>` : ""}
         ${detail.pinstripeColour ? `<div><strong>Pinstripe colour:</strong> ${escapeHtml(detail.pinstripeColour)}</div>` : ""}
-        <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>
+        <div><strong>Pinstripe:</strong> ${escapeHtml(detail.pinstripe)}</div>` : ""}
         <div><strong>Flavour:</strong> ${escapeHtml(detail.flavor ?? "-")}</div>
-        <div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
-        ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}
+        ${!detail.studioDesignSummary ? `<div><strong>Text:</strong> ${escapeHtml(detail.textColour)}</div>
+        ${detail.heartColour ? `<div><strong>Heart:</strong> ${escapeHtml(detail.heartColour)}</div>` : ""}` : ""}
         <div><strong>Packaging:</strong> ${escapeHtml(detail.packaging)}</div>
         <div><strong>Custom label type:</strong> ${escapeHtml(detail.labels)}</div>
         <div><strong>Ingredient labels:</strong> ${escapeHtml(detail.ingredientLabels)}</div>

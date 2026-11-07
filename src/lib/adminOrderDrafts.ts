@@ -1,0 +1,33 @@
+import type { OrderRow } from "@/lib/data";
+import { parseCandyDesign } from "@/lib/candyDesign";
+
+export type DraftOrderTab = { id: string; fields: Record<string,string>; batchWeights: string[] };
+export type AdminOrderDraftPayload = { schemaVersion: 1; shared: Record<string,string>; orders: DraftOrderTab[]; activeOrderId: string; invoiceDiscountType: string; invoiceDiscountValue: string; invoicePriceOverride: string };
+export type AdminOrderDraft = { id: string; revision: number; source_order_id: string|null; source_fingerprint: string|null; payload: AdminOrderDraftPayload; title: string; customer_name: string|null; required_date: string|null; updated_at: string; publishing_at: string|null; completed_at: string|null; discarded_at: string|null; published_order_ids: string[] };
+export type AdminOrderDraftSummary = Pick<AdminOrderDraft,'id'|'revision'|'source_order_id'|'title'|'customer_name'|'required_date'|'updated_at'|'publishing_at'>;
+
+const SHARED_FIELDS=new Set(['first_name','last_name','customer_email','phone','organization_name','pickup','address_line1','address_line2','suburb','postcode','state','customer_note']);
+const ORDER_FIELDS=new Set(['title','order_description','category_id','packaging_option_id','quantity','labels_count','labels_opt_in','jar_lid_color','due_date','total_price','order_weight_g','total_weight_kg','admin_discount_type','admin_discount_value','admin_price_override','ingredient_labels_opt_in','ingredient_labels_count','design_type','design_text','jacket','jacket_type','jacket_color_one','jacket_color_two','candy_fill_color','pinstripe_color','text_color','heart_color','flavor','logo_url','label_image_url','label_type_id','notes','candy_design','admin_premade_mode','admin_premade_candy_id','admin_premade_custom_name','production_slot_date']);
+const record=(v:unknown):Record<string,unknown> => v && typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
+const fields=(v:unknown,allowed:Set<string>) => Object.fromEntries(Object.entries(record(v)).filter(([k,value])=>allowed.has(k)&&typeof value==='string')) as Record<string,string>;
+export const isDraftUuid=(value:unknown):value is string => typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+
+export function parseAdminOrderDraftPayload(value:unknown):AdminOrderDraftPayload {
+  if((JSON.stringify(value)?.length ?? 0)>24_000_000) throw new Error('The draft is too large. Reduce the uploaded artwork size.');
+  const v=record(value);
+  if(v.schemaVersion!==1||!Array.isArray(v.orders)||!v.orders.length||v.orders.length>12) throw new Error('A draft must contain between 1 and 12 order tabs.');
+  const seen=new Set<string>();
+  const orders=v.orders.map((input,index)=>{const o=record(input); const id=typeof o.id==='string'?o.id.slice(0,120):`order-${index}`;if(seen.has(id)) throw new Error('Duplicate draft order tab.');seen.add(id); return {id,fields:fields(o.fields,ORDER_FIELDS),batchWeights:Array.isArray(o.batchWeights)?o.batchWeights.filter((w):w is string=>typeof w==='string').slice(0,100):[]};});
+  return {schemaVersion:1,shared:fields(v.shared,SHARED_FIELDS),orders,activeOrderId:typeof v.activeOrderId==='string'&&seen.has(v.activeOrderId)?v.activeOrderId:orders[0].id,invoiceDiscountType:['none','fixed','percent'].includes(String(v.invoiceDiscountType))?String(v.invoiceDiscountType):'none',invoiceDiscountValue:typeof v.invoiceDiscountValue==='string'?v.invoiceDiscountValue.slice(0,40):'',invoicePriceOverride:typeof v.invoicePriceOverride==='string'?v.invoicePriceOverride.slice(0,40):''};
+}
+export function adminDraftHref(draft:Pick<AdminOrderDraft,'id'|'source_order_id'>) { return draft.source_order_id?`/admin/orders/${draft.source_order_id}?edit=1&draft=${draft.id}`:`/admin/orders/new?draft=${draft.id}`; }
+export function draftOrderFields(draft:AdminOrderDraft) { const p=draft.payload; return {...p.orders.find(o=>o.id===p.activeOrderId)!.fields,...p.shared}; }
+export function orderDraftSourceFingerprint(order:OrderRow) {
+  return JSON.stringify([...ORDER_FIELDS,...SHARED_FIELDS,'admin_batch_weights_kg','admin_price_locked_at','status','paid_at','payment_provider','payment_transaction_id','payment_method','square_invoice_id','square_invoice_status','made','shipped_at','archived_at','refunded_at'].filter(key=>key!=='production_slot_date').map(key=>[key,(order as unknown as Record<string,unknown>)[key]??null]));
+}
+export function draftFormOrderDefaults(draft:AdminOrderDraft,source:OrderRow|null=null):OrderRow {
+  const f=draftOrderFields(draft); const tab=draft.payload.orders.find(o=>o.id===draft.payload.activeOrderId)!;
+  let design=null; try { design=parseCandyDesign(f.candy_design); } catch { /* Incomplete artwork remains editable. */ }
+  const numeric=(key:string)=>f[key]?.trim()&&Number.isFinite(Number(f[key]))?Number(f[key]):null;
+  return {...source,...f,id:source?.id||'',order_number:source?.order_number||null,created_at:source?.created_at||draft.updated_at,status:source?.status||'unassigned',quantity:numeric('quantity'),labels_count:numeric('labels_count'),ingredient_labels_count:numeric('ingredient_labels_count'),total_price:numeric('total_price'),total_weight_kg:numeric('order_weight_g')!==null?Number(f.order_weight_g)/1000:numeric('total_weight_kg')??0,admin_discount_value:numeric('admin_discount_value'),admin_price_override:numeric('admin_price_override'),pickup:f.pickup==='on',admin_batch_weights_kg:tab.batchWeights.map(Number).filter(Number.isFinite),candy_design:design,customer_name:[f.first_name,f.last_name].filter(Boolean).join(' ')||f.organization_name||source?.customer_name||null} as OrderRow;
+}

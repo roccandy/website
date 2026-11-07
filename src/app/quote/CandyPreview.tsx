@@ -2,8 +2,12 @@
 
 import { useId, useMemo } from "react";
 import { shortCandyTextScale } from "@/lib/candyTextSizing";
+import { CandyDesignSvg } from "@/components/CandyDesignSvg";
+import type { CandyDesign } from "@/lib/candyDesign";
+import { SITE_DESIGNER_DEFAULTS, getCustomTextLayout, getCustomArcTextStyle, CUSTOM_ARC_LETTER_SPACING_EM, CUSTOM_SINGLE_ARC_MAX_WIDTH_RATIO } from "@/lib/siteDesignerDefaults";
 
 type Props = {
+  design?: CandyDesign | null;
   designText?: string;
   lineOne?: string;
   lineTwo?: string;
@@ -23,13 +27,14 @@ type Props = {
   zoom?: number;
 };
 
-const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
+const PREVIEW_FONT_FAMILY = SITE_DESIGNER_DEFAULTS.fontFamily;
 const previewDimensions = { width: 350, height: 260 };
 const CANVAS_WIDTH = 1772;
 const CANVAS_HEIGHT = 1300;
 const SVG_VIEW_BOX = `0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`;
 
 export function CandyPreview({
+  design,
   designText,
   lineOne,
   lineTwo,
@@ -192,6 +197,8 @@ export function CandyPreview({
         } as const)
       : undefined;
 
+  if (design) return <div className="mx-auto w-full bg-white" style={{ maxWidth: previewSize.width, aspectRatio: `${previewSize.width} / ${previewSize.height}` }}><CandyDesignSvg design={design} prefix={gradientPrefix}/></div>;
+
   return (
     <div
       className="flex w-full items-center justify-center bg-white p-[0.1rem]"
@@ -305,74 +312,6 @@ type OverlayProps = {
   zoom?: number;
 };
 
-type CustomTextLayout =
-  | { kind: "straight"; text: string }
-  | { kind: "singleArc"; text: string }
-  | { kind: "stacked"; words: string[] }
-  | { kind: "twoArc"; top: string; bottom: string };
-
-const nonSpaceLength = (value: string) => value.replace(/\s/g, "").length;
-
-function getCustomTextLayout(text: string, variant?: "short" | "long"): CustomTextLayout | null {
-  const trimmed = text.trim().replace(/\s+/g, " ");
-  if (!trimmed) return null;
-  if (variant === "short") return { kind: "straight", text: trimmed };
-  if (variant !== "long") return null;
-
-  const words = trimmed.split(" ").filter(Boolean);
-  const letters = nonSpaceLength(trimmed);
-
-  if (words.length === 1) {
-    return letters <= 6 ? { kind: "straight", text: trimmed } : { kind: "singleArc", text: trimmed };
-  }
-
-  if (words.length === 2) {
-    const eachWordFitsStraight = words.every((word) => nonSpaceLength(word) <= 6);
-    if (letters <= 11 && eachWordFitsStraight) return { kind: "stacked", words };
-    return { kind: "twoArc", top: words[0] ?? "", bottom: words[1] ?? "" };
-  }
-
-  if (words.length === 3 && words.every((word) => nonSpaceLength(word) <= 6)) {
-    return { kind: "stacked", words };
-  }
-
-  return { kind: "singleArc", text: trimmed };
-}
-
-const CUSTOM_ARC_LETTER_SPACING_EM = 0.1;
-const CUSTOM_ARC_MAX_WIDTH_RATIO = 0.86;
-const CUSTOM_SINGLE_ARC_MAX_WIDTH_RATIO = 0.84;
-const CUSTOM_ARC_MIN_FONT_SIZE = 88;
-const CUSTOM_ARC_MIN_LETTER_SPACING_EM = 0.045;
-
-function estimateArcTextWidth(text: string, fontSize: number, letterSpacingEm: number) {
-  const glyphWidth = Array.from(text.toUpperCase()).reduce((total, char) => {
-    if (char === " ") return total + 0.34;
-    if ("MW".includes(char)) return total + 0.95;
-    if ("@#%&".includes(char)) return total + 0.86;
-    if ("OQCG".includes(char)) return total + 0.74;
-    if ("ABDHKNPRUSVXYZ".includes(char)) return total + 0.66;
-    if ("0123456789".includes(char)) return total + 0.56;
-    if ("ILTJ".includes(char)) return total + 0.38;
-    return total + 0.5;
-  }, 0);
-  const letterCount = Array.from(text).filter((char) => char !== " ").length;
-  const spacingWidth = Math.max(0, letterCount - 1) * letterSpacingEm * fontSize;
-  return glyphWidth * fontSize + spacingWidth;
-}
-
-function getCustomArcTextStyle(text: string, baseFontSize: number, arcRadius: number, maxWidthRatio = CUSTOM_ARC_MAX_WIDTH_RATIO) {
-  const maxWidth = Math.PI * arcRadius * maxWidthRatio;
-  const estimatedWidth = estimateArcTextWidth(text, baseFontSize, CUSTOM_ARC_LETTER_SPACING_EM);
-  const scale = estimatedWidth > maxWidth ? maxWidth / estimatedWidth : 1;
-  const fontSize = Math.max(CUSTOM_ARC_MIN_FONT_SIZE, Math.floor(baseFontSize * scale));
-  const letterSpacingEm = Math.max(CUSTOM_ARC_MIN_LETTER_SPACING_EM, CUSTOM_ARC_LETTER_SPACING_EM * scale);
-
-  return {
-    fontSize,
-    letterSpacing: `${letterSpacingEm.toFixed(3)}em`,
-  };
-}
 
 function OverlayText({
   logoUrl,
@@ -389,19 +328,19 @@ function OverlayText({
   // Match the inner circle center in the SVG paths.
   const cx = 544.367;
   const cy = 659.802;
-  const arcRadius = 320; // tuned to mimic the live site arc curvature
+  const arcRadius = SITE_DESIGNER_DEFAULTS.arcRadius;
   const singleArcRadius = 380;
   const singleArcYOffset = 36;
   const fontFamily = PREVIEW_FONT_FAMILY;
   const cappedDesign = (designText || lineOne || "").trim();
   const customTextLayout = getCustomTextLayout(cappedDesign, customTextVariant);
-  const arcFontSizeBase = 122; // maps to ~24px at rendered size
-  const weddingArcFontSize = 130; // slightly larger for wedding arcs
+  const arcFontSizeBase = SITE_DESIGNER_DEFAULTS.genericFontSize;
+  const weddingArcFontSize = SITE_DESIGNER_DEFAULTS.weddingFontSize;
   const singleArcFontSize = cappedDesign.length > 12 ? 106 : 114;
   const singleArcLetterSpacing = cappedDesign.length > 10 ? "0.08em" : "0.06em";
-  const straightFontSize = customTextLayout ? Math.round(132 * (customTextLayout.kind === "straight" ? shortCandyTextScale(cappedDesign) : 1)) : 122;
-  const initialsFontSize = 180; // maps to ~35px at rendered size
-  const heartScale = 9.49;
+  const straightFontSize = customTextLayout ? Math.round(SITE_DESIGNER_DEFAULTS.straightFontSize * (customTextLayout.kind === "straight" ? shortCandyTextScale(cappedDesign) : 1)) : SITE_DESIGNER_DEFAULTS.genericFontSize;
+  const initialsFontSize = SITE_DESIGNER_DEFAULTS.initialsFontSize;
+  const heartScale = SITE_DESIGNER_DEFAULTS.heartScale;
   const frontCircleCx = 549.755 * 0.979136 + 6.78919;
   const frontCircleCy = 656.823 * 0.979136 + 16.7037;
   const frontCircleRadius = 444.797 * 0.979136;
@@ -431,7 +370,7 @@ function OverlayText({
     customTextLayout?.kind === "twoArc" ? getCustomArcTextStyle(customTextLayout.top, customArcFontSize, arcRadius) : null;
   const bottomCustomArcStyle =
     customTextLayout?.kind === "twoArc" ? getCustomArcTextStyle(customTextLayout.bottom, customArcFontSize, arcRadius) : null;
-  const lowerArcYOffset = 24;
+  const lowerArcYOffset = SITE_DESIGNER_DEFAULTS.lowerArcYOffset;
   const hasAnyText =
     Boolean((lineOne || "").trim().length) || Boolean((lineTwo || "").trim().length) || Boolean((designText || "").trim().length);
   const overlayZoomStyle =

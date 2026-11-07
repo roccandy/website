@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+import { adminDraftHref, draftFormOrderDefaults, orderDraftSourceFingerprint, parseAdminOrderDraftPayload, type AdminOrderDraft } from "../adminOrderDrafts";
+import { emptyCandyDesign, nameDesignForOrder } from "../candyDesign";
+import type { OrderRow } from "../data";
+
+const payload = () => ({schemaVersion: 1, shared: {first_name:"Ada", customer_email:"", pickup:"on"}, orders:[{id:"one",fields:{title:"Unfinished",category_id:"custom-7-14",notes:"Keep these notes",quantity:"",total_price:"",candy_design:JSON.stringify(emptyCandyDesign())},batchWeights:["4",""]},{id:"two",fields:{title:"Second",design_text:"HELLO"},batchWeights:["2"]}],activeOrderId:"one",invoiceDiscountType:"percent",invoiceDiscountValue:"5",invoicePriceOverride:""});
+const draft = () => ({id:"77777777-7777-4777-8777-777777777777",revision:1,source_order_id:null,payload:parseAdminOrderDraftPayload(payload()),updated_at:"2026-11-07T12:00:00Z"}) as AdminOrderDraft;
+describe("unfinished order drafts", () => {
+  it("retains incomplete customer details, each order tab, notes, batch inputs and invoice adjustments", () => {
+    const parsed = parseAdminOrderDraftPayload(payload());
+    expect(parsed.shared.customer_email).toBe("");
+    expect(parsed.orders[0].fields.notes).toBe("Keep these notes");
+    expect(parsed.orders[0].batchWeights).toEqual(["4",""]);
+    expect(parsed.orders[1].fields.title).toBe("Second");
+    expect(parsed.invoiceDiscountType).toBe("percent");
+    const defaults=draftFormOrderDefaults(draft());
+    expect(defaults.candy_design).toEqual(emptyCandyDesign());
+    expect(defaults.pickup).toBe(true);
+    expect(defaults.quantity).toBeNull();
+  });
+  it("drops authority, invoice and live-order identifiers from stored editable fields", () => {
+    const input=payload(); Object.assign(input.shared,{canWrite:"true",status:"paid"});
+    Object.assign(input.orders[0].fields,{id:"live-order",square_invoice_id:"invoice",payment_status:"paid",submit_intent:"send",status:"scheduled"});
+    const parsed=parseAdminOrderDraftPayload(input);
+    expect(parsed.shared).not.toHaveProperty("canWrite");
+    for(const key of ["id","square_invoice_id","payment_status","submit_intent","status"]) expect(parsed.orders[0].fields).not.toHaveProperty(key);
+  });
+  it("does not mutate a published order or let a draft change its identifiers and status", () => {
+    const source={id:"source",status:"scheduled",order_number:"123",total_price:300,created_at:"2026-01-01"} as OrderRow;
+    const before=JSON.stringify(source);
+    const restored=draftFormOrderDefaults(draft(),source);
+    expect(JSON.stringify(source)).toBe(before);
+    expect(restored.id).toBe("source"); expect(restored.status).toBe("scheduled");
+    expect(restored.order_number).toBe("123");
+  });
+  it("detects production and payment changes before an old draft can overwrite the order", () => {
+    const source={status:"unassigned",total_price:300,square_invoice_id:"first"} as OrderRow;
+    expect(orderDraftSourceFingerprint(source)).not.toBe(orderDraftSourceFingerprint({...source,status:"scheduled"}));
+    expect(orderDraftSourceFingerprint(source)).not.toBe(orderDraftSourceFingerprint({...source,total_price:400}));
+    expect(orderDraftSourceFingerprint(source)).not.toBe(orderDraftSourceFingerprint({...source,square_invoice_id:"second"}));
+  });
+  it("routes new and existing-order drafts back to the appropriate form", () => {
+    const d=draft(); expect(adminDraftHref(d)).toBe(`/admin/orders/new?draft=${d.id}`);
+    expect(adminDraftHref({...d,source_order_id:"source"})).toBe(`/admin/orders/source?edit=1&draft=${d.id}`);
+  });
+  it("rejects unknown versions, empty/oversized tab groups and duplicate tab ids", () => {
+    for(const input of [undefined,{...payload(),schemaVersion:2},{...payload(),orders:[]},{...payload(),orders:Array(13).fill(payload().orders[0])},{...payload(),orders:Array(2).fill(payload().orders[0])}]) expect(()=>parseAdminOrderDraftPayload(input)).toThrow();
+  });
+  it("names an order snapshot from its title without renaming a library master", () => {
+    const master=emptyCandyDesign("Master"); expect(nameDesignForOrder(master,"  Ada's order ").name).toBe("Ada's order"); expect(master.name).toBe("Master");
+    expect(nameDesignForOrder(master," ")).toBe(master);
+  });
+});

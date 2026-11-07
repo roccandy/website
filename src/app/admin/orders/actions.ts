@@ -15,6 +15,9 @@ import {
 import { revalidateAdminPath as revalidatePath } from "@/lib/adminRevalidation";
 import { redirect } from "next/navigation";
 import { getSettings, type OrderRow } from "@/lib/data";
+import { designLegacyFields, parseCandyDesign, nameDesignForOrder } from "@/lib/candyDesign";
+import { claimOrderDraft, completeOrderDraft, releaseOrderDraft, type DraftPublication } from "@/lib/adminOrderDraftStore";
+import { validateDesignImages } from "@/lib/candyDesignExport";
 import { buildPricingContext } from "@/lib/pricing";
 import {
   calculateAdminLargeOrderPricingWithContext,
@@ -443,7 +446,7 @@ const orderNumberSuffix = (index: number) => {
   return alphabet[index] ?? String(index + 1);
 };
 
-async function createTabbedAdminInvoiceOrders(formData: FormData) {
+async function createTabbedAdminInvoiceOrders(formData: FormData, claim: DraftPublication | null) {
   const rawPayload = formData.get("admin_invoice_orders_json")?.toString() || "";
   let parsed: unknown;
   try {
@@ -478,7 +481,9 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
   const invoiceDueDays = invoiceDueDaysFromSettings(await getSettings());
 
   const batchWeightMismatchApproved = formData.get("batch_weight_mismatch_approved")?.toString() === "on";
-  const createdPayloads = tabbedOrders.map((input, index) => {
+  const createdPayloads = await Promise.all(tabbedOrders.map(async (input, index) => {
+    const parsedDesign = parseCandyDesign(tabbedNullableField(input, "candy_design"));
+    const candyDesign = parsedDesign ? nameDesignForOrder(await validateDesignImages(parsedDesign), tabbedNullableField(input, "title")) : null;
     const category_id = tabbedNullableField(input, "category_id");
     const packaging_option_id = tabbedNullableField(input, "packaging_option_id");
     const quantity = tabbedNumberField(input, "quantity");
@@ -562,8 +567,10 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       heart_color: isWedding ? tabbedNullableField(input, "heart_color") : null,
       candy_fill_color: adminCandyColor(tabbedNullableField(input, "candy_fill_color")),
       pinstripe_color: adminCandyColor(tabbedNullableField(input, "pinstripe_color")),
+      candy_design: candyDesign,
+      ...(candyDesign ? designLegacyFields(candyDesign) : {}),
     };
-  });
+  }));
 
   const client = supabaseAdminClient;
   let insertedOrders: OrderRow[] = [];
@@ -574,7 +581,9 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
       ...payload,
       order_number: createdPayloads.length > 1 ? `${baseNumber}-${orderNumberSuffix(index)}` : baseNumber,
     }));
+    if (claim) claim.persisted = true;
     const { data, error } = await client.from("orders").insert(candidatePayloads).select("*");
+    if (claim && error?.code) claim.persisted = false;
     if (!error) {
       insertedOrders = (data ?? []) as OrderRow[];
       insertError = null;
@@ -591,6 +600,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData) {
   }
 
   const createdOrderIds = insertedOrders.map((order) => order.id);
+  await completeOrderDraft(claim, createdOrderIds);
   let primaryOrder = insertedOrders[0];
   if (!primaryOrder) {
     throw new Error("Unable to create invoice order.");
@@ -709,12 +719,25 @@ async function resolveFirstAvailableSlotIndex(
 }
 
 async function upsertOrderShared(formData: FormData) {
+  const inline = isInlineResponse(formData);
+  let claim: DraftPublication | null = null;
+  try {
+    claim = await claimOrderDraft(formData);
+    return await upsertOrderImplementation(formData, claim);
+  } catch (error) {
+    if (isRedirectControlError(error)) throw error;
+    if (inline) return { ok: false, tone: "error" as const, message: error instanceof Error ? error.message : "Unable to save order." };
+    throw error;
+  } finally { await releaseOrderDraft(claim); }
+}
+
+async function upsertOrderImplementation(formData: FormData, claim: DraftPublication | null) {
   await requireAdminWriteAccess({ onDenied: "redirect" });
   const inlineResponse = isInlineResponse(formData);
   const submitIntent = formData.get("submit_intent")?.toString() || "save";
   if (submitIntent === "create_tabbed_invoice") {
     try {
-      await createTabbedAdminInvoiceOrders(formData);
+      await createTabbedAdminInvoiceOrders(formData, claim);
     } catch (error) {
       if (isRedirectControlError(error)) throw error;
       const message = error instanceof Error ? error.message : "Unable to create invoice orders.";
@@ -1048,6 +1071,8 @@ async function upsertOrderShared(formData: FormData) {
       ? `${resolvedAdminPremadeSelection} stock batch`
       : "Premade stock batch";
 
+    const parsedDesign = isAdminPremade ? null : parseCandyDesign(formData.has("candy_design") ? formData.get("candy_design") : existing?.candy_design);
+    const candyDesign = parsedDesign ? nameDesignForOrder(await validateDesignImages(parsedDesign), title ?? existing?.title) : null;
     const basePayload = {
       title: isAdminPremade ? premadeStockTitle : title ?? syncedTitleFromDesignText ?? existing?.title ?? null,
       order_description: isAdminPremade ? premadeStockDescription : order_description ?? existing?.order_description ?? null,
@@ -1131,14 +1156,19 @@ async function upsertOrderShared(formData: FormData) {
       candy_fill_color: isAdminPremade ? null : adminCandyColor(formData.get("candy_fill_color"), existing?.candy_fill_color ?? "#ffffff"),
       pinstripe_color: isAdminPremade ? null : adminCandyColor(formData.get("pinstripe_color"), existing?.pinstripe_color ?? "#ffffff"),
       created_at: created_at ?? undefined,
+      candy_design: candyDesign,
+      ...(candyDesign ? designLegacyFields(candyDesign) : {}),
     };
     const orderChanges = existing ? buildOrderActivityChanges(existing as OrderRow, basePayload) : [];
 
     if (id) {
       let customerConfirmationResent = false;
       let customerPdfInvoiceResent = false;
+      if (claim) claim.persisted = true;
       const { error } = await client.from("orders").update(basePayload).eq("id", id);
+      if (claim && error?.code) claim.persisted = false;
       if (error) throw new Error(error.message);
+      await completeOrderDraft(claim, [id]);
       await syncOrderSlotWeightsWithBatches(
         client,
         id,
@@ -1344,7 +1374,9 @@ async function upsertOrderShared(formData: FormData) {
                 customer_name: basePayload.customer_name,
               }),
         };
+        if (claim) claim.persisted = true;
         const { data, error } = await client.from("orders").insert(candidate).select("id").single();
+        if (claim && error?.code) claim.persisted = false;
         if (!error) {
           payload = candidate;
           createdOrderId = data?.id ?? null;
@@ -1365,6 +1397,7 @@ async function upsertOrderShared(formData: FormData) {
       if (!createdOrderId) {
         throw new Error("Unable to resolve the new order id.");
       }
+      if (!isAdminPremade) await completeOrderDraft(claim, [createdOrderId]);
       const { customOrderNumber, premadeOrderNumber, quoteLabel } = orderNumbers;
       const ordersRecipients = getOrdersRecipients();
       if (!isAdminPremade && ordersRecipients.length > 0) {
@@ -1549,10 +1582,13 @@ async function upsertOrderShared(formData: FormData) {
           if (cleanupError) {
             throw new Error(`${scheduleMessage} The unscheduled premade order could not be cleaned up automatically.`);
           }
+          if (claim) claim.persisted = false;
           throw new Error(scheduleMessage);
         }
         postSaveRedirect = `${ORDERS_PATH}?selected=${encodeURIComponent(createdOrderId)}`;
       }
+
+      if (isAdminPremade) await completeOrderDraft(claim, [createdOrderId]);
 
       activity = {
         area: "operations",

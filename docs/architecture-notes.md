@@ -87,11 +87,117 @@ The service-role Supabase key is server-only and is required for privileged oper
 
 Detailed implementation history and migration notes are in `docs/admin-large-order-workflow.md`; this guide remains authoritative for current behavior.
 
+### Unfinished admin order drafts
+
+Create/edit forms provide **Save draft** without requiring complete customer,
+design, packaging, or price fields. In-app navigation and browser history
+navigation with unsaved edits offer Keep editing, Save draft & leave, or Discard
+& leave. Discard also closes a previously saved draft; it never deletes the
+live order. Browser refresh/close uses the browser's native unsaved warning;
+save explicitly before closing because browsers cannot await an async draft
+save during unload.
+
+`admin_order_drafts` stores a private, versioned JSON payload containing all
+order tabs, shared customer/delivery details, artwork, production notes, batch
+inputs and invoice adjustments. These records are separate from `orders`:
+draft saves invoke no Square or mail integration. The production schedule shows
+them in **Draft orders**, explicitly labelled **not sent to customer**, outside
+production capacity, invoice and revenue calculations. An existing order draft
+is labelled Draft changes; the original remains live until normal submission.
+
+`draftActions.ts` requires write access, whitelists editable fields, and uses
+`save_admin_order_draft` for revision checks and repeat-save idempotency.
+Resume links restore each tab and incomplete values. One active draft is
+allowed per existing order. A source fingerprint blocks stale drafts when the
+live order changes. Normal order submission retains all required-field checks
+and atomically claims the draft revision. The draft is closed immediately after
+order rows are saved, before invoice/email calls. A submission with an uncertain
+write response stays locked for reconciliation rather than risking duplicate
+orders. Draft activity records saves/discards without copying customer payloads.
+
+### Admin Design Studio
+
+New designs, layers and presets use the shared public baseline in
+`src/lib/siteDesignerDefaults.ts`: the configured light-grey palette entries,
+Helvetica/Arial sans-serif stack, bold upright text, the public short-text size
+scaling/tracking, wedding names/initials/heart layout, and white fill/pinstripes.
+Basic order imports retain their chosen colours/artwork and reproduce the public
+stacked/curved long-text layouts. Saved Studio snapshots retain all explicitly
+chosen settings. Layer and jacket reset controls apply the baseline only when
+requested. The site's generic font uses bundled Arimo (Arial-compatible) glyphs
+for portable server exports; Roboto, Roboto Slab and Roboto Mono remain optional
+advanced choices. Public rendering retains its existing baseline behaviour.
+
+`/admin/design` is an independent artwork workspace with text/image/shape layers,
+positioning, rotation, text arcs, font family/size/bold/italic/spacing, jacket
+segments, fill and pinstripe colours, undo/redo, browser draft recovery, a saved
+design library and PNG/PDF/SVG export. The public `QuoteBuilder` keeps its
+existing controls and rendering path. Studio designs use `CandyDesignSvg`;
+`CandyPreview` selects that renderer only when given an advanced design.
+
+`src/lib/candyDesign.ts` defines and validates the version 1 JSON document.
+`candy_designs` holds each library project's latest document;
+`candy_design_revisions` holds immutable revisions. `save_candy_design` performs
+an atomic revision check and history insert, preventing lost updates between
+tabs. Only the server's service role can write these tables, after admin write
+permission checks. The library supports name search and pages of 24 designs;
+each project shows its latest 30 revision links. Saving a copy gives a design
+its own identity.
+
+The create/edit order form opens the Studio in an overlay so unsaved order and
+customer fields survive. "Save & use in order" saves the library revision then
+copies the design into that order tab's `orders.candy_design` JSONB snapshot.
+The snapshot includes its library id/revision; later library edits do not change
+saved orders. Each tab on a combined invoice has its own snapshot. Remakes carry
+the snapshot forward. Order updates record design changes in activity history.
+Saved order details and print views provide direct PNG/PDF/SVG downloads of
+their own snapshot, without opening the editor or changing the library.
+
+Studio artwork never forces an order into the branded category. Staff still
+select the commercial order type; compatibility text/colour/jacket fields are
+derived from the snapshot on save. Custom segmented jackets use the existing
+two-colour jacket pricing, with normal admin overrides available. Advanced
+artwork is the authoritative preview in order details, production, print and
+invoice review. The production printout includes layers, fonts, size/position,
+rotation, colours and internal production notes. Confirmations include a PNG
+generated from the snapshot plus a readable design summary, excluding internal
+notes and layout measurements. Existing orders without snapshots keep their
+legacy rendering and summaries.
+
+Uploaded artwork is validated/optimised and stored once under a content hash in
+the private `candy-design-assets` storage bucket; ordinary order documents contain
+`candy-asset:<sha256>.png` references rather than large base64 files. The admin
+image route requires a session and serves private, uncached responses. Legacy
+references to this bucket's former public URLs are mapped to that route. Saved
+artwork is immutable. The
+server exporter embeds these assets and uses the same bundled Roboto, Roboto
+Slab and Roboto Mono fonts as the browser. The server uses Fontkit to convert
+text and arcs into glyph outlines before SVG/PNG/PDF/email rendering, preventing
+system-font substitution. The editable document retains the original text and
+typography controls. Unsupported characters produce a clear validation error.
+The font files and licences live in `public/design-fonts/` and are included in server
+deployment tracing. Legacy remote artwork import accepts only the configured
+site/Supabase origins, with a timeout and byte limit; each redirect destination
+must also be approved. Historical PNG-containing ICO artwork is rasterised.
+The exporter downloads original assets using the server client and embeds them;
+customer email previews continue to use their separate flattened preview path.
+
+Historical custom order designs are imported insert-only into the catalogue,
+named from their order titles, with `source_order_id` provenance and revision 1.
+`scripts/backfill-order-designs.ts` defaults to a dry run and verifies source
+orders remain unchanged on apply; reruns preserve imported or manually edited
+catalogue entries. Orders with no design and premade stock are excluded. An
+explicit order title also names its new Studio mockup and saved order snapshot;
+renaming an order never renames a reused library master.
+Schema version 1 and its bundled font files are compatibility contracts: retain
+their rendering semantics for existing snapshots when adding future versions.
+
 ## Data and Storage
 
 Important active tables include:
 
 - Commerce/production: `orders`, `payment_failures`, `order_slots`, `production_slots`, `production_blocks`, `production_day_notes`.
+- Artwork: `candy_designs`, `candy_design_revisions`, and immutable `orders.candy_design` snapshots.
 - Catalog/pricing: `premade_candies`, `packaging_options`, `packaging_option_images`, `packaging_lid_colors`, `flavors`, `label_types`, `label_ranges`, `weight_tiers`, `settings`, `color_palette`.
 - Admin/content/SEO: `admin_users`, `admin_activity`, `site_pages`, `site_redirects`, FAQs/blog/policy tables used by the data modules.
 - CRM/imported history: `customers`, `customer_identities`, `customer_notes`, `customer_contact_events`, `customer_order_history`, `customer_order_items`.

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { Edit3, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { readCandyDesign } from "@/lib/candyDesign";
 import OrderColorField from "../OrderColorField";
 import {
   fileToDataUrl,
@@ -979,6 +980,9 @@ export function OrderDetailEditor({
           <div className="md:col-span-2 xl:col-span-3">
             <div className="flex min-h-[14rem] items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-4">
               <CandyPreview
+                design={readCandyDesign(order.candy_design)}
+                fillColor={order.candy_fill_color || undefined}
+                pinstripeColor={order.pinstripe_color || undefined}
                 designText={!isBranded && !isWedding ? effectiveDesignText || draft.title || "Candy" : undefined}
                 lineOne={isWedding ? draft.weddingLineOne : undefined}
                 lineTwo={isWedding ? draft.weddingLineTwo : undefined}
@@ -1553,6 +1557,9 @@ export function OrderDetailEditor({
         <div className="md:col-span-2 xl:col-span-3">
           <div className="flex min-h-[14rem] items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-4">
             <CandyPreview
+              design={readCandyDesign(order.candy_design)}
+              fillColor={order.candy_fill_color || undefined}
+              pinstripeColor={order.pinstripe_color || undefined}
               designText={!isBranded && !isWedding ? effectiveDesignText || draft.title || "Candy" : undefined}
               lineOne={isWedding ? draft.weddingLineOne : undefined}
               lineTwo={isWedding ? draft.weddingLineTwo : undefined}

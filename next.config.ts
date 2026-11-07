@@ -25,6 +25,7 @@ const supabaseRemotePattern = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/*": ["./public/design-fonts/**/*"] },
   reactCompiler: true,
   poweredByHeader: false,
   compress: true,

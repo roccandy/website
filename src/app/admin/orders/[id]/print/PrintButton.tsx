@@ -6,7 +6,7 @@ type Props = {
 
 export function PrintButton({ className }: Props) {
   return (
-    <button type="button" onClick={() => window.print()} className={className}>
+    <button type="button" onClick={async () => { await document.fonts.ready; window.print(); }} className={className}>
       Print
     </button>
   );

@@ -76,6 +76,7 @@ export function getAdminPrimaryNavigation(
       href: "/admin/customers",
       description: "Customer history.",
     },
+    { label: "Design", href: "/admin/design", description: "Candy designs and mockups." },
     {
       label: "Invoices",
       href: "/admin/orders/invoices",
@@ -128,6 +129,7 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
         href: "/admin/orders/new",
         description: "Manual order entry for custom or special cases.",
       },
+      { label: "Design Studio", href: "/admin/design", description: "Create, save and export editable candy designs." },
       {
         label: "Production Settings",
         href: "/admin/settings/production",

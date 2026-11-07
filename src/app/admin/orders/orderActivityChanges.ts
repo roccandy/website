@@ -1,4 +1,5 @@
 import type { OrderRow } from "@/lib/data";
+import { readCandyDesign } from "@/lib/candyDesign";
 
 export type OrderActivityChange = {
   field: string;
@@ -6,7 +7,7 @@ export type OrderActivityChange = {
   to: string;
 };
 
-type ChangeKind = "attachment" | "batchWeights" | "boolean" | "date" | "money" | "pickup" | "status" | "text" | "weight";
+type ChangeKind = "attachment" | "batchWeights" | "boolean" | "date" | "money" | "pickup" | "status" | "text" | "weight" | "design";
 
 type ChangeField = {
   key: keyof OrderRow;
@@ -15,6 +16,7 @@ type ChangeField = {
 };
 
 const CHANGE_FIELDS: ChangeField[] = [
+  { key: "candy_design", label: "Candy design", kind: "design" },
   { key: "title", label: "Title" },
   { key: "candy_fill_color", label: "Candy fill colour" },
   { key: "pinstripe_color", label: "Pinstripe colour" },
@@ -103,6 +105,7 @@ const normalizeBatchWeights = (value: unknown) => {
 };
 
 const normalizeValue = (value: unknown, kind: ChangeKind) => {
+  if (kind === "design") return readCandyDesign(value);
   if (kind === "batchWeights") return normalizeBatchWeights(value);
   if (kind === "money" || kind === "weight") return normalizeNumber(value, 2);
   if (kind === "boolean" || kind === "pickup") return value === null || value === undefined ? null : Boolean(value);
@@ -125,6 +128,7 @@ const formatAttachmentChange = (before: unknown, after: unknown) => {
 };
 
 const formatValue = (value: unknown, kind: ChangeKind) => {
+  if (kind === "design") { const design = readCandyDesign(value); return design ? `${design.name}${design.source ? ` · revision ${design.source.revision}` : ""}` : "Basic design"; }
   if (kind === "batchWeights") return formatBatchWeights(value);
   if (kind === "money") {
     const normalized = normalizeNumber(value, 2);

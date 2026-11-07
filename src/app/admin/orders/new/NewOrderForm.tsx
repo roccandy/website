@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import { AdminSubmitButton } from "@/components/AdminSubmitButton";
 import { AdminNotice } from "../../AdminNotice";
@@ -12,6 +13,8 @@ import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ImageOptimizationStatus } from "@/components/ImageOptimizationStatus";
 import AssignmentCalendarModal from "@/app/admin/orders/AssignmentCalendarModal";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { OrderDesignStudio } from "@/app/admin/design/OrderDesignStudio";
+import { designLegacyFields, designSummary, parseCandyDesign, type CandyDesign } from "@/lib/candyDesign";
 import {
   analyzeImageOptimization,
   fileToDataUrl,
@@ -51,6 +54,9 @@ import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
 import { isDirectDepositPdfInvoicePaymentMethod } from "@/lib/invoiceDelivery";
+import { saveOrderDraft, discardOrderDraft } from "../draftActions";
+import { orderDraftGuards } from "../../orderDraftGuard";
+import type { AdminOrderDraft } from "@/lib/adminOrderDrafts";
 const WEDDING_HEART = "❤️";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
@@ -415,6 +421,9 @@ type Props = {
   assignments: OrderSlot[];
   mode?: "create" | "edit";
   initialOrder?: OrderRow | null;
+  initialDesign?: CandyDesign | null;
+  initialDraft?: AdminOrderDraft | null;
+  sourceOrderFingerprint?: string | null;
   cancelHref?: string;
 };
 
@@ -509,6 +518,9 @@ export function NewOrderForm({
   assignments,
   mode = "create",
   initialOrder = null,
+  initialDesign = null,
+  initialDraft = null,
+  sourceOrderFingerprint = null,
   cancelHref = "/admin/orders",
 }: Props) {
   const isEditMode = mode === "edit" && Boolean(initialOrder);
@@ -519,11 +531,18 @@ export function NewOrderForm({
   const invoiceDraftMode = !isEditMode;
   const editUrgencyReferenceDate = isEditMode ? initialOrder?.created_at ?? null : null;
   const initialInvoiceDraftIdRef = useRef(`order-${Date.now()}`);
-  const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => [
+  const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => initialDraft ? initialDraft.payload.orders.map(tab => ({...tab, previewSvg: null, previewPngDataUrl: null})) : [
     emptyInvoiceOrderDraft(initialInvoiceDraftIdRef.current),
   ]);
-  const [activeInvoiceDraftId, setActiveInvoiceDraftId] = useState(initialInvoiceDraftIdRef.current);
+  const [activeInvoiceDraftId, setActiveInvoiceDraftId] = useState(initialDraft?.payload.activeOrderId ?? initialInvoiceDraftIdRef.current);
+  const [manualTitle, setManualTitle] = useState<string | null>(initialOrder?.title ?? null);
+  const draftIdentity = useRef({ id: initialDraft?.id ?? "", revision: initialDraft?.revision ?? 0 });
+  const [draftMeta, setDraftMeta] = useState(draftIdentity.current);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const draftBusy = useRef(false);
+  const initialDraftFields = initialDraft?.payload.orders.find(tab => tab.id === initialDraft.payload.activeOrderId)?.fields;
   const [orderFieldsKey, setOrderFieldsKey] = useState(0);
+  const [candyDesign, setCandyDesign] = useState<CandyDesign | null>(() => parseCandyDesign(initialOrder?.candy_design ?? initialDesign));
   const [reviewMode, setReviewMode] = useState(false);
   const [sharedFirstName, setSharedFirstName] = useState(customerDefaults?.first_name ?? "");
   const [sharedLastName, setSharedLastName] = useState(customerDefaults?.last_name ?? "");
@@ -545,39 +564,40 @@ export function NewOrderForm({
   const sendUpdatedInvoiceInputRef = useRef<HTMLInputElement | null>(null);
   const batchWeightMismatchApprovedInputRef = useRef<HTMLInputElement | null>(null);
   const previousPackagingOptionIdRef = useRef<string | null>(initialOrder?.packaging_option_id ?? null);
-  const preserveInitialBatchWeightsRef = useRef(batchWeightsInputValues(initialOrder).length > 0);
+  const initialDraftTab = initialDraft?.payload.orders.find(tab => tab.id === initialDraft.payload.activeOrderId);
+  const preserveInitialBatchWeightsRef = useRef((initialDraftTab?.batchWeights ?? batchWeightsInputValues(initialOrder)).length > 0);
   const defaultJacketColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#d1d5db"), [palette]);
   const defaultTextColor = useMemo(() => getPaletteHex(palette, "grey", "light", "#b7b7b7"), [palette]);
   const paletteGroups = useMemo(() => buildPaletteGroups(palette), [palette]);
   const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">(customerDefaults?.pickup ? "pickup" : "delivery");
   const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [packagingOptionId, setPackagingOptionId] = useState(initialOrder?.packaging_option_id ?? "");
-  const [quantity, setQuantity] = useState(initialOrder?.quantity ? formatInputNumber(initialOrder.quantity, 0) : "");
-  const [customLabelsOptIn, setCustomLabelsOptIn] = useState(Boolean(Number(initialOrder?.labels_count) > 0));
-  const [labelsCount, setLabelsCount] = useState(initialOrder?.labels_count ? formatInputNumber(initialOrder.labels_count, 0) : "");
+  const [quantity, setQuantity] = useState(initialDraftFields?.quantity ?? (initialOrder?.quantity ? formatInputNumber(initialOrder.quantity, 0) : ""));
+  const [customLabelsOptIn, setCustomLabelsOptIn] = useState(initialDraftFields ? initialDraftFields.labels_opt_in === "on" : Boolean(Number(initialOrder?.labels_count) > 0));
+  const [labelsCount, setLabelsCount] = useState(initialDraftFields?.labels_count ?? (initialOrder?.labels_count ? formatInputNumber(initialOrder.labels_count, 0) : ""));
   const [jarLidColor, setJarLidColor] = useState(initialOrder?.jar_lid_color ?? "");
-  const [jacket, setJacket] = useState(initialOrder?.jacket ?? "");
+  const [jacket, setJacket] = useState(initialDesign ? designLegacyFields(initialDesign).jacket : initialOrder?.jacket ?? "");
   const [dueDate, setDueDate] = useState(dateInputValue(initialOrder?.due_date));
-  const [productionSlotDate, setProductionSlotDate] = useState("");
+  const [productionSlotDate, setProductionSlotDate] = useState(initialDraftFields?.production_slot_date ?? "");
   const [productionSlotPickerOpen, setProductionSlotPickerOpen] = useState(false);
-  const [priceValue, setPriceValue] = useState(initialOrder?.total_price ? Number(initialOrder.total_price).toFixed(2) : "");
+  const [priceValue, setPriceValue] = useState(initialDraftFields?.total_price ?? (initialOrder?.total_price ? Number(initialOrder.total_price).toFixed(2) : ""));
   const [weightValue, setWeightValue] = useState(
-    initialOrder
+    (initialIsAdminPremade ? initialDraftFields?.total_weight_kg : initialDraftFields?.order_weight_g) ?? (initialOrder
       ? initialIsAdminPremade
         ? formatInputNumber(initialOrder.total_weight_kg)
         : formatInputNumber(Number(initialOrder.total_weight_kg) * 1000, 0)
-      : "",
+      : ""),
   );
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [isPricing, setIsPricing] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [batchWeights, setBatchWeights] = useState<string[]>(() => batchWeightsInputValues(initialOrder));
+  const [batchWeights, setBatchWeights] = useState<string[]>(() => initialDraftTab?.batchWeights ?? batchWeightsInputValues(initialOrder));
   const [discountType, setDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialOrder?.admin_discount_type));
   const [discountValue, setDiscountValue] = useState(initialOrder?.admin_discount_value ? formatInputNumber(initialOrder.admin_discount_value) : "");
   const [priceOverride, setPriceOverride] = useState(initialOrder?.admin_price_override ? formatInputNumber(initialOrder.admin_price_override) : "");
-  const [invoiceDiscountType, setInvoiceDiscountType] = useState<AdminDiscountType>("none");
-  const [invoiceDiscountValue, setInvoiceDiscountValue] = useState("");
-  const [invoicePriceOverride, setInvoicePriceOverride] = useState("");
+  const [invoiceDiscountType, setInvoiceDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialDraft?.payload.invoiceDiscountType));
+  const [invoiceDiscountValue, setInvoiceDiscountValue] = useState(initialDraft?.payload.invoiceDiscountValue ?? "");
+  const [invoicePriceOverride, setInvoicePriceOverride] = useState(initialDraft?.payload.invoicePriceOverride ?? "");
   const [quoteItems, setQuoteItems] = useState<Array<{ label: string; amount: number }>>([]);
   const [weddingLineOne, setWeddingLineOne] = useState(initialWeddingDesign.left);
   const [weddingLineTwo, setWeddingLineTwo] = useState(initialWeddingDesign.right);
@@ -599,7 +619,7 @@ export function NewOrderForm({
   const [logoSummary, setLogoSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLogo, setIsOptimisingLogo] = useState(false);
   const [ingredientLabelsOptIn, setIngredientLabelsOptIn] = useState(
-    Boolean(Number(initialOrder?.ingredient_labels_count) > 0) ||
+    initialDraftFields?.ingredient_labels_opt_in === "on" || Boolean(Number(initialOrder?.ingredient_labels_count) > 0) ||
       Boolean(initialOrder && hasIngredientLabelsRequested({ notes: initialOrder.notes })),
   );
   const [ingredientLabelsCount, setIngredientLabelsCount] = useState(
@@ -611,7 +631,7 @@ export function NewOrderForm({
   const [labelImageSummary, setLabelImageSummary] = useState<ImageOptimizationSummary | null>(null);
   const [isOptimisingLabelImage, setIsOptimisingLabelImage] = useState(false);
   const [adminPremadeMode, setAdminPremadeMode] = useState<AdminPremadeMode>(
-    initialIsAdminPremade ? "custom" : "",
+    normalizeAdminPremadeMode(initialDraftFields?.admin_premade_mode) || (initialIsAdminPremade ? "custom" : ""),
   );
   const [adminPremadeCustomName, setAdminPremadeCustomName] = useState(
     initialIsAdminPremade
@@ -621,7 +641,7 @@ export function NewOrderForm({
       : "",
   );
   const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? "" : "");
-  const [adminPremadeCandyId, setAdminPremadeCandyId] = useState("");
+  const [adminPremadeCandyId, setAdminPremadeCandyId] = useState(initialDraftFields?.admin_premade_candy_id ?? "");
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | "fill" | "pinstripe" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
@@ -888,6 +908,7 @@ export function NewOrderForm({
   const customTextLimit =
     categoryId === "custom-7-14" ? LONG_CUSTOM_TEXT_MAX_LENGTH : SHORT_CUSTOM_TEXT_MAX_LENGTH;
   const designTextValue = useMemo(() => {
+    if (candyDesign) return designLegacyFields(candyDesign).design_text;
     if (isWedding) {
       const left = isWeddingInitials
         ? (weddingLineOne || "").trim().toUpperCase()
@@ -901,18 +922,20 @@ export function NewOrderForm({
     if (isCustomText) return (customText || "").trim();
     if (isBranded) return (sharedOrganizationName || "").trim();
     return (designText || "").trim();
-  }, [customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, sharedOrganizationName, weddingLineOne, weddingLineTwo]);
+  }, [candyDesign, customText, designText, isBranded, isCustomText, isWedding, isWeddingInitials, sharedOrganizationName, weddingLineOne, weddingLineTwo]);
   const derivedOrderTitle = useMemo(() => {
+    if (manualTitle?.trim()) return manualTitle.trim();
     if (isAdminPremadeOrder) {
       return adminPremadeSelectionLabel ? `Premade stock - ${adminPremadeSelectionLabel}` : "Premade stock";
     }
+    if (candyDesign) return candyDesign.name;
     return orderTitleFromDetails({
       categoryId,
       designText: designTextValue,
       organizationName: sharedOrganizationName,
       fallback: categories.find((category) => category.id === categoryId)?.name ?? "Custom candy order",
     });
-  }, [adminPremadeSelectionLabel, categories, categoryId, designTextValue, isAdminPremadeOrder, sharedOrganizationName]);
+  }, [manualTitle, candyDesign, adminPremadeSelectionLabel, categories, categoryId, designTextValue, isAdminPremadeOrder, sharedOrganizationName]);
   const jacketTypeValue = useMemo(() => {
     if (jacket === "rainbow") return "rainbow";
     if (jacket === "two_colour" || jacket === "two_colour_pinstripe") return "two_colour";
@@ -1158,11 +1181,13 @@ export function NewOrderForm({
       id: draftId,
       fields: {
         ...fields,
+        candy_design: candyDesign ? JSON.stringify(candyDesign) : "",
         category_id: categoryId,
         title: derivedOrderTitle ?? "",
         packaging_option_id: packagingOptionId,
         quantity,
         labels_count: customLabelsOptIn ? labelsCount : "",
+        labels_opt_in: customLabelsOptIn ? "on" : "off",
         jar_lid_color: jarLidColor,
         due_date: dueDate,
         total_price: isAdminPremadeOrder ? "" : priceValue,
@@ -1192,7 +1217,7 @@ export function NewOrderForm({
         production_slot_date: productionSlotDate,
       },
       batchWeights: isAdminPremadeOrder ? [] : draftBatchWeights.length > 0 ? draftBatchWeights : batchWeights,
-      previewSvg: isAdminPremadeOrder ? null : captureCandyPreviewSvg(),
+      previewSvg: isAdminPremadeOrder || candyDesign ? null : captureCandyPreviewSvg(),
       previewPngDataUrl: null,
     };
   };
@@ -1204,12 +1229,14 @@ export function NewOrderForm({
   };
   const applyInvoiceDraft = (draft: InvoiceOrderDraft) => {
     const fields = draft.fields;
+    setManualTitle(fields.title ?? null);
+    setCandyDesign(parseCandyDesign(fields.candy_design));
     const nextCategoryId = fields.category_id ?? "";
     const nextWeddingDesign = splitWeddingDesign(fields.design_text);
     setCategoryId(nextCategoryId);
     setPackagingOptionId(fields.packaging_option_id ?? "");
     setQuantity(fields.quantity ?? "");
-    setCustomLabelsOptIn(Boolean(fields.labels_count));
+    setCustomLabelsOptIn(fields.labels_opt_in === "on" || Boolean(fields.labels_count));
     setLabelsCount(fields.labels_count ?? "");
     setJarLidColor(fields.jar_lid_color ?? "");
     setDueDate(fields.due_date ?? "");
@@ -1418,12 +1445,14 @@ export function NewOrderForm({
               admin_discount_value: index === 0 && invoiceDiscountType !== "none" ? invoiceDiscountValue : "",
               admin_price_override: index === 0 ? invoicePriceOverride : "",
               title:
+                draft.fields.title?.trim() ||
+                parseCandyDesign(draft.fields.candy_design)?.name ||
                 orderTitleFromDetails({
                   categoryId: draftCategoryId,
                   designText: draft.fields.design_text ?? "",
                   organizationName: sharedOrganizationName,
                   fallback: categories.find((category) => category.id === draftCategoryId)?.name ?? "Custom candy order",
-                }) ?? "",
+                }) || "",
             },
             batchWeights: draft.batchWeights,
             previewSvg: draft.previewSvg,
@@ -1604,11 +1633,55 @@ export function NewOrderForm({
     };
   }, [batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
+  const sharedDraftFields = {
+    first_name: sharedFirstName, last_name: sharedLastName, customer_email: sharedEmail,
+    phone: sharedPhone, organization_name: sharedOrganizationName, pickup: deliveryMode === "pickup" ? "on" : "",
+    address_line1: sharedAddressLine1, address_line2: sharedAddressLine2, suburb: sharedSuburb,
+    postcode: sharedPostcode, state: sharedState, customer_note: sharedCustomerNote,
+  };
+  const savePrivateDraft = async () => {
+    if (draftBusy.current || submitLock.current) return false;
+    draftBusy.current = true;
+    setIsSavingDraft(true); setSaveError(null);
+    try {
+      const tabs = reviewMode ? invoiceOrderDrafts : invoiceOrderDrafts.map(tab => tab.id === activeInvoiceDraftId ? captureCurrentInvoiceDraft() : tab);
+      if (!draftIdentity.current.id) draftIdentity.current.id = crypto.randomUUID();
+      const result = await saveOrderDraft({ ...draftIdentity.current, sourceOrderId: isEditMode ? initialOrder!.id : null,
+        sourceFingerprint: sourceOrderFingerprint,
+        payload: { schemaVersion: 1, shared: sharedDraftFields, orders: tabs.map(({ id, fields, batchWeights }) => ({ id, fields, batchWeights })), activeOrderId: activeInvoiceDraftId, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride },
+      });
+      if (!result.ok) { setSaveError(result.error); return false; }
+      draftIdentity.current = { id: result.id, revision: result.revision };
+      // Refresh the guard and enabled form controls before recording the baseline.
+      flushSync(() => { setDraftMeta(draftIdentity.current); setInvoiceOrderDrafts(tabs); setIsSavingDraft(false); });
+      window.dispatchEvent(new CustomEvent("admin:form-saved", { detail: { form: formRef.current } }));
+      return true;
+    } catch { setSaveError("We couldn’t confirm the draft save. Your changes are still here; retry to confirm."); return false; }
+    finally { draftBusy.current = false; setIsSavingDraft(false); }
+  };
+  const discardPrivateDraft = async () => {
+    if (draftBusy.current || submitLock.current) return false;
+    if (!draftIdentity.current.revision) return true;
+    draftBusy.current = true; setIsSavingDraft(true);
+    try {
+      const result = await discardOrderDraft(draftIdentity.current.id, draftIdentity.current.revision);
+      if (!result.ok) { setSaveError(result.error); return false; }
+      return true;
+    } catch { setSaveError("Unable to confirm that the draft was discarded. Please retry."); return false; }
+    finally { draftBusy.current = false; setIsSavingDraft(false); }
+  };
+  useLayoutEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    orderDraftGuards.set(form, { save: savePrivateDraft, discard: discardPrivateDraft, state: () => JSON.stringify({ shared: sharedDraftFields, tabs: invoiceOrderDrafts.map(({id,fields,batchWeights}) => ({id,fields,batchWeights})), batchWeights, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride }) });
+    return () => { orderDraftGuards.delete(form); };
+  });
+
   return (
     <form
       ref={formRef}
       data-protect-unsaved
-      aria-busy={isSubmittingOrder || undefined}
+      aria-busy={isSubmittingOrder || isSavingDraft || undefined}
       action={async (formData) => {
         try {
           if (isEditMode) {
@@ -1636,7 +1709,7 @@ export function NewOrderForm({
       }}
       className="space-y-6"
       onSubmit={(event) => {
-        if (submitLock.current) { event.preventDefault(); return; }
+        if (submitLock.current || draftBusy.current) { event.preventDefault(); return; }
         if (invoiceDraftMode && !isAdminPremadeOrder && !reviewMode) {
           event.preventDefault();
           openReview();
@@ -1705,6 +1778,17 @@ export function NewOrderForm({
         setIsSubmittingOrder(true);
       }}
     >
+      <input type="hidden" name="order_draft_id" value={draftMeta.id} />
+      <input type="hidden" name="order_draft_revision" value={draftMeta.revision} />
+      <fieldset disabled={isSavingDraft} className="min-w-0 space-y-6">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <p className="flex-1">{draftMeta.revision ? `${isEditMode ? "Draft changes" : "Draft order"} saved — not sent to customer. Further edits need saving.` : "Save unfinished details as a draft to resume from the schedule."}</p>
+        <button type="button" disabled={isSubmittingOrder || isSavingDraft} onClick={() => void savePrivateDraft()} className="rounded-lg border border-amber-300 bg-white px-3 py-2 font-semibold">{isSavingDraft ? "Saving…" : "Save draft"}</button>
+        {draftMeta.revision > 0 && <button type="button" disabled={isSubmittingOrder || isSavingDraft} className="rounded-lg border border-amber-300 px-3 py-2 font-semibold" onClick={async () => {
+          if (!window.confirm("Discard this draft and leave? The original order, if any, will remain unchanged.")) return;
+          if (await discardPrivateDraft()) { window.dispatchEvent(new Event("admin:form-saved")); if (navigation) navigation.navigate(cancelHref); else location.assign(cancelHref); }
+        }}>Discard draft</button>}
+      </div>
       {isSubmittingOrder ? (
         <AdminNotice>
         <div role="status" aria-live="polite" className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 shadow-sm">
@@ -2117,17 +2201,19 @@ export function NewOrderForm({
           </div>
           <div className="mt-5 grid gap-3">
             {reviewDrafts.map((draft, index) => {
+              const design = parseCandyDesign(draft.fields.candy_design);
               const category = categories.find((item) => item.id === draft.fields.category_id);
               const packaging = packagingOptions.find((item) => item.id === draft.fields.packaging_option_id);
               const weightKg = draftNumber(draft.fields.order_weight_g) !== null ? Number(draft.fields.order_weight_g) / 1000 : null;
               const total = draftNumber(adjustedReviewTotals.get(draft.id) ?? draft.fields.total_price);
               const title =
+                draft.fields.title?.trim() || design?.name ||
                 orderTitleFromDetails({
                   categoryId: draft.fields.category_id ?? "",
                   designText: draft.fields.design_text ?? "",
                   organizationName: sharedOrganizationName,
                   fallback: category?.name ?? "Custom candy order",
-                }) ?? draftLabel(draft, index);
+                }) || draftLabel(draft, index);
               return (
                 <div key={draft.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -2139,6 +2225,7 @@ export function NewOrderForm({
                     <p className="text-sm font-semibold text-zinc-900">{formatMoney(total ?? 0)}</p>
                   </div>
                   <dl className="mt-3 grid gap-2 text-xs text-zinc-600 sm:grid-cols-2 lg:grid-cols-4">
+                    {design && <div className="sm:col-span-2"><CandyPreview design={design} mode="" colorOne="#ffffff" colorTwo="#ffffff" dimensions={{ width: 300, height: 223 }}/><p className="mt-2">{design.name} · revision {design.source?.revision || "draft"}</p></div>}
                     <div>
                       <dt className="font-semibold text-zinc-900">Packaging</dt>
                       <dd>{packaging ? `${packaging.type} ${packaging.size}` : "-"}</dd>
@@ -2451,7 +2538,9 @@ export function NewOrderForm({
               </div>
             </>
           ) : null}
-          <input type="hidden" name="title" value={derivedOrderTitle ?? ""} />
+          <label className="block text-xs font-semibold text-zinc-600">Order title
+            <input name="title" value={manualTitle ?? derivedOrderTitle ?? ""} onChange={event => setManualTitle(event.target.value)} maxLength={120} className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900" />
+          </label>
           <input type="hidden" name="status" value={isEditMode && initialOrder ? initialOrder.status : "unassigned"} />
         </div>
       </div>
@@ -2883,6 +2972,8 @@ export function NewOrderForm({
       ) : null}
 
       <input type="hidden" name="design_type" value={isAdminPremadeOrder ? "premade" : categoryId} />
+      {!isAdminPremadeOrder ? <input type="hidden" name="candy_design" value={candyDesign ? JSON.stringify(candyDesign) : ""} /> : null}
+      {!isAdminPremadeOrder ? <input type="hidden" name="jacket" value={jacket} /> : null}
       <input type="hidden" name="design_text" value={isAdminPremadeOrder ? adminPremadeSelectionLabel : designTextValue} />
       <input type="hidden" name="jacket_type" value={isAdminPremadeOrder ? "" : jacketTypeValue} />
       <input type="hidden" name="jacket_color_one" value={isAdminPremadeOrder ? "" : jacketColorOne} />
@@ -2903,8 +2994,16 @@ export function NewOrderForm({
             }`}
           >
             <h3 className="admin-card-title text-zinc-900">Candy design & flavor</h3>
+            <div className="mt-3 space-y-3">
+              <OrderDesignStudio siteDefaults={{ jacketColour: defaultJacketColor, textColour: defaultTextColor }} order={{ category_id: categoryId, title: derivedOrderTitle, design_text: designTextValue, jacket, jacket_color_one: jacketColorOne, jacket_color_two: jacketColorTwo, candy_fill_color: fillColor, pinstripe_color: pinstripeColor, text_color: textColor, heart_color: heartColor, logo_url: logoUrl, candy_design: candyDesign }} onApply={design => {
+                const fields = designLegacyFields(design);
+                setCandyDesign(design); setJacket(fields.jacket); setJacketColorOne(fields.jacket_color_one); setJacketColorTwo(fields.jacket_color_two); setFillColor(fields.candy_fill_color); setPinstripeColor(fields.pinstripe_color); setTextColor(fields.text_color); setHeartColor(fields.heart_color);
+              }}/>
+              {candyDesign && <div className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-950"><p className="font-semibold">{candyDesign.name} · revision {candyDesign.source?.revision || "draft"}</p><p className="mt-1">This saved artwork will appear on the order, production printout and confirmation. Custom segment jackets use two-colour jacket pricing; review the total for advanced designs.</p><details className="mt-2"><summary className="cursor-pointer">Design specification</summary><ul className="mt-2 space-y-1">{designSummary(candyDesign, true).map((line, i) => <li key={i}>{line}</li>)}</ul></details><button type="button" className="mt-2 underline" onClick={() => { if (window.confirm("Remove the studio artwork from this order and return to the basic design controls?")) setCandyDesign(null); }}>Use basic design controls</button></div>}
+            </div>
             <div className={isEditMode ? "admin-edit-design-grid mt-4 grid min-w-0 gap-4" : "mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]"}>
               <div className="grid gap-4 md:grid-cols-2">
+              {!candyDesign && <>
               {isWedding && (
                 <>
                   <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -2980,7 +3079,6 @@ export function NewOrderForm({
               )}
               <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
                 <p>Jacket type</p>
-                <input type="hidden" name="jacket" value={jacket} />
                 <div className="mt-2 flex flex-wrap gap-2">
                   {JACKET_OPTIONS.map((option) => {
                     const isActive = jacket === option.value;
@@ -3049,6 +3147,7 @@ export function NewOrderForm({
                   />
                 </div>
               )}
+              </>}
               <label className="text-xs uppercase tracking-[0.2em] text-zinc-500">
                 Candy flavor
                 <select
@@ -3065,7 +3164,7 @@ export function NewOrderForm({
                   ))}
                 </select>
               </label>
-              {isBranded && (
+              {isBranded && !candyDesign && (
                 <div className="text-xs uppercase tracking-[0.2em] text-zinc-500 md:col-span-2">
                   <label htmlFor="logo-upload">Upload Your Design</label>
                   <div className="mt-2">
@@ -3107,6 +3206,7 @@ export function NewOrderForm({
               </div>
               <aside ref={candyPreviewRef} className={isEditMode ? "flex min-w-0 min-h-[13rem] items-center justify-center overflow-hidden px-2 py-2" : "flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40"}>
                 <CandyPreview
+                  design={candyDesign}
                   designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
                   lineOne={isWedding ? weddingLineOne : undefined}
                   lineTwo={isWedding ? weddingLineTwo : undefined}
@@ -3469,6 +3569,7 @@ export function NewOrderForm({
           Add to Calendar
         </AdminSubmitButton>
       </div>
+      </fieldset>
     </form>
   );
 }

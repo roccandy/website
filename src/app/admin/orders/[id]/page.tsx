@@ -24,6 +24,8 @@ import { adminOrderRemakeHref } from "@/lib/adminOrderRemake";
 import { OrderSummary } from "./OrderSummary";
 import { OrderCommunicationHistory } from "../OrderCommunicationHistory";
 import { perthDate } from "../../stats-v2/statsModel";
+import { loadAdminOrderDraft, listAdminOrderDrafts } from "@/lib/adminOrderDraftStore";
+import { adminDraftHref, draftFormOrderDefaults, orderDraftSourceFingerprint } from "@/lib/adminOrderDrafts";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -37,6 +39,7 @@ type SearchParams = {
   edit?: string;
   toast?: string;
   message?: string;
+  draft?: string;
 };
 
 const isUuid = (value: string) =>
@@ -74,6 +77,11 @@ export default async function AdminOrderDetailPage({
   const order = await loadOrder(rawId);
   if (!order) redirect("/admin/orders");
   const editing = resolvedSearchParams?.edit === "1" && session.user.canWrite;
+  const savedDrafts = await listAdminOrderDrafts();
+  const pendingDraft = savedDrafts.find(draft => draft.source_order_id === order.id);
+  const draft = resolvedSearchParams?.draft ? await loadAdminOrderDraft(resolvedSearchParams.draft) : null;
+  if (resolvedSearchParams?.draft && (!draft || draft.source_order_id !== order.id || draft.discarded_at)) redirect(`/admin/orders/${order.id}`);
+  if (draft?.completed_at) redirect(`/admin/orders/${order.id}`);
 
   const [
     categories,
@@ -209,6 +217,8 @@ export default async function AdminOrderDetailPage({
         </div>
       ) : null}
 
+      {pendingDraft && !draft ? <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">This order has saved draft changes — not sent to customer. <Link href={adminDraftHref(pendingDraft)} className="font-semibold underline">Resume draft</Link></p> : null}
+      {draft && draft.source_fingerprint !== orderDraftSourceFingerprint(order) ? <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">The live order changed after this draft was started. Saving is blocked to protect those changes. Compare the draft with the live order, then discard and start a fresh edit.</p> : null}
       {editing ? (
         <>
           <div className="grid gap-3 md:grid-cols-4">
@@ -247,6 +257,9 @@ export default async function AdminOrderDetailPage({
           </div>
 
           <NewOrderForm
+            key={draft?.id ?? order.id}
+            initialDraft={draft}
+            sourceOrderFingerprint={draft?.source_fingerprint ?? orderDraftSourceFingerprint(order)}
             categories={categories}
             packagingOptions={packagingOptions}
             flavors={flavors}
@@ -257,7 +270,7 @@ export default async function AdminOrderDetailPage({
             slots={slots}
             assignments={assignments}
             mode="edit"
-            initialOrder={order}
+            initialOrder={draft ? draftFormOrderDefaults(draft, order) : order}
             cancelHref={`/admin/orders/${order.id}`}
           />
         </>

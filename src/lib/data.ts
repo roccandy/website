@@ -133,6 +133,7 @@ export type PremadeCandy = {
 };
 
 export type OrderRow = {
+  candy_design?: import("@/lib/candyDesign").CandyDesign | null;
   id: string;
   order_number: string | null;
   title: string | null;

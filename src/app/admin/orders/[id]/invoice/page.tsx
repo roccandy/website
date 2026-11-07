@@ -21,6 +21,8 @@ import {
 } from "../../invoices/invoicePresentation";
 import { OrderPaymentConfirmation } from "../../OrderPaymentConfirmation";
 import { OrderCommunicationHistory } from "../../OrderCommunicationHistory";
+import { CandyPreview } from "@/app/quote/CandyPreview";
+import { readCandyDesign } from "@/lib/candyDesign";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -163,6 +165,7 @@ export default async function AdminInvoiceReviewPage({
         </p>
       ) : null}
 
+      {groupedOrders.some(row => Boolean(row.candy_design)) && <section className="rounded-2xl border border-zinc-200 bg-white p-5"><h3 className="font-semibold">Saved candy designs</h3><div className="mt-3 flex flex-wrap gap-5">{groupedOrders.map(row => { const design = readCandyDesign(row.candy_design); return design ? <div key={row.id} className="max-w-xs"><CandyPreview design={design} mode="" colorOne="#ffffff" colorTwo="#ffffff" dimensions={{ width: 260, height: 193 }}/><p className="mt-2 text-sm font-semibold">#{row.order_number} · {design.name}</p><p className="text-xs text-zinc-500">Revision {design.source?.revision || "draft"} · saved with this order</p></div> : null; })}</div></section>}
       {!editing ? (
         <div className="space-y-5">
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">

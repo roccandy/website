@@ -15,6 +15,9 @@ import { notFound, redirect } from "next/navigation";
 import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { adminOrderRemakeFormDefaults, resolveAdminOrderRemakeSource } from "@/lib/adminOrderRemake";
 import { NewOrderForm } from "./NewOrderForm";
+import { loadCandyDesign } from "@/lib/candyDesignStore";
+import { loadAdminOrderDraft } from "@/lib/adminOrderDraftStore";
+import { adminDraftHref, draftFormOrderDefaults } from "@/lib/adminOrderDrafts";
 
 export const revalidate = 0;
 export const dynamic = "force-dynamic";
@@ -24,12 +27,19 @@ type SearchParams = {
   toast?: string;
   message?: string;
   remake?: string | string[];
+  design?: string;
+  revision?: string;
+  draft?: string;
 };
 
 export default async function NewOrderPage({ searchParams }: { searchParams?: SearchParams | Promise<SearchParams> }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/admin/login");
   const resolvedSearchParams = await Promise.resolve(searchParams);
+  const draft = resolvedSearchParams?.draft ? await loadAdminOrderDraft(resolvedSearchParams.draft) : null;
+  if (resolvedSearchParams?.draft && (!draft || draft.discarded_at)) notFound();
+  if (draft?.completed_at) redirect(`/admin/orders/${draft.published_order_ids[0] || ""}`);
+  if (draft?.source_order_id) redirect(adminDraftHref(draft));
 
   const [categories, packagingOptions, flavors, palette, premadeCandies, settings, orders, slots, assignments] = await Promise.all([
     getCategories(),
@@ -49,7 +59,9 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
   const fullRemakeOrder = remakeId ? await readOrderForRemake(remakeId) : null;
   const remakeOrder = resolveAdminOrderRemakeSource(fullRemakeOrder ? [fullRemakeOrder] : [], resolvedSearchParams?.remake);
   if (remakeRequested && !remakeOrder) notFound();
-  const initialOrder = remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
+  const initialOrder = draft ? draftFormOrderDefaults(draft) : remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
+  const initialDesign = resolvedSearchParams?.design ? await loadCandyDesign(resolvedSearchParams.design, Number(resolvedSearchParams.revision) || undefined) : null;
+  if (resolvedSearchParams?.design && !initialDesign) notFound();
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
   const toastMessage = resolvedSearchParams?.message ?? null;
   const remakeOrderLabel = remakeOrder?.order_number ? `#${remakeOrder.order_number}` : remakeOrder ? `#${remakeOrder.id.slice(0, 8)}` : null;
@@ -91,6 +103,8 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
       ) : null}
 
       <NewOrderForm
+        key={draft?.id ?? "new"}
+        initialDraft={draft}
         categories={categories}
         packagingOptions={packagingOptions}
         flavors={flavors}
@@ -102,6 +116,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         assignments={assignments}
         mode="create"
         initialOrder={initialOrder}
+        initialDesign={initialDesign}
         cancelHref={remakeOrder ? `/admin/orders/${encodeURIComponent(remakeOrder.id)}` : "/admin/orders"}
       />
     </section>

@@ -19,6 +19,7 @@ import type {
   SettingsRow,
 } from "@/lib/data";
 import { CandyPreview } from "./CandyPreview";
+import { resolveSiteDesignerDefaults } from "@/lib/siteDesignerDefaults";
 import { useCart, type CustomCartItem } from "@/components/CartProvider";
 import { trackAddToCart } from "@/lib/analyticsEvents";
 import {
@@ -37,7 +38,6 @@ import {
   clampByte,
   clampChannel,
   cmykToHex,
-  getPaletteHex,
   hexToCmyk,
   hexToRgba,
   normalizeHex,
@@ -175,14 +175,9 @@ export function QuoteBuilder({
   const ingredientLabelPrice = Number.isFinite(Number(settings.ingredient_label_price))
     ? Number(settings.ingredient_label_price)
     : 0;
-  const defaultJacketColor = useMemo(
-    () => getPaletteHex(palette, "grey", "light", "#d1d5db"),
-    [palette],
-  );
-  const defaultTextColor = useMemo(
-    () => getPaletteHex(palette, "grey", "light", "#b7b7b7"),
-    [palette],
-  );
+  const designerDefaults = useMemo(() => resolveSiteDesignerDefaults(palette), [palette]);
+  const defaultJacketColor = designerDefaults.jacketColour;
+  const defaultTextColor = designerDefaults.textColour;
   const queryOrderType = designerState?.orderType;
   const querySubtype = designerState?.categoryId ?? undefined;
   const { initialOrderTypeResolved, initialSubtype } = resolveInitialDesignerSelection({

@@ -5,6 +5,8 @@ import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { redirect } from "next/navigation";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { readCandyDesign, designSummary } from "@/lib/candyDesign";
+import { DesignDownloads } from "@/app/admin/design/DesignDownloads";
 import { paletteSections } from "@/app/admin/settings/palette";
 import type { OrderRow } from "@/lib/data";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
@@ -294,8 +296,15 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
     .eq("order_id", order.id);
   const { data: paletteRows } = await client.from("color_palette").select("category,shade,hex");
   const paletteHexMap = buildPaletteHexMap(paletteRows ?? []);
+  const designColourLabel = (hex: string) => {
+    const name = paletteHexMap.get(hex.toLowerCase());
+    if (name) return `${name} (${hex})`;
+    const cmyk = hexToCmyk(hex);
+    return cmyk ? `${hex} (C:${cmyk.c} M:${cmyk.m} Y:${cmyk.y} K:${cmyk.k})` : hex;
+  };
 
   const textColorHex = order.text_color || "#b7b7b7";
+  const studioDesign = readCandyDesign(order.candy_design);
   const heartColorHex = order.heart_color || textColorHex;
   const textColorDisplay = resolveColorDisplay(textColorHex, paletteHexMap);
   const heartColorDisplay = resolveColorDisplay(heartColorHex, paletteHexMap);
@@ -409,7 +418,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
               download={logoDownloadName}
               className="rounded border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
             >
-              Download logo
+              {studioDesign ? "Download original logo" : "Download logo"}
             </a>
           ) : null}
           {labelImageUrl ? (
@@ -425,11 +434,13 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
         </div>
       </div>
 
+      {studioDesign && <DesignDownloads design={studioDesign}/>}
       <div className="print-grid-two grid gap-8 md:grid-cols-2 print:gap-3">
         <div className="space-y-8 print:space-y-4">
           <div>
             <div className="flex items-center justify-center" style={{ fontFamily: PRINT_FONT_FAMILY }}>
               <CandyPreview
+                design={studioDesign}
                 designText={!isBranded && !isWedding ? designText : undefined}
                 lineOne={isWedding ? lineOne : undefined}
                 lineTwo={isWedding ? lineTwo : undefined}
@@ -559,7 +570,16 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 </div>
               </section>
 
-              <section>
+              {studioDesign ? (
+                <section className="break-inside-avoid">
+                  <h3 className={SECTION_HEADING_CLASS}>Design specification</h3>
+                  <ul className="mt-2 space-y-2 text-sm leading-snug">
+                    {designSummary(studioDesign, true, designColourLabel).map((line, i) => (
+                      <li className="whitespace-pre-wrap break-words" key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : <section>
                 <h3 className={SECTION_HEADING_CLASS}>Colours</h3>
                 <div className="mt-2 space-y-3 print:mt-1 print:space-y-2">
                   <div className="space-y-3 print:space-y-2">
@@ -609,6 +629,7 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 </div>
               </section>
 
+              }
               <section>
                 <h3 className={SECTION_HEADING_CLASS}>Packaging</h3>
                 <div className="mt-2 print:mt-1">

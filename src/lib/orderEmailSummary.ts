@@ -1,6 +1,8 @@
 import { getColorPalette, getLabelTypes, getPackagingOptions } from "@/lib/data";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import sharp from "sharp";
+import { readCandyDesign, designSummary } from "@/lib/candyDesign";
+import { candyDesignPng } from "@/lib/candyDesignExport";
 import type { EmailArchiveContext } from "./emailArchiveTypes";
 
 type OrderPayload = Record<string, unknown>;
@@ -22,6 +24,7 @@ export type AdminOrderSummaryItem = {
 };
 
 export type AdminCustomOrderDetails = {
+  studioDesignSummary?: string[];
   imageUrl: string | null;
   imageDataUrl: string | null;
   fallbackImageUrl: string | null;
@@ -324,6 +327,7 @@ export async function buildAdminOrderSummaryEmailPayload({
   const customItems = orderPayloads.filter((payload) => Boolean(payload.packaging_option_id));
 
   const customDetailsList = await Promise.all(customItems.map(async (customItem, index) => {
+    const studioDesign = readCandyDesign(customItem.candy_design);
     const customOrderNumber = String(customItem.order_number ?? "").trim() || orderNumber;
     const preview =
       customPreviews?.find((item) => item.orderNumber && item.orderNumber === customOrderNumber) ??
@@ -392,17 +396,19 @@ export async function buildAdminOrderSummaryEmailPayload({
           ? customPreviewSvg
           : null
     );
-    const generatedPreviewUrl = buildCandyPreviewUrl(customItem);
-    const previewSource =
+    const generatedPreviewUrl = studioDesign ? null : buildCandyPreviewUrl(customItem);
+    const studioPreview = studioDesign ? `data:image/png;base64,${(await candyDesignPng(studioDesign)).toString("base64")}` : null;
+    const previewSource = studioPreview ?? (
       isBranded && hasLogoUrl
         ? previewPngDataUrl ?? generatedPreviewUrl ?? previewSvgDataUrl
-        : previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl;
+        : previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl);
     const persistedPreviewUrl = await persistEmailPreview(
       previewSource,
       customOrderNumber
     );
     const imageUrl =
       persistedPreviewUrl ||
+      studioPreview ||
       generatedPreviewUrl ||
       (typeof customItem.logo_url === "string" && customItem.logo_url.trim()) ||
       null;
@@ -415,7 +421,8 @@ export async function buildAdminOrderSummaryEmailPayload({
 
     const detail: AdminCustomOrderDetails = {
       imageUrl,
-      imageDataUrl: previewPngDataUrl,
+      imageDataUrl: studioPreview ?? previewPngDataUrl,
+      ...(studioDesign ? { studioDesignSummary: designSummary(studioDesign, false, formatColour) } : {}),
       fallbackImageUrl,
       orderNumber: customOrderNumber,
       weightKg: customWeight > 0 ? customWeight : null,

@@ -62,6 +62,15 @@ preview-only browser suite, Dependabot alerts without auto-merge, independent
 uptime monitoring, and environment-variable name validation. These are not
 required for the live application to operate.
 
+### Runtime dependency maintenance
+
+The 2026-11-07 verification still reports two high-severity audit findings in
+the existing Nodemailer/NextAuth dependency chain. A dedicated dependency
+upgrade should follow the controlled process in the operations guide, including
+SMTP and authentication regression checks; the Design Studio change does not
+upgrade these packages. Owner: development maintainer, with the business
+administrator choosing the maintenance window.
+
 ### Server-side image fetching
 
 Customer-facing image optimisation already restricts remote hosts. Server-side
@@ -91,6 +100,37 @@ carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-07 — Added persistent, explicitly unsent admin order drafts, schedule
+  resume/discard controls, and leave-page save/discard choices. Existing-order
+  drafts preserve the live order; revision/source checks and submission claims
+  protect against stale changes and duplicate submissions. Current behaviour and
+  recovery procedure are in the architecture and operations guides.
+- 2026-11-07 — Imported all 208 eligible historical custom designs into the
+  catalogue using order titles, preserving two existing entries and all source
+  orders. Added order-title naming for new mockups/snapshots. Made original
+  artwork private with authenticated previews and embedded exports before import.
+- 2026-11-07 — Reviewed earlier local smoke-test access and removed both
+  temporary credential-loading helpers. Changed local preview to loopback only;
+  documented normal-login testing and the limit that generated sessions were not
+  individually revoked. No signing-secret rotation was performed.
+
+- 2026-11-07 — Aligned new Studio designs, added layers, presets, and basic-order
+  imports with the public designer's neutral palette, font stack, sizing,
+  spacing, wedding/long-text layouts and artwork footprint. Added explicit
+  layer/jacket reset controls; saved artwork retains its existing settings.
+
+- 2026-11-07 — Corrected Custom Segments jacket rendering so each visible side
+  panel continues the colour of its adjoining face segment in previews and
+  exports. Other jacket modes retain their existing mapping.
+
+- 2026-11-07 — Implemented the admin Design Studio: editable layered artwork,
+  protected versioned library, order snapshots, exports, production/print
+  specifications and customer-safe confirmation summaries. Advanced mockups no
+  longer require using the branded-logo field. Current behaviour and operating
+  instructions are recorded in the system and release guides.
+- 2026-11-07 — Rechecked the runtime dependency audit during Studio validation;
+  retained the existing mail/auth dependency upgrade as separate maintenance.
 
 - 2026-11-07 — Created as the sole control document for future improvements;
   consolidated remaining external verification and optional hardening work.

@@ -9,6 +9,7 @@ import {
 import { getCachedProductionDay } from "../adminReadModels";
 import OrderTitleWithLogo from "@/app/admin/orders/OrderTitleWithLogo";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { readCandyDesign } from "@/lib/candyDesign";
 import {
   dateKey,
   logoDownloadNameForOrder,
@@ -128,6 +129,7 @@ function previewPropsForOrder(order: OrderRow) {
 
   return {
     designText: !isBranded && !isWedding ? designText : undefined,
+    design: readCandyDesign(order.candy_design),
     lineOne: isWedding ? lineOne : undefined,
     lineTwo: isWedding ? lineTwo : undefined,
     showHeart: isWedding,

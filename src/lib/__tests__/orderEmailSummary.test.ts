@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { emptyCandyDesign } from "@/lib/candyDesign";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getColorPalette = vi.fn();
@@ -23,6 +24,18 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 describe("buildAdminOrderSummaryEmailPayload", () => {
+  it("generates studio artwork from the saved snapshot and excludes internal design notes", async () => {
+    getColorPalette.mockResolvedValue([]); getPackagingOptions.mockResolvedValue([]); getLabelTypes.mockResolvedValue([]);
+    const design = emptyCandyDesign("Three colour mockup");
+    design.productionNotes = "Staff recipe only"; design.jacket.mode = "segments";
+    design.layers[0].text = "SPECIAL";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+    const summary = await buildAdminOrderSummaryEmailPayload({ orderPayloads: [{ candy_design: design, packaging_option_id: "pack-1", logo_url: "https://wrong.test/flattened.png" }], orderNumber: "test", requestedDate: null, billing: {}, pickup: true, paymentMethod: null, paymentAmount: 0 });
+    expect(summary.customDetails?.imageDataUrl).toMatch(/^data:image\/png;base64,/);
+    expect(summary.customDetails?.studioDesignSummary?.join("\n")).toContain("SPECIAL");
+    expect(summary.customDetails?.studioDesignSummary?.join("\n")).not.toContain("Staff recipe");
+    expect(summary.customDetails?.studioDesignSummary?.join("\n")).toContain("Custom segments");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     uploadPreview.mockResolvedValue({ error: null });

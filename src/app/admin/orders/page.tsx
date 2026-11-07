@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { AdminActivityFeed } from "@/app/admin/AdminActivityFeed";
 import { OrdersTable } from "./OrdersTable";
 import { isProductionActivity } from "@/lib/adminActivity";
+import { listAdminOrderDrafts } from "@/lib/adminOrderDraftStore";
+import { OrderDraftsList } from "./OrderDraftsList";
 
 export const metadata = {
   title: "Production Schedule | Roc Candy Admin",
@@ -22,10 +24,12 @@ export default async function OrdersPage({ searchParams }: { searchParams?: Sear
   const resolvedSearchParams = await Promise.resolve(searchParams);
   const selectedOrderId = resolvedSearchParams?.selected?.trim() || null;
 
-  const { orders, slots, assignments, dayNotes, pricingContext, categories, activityLog } = await getProductionWorkspaceData();
+  const [workspace, drafts] = await Promise.all([getProductionWorkspaceData(), listAdminOrderDrafts()]);
+  const { orders, slots, assignments, dayNotes, pricingContext, categories, activityLog } = workspace;
   const productionActivity = activityLog.filter(isProductionActivity).slice(0, 20);
   return (
     <section className="admin-production-schedule space-y-6">
+      <OrderDraftsList drafts={drafts} canWrite={session.user.canWrite} />
       <OrdersTable
         orders={orders}
         slots={slots}

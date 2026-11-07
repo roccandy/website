@@ -20,6 +20,7 @@ describe("Compact admin navigation", () => {
       "Orders",
       "Pre-made",
       "Customers",
+      "Design",
       "Invoices",
       "Insights",
     ]);

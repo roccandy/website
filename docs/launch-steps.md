@@ -61,6 +61,63 @@ This process is designed so checks do not mutate production data.
 
 Do not use live checkout, refunds, admin order creation, production scheduling, or webhook replay as casual smoke tests; they create real external or business state.
 
+## Design Studio deployment and use
+
+Apply these additive migrations before deploying the updated admin:
+`docs/sql/2026-11-07-private-design-assets.sql`,
+`docs/sql/2026-11-07-order-design-catalogue-backfill.sql`, and
+`docs/sql/2026-11-07-admin-order-drafts.sql`, after the base Studio migration.
+They have been applied to the configured project on 2026-11-07. Original design
+artwork must remain private; previews use an authenticated admin route and
+exports embed server-downloaded assets. Do not change this bucket to public.
+
+Historical import command: `npx tsx scripts/backfill-order-designs.ts` previews
+the eligible count; add `--apply` to import. The 2026-11-07 run imported 208
+custom designs, preserved two existing library designs, and verified that source
+orders were unchanged. A second pass imported the one legacy ICO image after
+adding bounded PNG extraction. No import failures remain.
+
+For unfinished orders, use **Save draft**, then resume from the schedule's
+**Draft orders** section. These drafts have not sent a confirmation or created
+an invoice. Normal final submission retains the existing confirmation/invoice
+workflow. Saving changes to an existing order as a draft leaves the live order
+unchanged. Refresh/close has a native warning; explicitly save first.
+
+If a draft displays **Submission in progress** after a failed request, inspect
+`admin_order_drafts.published_order_ids`, timestamps and the orders table before
+retrying. Only clear `publishing_at` after proving no order write occurred;
+otherwise record the corresponding IDs and complete the draft. Never clear this
+lock speculatively, as the write response may have been lost.
+
+Local verification must use the normal admin login or mocked authentication in
+unit tests. Do not generate signed administrator sessions from application secrets.
+The earlier temporary smoke/DB helpers were removed on 2026-11-07. No helper or
+test Chromium process remained at inspection; the private asset bucket was empty
+before historical import. Signing-secret rotation was not performed because it
+would sign out all admins; previously generated sessions were not individually
+revoked. Local preview binds to `127.0.0.1`.
+
+Apply `docs/sql/2026-11-07-candy-design-studio.sql` before deploying code that
+reads the new `orders.candy_design` column. The additive migration also creates
+the design library/revision tables, protected save function, and private
+`candy-design-assets` bucket. It is safe to re-run and does not rewrite existing
+orders. Include `public/design-fonts/` in the deployment (configured through
+Next.js output tracing).
+
+The Design tab saves reusable mockups independently of orders. Start there and
+choose Create order, or open Design Studio from a create/edit order form. Saving
+to the library alone never edits an order. Save & use in order returns the design
+to the form; save/review the order normally to persist its snapshot. To issue an
+updated customer confirmation, use Save & resend confirmation on the order.
+Exports download files and do not send email automatically. To restore an old
+design revision, open it from Previous revisions and save a copy.
+
+Use a preview/sandbox order for a full save/confirmation smoke test. Check its
+order preview, print specification and confirmation image match; verify internal
+design notes appear only in admin/print. Do not submit a live order or send a
+customer email as an incidental test. Existing orders need no migration into
+advanced artwork and remain editable with their original controls.
+
 ## Dependency Maintenance
 
 The current production dependency audit has known findings. The safest policy is controlled patching, not indefinite avoidance and not blind bulk upgrades.

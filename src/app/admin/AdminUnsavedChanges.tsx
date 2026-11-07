@@ -5,25 +5,30 @@ import { usePathname } from "next/navigation";
 import { useAdminNavigation } from "./AdminNavigationFeedback";
 import { draftFingerprint } from "./adminFormDraft";
 import { AdminNotice } from "./AdminNotice";
+import { orderDraftGuards, type OrderDraftGuard } from "./orderDraftGuard";
 
 export function formFingerprint(form: HTMLFormElement) {
   // Live quote results and submission metadata are not user edits. Otherwise
   // merely waiting for a quote can incorrectly make an untouched form dirty.
-  return draftFingerprint(new FormData(form));
+  return draftFingerprint(new FormData(form)) + (orderDraftGuards.get(form)?.state() ?? "");
 }
 
-/** Drafts stay in the page's memory; nothing customer-sensitive is persisted. */
+/** All forms protect unsaved edits; order forms can also save a private server draft. */
 export function AdminUnsavedChanges() {
   const navigation = useAdminNavigation();
   const pathname = usePathname();
   const forms = useRef(new Map<HTMLFormElement, string>());
   const [dirty, setDirty] = useState(false);
   const [leave, setLeave] = useState<null | (() => void)>(null);
+  const [draftGuard, setDraftGuard] = useState<OrderDraftGuard | null>(null);
+  const [busy, setBusy] = useState(false);
   const stay = useRef<HTMLButtonElement>(null);
   useEffect(() => { if (leave) stay.current?.focus(); }, [leave]);
 
   useEffect(() => {
     const tracked = forms.current;
+    const currentUrl = window.location.href;
+    const currentHistoryState = window.history.state;
     const hasChanges = () => {
       let changed = false;
       tracked.forEach((baseline, form) => {
@@ -36,6 +41,8 @@ export function AdminUnsavedChanges() {
       if (!hasChanges()) return false;
       window.dispatchEvent(new Event("admin:unsaved-prompt"));
       setDirty(true);
+      const form = [...tracked].find(([form, baseline]) => form.isConnected && formFingerprint(form) !== baseline)?.[0];
+      setDraftGuard(form ? orderDraftGuards.get(form) ?? null : null);
       setLeave(() => proceed);
       return true;
     };
@@ -68,7 +75,26 @@ export function AdminUnsavedChanges() {
         else window.location.assign(next.href);
       })) { event.preventDefault(); event.stopPropagation(); }
     };
-    const clear = () => { tracked.clear(); setDirty(false); setLeave(null); };
+    const clear = (event: Event) => {
+      const form = (event as CustomEvent<{form?: HTMLFormElement}>).detail?.form;
+      if (form) { tracked.set(form, formFingerprint(form)); setDirty(hasChanges()); }
+      else { tracked.clear(); setDirty(false); setLeave(null); }
+    };
+    const back = (event: PopStateEvent) => {
+      if (!hasChanges() || ![...tracked.keys()].some(form => orderDraftGuards.has(form))) return;
+      const target = window.location.href;
+      if (target === currentUrl) return;
+      // App Router cannot cancel popstate. Restore the form's history entry
+      // before its listener runs, then navigate only after the user's choice.
+      event.stopImmediatePropagation();
+      window.history.pushState(currentHistoryState, "", currentUrl);
+      ask(() => {
+        tracked.clear(); setDirty(false); setLeave(null);
+        const url = new URL(target);
+        if (url.origin === location.origin && navigation) navigation.navigate(url.pathname + url.search + url.hash);
+        else location.assign(target);
+      });
+    };
     document.addEventListener("pointerdown", baseline, true);
     document.addEventListener("focusin", baseline, true);
     document.addEventListener("input", check, true);
@@ -77,6 +103,7 @@ export function AdminUnsavedChanges() {
     window.addEventListener("beforeunload", beforeUnload);
     window.addEventListener("admin:before-navigation", beforeNavigate);
     window.addEventListener("admin:form-saved", clear);
+    window.addEventListener("popstate", back, true);
     return () => {
       document.removeEventListener("pointerdown", baseline, true);
       document.removeEventListener("focusin", baseline, true);
@@ -86,6 +113,7 @@ export function AdminUnsavedChanges() {
       window.removeEventListener("beforeunload", beforeUnload);
       window.removeEventListener("admin:before-navigation", beforeNavigate);
       window.removeEventListener("admin:form-saved", clear);
+      window.removeEventListener("popstate", back, true);
     };
   }, [navigation, pathname]);
 
@@ -95,8 +123,17 @@ export function AdminUnsavedChanges() {
     <section data-admin-unsaved aria-label="Unsaved changes" aria-live="polite" onKeyDown={(event) => { if (event.key === "Escape") setLeave(null); }} className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow-sm print:hidden">
       <p className="font-medium">{leave ? "Leave without saving your changes?" : "You have unsaved changes"}</p>
       {leave ? <div className="mt-2 flex gap-2">
-        <button ref={stay} type="button" onClick={() => setLeave(null)} className="rounded-lg bg-amber-950 px-3 py-1.5 font-semibold text-white">Keep editing</button>
-        <button type="button" onClick={() => { const proceed = leave; forms.current.clear(); setDirty(false); setLeave(null); proceed(); }} className="rounded-lg border border-amber-300 px-3 py-1.5 font-semibold">Discard & leave</button>
+        <button ref={stay} disabled={busy} type="button" onClick={() => setLeave(null)} className="rounded-lg bg-amber-950 px-3 py-1.5 font-semibold text-white">Keep editing</button>
+        {draftGuard ? <button disabled={busy} type="button" onClick={async () => {
+          const proceed = leave; setBusy(true);
+          try { if (await draftGuard.save()) { forms.current.clear(); setDirty(false); setLeave(null); proceed(); } }
+          finally { setBusy(false); }
+        }} className="rounded-lg border border-amber-300 px-3 py-1.5 font-semibold">{busy ? "Please wait…" : "Save draft & leave"}</button> : null}
+        <button disabled={busy} type="button" onClick={async () => {
+          const proceed = leave; setBusy(true);
+          try { if (!draftGuard || await draftGuard.discard()) { forms.current.clear(); setDirty(false); setLeave(null); proceed(); } }
+          finally { setBusy(false); }
+        }} className="rounded-lg border border-amber-300 px-3 py-1.5 font-semibold">Discard & leave</button>
       </div> : null}
     </section>
     </AdminNotice>
