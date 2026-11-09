@@ -49,7 +49,13 @@ import {
 import { upsertOrder, upsertOrderInline } from "../actions";
 import { formatFullDateLabel, formatOrderDescription } from "../productionScheduleShared";
 import { paletteSections } from "@/app/admin/settings/palette";
-import { LONG_CUSTOM_TEXT_MAX_LENGTH, SHORT_CUSTOM_TEXT_MAX_LENGTH } from "@/app/quote/quoteBuilderShared";
+import {
+  countCustomTextLetters,
+  LONG_CUSTOM_TEXT_MAX_LENGTH,
+  LONG_CUSTOM_TEXT_MAX_SPACES,
+  sanitizeCustomTextInput,
+  SHORT_CUSTOM_TEXT_MAX_LENGTH,
+} from "@/app/quote/quoteBuilderShared";
 import { hasIngredientLabelsRequested } from "@/lib/customPricingInput";
 import { buildPremadeImageUrl } from "@/lib/premadeCatalog";
 import { isAdminManagedCustomOrder } from "../scheduleVisibility";
@@ -57,6 +63,7 @@ import { isDirectDepositPdfInvoicePaymentMethod } from "@/lib/invoiceDelivery";
 import { saveOrderDraft, discardOrderDraft } from "../draftActions";
 import { orderDraftGuards } from "../../orderDraftGuard";
 import type { AdminOrderDraft } from "@/lib/adminOrderDrafts";
+import { adminOrderRemakeInvoiceTabs } from "@/lib/adminOrderRemake";
 const WEDDING_HEART = "❤️";
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PREVIEW_FONT_FAMILY = "Helvetica, Arial, sans-serif";
@@ -421,6 +428,7 @@ type Props = {
   assignments: OrderSlot[];
   mode?: "create" | "edit";
   initialOrder?: OrderRow | null;
+  initialInvoiceOrders?: OrderRow[];
   initialDesign?: CandyDesign | null;
   initialDraft?: AdminOrderDraft | null;
   sourceOrderFingerprint?: string | null;
@@ -518,6 +526,7 @@ export function NewOrderForm({
   assignments,
   mode = "create",
   initialOrder = null,
+  initialInvoiceOrders = [],
   initialDesign = null,
   initialDraft = null,
   sourceOrderFingerprint = null,
@@ -531,10 +540,11 @@ export function NewOrderForm({
   const invoiceDraftMode = !isEditMode;
   const editUrgencyReferenceDate = isEditMode ? initialOrder?.created_at ?? null : null;
   const initialInvoiceDraftIdRef = useRef(`order-${Date.now()}`);
-  const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => initialDraft ? initialDraft.payload.orders.map(tab => ({...tab, previewSvg: null, previewPngDataUrl: null})) : [
+  const remakeInvoiceTabs = adminOrderRemakeInvoiceTabs(initialInvoiceOrders);
+  const [invoiceOrderDrafts, setInvoiceOrderDrafts] = useState<InvoiceOrderDraft[]>(() => initialDraft ? initialDraft.payload.orders.map(tab => ({...tab, previewSvg: null, previewPngDataUrl: null})) : remakeInvoiceTabs.length ? remakeInvoiceTabs.map(tab => ({ ...tab, previewSvg: null, previewPngDataUrl: null })) : [
     emptyInvoiceOrderDraft(initialInvoiceDraftIdRef.current),
   ]);
-  const [activeInvoiceDraftId, setActiveInvoiceDraftId] = useState(initialDraft?.payload.activeOrderId ?? initialInvoiceDraftIdRef.current);
+  const [activeInvoiceDraftId, setActiveInvoiceDraftId] = useState(initialDraft?.payload.activeOrderId ?? remakeInvoiceTabs[0]?.id ?? initialInvoiceDraftIdRef.current);
   const [manualTitle, setManualTitle] = useState<string | null>(initialOrder?.title ?? null);
   const draftIdentity = useRef({ id: initialDraft?.id ?? "", revision: initialDraft?.revision ?? 0 });
   const [draftMeta, setDraftMeta] = useState(draftIdentity.current);
@@ -907,6 +917,7 @@ export function NewOrderForm({
     categoryId === "custom-1-6" ? "short" : categoryId === "custom-7-14" ? "long" : undefined;
   const customTextLimit =
     categoryId === "custom-7-14" ? LONG_CUSTOM_TEXT_MAX_LENGTH : SHORT_CUSTOM_TEXT_MAX_LENGTH;
+  const customTextVariant = categoryId === "custom-7-14" ? "long" : "short";
   const designTextValue = useMemo(() => {
     if (candyDesign) return designLegacyFields(candyDesign).design_text;
     if (isWedding) {
@@ -3045,18 +3056,20 @@ export function NewOrderForm({
                   Custom text
                   <input
                     value={customText}
-                    maxLength={customTextLimit}
-                    onChange={(event) => setCustomText((event.target.value || "").slice(0, customTextLimit))}
+                    maxLength={customTextVariant === "short" ? SHORT_CUSTOM_TEXT_MAX_LENGTH : undefined}
+                    onChange={(event) =>
+                      setCustomText(sanitizeCustomTextInput(event.target.value || "", customTextVariant))
+                    }
                     className="mt-2 w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900"
                     placeholder="Your text"
                   />
                   <div className="mt-1 flex items-center justify-between gap-3 text-[11px] normal-case tracking-normal text-zinc-500">
                     <span>
                       {categoryId === "custom-7-14"
-                        ? `${LONG_CUSTOM_TEXT_MAX_LENGTH} characters max, including spaces`
+                        ? `${LONG_CUSTOM_TEXT_MAX_LENGTH} letters max, ${LONG_CUSTOM_TEXT_MAX_SPACES} spaces max`
                         : `Up to ${SHORT_CUSTOM_TEXT_MAX_LENGTH} letters`}
                     </span>
-                    <span>{`${(customText || "").length}/${customTextLimit}`}</span>
+                    <span>{`${customTextVariant === "long" ? countCustomTextLetters(customText || "") : (customText || "").length}/${customTextLimit}`}</span>
                   </div>
                 </label>
               )}

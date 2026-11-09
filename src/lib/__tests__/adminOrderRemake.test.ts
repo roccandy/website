@@ -3,6 +3,7 @@ import type { OrderRow } from "@/lib/data";
 import {
   adminOrderRemakeFormDefaults,
   adminOrderRemakeHref,
+  adminOrderRemakeInvoiceTabs,
   resolveAdminOrderRemakeSource,
 } from "@/lib/adminOrderRemake";
 
@@ -33,6 +34,43 @@ describe("admin order re-make", () => {
 
     expect(adminOrderRemakeFormDefaults(source).due_date).toBeNull();
     expect(source.due_date).toBe("2026-08-20");
+  });
+
+  it("keeps each combined-invoice design and its own price in a separate remake tab", () => {
+    const tabs = adminOrderRemakeInvoiceTabs([
+      order({
+        id: "design-a",
+        order_number: "0141-a",
+        design_text: "Design A",
+        quantity: 10,
+        total_price: 25,
+        total_weight_kg: 1,
+        due_date: "2026-08-20",
+        admin_batch_weights_kg: [1],
+      }),
+      order({
+        id: "design-b",
+        order_number: "0141-b",
+        design_text: "Design B",
+        quantity: 20,
+        total_price: 50,
+        total_weight_kg: 2,
+        due_date: "2026-08-20",
+        admin_batch_weights_kg: [2],
+      }),
+    ]);
+
+    expect(tabs).toHaveLength(2);
+    expect(tabs[0]).toMatchObject({
+      id: "remake-design-a",
+      fields: { design_text: "Design A", total_price: "25", due_date: "", order_weight_g: "1000" },
+      batchWeights: ["1"],
+    });
+    expect(tabs[1]).toMatchObject({
+      id: "remake-design-b",
+      fields: { design_text: "Design B", total_price: "50", due_date: "", order_weight_g: "2000" },
+      batchWeights: ["2"],
+    });
   });
 
   it("does not offer the customer order form for premade stock records", () => {

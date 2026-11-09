@@ -153,7 +153,7 @@ export default async function AdminOrderDetailPage({
               {editing ? "Cancel editing" : "Edit order"}
             </Link>
           )}
-          {editing && session.user.canWrite && !isAdminPremadeOrder(order) ? (
+          {session.user.canWrite && !isAdminPremadeOrder(order) ? (
             <Link
               href={adminOrderRemakeHref(order.id)}
               className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-700 hover:border-sky-300"

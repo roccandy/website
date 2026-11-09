@@ -30,6 +30,26 @@ export async function readOrderForRemake(id: string): Promise<OrderRow|null> {
   return data as OrderRow|null;
 }
 
+/** Load every design that belongs to the selected order's combined invoice. */
+export async function readOrderGroupForRemake(id: string): Promise<OrderRow[]> {
+  const source = await readOrderForRemake(id);
+  if (!source) return [];
+  if (!source.square_invoice_id) return [source];
+
+  const { data, error } = await supabaseAdminClient
+    .from("orders")
+    .select("*")
+    .eq("square_invoice_id", source.square_invoice_id);
+  if (error) throw new Error("Unable to load the original order.");
+
+  const siblings = (data as OrderRow[] | null) ?? [];
+  return siblings.sort((a, b) => {
+    if (a.id === source.id) return -1;
+    if (b.id === source.id) return 1;
+    return (a.order_number ?? a.created_at).localeCompare(b.order_number ?? b.created_at);
+  });
+}
+
 // Only call after the page's authentication/role checks. No sessions or per-user
 // permissions are cached. Other pages and checkout continue to read fresh data.
 export const getProductionWorkspaceData = unstable_cache(async () => {

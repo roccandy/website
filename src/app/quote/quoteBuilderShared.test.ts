@@ -18,6 +18,11 @@ describe("custom text input rules", () => {
     expect(sanitizeCustomTextInput("ONE TWO THREE FOUR", "long").split(" ").length - 1).toBe(2);
   });
 
+  it("allows a three-word message when it fits the public long-text rules", () => {
+    expect(sanitizeCustomTextInput("Thank You Karry", "long")).toBe("THANK YOU KARRY");
+    expect(isCustomTextValid("THANK YOU KARRY", "long")).toBe(true);
+  });
+
   it("keeps short custom text to 6 total characters including spaces", () => {
     expect(sanitizeCustomTextInput("A B C D", "short")).toBe("A B C ");
   });

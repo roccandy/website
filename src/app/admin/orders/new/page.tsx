@@ -8,7 +8,7 @@ import {
   getProductionSlots,
   getSettings,
 } from "@/lib/data";
-import { readProductionOrders,readOrderForRemake } from "../../adminWorkspaceData";
+import { readProductionOrders,readOrderGroupForRemake } from "../../adminWorkspaceData";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
@@ -56,8 +56,8 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
     (Array.isArray(resolvedSearchParams?.remake) ? resolvedSearchParams?.remake[0] : resolvedSearchParams?.remake)?.trim(),
   );
   const remakeId = (Array.isArray(resolvedSearchParams?.remake) ? resolvedSearchParams.remake[0] : resolvedSearchParams?.remake)?.trim();
-  const fullRemakeOrder = remakeId ? await readOrderForRemake(remakeId) : null;
-  const remakeOrder = resolveAdminOrderRemakeSource(fullRemakeOrder ? [fullRemakeOrder] : [], resolvedSearchParams?.remake);
+  const remakeOrders = remakeId ? await readOrderGroupForRemake(remakeId) : [];
+  const remakeOrder = resolveAdminOrderRemakeSource(remakeOrders, resolvedSearchParams?.remake);
   if (remakeRequested && !remakeOrder) notFound();
   const initialOrder = draft ? draftFormOrderDefaults(draft) : remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
   const initialDesign = resolvedSearchParams?.design ? await loadCandyDesign(resolvedSearchParams.design, Number(resolvedSearchParams.revision) || undefined) : null;
@@ -116,6 +116,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         assignments={assignments}
         mode="create"
         initialOrder={initialOrder}
+        initialInvoiceOrders={remakeOrder ? remakeOrders : undefined}
         initialDesign={initialDesign}
         cancelHref={remakeOrder ? `/admin/orders/${encodeURIComponent(remakeOrder.id)}` : "/admin/orders"}
       />

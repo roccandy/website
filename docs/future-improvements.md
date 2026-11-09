@@ -25,21 +25,14 @@ to build every item.
 
 ### Analytics and advertising
 
-The website emits `view_item`, `add_to_cart`, `begin_checkout`, `purchase`,
-`enquiry_form_start`, and `generate_lead` data-layer events. The remaining
-work, if measurement is required, is in GTM/GA4/Google Ads rather than this
-repository:
+The administrator is satisfied with the current GTM/GA4 setup. Broad tag or
+conversion changes are not proposed. The reported GA4 ecommerce item-revenue
+discrepancy remains deferred until the administrator chooses to investigate it.
+Compare emitted purchase/item values with the corresponding order and GA4
+report before proposing a change; no new live payment is authorised by this item.
 
-- Create and publish GTM event tags for `enquiry_form_start` and
-  `generate_lead`, including `lead_type` and `source_page`.
-- Submit a test enquiry and verify `generate_lead` in GA4 without customer
-  personal data in analytics payloads.
-- Run an approved controlled payment and verify one `purchase` event with a
-  non-empty `transaction_id`.
-- Mark the intended lead and purchase events as GA4 key events and configure
-  the corresponding Google Ads conversions if Ads optimisation uses them.
-
-Owner: business/marketing administrator with access to the external accounts.
+Owner: business/marketing administrator, with the development maintainer
+investigating the purchase payload when requested.
 
 ### Production checks
 
@@ -53,6 +46,45 @@ These are validation tasks, not missing features:
   checks in the operations guide.
 
 ## Optional engineering hardening
+
+### Admin design and order workflow review
+
+The following are proposals from the 2026-11-07 repository review, awaiting the
+administrator's choice of scope. Owner: development maintainer; the business
+administrator prioritises user-facing workflow changes. These proposals add no
+mandatory daily checklist or customer-approval gate.
+
+1. **Browser regression coverage.** Prioritise the automated delivery checks
+   below around normal-login draft save/resume/discard, navigation and refresh,
+   multi-tab orders, Studio save/copy, private artwork, print and exports. The
+   latest local unit/build checks passed; a complete signed-in browser
+   click-through and production deployment verification remain unverified.
+2. **Recovery for each design.** Studio currently has one global browser recovery
+   key, and embedded Studio editing does not use that recovery mechanism. Scope
+   recovery to each design/edit session and preserve unfinished embedded artwork.
+   Consider quiet autosave of already-saved order drafts with a clear saved time;
+   retain explicit discard and ensure autosave cannot send mail or create invoices.
+3. **Precise canvas tools.** Add a flat face editing view alongside the 3D preview,
+   centre/snap guides, alignment, layer locking, and multiple-layer selection and
+   movement. Existing duplication, zoom and keyboard nudging remain available.
+   These tools should reduce repeated numeric adjustments for advanced mockups.
+4. **Catalogue navigation.** Search is currently by design name only. Expose the
+   source-order link already stored for imports, add order/customer lookup and
+   optional favourites/archive controls. Preserve order snapshots and revisions;
+   do not require staff to manually categorise historical designs.
+5. **Customer proof export.** Add an optional, clearly formatted proof with the
+   flat face, 3D preview, design/order name and revision. Generate useful filenames
+   automatically. Email-thread integration belongs to the separately planned mail
+   system; proof approval must not become a required step to create an order.
+6. **Interrupted submission recovery.** Draft claims currently protect against
+   repeated submissions but an ambiguous write can leave a manual reconciliation
+   lock. Explore atomic order-write/draft completion and a stable submission ID
+   for ordinary unsaved new orders too. Any recovery UI must verify the saved
+   result before allowing a retry; never blindly unlock an uncertain write.
+7. **Smaller order/editor modules.** The order form and order actions each exceed
+   3,000 lines. Extract draft persistence, invoice submission and artwork handling
+   into focused modules with regression coverage as those areas change, retaining
+   current behaviour. This is developer maintenance with no extra admin steps.
 
 ### Automated delivery checks
 
@@ -93,13 +125,25 @@ Only add these when there is a specific search or content reason:
 
 ## Explicitly out of scope unless re-opened
 
+The mail system is a separate administrator-intended project. Its brief may
+include enquiry handling, email threads and the currently unused Today page;
+implementation is not authorised by the Studio/draft changes. Mailbox ingestion
+and AI drafting need an explicit brief within that project.
+
 The following were previously proposed but are not planned work: operations
-automation/outbox queues, mailbox ingestion or AI drafting, automatic schedule
+automation/outbox queues, automatic schedule
 proposals, inventory and purchasing workflows, QR/barcode fulfilment,
 carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-07 — Reviewed the implemented admin workflow and recorded seven
+  unapproved improvement proposals, prioritising browser regression coverage,
+  recovery, precise editing, catalogue access and interrupted submissions.
+  Corrected the analytics/mail scope to reflect the administrator's existing
+  preferences: defer the item-revenue discrepancy and keep the planned mail
+  system separate. No application behaviour changed in this review.
 
 - 2026-11-07 — Added persistent, explicitly unsent admin order drafts, schedule
   resume/discard controls, and leave-page save/discard choices. Existing-order
