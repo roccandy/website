@@ -20,6 +20,20 @@ export const DESIGN_JACKETS = {
   rainbow: "Rainbow",
   segments: "Custom segments",
 } as const;
+export type AdvancedJacket = {
+  segments: number;
+  gap: number;
+  ring: number;
+  shading: number;
+  shadow: boolean;
+};
+export const DEFAULT_ADVANCED_JACKET: AdvancedJacket = {
+  segments: 8,
+  gap: 0.15,
+  ring: 1 - 435 / 532,
+  shading: 0.35,
+  shadow: true,
+};
 export type DesignLayer = {
   id: string;
   type: "text" | "image" | "heart" | "circle" | "star";
@@ -37,9 +51,22 @@ export type DesignLayer = {
   curve: "straight" | "up" | "down";
   image: string;
   visible: boolean;
+  opacity?: number;
+  locked?: boolean;
+  scaleX?: number;
+  scaleY?: number;
+  flipX?: boolean;
+  flipY?: boolean;
+  arcRadius?: number;
+  arcOffset?: number;
+  surface?: "face" | "jacket";
+  aspectRatio?: number;
+  frame?: "face" | "scene";
+  uppercase?: boolean;
+  fullArc?: boolean;
 };
 export type CandyDesign = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   name: string;
   jacket: {
     mode: keyof typeof DESIGN_JACKETS;
@@ -47,15 +74,45 @@ export type CandyDesign = {
     fill: string;
     pinstripe: string;
     showPinstripe: boolean;
+    advanced?: AdvancedJacket;
   };
   layers: DesignLayer[];
   productionNotes: string;
   source?: { id: string; revision: number };
+  presentation?: { background: string; transparent: boolean };
 };
 export const MAX_DESIGN_LAYERS = 20;
 export const MAX_JACKET_COLOURS = 8;
-export function nameDesignForOrder(design: CandyDesign, orderTitle: unknown): CandyDesign {
-  const name = typeof orderTitle === "string" ? orderTitle.trim().slice(0,120) : "";
+/** Explicit upgrades preserve v1 geometry until advanced jacket controls are enabled. */
+export function upgradeCandyDesign(design: CandyDesign): CandyDesign {
+  return { ...design, schemaVersion: 2 };
+}
+export function studioCandyDesign(
+  name?: string,
+  defaults?: SiteDesignerDefaults,
+): CandyDesign {
+  const design = emptyCandyDesign(name, defaults);
+  return {
+    ...design,
+    schemaVersion: 2,
+    jacket: { ...design.jacket, advanced: { ...DEFAULT_ADVANCED_JACKET } },
+    layers: design.layers.map((l) => ({ ...l, fullArc: true })),
+  };
+}
+export function designFaceRadius(design: CandyDesign) {
+  return design.schemaVersion === 2 && design.jacket.advanced
+    ? 532 * (1 - design.jacket.advanced.ring)
+    : 435;
+}
+export function designLayerText(layer: DesignLayer) {
+  return layer.uppercase ? layer.text.toUpperCase() : layer.text;
+}
+export function nameDesignForOrder(
+  design: CandyDesign,
+  orderTitle: unknown,
+): CandyDesign {
+  const name =
+    typeof orderTitle === "string" ? orderTitle.trim().slice(0, 120) : "";
   return name ? { ...design, name } : design;
 }
 const hex = (v: unknown, fallback = "#b7b7b7") =>
@@ -88,11 +145,11 @@ export function designAssetKey(value: string): string | null {
   if (/^candy-asset:[a-f0-9]{64}\.png$/.test(value)) return value.slice(12);
   const origin = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const prefix = `${origin}/storage/v1/object/public/candy-design-assets/`;
-  return (
-    origin &&
+  return origin &&
     value.startsWith(prefix) &&
     /^[a-f0-9]{64}\.png$/.test(value.slice(prefix.length))
-  ) ? value.slice(prefix.length) : null;
+    ? value.slice(prefix.length)
+    : null;
 }
 export function designImageHref(value: string) {
   const key = designAssetKey(value);
@@ -164,7 +221,7 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
     }
   }
   const v = obj(raw);
-  if (v.schemaVersion !== 1)
+  if (v.schemaVersion !== 1 && v.schemaVersion !== 2)
     throw new Error(
       "Unsupported candy design version. The saved design has not been changed.",
     );
@@ -193,7 +250,7 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
       name: str(l.name, 80, type),
       x: num(l.x, 0, 100, 50),
       y: num(l.y, 0, 100, 50),
-      size: num(l.size, 2, 110, 16),
+      size: num(l.size, 2, v.schemaVersion === 2 ? 250 : 110, 16),
       rotation: num(l.rotation, -180, 180, 0),
       colour: hex(l.colour, "#333333"),
       text: str(l.text, 120),
@@ -209,11 +266,29 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
           : ("straight" as DesignLayer["curve"]),
       image,
       visible: l.visible !== false,
+      ...(v.schemaVersion === 2
+        ? {
+            opacity: num(l.opacity, 0, 1, 1),
+            locked: l.locked === true,
+            scaleX: num(l.scaleX, 0.1, 4, 1),
+            scaleY: num(l.scaleY, 0.1, 4, 1),
+            flipX: l.flipX === true,
+            flipY: l.flipY === true,
+            arcRadius: num(l.arcRadius, 60, 600, 320),
+            arcOffset: num(l.arcOffset, -50, 50, 0),
+            surface:
+              l.surface === "jacket" ? ("jacket" as const) : ("face" as const),
+            aspectRatio: num(l.aspectRatio, 0.1, 10, 1),
+            frame: l.frame === "scene" ? ("scene" as const) : ("face" as const),
+            uppercase: l.uppercase === true,
+            fullArc: l.fullArc === true,
+          }
+        : {}),
     };
   });
   const source = obj(v.source);
   const document: CandyDesign = {
-    schemaVersion: 1,
+    schemaVersion: v.schemaVersion,
     name: str(v.name, 120, "Untitled design") || "Untitled design",
     jacket: {
       mode: Object.hasOwn(DESIGN_JACKETS, String(jacket.mode))
@@ -225,10 +300,33 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
       fill: hex(jacket.fill, "#ffffff"),
       pinstripe: hex(jacket.pinstripe, "#ffffff"),
       showPinstripe: jacket.showPinstripe === true,
+      ...(v.schemaVersion === 2 && jacket.advanced
+        ? {
+            advanced: {
+              segments: Math.round(
+                num(obj(jacket.advanced).segments, 2, 16, 8),
+              ),
+              gap: num(obj(jacket.advanced).gap, 0.01, 0.7, 0.15),
+              ring: num(
+                obj(jacket.advanced).ring,
+                0.08,
+                0.35,
+                DEFAULT_ADVANCED_JACKET.ring,
+              ),
+              shading: num(obj(jacket.advanced).shading, 0, 1, 0.35),
+              shadow: obj(jacket.advanced).shadow !== false,
+            },
+          }
+        : {}),
     },
     layers,
     productionNotes: str(v.productionNotes, 2000),
   };
+  if (v.schemaVersion === 2 && v.presentation)
+    document.presentation = {
+      background: hex(obj(v.presentation).background, "#ffffff"),
+      transparent: obj(v.presentation).transparent === true,
+    };
   if (!document.jacket.colours.length) document.jacket.colours = ["#d1d5db"];
   if (
     typeof source.id === "string" &&
@@ -269,15 +367,21 @@ export function designSummary(
     `Jacket: ${DESIGN_JACKETS[design.jacket.mode]}${design.jacket.mode === "rainbow" ? "" : ` (${colours.map(formatColour).join(", ")})`}`,
     `Fill: ${formatColour(design.jacket.fill)}${design.jacket.showPinstripe ? ` · Pinstripe: ${formatColour(design.jacket.pinstripe)}` : ""}`,
   ];
+  if (design.schemaVersion === 2 && design.jacket.advanced) {
+    const a = design.jacket.advanced;
+    lines.push(
+      `Jacket construction: ${a.segments} segments${production ? ` · ring ${Math.round(a.ring * 1000) / 10}%${design.jacket.showPinstripe ? ` · stripe width ${Math.round(a.gap * 100)}% of segment` : ""}` : ""}`,
+    );
+  }
   for (const l of design.layers.filter((l) => l.visible)) {
     const content =
       l.type === "text"
-        ? `“${l.text}” · ${DESIGN_FONTS[l.font].label}${l.bold ? " bold" : ""}${l.italic ? " italic" : ""}${l.curve !== "straight" ? ` · curve ${l.curve}` : ""}`
+        ? `“${designLayerText(l)}” · ${DESIGN_FONTS[l.font].label}${l.bold ? " bold" : ""}${l.italic ? " italic" : ""}${l.curve !== "straight" ? ` · curve ${l.curve}` : ""}`
         : l.type === "image"
           ? `Artwork: ${l.name}`
           : l.type;
     lines.push(
-      `${content}${l.type !== "image" ? ` · ${formatColour(l.colour)}` : ""}${production ? ` · size ${l.size}% · position ${l.x},${l.y}% · rotation ${l.rotation}°${l.type === "text" ? ` · spacing ${l.spacing}` : ""}` : ""}`,
+      `${content}${l.type !== "image" ? ` · ${formatColour(l.colour)}` : ""}${l.surface === "jacket" ? " · jacket artwork" : ""}${production ? ` · size ${l.size}% · position ${l.x},${l.y}% · rotation ${l.rotation}°${l.type === "text" ? ` · spacing ${l.spacing}${l.curve !== "straight" ? ` · arc radius ${l.arcRadius ?? 320} · arc offset ${l.arcOffset ?? 0}% · ${l.fullArc ? "full-circle" : "semicircle"} path` : ""}` : ""} · opacity ${Math.round((l.opacity ?? 1) * 100)}% · scale ${l.scaleX ?? 1}×${l.scaleY ?? 1}${l.flipX ? " · flipped horizontally" : ""}${l.flipY ? " · flipped vertically" : ""}` : ""}`,
     );
   }
   if (production && design.productionNotes)
@@ -308,7 +412,7 @@ export function designLegacyFields(design: CandyDesign) {
     design_text:
       design.layers
         .filter((l) => l.visible && l.type === "text")
-        .map((l) => l.text)
+        .map(designLayerText)
         .join(" / ") || design.name,
     text_color:
       design.layers.find((l) => l.type === "text")?.colour || "#333333",

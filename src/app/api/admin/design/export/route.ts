@@ -17,12 +17,30 @@ export async function POST(request: Request) {
     if (!parsed) throw new Error("A design is required.");
     const design = await validateDesignImages(parsed);
     const format =
-      input.format === "pdf" ? "pdf" : input.format === "svg" ? "svg" : "png";
+      input.format === "proof"
+        ? "proof"
+        : input.format === "pdf"
+          ? "pdf"
+          : input.format === "svg"
+            ? "svg"
+            : "png";
+    const options = {
+      view:
+        input.view === "face"
+          ? ("face" as const)
+          : ("three-dimensional" as const),
+      presentation: input.presentation === true,
+    };
     let bytes: Uint8Array | string;
-    if (format === "svg") bytes = await candyDesignSvg(design);
+    if (format === "svg") bytes = await candyDesignSvg(design, options);
     else {
-      const png = await candyDesignPng(design);
-      if (format === "pdf") {
+      const png = await candyDesignPng(
+        design,
+        format === "proof"
+          ? { ...options, view: "three-dimensional" }
+          : options,
+      );
+      if (format === "pdf" || format === "proof") {
         const pdf = await PDFDocument.create();
         const font = await pdf.embedFont(StandardFonts.Helvetica);
         const page = pdf.addPage([595, 842]);
@@ -33,14 +51,29 @@ export async function POST(request: Request) {
           size: 18,
           font,
         });
-        page.drawImage(image, { x: 36, y: 366, width: 523, height: 384 });
+        if (format === "proof") {
+          const face = await pdf.embedPng(
+            await candyDesignPng(design, { ...options, view: "face" }),
+          );
+          page.drawText(
+            `Customer design proof${design.source ? ` - revision ${design.source.revision}` : " - unsaved design"}`,
+            { x: 36, y: 768, size: 11, font },
+          );
+          page.drawImage(image, { x: 36, y: 535, width: 300, height: 220 });
+          page.drawImage(face, { x: 350, y: 550, width: 200, height: 200 });
+          page.drawText("3D preview", { x: 36, y: 515, size: 10, font });
+          page.drawText("Flat candy face", { x: 350, y: 515, size: 10, font });
+        } else {
+          const width = options.view === "face" ? 384 : 523;
+          page.drawImage(image, { x: 36, y: 366, width, height: 384 });
+        }
         const lines = designSummary(design).flatMap(
           (line) =>
             line
               .replace(/[^\x20-\x7e]/g, " ")
               .match(/.{1,90}(?:\s|$)|.{1,90}/g) || [],
         );
-        let y = 350;
+        let y = format === "proof" ? 485 : 350;
         let currentPage = page;
         for (const line of lines) {
           if (y < 40) {
@@ -68,10 +101,10 @@ export async function POST(request: Request) {
           "Content-Type":
             format === "svg"
               ? "image/svg+xml"
-              : format === "pdf"
+              : format === "pdf" || format === "proof"
                 ? "application/pdf"
                 : "image/png",
-          "Content-Disposition": `attachment; filename="${filename}.${format}"`,
+          "Content-Disposition": `attachment; filename="${filename}${format === "proof" ? "-proof.pdf" : `.${format}`}"`,
           "Cache-Control": "no-store",
         },
       },

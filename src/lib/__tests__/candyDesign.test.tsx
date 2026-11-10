@@ -21,7 +21,7 @@ import type { OrderRow } from "@/lib/data";
 describe("versioned candy designs", () => {
   it("rejects unsupported versions and executable/remote image sources", () => {
     expect(() =>
-      parseCandyDesign({ ...emptyCandyDesign(), schemaVersion: 2 }),
+      parseCandyDesign({ ...emptyCandyDesign(), schemaVersion: 999 }),
     ).toThrow("Unsupported");
     for (const image of [
       "javascript:alert(1)",

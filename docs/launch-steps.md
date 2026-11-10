@@ -71,6 +71,23 @@ They have been applied to the configured project on 2026-11-07. Original design
 artwork must remain private; previews use an authenticated admin route and
 exports embed server-downloaded assets. Do not change this bucket to public.
 
+For Studio v2, apply `docs/sql/2026-11-10-candy-design-v2.sql` before deploying
+the application update. This adds version 2 to the existing atomic save
+function's accepted versions, preserving v1 support, revision conflict checks
+and service-role-only access. It does not rewrite existing projects/orders.
+The migration is supplied with this change; production application/deployment
+must be verified separately. A code rollback remains compatible with v1 data,
+but a v1-only application cannot edit newly saved v2 documents: retain the v2
+reader or roll forward after any v2 designs have been saved.
+
+`npm run test:studio` runs the isolated Playwright component suite on loopback
+with mocked library actions, without signing in or touching real accounts,
+orders or email. It covers complex jacket controls, text/transform editing,
+paint/selection split, project round trips, legacy upgrades and narrow layout.
+Use the normal login flow for additional live admin verification. Never mint
+sessions using application secrets. Customer proof/export buttons download
+files only; they do not send mail or create orders.
+
 Historical import command: `npx tsx scripts/backfill-order-designs.ts` previews
 the eligible count; add `--apply` to import. The 2026-11-07 run imported 208
 custom designs, preserved two existing library designs, and verified that source

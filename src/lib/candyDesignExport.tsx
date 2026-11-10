@@ -7,14 +7,22 @@ import { isDesignAssetUrl, designAssetKey } from "@/lib/candyDesign";
 import { createHash } from "node:crypto";
 import { candyTextOutlines } from "@/lib/candyDesignText";
 
-export async function candyDesignSvg(design: CandyDesign) {
+export type DesignExportOptions = {
+  view?: "three-dimensional" | "face";
+  presentation?: boolean;
+};
+export async function candyDesignSvg(
+  design: CandyDesign,
+  options: DesignExportOptions = {},
+) {
   const layers = await Promise.all(
     design.layers.map(async (layer) => {
       if (layer.type !== "image" || !isDesignAssetUrl(layer.image))
         return layer;
       const { supabaseAdminClient } = await import("@/lib/supabase/admin");
       const { data, error } = await supabaseAdminClient.storage
-        .from("candy-design-assets").download(designAssetKey(layer.image)!);
+        .from("candy-design-assets")
+        .download(designAssetKey(layer.image)!);
       if (error || !data)
         throw new Error(
           "Saved artwork could not be loaded. Please retry the export.",
@@ -33,17 +41,27 @@ export async function candyDesignSvg(design: CandyDesign) {
       design: { ...design, layers },
       prefix: "export",
       textOutlines: await candyTextOutlines(design),
+      view: options.view,
+      showBackground: options.presentation,
     }),
   );
   const svg = await new Response(stream).text();
   return svg;
 }
-export async function candyDesignPng(design: CandyDesign) {
-  return sharp(Buffer.from(await candyDesignSvg(design)))
-    .resize(1418, 1040)
-    .flatten({ background: "#ffffff" })
-    .png()
-    .toBuffer();
+export async function candyDesignPng(
+  design: CandyDesign,
+  options: DesignExportOptions = {},
+) {
+  const image = sharp(
+    Buffer.from(await candyDesignSvg(design, options)),
+  ).resize(options.view === "face" ? 1040 : 1418, 1040);
+  if (!(options.presentation && design.presentation?.transparent))
+    image.flatten({
+      background: options.presentation
+        ? (design.presentation?.background ?? "#ffffff")
+        : "#ffffff",
+    });
+  return image.png().toBuffer();
 }
 export async function validateDesignImages(design: CandyDesign) {
   await candyTextOutlines(design);

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:studio": "playwright test --config=playwright.studio.config.ts",
     "db:apply-sql": "node scripts/run-supabase-sql.mjs",
     "sync-managed-content": "tsx scripts/sync-managed-content.ts",
     "import-packaging-images": "node scripts/import-packaging-images.mjs",
@@ -36,6 +37,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/fontkit": "^2.0.9",
     "@types/node": "^24.10.1",

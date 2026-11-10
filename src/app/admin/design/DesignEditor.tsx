@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { CandyDesignSvg } from "@/components/CandyDesignSvg";
+import { RasterEditor } from "./RasterEditor";
 import {
   DESIGN_FONTS,
   DESIGN_JACKETS,
@@ -20,6 +21,10 @@ import {
   parseCandyDesign,
   resetDesignLayerDefaults,
   emptyCandyDesign,
+  upgradeCandyDesign,
+  DEFAULT_ADVANCED_JACKET,
+  designFaceRadius,
+  designImageHref,
   type CandyDesign,
   type DesignLayer,
 } from "@/lib/candyDesign";
@@ -196,6 +201,15 @@ export function DesignEditor({
   const [zoom, setZoom] = useState(100);
   const [recovery, setRecovery] = useState<CandyDesign | null>(null);
   const [showSpecs, setShowSpecs] = useState(false);
+  const [view, setView] = useState<"three-dimensional" | "face">(
+    "three-dimensional",
+  );
+  const [present, setPresent] = useState(false);
+  const [raster, setRaster] = useState<{
+    layer?: DesignLayer;
+    jacket?: boolean;
+  } | null>(null);
+  const [snap, setSnap] = useState(true);
   const canvasRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
     id: string;
@@ -204,6 +218,7 @@ export function DesignEditor({
     startX: number;
     startY: number;
     before: CandyDesign;
+    handle?: string;
   } | null>(null);
   const currentRef = useRef(design);
   useEffect(() => {
@@ -267,6 +282,66 @@ export function DesignEditor({
         ),
       });
   };
+  const advancedLayerChange = (patch: Partial<DesignLayer>) => {
+    if (selected)
+      change({
+        ...upgradeCandyDesign(design),
+        layers: design.layers.map((l) =>
+          l.id === selected.id ? { ...l, ...patch } : l,
+        ),
+      });
+  };
+  const fitText = () => {
+    if (!selected || selected.type !== "text") return;
+    const node = canvasRef.current?.querySelector<SVGTextElement>(
+      `[data-design-layer="${selected.id}"] text`,
+    );
+    if (!node) return;
+    const radius = designFaceRadius(design) * 0.94;
+    let extent = 0;
+    for (let i = 0; i < node.getNumberOfChars(); i++) {
+      const box = node.getExtentOfChar(i);
+      for (const x of [box.x, box.x + box.width])
+        for (const y of [box.y, box.y + box.height])
+          extent = Math.max(
+            extent,
+            Math.hypot(x * (selected.scaleX ?? 1), y * (selected.scaleY ?? 1)),
+          );
+    }
+    const arc = selected.curve !== "straight",
+      arcRadius = selected.arcRadius ?? 320;
+    const scale = Math.max(selected.scaleX ?? 1, selected.scaleY ?? 1);
+    const fittedArcRadius = Math.max(
+      60,
+      Math.min(arcRadius, (radius * 0.85) / scale),
+    );
+    const radialFit = arc
+      ? (radius - fittedArcRadius * scale) /
+        Math.max(1, extent - arcRadius * scale)
+      : radius / Math.max(1, extent);
+    const pathFit = arc
+      ? (Math.PI * fittedArcRadius * (selected.fullArc ? 2 : 1)) /
+        Math.max(1, node.getComputedTextLength())
+      : 1;
+    const ratio = Math.min(
+      1,
+      Math.max(0.05, radialFit),
+      Math.max(0.05, pathFit),
+    );
+    const patch = {
+      x: 50,
+      y: 50,
+      size: Math.max(2, Math.round(selected.size * ratio * 100) / 100),
+      spacing: Math.round(selected.spacing * ratio * 100) / 100,
+    };
+    if (arc)
+      advancedLayerChange({
+        ...patch,
+        arcRadius: fittedArcRadius,
+        arcOffset: 0,
+      });
+    else layerChange(patch);
+  };
   const jacketChange = (patch: Partial<CandyDesign["jacket"]>) =>
     change({ ...design, jacket: { ...design.jacket, ...patch } });
   const add = (type: DesignLayer["type"], image = "", name?: string) => {
@@ -276,6 +351,7 @@ export function DesignEditor({
     }
     const layer = {
       ...newDesignLayer(type, crypto.randomUUID(), siteDefaults),
+      ...(design.schemaVersion === 2 ? { fullArc: true } : {}),
       image,
       ...(name ? { name } : {}),
     };
@@ -351,7 +427,7 @@ export function DesignEditor({
       setBusy(false);
     }
   };
-  const exportDesign = async (format: "png" | "pdf" | "svg") => {
+  const exportDesign = async (format: "png" | "pdf" | "svg" | "proof") => {
     setBusy(true);
     setError("");
     try {
@@ -359,7 +435,7 @@ export function DesignEditor({
       const response = await fetch("/api/admin/design/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ design, format }),
+        body: JSON.stringify({ design, format, view, presentation: true }),
       });
       if (!response.ok) {
         const payload = await response.json();
@@ -368,13 +444,72 @@ export function DesignEditor({
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${design.name.replace(/[^a-z0-9_-]/gi, "-")}.${format}`;
+      link.download = `${design.name.replace(/[^a-z0-9_-]/gi, "-")}${format === "proof" ? "-proof.pdf" : `.${format}`}`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to export artwork.");
     } finally {
       setBusy(false);
+    }
+  };
+  const saveProject = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const layers = await Promise.all(
+        design.layers.map(async (l) => {
+          if (l.type !== "image" || l.image.startsWith("data:")) return l;
+          const response = await fetch(designImageHref(l.image));
+          if (!response.ok)
+            throw new Error(
+              "Unable to load saved artwork for the project download.",
+            );
+          const image = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = reject;
+            void response
+              .blob()
+              .then((blob) => reader.readAsDataURL(blob), reject);
+          });
+          return { ...l, image };
+        }),
+      );
+      const project = parseCandyDesign({ ...design, layers })!;
+      delete project.source;
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(project)], { type: "application/json" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${design.name.replace(/[^a-z0-9_-]/gi, "-")}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to download project.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const openProject = async (file?: File) => {
+    if (!file) return;
+    try {
+      if (file.size > 5_000_000)
+        throw new Error("Choose a Studio JSON project up to 5MB.");
+      const next = parseCandyDesign(await file.text());
+      if (!next) throw new Error("Choose a valid Studio project.");
+      if (
+        dirty &&
+        !window.confirm("Replace the current unsaved design with this project?")
+      )
+        return;
+      delete next.source;
+      projectRef.current = undefined;
+      change(next);
+      setSelectedId(next.layers[0]?.id ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to open project.");
     }
   };
   const point = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -543,11 +678,63 @@ export function DesignEditor({
           {message}
         </p>
       )}
+      {raster && (
+        <RasterEditor
+          image={raster.layer?.image}
+          jacketDesign={
+            raster.jacket
+              ? {
+                  ...design,
+                  layers: design.layers.filter(
+                    (l) => l.id !== raster.layer?.id,
+                  ),
+                }
+              : undefined
+          }
+          onClose={() => setRaster(null)}
+          onApply={(image, ratio, copy) => {
+            const count = (raster.layer ? 0 : 1) + (copy ? 1 : 0);
+            if (design.layers.length + count > MAX_DESIGN_LAYERS)
+              throw new Error(
+                `A design can contain up to ${MAX_DESIGN_LAYERS} layers. Cancel and remove a layer before adding more artwork.`,
+              );
+            const layer: DesignLayer = raster.layer
+              ? { ...raster.layer, image }
+              : {
+                  ...newDesignLayer("image", crypto.randomUUID(), siteDefaults),
+                  image,
+                  name: raster.jacket ? "Jacket paint" : "Face paint",
+                  size: 100,
+                  aspectRatio: ratio,
+                  surface: raster.jacket ? "jacket" : "face",
+                  frame: raster.jacket ? "scene" : "face",
+                };
+            const layers = raster.layer
+              ? design.layers.map((l) => (l.id === layer.id ? layer : l))
+              : [...design.layers, layer];
+            if (copy)
+              layers.push({
+                ...layer,
+                id: crypto.randomUUID(),
+                image: copy,
+                name: `${layer.name} selection`,
+              });
+            change(
+              parseCandyDesign({ ...upgradeCandyDesign(design), layers })!,
+            );
+            setSelectedId(layer.id);
+            setRaster(null);
+          }}
+        />
+      )}
       <fieldset
         disabled={busy}
-        className="grid items-start gap-4 border-0 p-0 xl:grid-cols-[220px_minmax(0,1fr)_260px]"
+        className={`grid items-start gap-4 border-0 p-0 ${present ? "" : "xl:grid-cols-[220px_minmax(0,1fr)_260px]"}`}
       >
-        <aside className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">
+        <aside
+          hidden={present}
+          className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto"
+        >
           <Field label="Design name">
             <input
               className={input}
@@ -606,6 +793,7 @@ export function DesignEditor({
                   onClick={() => setSelectedId(l.id)}
                 >
                   {!l.visible ? "◌ " : ""}
+                  {l.locked ? "🔒 " : ""}
                   {l.type === "text" ? l.text || "Empty text" : l.name}
                 </button>
               ))}
@@ -643,11 +831,30 @@ export function DesignEditor({
               }}
             />
           </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={button}
+              onClick={() => setRaster({})}
+            >
+              Paint face
+            </button>
+            <button
+              type="button"
+              className={button}
+              onClick={() => {
+                setView("three-dimensional");
+                setRaster({ jacket: true });
+              }}
+            >
+              Paint jacket
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               className={button}
-              disabled={!selected}
+              disabled={!selected || !!selected.locked}
               onClick={() => {
                 if (selected && design.layers.length < MAX_DESIGN_LAYERS) {
                   const layer = {
@@ -708,7 +915,37 @@ export function DesignEditor({
               />
               {zoom}%
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={button}
+                aria-pressed={view === "face"}
+                onClick={() =>
+                  setView(view === "face" ? "three-dimensional" : "face")
+                }
+              >
+                {view === "face" ? "3D preview" : "Flat face"}
+              </button>
+              <button
+                type="button"
+                className={button}
+                aria-pressed={present}
+                onClick={() => setPresent(!present)}
+              >
+                {present ? "Return to editing" : "Present"}
+              </button>
+              {!present && (
+                <label className="flex items-center gap-1 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={snap}
+                    onChange={(e) => setSnap(e.target.checked)}
+                  />{" "}
+                  Snap to centre
+                </label>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
               {(["png", "pdf", "svg"] as const).map((format) => (
                 <button
                   type="button"
@@ -720,6 +957,13 @@ export function DesignEditor({
                   Export {format.toUpperCase()}
                 </button>
               ))}
+              <button
+                type="button"
+                className={button}
+                onClick={() => void exportDesign("proof")}
+              >
+                Customer proof
+              </button>
             </div>
           </div>
           <div className="overflow-auto rounded-xl border border-zinc-200 bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%)] bg-[length:24px_24px] p-3">
@@ -728,14 +972,35 @@ export function DesignEditor({
               tabIndex={0}
               role="group"
               aria-label="Design canvas. Select a layer and use arrow keys to move it."
-              className="relative mx-auto touch-none bg-white outline-none focus:ring-2 focus:ring-blue-400"
+              className="relative mx-auto touch-none outline-none focus:ring-2 focus:ring-blue-400"
               style={{
                 width: `${zoom}%`,
                 minWidth: 320,
-                aspectRatio: "1772 / 1300",
+                aspectRatio: view === "face" ? "1" : "1772 / 1300",
+              }}
+              onDragOver={(e) => {
+                if (!present && e.dataTransfer.types.includes("Files"))
+                  e.preventDefault();
+              }}
+              onDrop={(e) => {
+                if (!present && !busy) {
+                  e.preventDefault();
+                  void upload(e.dataTransfer.files[0]);
+                }
+              }}
+              onPaste={(e) => {
+                if (!present && !busy) {
+                  const file = [...e.clipboardData.files].find((f) =>
+                    f.type.startsWith("image/"),
+                  );
+                  if (file) {
+                    e.preventDefault();
+                    void upload(file);
+                  }
+                }
               }}
               onPointerDown={(e) => {
-                if (busy) return;
+                if (busy || present) return;
                 const id = (e.target as Element)
                   .closest("[data-design-layer]")
                   ?.getAttribute("data-design-layer");
@@ -747,6 +1012,7 @@ export function DesignEditor({
                 const p = point(e);
                 if (!l || !p) return;
                 setSelectedId(id);
+                if (l.locked) return;
                 drag.current = {
                   id,
                   x: l.x,
@@ -754,6 +1020,9 @@ export function DesignEditor({
                   startX: p.x,
                   startY: p.y,
                   before: design,
+                  handle:
+                    (e.target as Element).getAttribute("data-design-handle") ||
+                    undefined,
                 };
                 e.currentTarget.setPointerCapture(e.pointerId);
                 e.preventDefault();
@@ -765,6 +1034,68 @@ export function DesignEditor({
                 if (!d || !p) return;
                 const round = (v: number) =>
                   Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+                const original = d.before.layers.find((l) => l.id === d.id)!;
+                const radius = designFaceRadius(d.before),
+                  diameter = radius * 2;
+                const cx =
+                  original.frame === "scene"
+                    ? (original.x / 100) * 1772
+                    : 545 - radius + (original.x / 100) * diameter;
+                const cy =
+                  original.frame === "scene"
+                    ? (original.y / 100) * 1300
+                    : 660 - radius + (original.y / 100) * diameter;
+                const centre = (n: number) =>
+                  snap && Math.abs(n - 50) < 1.2 ? 50 : n;
+                const patch =
+                  d.handle === "resize"
+                    ? {
+                        size: Math.min(
+                          d.before.schemaVersion === 2 ? 250 : 110,
+                          Math.max(
+                            2,
+                            (original.size * Math.hypot(p.x - cx, p.y - cy)) /
+                              Math.max(
+                                1,
+                                Math.hypot(d.startX - cx, d.startY - cy),
+                              ),
+                          ),
+                        ),
+                      }
+                    : d.handle === "rotate"
+                      ? {
+                          rotation:
+                            ((original.rotation +
+                              ((Math.atan2(p.y - cy, p.x - cx) -
+                                Math.atan2(d.startY - cy, d.startX - cx)) *
+                                180) /
+                                Math.PI +
+                              540) %
+                              360) -
+                            180,
+                        }
+                      : {
+                          x: centre(
+                            round(
+                              d.x +
+                                ((p.x - d.startX) /
+                                  (original.frame === "scene"
+                                    ? 1772
+                                    : diameter)) *
+                                  100,
+                            ),
+                          ),
+                          y: centre(
+                            round(
+                              d.y +
+                                ((p.y - d.startY) /
+                                  (original.frame === "scene"
+                                    ? 1300
+                                    : diameter)) *
+                                  100,
+                            ),
+                          ),
+                        };
                 dispatch({
                   type: "replace",
                   design: {
@@ -773,8 +1104,7 @@ export function DesignEditor({
                       l.id === d.id
                         ? {
                             ...l,
-                            x: round(d.x + ((p.x - d.startX) / 870) * 100),
-                            y: round(d.y + ((p.y - d.startY) / 870) * 100),
+                            ...patch,
                           }
                         : l,
                     ),
@@ -792,6 +1122,7 @@ export function DesignEditor({
                 drag.current = null;
               }}
               onKeyDown={(e) => {
+                if (busy || present) return;
                 if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
                   e.preventDefault();
                   dispatch({ type: e.shiftKey ? "redo" : "undo" });
@@ -804,7 +1135,7 @@ export function DesignEditor({
                   ArrowDown: [0, 1],
                 };
                 const m = moves[e.key];
-                if (selected && m) {
+                if (selected && !selected.locked && m) {
                   e.preventDefault();
                   const step = e.shiftKey ? 5 : 1;
                   layerChange({
@@ -816,15 +1147,18 @@ export function DesignEditor({
             >
               <CandyDesignSvg
                 design={design}
-                selectedId={selectedId || undefined}
+                selectedId={present ? undefined : selectedId || undefined}
                 prefix="studio"
+                view={view}
+                showBackground
+                handles={!present}
               />
             </div>
           </div>
           <p className="text-xs text-zinc-500">
-            Artwork is clipped to the candy face. Use numeric controls for
-            precise positioning. Design changes do not set the order’s price or
-            product type.
+            Artwork is clipped to its candy surface. Drag to move, use the
+            square handle to resize or the round handle to rotate. Design
+            changes do not set the order’s price or product type.
           </p>
           <button
             type="button"
@@ -841,7 +1175,10 @@ export function DesignEditor({
             </ul>
           )}
         </main>
-        <aside className="space-y-5 rounded-xl border border-zinc-200 bg-white p-4">
+        <aside
+          hidden={present}
+          className="space-y-5 rounded-xl border border-zinc-200 bg-white p-4 xl:sticky xl:top-4 xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto"
+        >
           {selected ? (
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Selected layer</h3>
@@ -861,6 +1198,91 @@ export function DesignEditor({
                 />
                 Visible
               </label>
+              <label className="flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={selected.locked ?? false}
+                  onChange={(e) =>
+                    advancedLayerChange({ locked: e.target.checked })
+                  }
+                />{" "}
+                Lock position
+              </label>
+              <NumberField
+                label="Opacity (%)"
+                value={Math.round((selected.opacity ?? 1) * 100)}
+                min={0}
+                max={100}
+                onChange={(v) => advancedLayerChange({ opacity: v / 100 })}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <NumberField
+                  label="Width scale"
+                  value={selected.scaleX ?? 1}
+                  min={0.1}
+                  max={4}
+                  step={0.05}
+                  onChange={(scaleX) => advancedLayerChange({ scaleX })}
+                />
+                <NumberField
+                  label="Height scale"
+                  value={selected.scaleY ?? 1}
+                  min={0.1}
+                  max={4}
+                  step={0.05}
+                  onChange={(scaleY) => advancedLayerChange({ scaleY })}
+                />
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() =>
+                    advancedLayerChange({ flipX: !selected.flipX })
+                  }
+                >
+                  Flip horizontal
+                </button>
+                <button
+                  type="button"
+                  className={button}
+                  onClick={() =>
+                    advancedLayerChange({ flipY: !selected.flipY })
+                  }
+                >
+                  Flip vertical
+                </button>
+              </div>
+              {selected.type === "image" && (
+                <>
+                  <button
+                    type="button"
+                    className={button}
+                    onClick={() =>
+                      setRaster({
+                        layer: selected,
+                        jacket:
+                          selected.surface === "jacket" &&
+                          selected.frame === "scene",
+                      })
+                    }
+                  >
+                    Edit image / remove background
+                  </button>
+                  <Field label="Artwork surface">
+                    <select
+                      className={input}
+                      value={selected.surface ?? "face"}
+                      onChange={(e) =>
+                        advancedLayerChange({
+                          surface: e.target.value as "face" | "jacket",
+                        })
+                      }
+                    >
+                      <option value="face">Candy face</option>
+                      <option value="jacket">Jacket</option>
+                    </select>
+                  </Field>
+                </>
+              )}
               {selected.type === "text" && (
                 <>
                   <Field label="Text">
@@ -870,9 +1292,9 @@ export function DesignEditor({
                       value={selected.text}
                       maxLength={120}
                       onChange={(e) =>
-                        layerChange({
-                          text: e.target.value.replace(/\n/g, " "),
-                        })
+                        e.target.value.includes("\n")
+                          ? advancedLayerChange({ text: e.target.value })
+                          : layerChange({ text: e.target.value })
                       }
                     />
                   </Field>
@@ -915,6 +1337,16 @@ export function DesignEditor({
                       Italic
                     </label>
                   </div>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={selected.uppercase ?? false}
+                      onChange={(e) =>
+                        advancedLayerChange({ uppercase: e.target.checked })
+                      }
+                    />{" "}
+                    Uppercase text
+                  </label>
                   <Field label="Text layout">
                     <select
                       className={input}
@@ -938,6 +1370,48 @@ export function DesignEditor({
                     step={0.5}
                     onChange={(spacing) => layerChange({ spacing })}
                   />
+                  {selected.curve !== "straight" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumberField
+                        label="Arc radius"
+                        value={selected.arcRadius ?? 320}
+                        min={60}
+                        max={600}
+                        onChange={(arcRadius) =>
+                          advancedLayerChange({ arcRadius })
+                        }
+                      />
+                      <NumberField
+                        label="Arc slide (%)"
+                        value={selected.arcOffset ?? 0}
+                        min={-50}
+                        max={50}
+                        onChange={(arcOffset) =>
+                          advancedLayerChange({ arcOffset })
+                        }
+                      />
+                    </div>
+                  )}
+                  {selected.curve !== "straight" && (
+                    <label className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={selected.fullArc ?? false}
+                        onChange={(e) =>
+                          advancedLayerChange({ fullArc: e.target.checked })
+                        }
+                      />{" "}
+                      Full-circle text path
+                    </label>
+                  )}
+                  <button type="button" className={button} onClick={fitText}>
+                    Fit text to face
+                  </button>
+                  <p className="text-xs text-zinc-500">
+                    Text outside the face is clipped. Fit text centres it and
+                    adjusts size, spacing and arc placement; you can still
+                    adjust it freely.
+                  </p>
                 </>
               )}
               {selected.type !== "image" && (
@@ -970,7 +1444,7 @@ export function DesignEditor({
                   }
                   value={selected.size}
                   min={2}
-                  max={110}
+                  max={design.schemaVersion === 2 ? 250 : 110}
                   step={0.5}
                   onChange={(size) => layerChange({ size })}
                 />
@@ -1009,6 +1483,23 @@ export function DesignEditor({
           )}
           <section className="space-y-3 border-t border-zinc-100 pt-4">
             <h3 className="text-sm font-semibold">Candy & jacket</h3>
+            {!design.jacket.advanced && (
+              <button
+                type="button"
+                className={button}
+                onClick={() =>
+                  change({
+                    ...upgradeCandyDesign(design),
+                    jacket: {
+                      ...design.jacket,
+                      advanced: { ...DEFAULT_ADVANCED_JACKET },
+                    },
+                  })
+                }
+              >
+                Enable advanced jacket controls
+              </button>
+            )}
             <Field label="Jacket pattern">
               <select
                 className={input}
@@ -1026,6 +1517,65 @@ export function DesignEditor({
                 ))}
               </select>
             </Field>
+            {design.jacket.advanced && (
+              <>
+                <NumberField
+                  label="Jacket segments"
+                  value={design.jacket.advanced.segments}
+                  min={2}
+                  max={16}
+                  onChange={(segments) =>
+                    jacketChange({
+                      advanced: {
+                        ...design.jacket.advanced!,
+                        segments: Math.round(segments),
+                      },
+                    })
+                  }
+                />
+                <NumberField
+                  label="Jacket ring thickness (%)"
+                  value={Math.round(design.jacket.advanced.ring * 1000) / 10}
+                  min={8}
+                  max={35}
+                  step={0.1}
+                  onChange={(v) =>
+                    jacketChange({
+                      advanced: { ...design.jacket.advanced!, ring: v / 100 },
+                    })
+                  }
+                />
+                <NumberField
+                  label="Body shading (%)"
+                  value={Math.round(design.jacket.advanced.shading * 100)}
+                  min={0}
+                  max={100}
+                  onChange={(v) =>
+                    jacketChange({
+                      advanced: {
+                        ...design.jacket.advanced!,
+                        shading: v / 100,
+                      },
+                    })
+                  }
+                />
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={design.jacket.advanced.shadow}
+                    onChange={(e) =>
+                      jacketChange({
+                        advanced: {
+                          ...design.jacket.advanced!,
+                          shadow: e.target.checked,
+                        },
+                      })
+                    }
+                  />{" "}
+                  Show shadow
+                </label>
+              </>
+            )}
             {design.jacket.mode !== "rainbow" && (
               <>
                 {design.jacket.colours
@@ -1106,11 +1656,26 @@ export function DesignEditor({
               Show pinstripes
             </label>
             {design.jacket.showPinstripe && (
-              <Colour
-                label="Pinstripe colour"
-                value={design.jacket.pinstripe}
-                onChange={(pinstripe) => jacketChange({ pinstripe })}
-              />
+              <>
+                <Colour
+                  label="Pinstripe colour"
+                  value={design.jacket.pinstripe}
+                  onChange={(pinstripe) => jacketChange({ pinstripe })}
+                />
+                {design.jacket.advanced && (
+                  <NumberField
+                    label="Pinstripe width (% of segment)"
+                    value={Math.round(design.jacket.advanced.gap * 100)}
+                    min={1}
+                    max={70}
+                    onChange={(v) =>
+                      jacketChange({
+                        advanced: { ...design.jacket.advanced!, gap: v / 100 },
+                      })
+                    }
+                  />
+                )}
+              </>
             )}
             <button
               type="button"
@@ -1121,6 +1686,63 @@ export function DesignEditor({
             >
               Reset jacket to site defaults
             </button>
+          </section>
+          <section className="space-y-3 border-t border-zinc-100 pt-4">
+            <h3 className="text-sm font-semibold">Presentation & project</h3>
+            <Colour
+              label="Proof background"
+              value={design.presentation?.background ?? "#ffffff"}
+              onChange={(background) =>
+                change({
+                  ...upgradeCandyDesign(design),
+                  presentation: {
+                    background,
+                    transparent: design.presentation?.transparent ?? false,
+                  },
+                })
+              }
+            />
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={design.presentation?.transparent ?? false}
+                onChange={(e) =>
+                  change({
+                    ...upgradeCandyDesign(design),
+                    presentation: {
+                      background: design.presentation?.background ?? "#ffffff",
+                      transparent: e.target.checked,
+                    },
+                  })
+                }
+              />{" "}
+              Transparent export background
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={button}
+                onClick={() => void saveProject()}
+              >
+                Download project
+              </button>
+              <label className={`${button} cursor-pointer`}>
+                Open project
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="sr-only"
+                  onChange={(e) => {
+                    void openProject(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Background settings apply to proof exports. Order and confirmation
+              previews use a white background.
+            </p>
           </section>
           <Field label="Production notes (internal only)">
             <textarea

@@ -5,6 +5,7 @@ import { AdminLink as Link } from "@/app/admin/AdminNavigationFeedback";
 import { redirect } from "next/navigation";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { CandyPreview } from "@/app/quote/CandyPreview";
+import { CandyDesignSvg } from "@/components/CandyDesignSvg";
 import { readCandyDesign, designSummary } from "@/lib/candyDesign";
 import { DesignDownloads } from "@/app/admin/design/DesignDownloads";
 import { paletteSections } from "@/app/admin/settings/palette";
@@ -464,6 +465,12 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
                 }
               />
             </div>
+            {studioDesign?.schemaVersion === 2 && (
+              <div className="mx-auto mt-2 w-48 print:w-32">
+                <CandyDesignSvg design={studioDesign} view="face" prefix="print-flat-face" />
+                <p className="text-center text-xs text-zinc-500">Flat candy face</p>
+              </div>
+            )}
           </div>
 
           <div>

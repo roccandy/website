@@ -2,7 +2,7 @@
 
 Status: deferred improvements and external verification only
 
-Last reviewed against the repository: 2026-11-07
+Last reviewed against the repository: 2026-11-10
 
 The website and its current admin workspace are implemented. This is the single
 place for work that is deliberately deferred, optional, or dependent on an
@@ -57,34 +57,58 @@ mandatory daily checklist or customer-approval gate.
 1. **Browser regression coverage.** Prioritise the automated delivery checks
    below around normal-login draft save/resume/discard, navigation and refresh,
    multi-tab orders, Studio save/copy, private artwork, print and exports. The
-   latest local unit/build checks passed; a complete signed-in browser
-   click-through and production deployment verification remain unverified.
+   Studio now has isolated Playwright component coverage using mocked library
+   actions for complex jackets, artwork editing, transforms, project round trips
+   and narrow layouts. A complete normal-login browser click-through covering
+   the wider order workflow and production deployment remains unverified.
 2. **Recovery for each design.** Studio currently has one global browser recovery
    key, and embedded Studio editing does not use that recovery mechanism. Scope
    recovery to each design/edit session and preserve unfinished embedded artwork.
    Consider quiet autosave of already-saved order drafts with a clear saved time;
    retain explicit discard and ensure autosave cannot send mail or create invoices.
-3. **Precise canvas tools.** Add a flat face editing view alongside the 3D preview,
-   centre/snap guides, alignment, layer locking, and multiple-layer selection and
-   movement. Existing duplication, zoom and keyboard nudging remain available.
-   These tools should reduce repeated numeric adjustments for advanced mockups.
+3. **Remaining precise canvas tools.** V2 implements flat/3D views, centre
+   snapping, layer locking, resize/rotation handles, opacity and independent
+   scaling. Multiple-layer selection/movement and alignment between layers
+   remain optional. Existing duplication, zoom and keyboard nudging remain
+   available.
 4. **Catalogue navigation.** Search is currently by design name only. Expose the
    source-order link already stored for imports, add order/customer lookup and
    optional favourites/archive controls. Preserve order snapshots and revisions;
    do not require staff to manually categorise historical designs.
-5. **Customer proof export.** Add an optional, clearly formatted proof with the
-   flat face, 3D preview, design/order name and revision. Generate useful filenames
-   automatically. Email-thread integration belongs to the separately planned mail
-   system; proof approval must not become a required step to create an order.
-6. **Interrupted submission recovery.** Draft claims currently protect against
+5. **Interrupted submission recovery.** Draft claims currently protect against
    repeated submissions but an ambiguous write can leave a manual reconciliation
    lock. Explore atomic order-write/draft completion and a stable submission ID
    for ordinary unsaved new orders too. Any recovery UI must verify the saved
    result before allowing a retry; never blindly unlock an uncertain write.
-7. **Smaller order/editor modules.** The order form and order actions each exceed
+6. **Smaller order/editor modules.** The order form and order actions each exceed
    3,000 lines. Extract draft persistence, invoice submission and artwork handling
    into focused modules with regression coverage as those areas change, retaining
    current behaviour. This is developer maintenance with no extra admin steps.
+
+### Studio v2 release follow-up
+
+The 2026-11-10 follow-up review identified these unresolved gaps in the initial
+integration. Owner: development maintainer; the business administrator defines
+production/pricing rules and prioritises additional prototype compatibility.
+
+- **Saved versus applied artwork.** Saving to the library clears the editor's
+  dirty flag without applying artwork to the order. Closing then skips the
+  warning even though the order still has its earlier snapshot. Track library
+  saves and order application separately. Per-design/embedded recovery and the
+  complete normal-login order journey remain covered by items 1–2 above.
+- **Image/project round trips and source quality.** A reproduced 802 KB WebP
+  becomes a 2.9 MB PNG through storage conversion, exceeding the portable
+  project's 2 MB inline-image limit. Align those limits and preserve appropriate
+  original-resolution artwork; the current pipeline reduces images to 1200 px.
+- **Rendering and production parity.** Compare browser text with server glyph
+  outlines, including Helvetica/Arial versus the Arimo export substitute and
+  curved/clipped text. Consider useful clipping/resolution warnings. Define
+  achievable design detail, jacket-paint production representation and complexity
+  pricing; custom segments currently use existing two-colour pricing.
+- **Prototype compatibility.** Native `.rcmock.json` import, image-native/cropped
+  high-resolution exports, JPEG export and the prototype's wider font/palette
+  options are not implemented. They require a separately prioritised extension
+  of the current integration.
 
 ### Automated delivery checks
 
@@ -137,6 +161,20 @@ carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-10 — Recorded the follow-up Studio review before pushing the initial
+  integration: saved-versus-applied order state, the reproduced image/project
+  round-trip failure, source resolution, rendering/production parity and missing
+  prototype compatibility remain unresolved. Migration application and complete
+  normal-login deployment verification remain outstanding.
+
+- 2026-11-10 — Implemented admin Studio v2 with shared vector complex jackets,
+  richer layers/text, flat/3D editing, raster selection/paint tools, immutable
+  asset persistence and portable projects. Completed the optional customer proof
+  PDF and part of the precise-tools proposal. Added mocked browser component
+  coverage plus snapshot/export/email/print/draft/remake regression checks.
+  Normal-login production verification remains external; no customer order or
+  email was created for validation. The public designer is unchanged.
 
 - 2026-11-07 — Reviewed the implemented admin workflow and recorded seven
   unapproved improvement proposals, prioritising browser regression coverage,

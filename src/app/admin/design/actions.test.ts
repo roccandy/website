@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyCandyDesign } from "@/lib/candyDesign";
+import { emptyCandyDesign, studioCandyDesign } from "@/lib/candyDesign";
 const { access, rpc, persist, activity, revalidate } = vi.hoisted(() => ({
   access: vi.fn(),
   rpc: vi.fn(),
@@ -31,6 +31,14 @@ describe("design library saves", () => {
     });
     expect(rpc).not.toHaveBeenCalled();
     expect(persist).not.toHaveBeenCalled();
+  });
+  it("persists complex jackets as v2 immutable revisions without flattening the document", async () => {
+    const design = studioCandyDesign(); design.jacket.advanced!.segments = 12;
+    design.layers[0].opacity = 0.7;
+    const result = await saveCandyDesign(design);
+    expect(result.ok && result.design).toMatchObject({ schemaVersion: 2, jacket: { advanced: { segments: 12 } }, layers: [{ opacity: 0.7 }] });
+    expect(rpc.mock.calls[0][1].p_document.jacket.advanced.segments).toBe(12);
+    expect(rpc.mock.calls[0][1].p_document.schemaVersion).toBe(2);
   });
   it("checks the expected revision and records an attributable library update", async () => {
     const design = emptyCandyDesign();

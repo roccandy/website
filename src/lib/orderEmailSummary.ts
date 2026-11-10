@@ -3,6 +3,7 @@ import { supabaseAdminClient } from "@/lib/supabase/admin";
 import sharp from "sharp";
 import { readCandyDesign, designSummary } from "@/lib/candyDesign";
 import { candyDesignPng } from "@/lib/candyDesignExport";
+import { legacyCandyPreviewPng } from "@/lib/candyPreviewEmail";
 import type { EmailArchiveContext } from "./emailArchiveTypes";
 
 type OrderPayload = Record<string, unknown>;
@@ -398,10 +399,14 @@ export async function buildAdminOrderSummaryEmailPayload({
     );
     const generatedPreviewUrl = studioDesign ? null : buildCandyPreviewUrl(customItem);
     const studioPreview = studioDesign ? `data:image/png;base64,${(await candyDesignPng(studioDesign)).toString("base64")}` : null;
+    const legacyPreview = !studioDesign && !previewPngDataUrl && !previewSvgDataUrl
+      ? await legacyCandyPreviewPng(customItem)
+      : null;
+    const legacyPreviewDataUrl = legacyPreview ? `data:image/png;base64,${legacyPreview.toString("base64")}` : null;
     const previewSource = studioPreview ?? (
       isBranded && hasLogoUrl
         ? previewPngDataUrl ?? generatedPreviewUrl ?? previewSvgDataUrl
-        : previewPngDataUrl ?? previewSvgDataUrl ?? generatedPreviewUrl);
+        : previewPngDataUrl ?? previewSvgDataUrl ?? legacyPreviewDataUrl ?? generatedPreviewUrl);
     const persistedPreviewUrl = await persistEmailPreview(
       previewSource,
       customOrderNumber
@@ -421,7 +426,7 @@ export async function buildAdminOrderSummaryEmailPayload({
 
     const detail: AdminCustomOrderDetails = {
       imageUrl,
-      imageDataUrl: studioPreview ?? previewPngDataUrl,
+      imageDataUrl: studioPreview ?? previewPngDataUrl ?? legacyPreviewDataUrl,
       ...(studioDesign ? { studioDesignSummary: designSummary(studioDesign, false, formatColour) } : {}),
       fallbackImageUrl,
       orderNumber: customOrderNumber,

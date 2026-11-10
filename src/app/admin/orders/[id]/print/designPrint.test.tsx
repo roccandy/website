@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { emptyCandyDesign } from "@/lib/candyDesign";
+import { emptyCandyDesign, studioCandyDesign } from "@/lib/candyDesign";
 const { order } = vi.hoisted(() => ({
   order: { current: {} as Record<string, unknown> },
 }));
@@ -27,6 +27,13 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 import PrintOrderPage from "./page";
 describe("production design printout", () => {
+  it("includes the flat face, 3D jacket and construction settings for v2 artwork", async () => {
+    const design = studioCandyDesign("Complex jacket"); design.jacket.advanced!.segments = 12; design.productionNotes = "Internal instructions";
+    order.current = { id: "77777777-7777-4777-8777-777777777777", order_number: "v2-print", candy_design: design, category_id: "custom-7-14", total_weight_kg: 1, quantity: 10, created_at: "2026-11-10T00:00:00Z", pickup: true };
+    const markup = renderToStaticMarkup(await PrintOrderPage({ params: Promise.resolve({ id: String(order.current.id) }) }));
+    expect(markup).toContain("Flat candy face"); expect(markup).toContain("12 segments"); expect(markup).toContain("ring 18.2%");
+    expect(markup).toContain('data-jacket-body="'); expect(markup).toContain('data-jacket-ring="'); expect(markup).toContain("Internal instructions");
+  });
   it("prints the immutable design, layer settings and internal notes without a branded logo", async () => {
     const design = emptyCandyDesign("Special wedding mockup");
     design.layers[0].text = "ALICE & BOB";

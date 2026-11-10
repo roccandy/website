@@ -135,7 +135,38 @@ design library and PNG/PDF/SVG export. The public `QuoteBuilder` keeps its
 existing controls and rendering path. Studio designs use `CandyDesignSvg`;
 `CandyPreview` selects that renderer only when given an advanced design.
 
-`src/lib/candyDesign.ts` defines and validates the version 1 JSON document.
+`src/lib/candyDesign.ts` defines and validates version 1 and version 2 JSON
+documents. Version 1 snapshots retain their existing geometry. New standalone
+Studio designs use v2; old designs enable advanced jacket construction only on
+an explicit editor action. Layer-only upgrades preserve the original jacket.
+V2 adds 2–16 jacket segments, cycling palettes, proportional pinstripe width,
+8–35% jacket ring thickness, body shading and an optional shadow. The vector
+construction in `candyJacketGeometry.ts` joins each body band to the matching
+face band. `CandyDesignSvg` is shared by editor, order, print and server export.
+The public quote designer does not expose or generate Studio v2 documents.
+
+Studio also provides flat-face editing, a 3D view, resize/rotation handles,
+centre snapping, canvas locking, independent width/height scaling, flips,
+opacity, multiline/uppercase text, adjustable arc radius/slide, full-circle text
+paths and an explicit fit-to-face control. Existing semicircle text paths retain
+their original settings until changed. Presentation
+mode hides editing panels. Proof background/transparency settings are used only
+by explicit Studio exports; order/email previews retain a white background.
+The customer proof PDF combines the flat face and 3D preview with the design
+name/revision and customer-safe summary. Production printouts include both
+views and the full construction/layer specification for v2 snapshots.
+
+The admin raster editor supports brush/eraser, box/lasso/contiguous or global
+colour selections, remove/replace colour, tint, eyedropper, selection growth,
+shrink/invert, keep/delete/fill, and copy/split into a separate layer. Jacket
+paint uses the renderer's actual jacket clip and a scene-coordinate image frame;
+face artwork uses face coordinates. Pixel edits have their own undo/redo and
+apply/cancel controls; applying returns raster layers to the Studio's design
+history. On save they follow the same immutable private-asset pipeline as image
+uploads. No browser canvas state is required to reproduce a saved design.
+Portable JSON project downloads embed private images after authenticated fetch;
+opening a project validates it and creates a separate library identity on save.
+
 `candy_designs` holds each library project's latest document;
 `candy_design_revisions` holds immutable revisions. `save_candy_design` performs
 an atomic revision check and history insert, preventing lost updates between

@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { emptyCandyDesign } from "@/lib/candyDesign";
+import { emptyCandyDesign, studioCandyDesign } from "@/lib/candyDesign";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getColorPalette = vi.fn();
@@ -24,6 +24,21 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 describe("buildAdminOrderSummaryEmailPayload", () => {
+  it("renders complex jackets from the immutable snapshot and ignores presentation settings in confirmations", async () => {
+    const design = studioCandyDesign("Advanced order"); design.jacket.mode = "segments";
+    design.jacket.advanced!.segments = 12; design.jacket.colours = ["#ff0000", "#00ff00", "#0000ff"];
+    design.presentation = { background: "#ff00ff", transparent: true }; design.productionNotes = "Staff only";
+    const { buildAdminOrderSummaryEmailPayload } = await import("@/lib/orderEmailSummary");
+    const summary = await buildAdminOrderSummaryEmailPayload({ orderPayloads: [{ candy_design: design, packaging_option_id: "pack-1" }], orderNumber: "advanced", requestedDate: null, billing: {}, pickup: true, paymentMethod: null, paymentAmount: 0 });
+    const details = summary.customDetails!;
+    expect(details.studioDesignSummary?.join("\n")).toContain("12 segments");
+    expect(details.studioDesignSummary?.join("\n")).not.toContain("Staff only");
+    const bytes = Buffer.from(details.imageDataUrl!.split(",")[1], "base64");
+    const { candyDesignPng } = await import("@/lib/candyDesignExport");
+    expect(bytes).toEqual(await candyDesignPng(design));
+    const { data } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+    expect([...data.slice(0, 3)]).toEqual([255, 255, 255]);
+  });
   it("generates studio artwork from the saved snapshot and excludes internal design notes", async () => {
     getColorPalette.mockResolvedValue([]); getPackagingOptions.mockResolvedValue([]); getLabelTypes.mockResolvedValue([]);
     const design = emptyCandyDesign("Three colour mockup");
@@ -67,6 +82,7 @@ describe("buildAdminOrderSummaryEmailPayload", () => {
     });
     expect(summary.customDetails?.fillColour).toBe("White");
     expect(summary.customDetails?.pinstripeColour).toBe("Red");
+    expect(summary.customDetails?.imageDataUrl).toMatch(/^data:image\/png;base64,/);
     const url = new URL(summary.customDetails!.imageUrl!);
     expect(url.searchParams.get("fillColor")).toBe("#ffffff");
     expect(url.searchParams.get("pinstripeColor")).toBe("#ff0000");

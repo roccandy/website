@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { AdminLink } from "@/app/admin/AdminNavigationFeedback";
 import { supabaseAdminClient } from "@/lib/supabase/admin";
 import { loadCandyDesign } from "@/lib/candyDesignStore";
-import { emptyCandyDesign, readCandyDesign } from "@/lib/candyDesign";
+import { studioCandyDesign, readCandyDesign } from "@/lib/candyDesign";
 import { CandyPreview } from "@/app/quote/CandyPreview";
 import { DesignEditor } from "./DesignEditor";
 import { getColorPalette } from "@/lib/data";
@@ -203,7 +203,7 @@ export default async function DesignStudioPage({
       )}
       <DesignEditor
         key={`${design?.source?.id || "new"}-${design?.source?.revision || 0}`}
-        initialDesign={design || emptyCandyDesign(undefined, siteDefaults)}
+        initialDesign={design || studioCandyDesign(undefined, siteDefaults)}
         canWrite={session.user.canWrite}
         siteDefaults={siteDefaults}
       />
