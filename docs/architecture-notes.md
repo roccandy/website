@@ -154,6 +154,12 @@ frame so its supplied styles and keyboard/pointer interactions cannot alter the
 admin shell or public site. `studioControls.js` contains its UI/pixel interaction
 controller, with the independent prototype candy renderer and export code removed.
 `studioExperienceAdapter.ts` maps its state into existing CandyDesign snapshots.
+The page opens directly into the Studio without a separate page heading or
+library strip. Its toolbar's Library button opens an on-demand drawer; an
+authenticated, uncached library API handles search, pagination and revision links
+without navigating away from work in progress. Choosing another design or starting
+a new one still goes through the unsaved-navigation guard. Embedded order editing
+does not expose navigation away to the standalone library.
 React renders `StudioCandyPreview` directly in the canvas stage; the extra canvas
 is only a colour-sampling buffer and interaction overlay. Fonts, styles and code
 are served locally; imported project files are data only.
@@ -190,6 +196,9 @@ uses session storage scoped by project/order tab, isolating different browser
 tabs. Changed source baselines restore as copies. Existing global v1 browser
 recovery remains available for explicit migration. These browser drafts never
 create an order, invoice or email.
+Recovery is offered through a small Recovered work toolbar control, with its
+explanation and restore/dismiss actions inside a drawer. No recovery banner takes
+space above the canvas. Routine save/export feedback stays within the toolbar.
 
 Studio uploads use short-lived signed uploads into private staging paths, then
 server validation and immutable content hashes. PNG/JPEG/WebP originals retain

@@ -2545,6 +2545,8 @@ export function mountStudioControls(document, window, bridge) {
     if (file) bridge.openProject(file);
   });
   $("#saveLibrary").addEventListener("click", () => bridge.save(false));
+  $('#browseLibrary').addEventListener('click',()=>bridge.library());
+  $('#recoverWork').addEventListener('click',()=>bridge.recovery());
   $("#saveCopy").addEventListener("click", () => bridge.save(true));
   $("#useOrder").addEventListener("click", () => bridge.apply());
   $("#closeStudio").addEventListener("click", () => bridge.close());

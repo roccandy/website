@@ -34,6 +34,9 @@ type Props = {
   onSave: (copy: boolean) => void;
   onApply: () => void;
   onClose?: () => void;
+  onLibrary?: () => void;
+  onRecovery: () => void;
+  hasRecovery: boolean;
   onSaveProject: () => void;
   onOpenProject: (file: File) => void;
   onExport: (
@@ -148,7 +151,20 @@ export function PrototypeStudio({ ref, ...props }: Props) {
         props.busy || !props.canWrite;
     const status = doc.getElementById("integrationStatus");
     if (status) status.textContent = props.status || error || warning;
-  }, [props.busy, props.canWrite, props.status, error, host, warning]);
+    const library = doc.getElementById("browseLibrary");
+    if (library) library.hidden = !props.onLibrary;
+    const recovery = doc.getElementById("recoverWork");
+    if (recovery) recovery.hidden = !props.hasRecovery;
+  }, [
+    props.busy,
+    props.canWrite,
+    props.status,
+    error,
+    host,
+    warning,
+    props.onLibrary,
+    props.hasRecovery,
+  ]);
   // The canvas is only a colour-sampling buffer. All visible candy and exports use CandyDesignSvg.
   useEffect(() => {
     if (!host) return;
@@ -212,6 +228,8 @@ export function PrototypeStudio({ ref, ...props }: Props) {
         save: (copy: boolean) => callbacks.current.onSave(copy),
         apply: () => callbacks.current.onApply(),
         close: () => callbacks.current.onClose?.(),
+        library: () => callbacks.current.onLibrary?.(),
+        recovery: () => callbacks.current.onRecovery(),
         saveProject: () => callbacks.current.onSaveProject(),
         openProject: (file: File) => callbacks.current.onOpenProject(file),
         proof: (format: "pdf" | "proof" | "svg") =>
@@ -279,7 +297,7 @@ export function PrototypeStudio({ ref, ...props }: Props) {
         className="studio-experience-frame"
         style={{
           width: "100%",
-          height: "max(760px, calc(100dvh - 150px))",
+          height: "max(540px, calc(100dvh - 160px))",
           border: 0,
           display: "block",
         }}

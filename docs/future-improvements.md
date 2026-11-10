@@ -74,6 +74,8 @@ mandatory daily checklist or customer-approval gate.
    source-order link already stored for imports, add order/customer lookup and
    optional favourites/archive controls. Preserve order snapshots and revisions;
    do not require staff to manually categorise historical designs.
+   The library is now an on-demand toolbar drawer with search, pagination and
+   revision links; browsing it does not replace unsaved Studio artwork.
 5. **Interrupted submission recovery.** Draft claims currently protect against
    repeated submissions but an ambiguous write can leave a manual reconciliation
    lock. Explore atomic order-write/draft completion and a stable submission ID
@@ -135,6 +137,12 @@ carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-10 — Removed the redundant design-page heading and inline library strip.
+  Moved catalogue browsing into a lazy-loaded toolbar drawer with independent
+  search/pagination, preserving navigation safeguards. Moved browser recovery
+  explanations/actions into a separate on-demand drawer and removed duplicate
+  page-level save messages, giving the workspace its vertical space back.
 
 - 2026-11-10 — Corrected the previously incomplete Studio interface integration.
   Ported the supplied tool rail, stage, collapsible settings, colour targets and

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, startTransition } from "react";
 import { PrototypeStudio, type StudioHandle } from "./PrototypeStudio";
+import { StudioLibrary } from "./StudioLibrary";
+import { StudioPanel } from "./StudioPanel";
 import {
   encodeStudioRecovery,
   readStudioRecovery,
@@ -55,6 +57,8 @@ export function DesignEditor({
     | null
   >(null);
   const [closeChoice, setCloseChoice] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const currentRef = useRef(design);
   useEffect(() => {
     currentRef.current = design;
@@ -389,65 +393,63 @@ export function DesignEditor({
           </div>
         </div>
       )}
-      {recovery && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm">
-          <span>
-            A browser recovery draft is available: {recovery.design.name}.
-            {recovery.changedSource
-              ? " The source has changed; restoring will save as a separate copy."
-              : ""}
-          </span>
-          <button
-            type="button"
-            className={button}
-            onClick={() => {
-              change(recovery.design);
-              void workspace.current?.load(recovery.design);
-              projectRef.current = recovery.design.source;
-              if (recovery.legacy)
-                try {
-                  sessionStorage.setItem(
-                    recoveryKey,
-                    encodeStudioRecovery(recovery.design, initialDesign),
-                  );
-                  localStorage.removeItem("roccandy-design-studio-draft-v1");
-                } catch {}
-              setRecovery(null);
-            }}
-          >
-            Restore draft
-          </button>
-          <button
-            type="button"
-            className={button}
-            onClick={() => {
-              setRecovery(null);
-              clearRecovery();
-              if (recovery.legacy)
-                try {
-                  localStorage.removeItem("roccandy-design-studio-draft-v1");
-                } catch {}
-            }}
-          >
-            Dismiss
-          </button>
-        </div>
+      {libraryOpen && (
+        <StudioLibrary
+          onClose={() => setLibraryOpen(false)}
+          currentDesign={design.source}
+        />
       )}
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+      {recovery && recoveryOpen && (
+        <StudioPanel
+          title="Recovered work"
+          onClose={() => setRecoveryOpen(false)}
         >
-          {error}
-        </p>
-      )}
-      {message && (
-        <p
-          role="status"
-          className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900"
-        >
-          {message}
-        </p>
+          <div className="space-y-4 text-sm">
+            <p>
+              This browser saved an earlier editing session:{" "}
+              <strong>{recovery.design.name}</strong>.
+              {recovery.changedSource
+                ? " Restoring will open a copy, keeping the saved design intact."
+                : " Restore it to continue editing."}
+            </p>
+            <button
+              type="button"
+              className={button}
+              onClick={() => {
+                change(recovery.design);
+                void workspace.current?.load(recovery.design);
+                projectRef.current = recovery.design.source;
+                if (recovery.legacy)
+                  try {
+                    sessionStorage.setItem(
+                      recoveryKey,
+                      encodeStudioRecovery(recovery.design, initialDesign),
+                    );
+                    localStorage.removeItem("roccandy-design-studio-draft-v1");
+                  } catch {}
+                setRecovery(null);
+                setRecoveryOpen(false);
+              }}
+            >
+              Restore draft
+            </button>
+            <button
+              type="button"
+              className={button}
+              onClick={() => {
+                setRecovery(null);
+                setRecoveryOpen(false);
+                clearRecovery();
+                if (recovery.legacy)
+                  try {
+                    localStorage.removeItem("roccandy-design-studio-draft-v1");
+                  } catch {}
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </StudioPanel>
       )}
 
       <PrototypeStudio
@@ -458,6 +460,9 @@ export function DesignEditor({
         canWrite={canWrite}
         embedded={embedded || !!onApply}
         status={error || message}
+        onLibrary={!embedded ? () => setLibraryOpen(true) : undefined}
+        hasRecovery={!!recovery}
+        onRecovery={() => setRecoveryOpen(true)}
         onSave={(copy) =>
           startTransition(async () => {
             await save(copy);

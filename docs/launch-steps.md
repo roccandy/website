@@ -101,6 +101,10 @@ left-rail/central-stage/right-settings layout, inline layer editing and direct
 pixel tools as well as save/apply safeguards. For label artwork, verify hide-candy
 and native cropped export. Keep existing browser recovery drafts intact during
 live checks; do not restore or dismiss another admin's draft as a smoke test.
+The library and recovered-work controls now open drawers from the Studio toolbar.
+Check that library searching/paging leaves current artwork intact and that
+closing either drawer returns focus to the workspace. These layout changes
+require no database migration.
 
 Historical import command: `npx tsx scripts/backfill-order-designs.ts` previews
 the eligible count; add `--apply` to import. The 2026-11-07 run imported 208

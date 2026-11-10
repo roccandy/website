@@ -143,7 +143,7 @@ body.present .stage{margin:16px;background:var(--bg);border-color:transparent;al
     <button class="btn hide-present" id="openProj">Open design</button>
     <button class="btn" id="present" title="Hide all tools and show only the candy">Present</button>
     <button class="btn primary hide-present" id="export">Download PNG</button>
-  <div class="integration hide-present"><button class="btn" id="saveLibrary">Save to library</button><button class="btn" id="saveCopy">Save copy</button><button class="btn primary" id="useOrder">Save &amp; use in order</button><button class="btn" id="closeStudio">Close</button></div></header><div id="integrationStatus" class="status" role="status"></div>
+  <div class="integration hide-present"><button class="btn" id="browseLibrary">Library</button><button class="btn" id="recoverWork" hidden>Recovered work</button><button class="btn" id="saveLibrary">Save to library</button><button class="btn" id="saveCopy">Save copy</button><button class="btn primary" id="useOrder">Save &amp; use in order</button><button class="btn" id="closeStudio">Close</button></div></header><div id="integrationStatus" class="status" role="status"></div>
 
   <nav class="rail" aria-label="Tools">
     <div class="label">Tools</div>

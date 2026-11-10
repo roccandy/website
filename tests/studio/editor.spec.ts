@@ -26,13 +26,11 @@ async function label(page: Page, width = 800, height = 240) {
   })
     .png()
     .toBuffer();
-  await studio(page)
-    .locator("#fileIn")
-    .setInputFiles({
-      name: "Native label.png",
-      mimeType: "image/png",
-      buffer: bytes,
-    });
+  await studio(page).locator("#fileIn").setInputFiles({
+    name: "Native label.png",
+    mimeType: "image/png",
+    buffer: bytes,
+  });
   await expect(studio(page).locator(".layer .nm").first()).toContainText(
     "Native label",
   );
@@ -162,22 +160,18 @@ test("edits image pixels on the stage with selections, splits, eraser and undo",
   await ui.locator("[data-tool=magic]").click();
   const box = (await ui.locator("#ov").boundingBox())!;
   // Image is centred on the face, at (545,660) in the application's scene.
-  await ui
-    .locator("#ov")
-    .click({
-      position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
-    });
+  await ui.locator("#ov").click({
+    position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
+  });
   await expect(ui.locator("#maskActs")).toBeVisible();
   await ui.locator("#maskCopy").click();
   await expect(ui.locator(".layer")).toHaveCount(3);
   await ui.locator("#undo").click();
   await expect(ui.locator(".layer")).toHaveCount(2);
   await ui.locator("[data-tool=erase]").click();
-  await ui
-    .locator("#ov")
-    .click({
-      position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
-    });
+  await ui.locator("#ov").click({
+    position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
+  });
   const saved = await apply(page);
   expect(saved.layers).toHaveLength(2);
   expect(saved.layers[1].image).toMatch(/^candy-asset:/);
@@ -228,13 +222,11 @@ test("native uploads, blank-label editing and cropped JPEG/project round trips p
   const parsed = JSON.parse(project.toString());
   expect(parsed.design.presentation.hideCandy).toBe(true);
   expect(Object.keys(parsed.assets)).toHaveLength(1);
-  await ui
-    .locator("#projIn")
-    .setInputFiles({
-      name: "portable.json",
-      mimeType: "application/json",
-      buffer: project,
-    });
+  await ui.locator("#projIn").setInputFiles({
+    name: "portable.json",
+    mimeType: "application/json",
+    buffer: project,
+  });
   await expect(ui.locator(".layer")).toHaveCount(2);
   const saved = await apply(page);
   expect(saved.layers[1]).toMatchObject({
@@ -252,7 +244,9 @@ test("library save cannot silently discard unapplied artwork and recovery surviv
   await expect(ui.locator("#integrationStatus")).toContainText(
     "Saved to library",
   );
-  expect((await ui.locator('.stage').boundingBox())!.height).toBeGreaterThan(300);
+  expect((await ui.locator(".stage").boundingBox())!.height).toBeGreaterThan(
+    300,
+  );
   await ui.locator("#closeStudio").click();
   await expect(
     page.getByRole("group", { name: "Unapplied artwork" }),
@@ -261,6 +255,9 @@ test("library save cannot silently discard unapplied artwork and recovery surviv
     .getByRole("button", { name: "Keep recovery draft & close" })
     .click();
   await page.getByRole("button", { name: "Reopen Studio" }).click();
+  await studio(page)
+    .getByRole("button", { name: "Recovered work", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Restore draft", exact: true })
     .click();
@@ -281,6 +278,9 @@ test("scopes recovery by order and preserves original documents when opened", as
     0,
   );
   await ready(page, "/?scope=order-a");
+  await studio(page)
+    .getByRole("button", { name: "Recovered work", exact: true })
+    .click();
   await page.getByRole("button", { name: "Restore draft" }).click();
   await expect(studio(page).getByLabel("Layer text")).toHaveValue("ORDER A");
 });
@@ -303,11 +303,81 @@ test("retains legacy geometry and supports a narrow workspace", async ({
     fullPage: true,
   });
 });
-test('shows lettering service failures inside the canvas instead of concealing the warning',async({page})=>{
-  await page.route('**/api/admin/design/text',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Lettering service temporarily unavailable'})}));
-  await studio(page).getByLabel('Layer text').fill('VISIBLE SERVICE FAILURE');
-  await expect(studio(page).getByRole('alert')).toBeVisible();
-  await expect(studio(page).getByRole('alert')).toContainText('Lettering service temporarily unavailable');
+test("shows lettering service failures inside the canvas instead of concealing the warning", async ({
+  page,
+}) => {
+  await page.route("**/api/admin/design/text", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "Lettering service temporarily unavailable",
+      }),
+    }),
+  );
+  await studio(page).getByLabel("Layer text").fill("VISIBLE SERVICE FAILURE");
+  await expect(studio(page).getByRole("alert")).toBeVisible();
+  await expect(studio(page).getByRole("alert")).toContainText(
+    "Lettering service temporarily unavailable",
+  );
+});
+
+test("library loads on demand, searches and pages without disturbing artwork", async ({
+  page,
+}) => {
+  const requests: URL[] = [];
+  await page.route("**/api/admin/design/library?*", (route) => {
+    const url = new URL(route.request().url());
+    requests.push(url);
+    return route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        designs: [
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            name: url.searchParams.get("q") ? "Label match" : "Saved template",
+            revision: 2,
+            updatedAt: "2026-11-10T00:00:00Z",
+            design: null,
+          },
+        ],
+        count: 25,
+        page: Number(url.searchParams.get("page")),
+        revisions: [],
+      }),
+    });
+  });
+  expect(requests).toHaveLength(0);
+  const ui = studio(page);
+  await ui.getByLabel("Layer text").fill("KEEP MY CURRENT DESIGN");
+  const originalHeight = (await page.locator("iframe").boundingBox())!.height;
+  await ui.getByRole("button", { name: "Library", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Design library" });
+  await expect(drawer).toBeVisible();
+  await expect(
+    drawer.getByRole("link", { name: /Saved template/ }),
+  ).toBeVisible();
+  await drawer
+    .getByRole("textbox", { name: "Search design library" })
+    .fill("Label");
+  await drawer.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(drawer.getByRole("link", { name: /Label match/ })).toBeVisible();
+  await drawer.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(drawer.getByText("Page 2 of 2")).toBeVisible();
+  expect(requests.at(-1)?.searchParams.get("q")).toBe("Label");
+  expect(requests.at(-1)?.searchParams.get("page")).toBe("1");
+  await page.keyboard.press("Escape");
+  await expect(drawer).toHaveCount(0);
+  await expect(ui.getByLabel("Layer text")).toHaveValue(
+    "KEEP MY CURRENT DESIGN",
+  );
+  expect((await page.locator("iframe").boundingBox())!.height).toBe(
+    originalHeight,
+  );
+  await page.screenshot({
+    path: "test-results/studio-compact-workspace.png",
+    fullPage: true,
+  });
 });
 
 test("opens data-only prototype projects into the shared renderer", async ({
@@ -347,13 +417,11 @@ test("opens data-only prototype projects into the shared renderer", async ({
       },
     ],
   };
-  await ui
-    .locator("#projIn")
-    .setInputFiles({
-      name: "original.rcmock.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(project)),
-    });
+  await ui.locator("#projIn").setInputFiles({
+    name: "original.rcmock.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
   await expect(ui.getByLabel("Layer text")).toHaveValue("THANK YOU KARRI");
   const saved = await apply(page);
   expect(saved.jacket.advanced.segments).toBe(6);
