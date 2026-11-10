@@ -303,6 +303,13 @@ test("retains legacy geometry and supports a narrow workspace", async ({
     fullPage: true,
   });
 });
+test('shows lettering service failures inside the canvas instead of concealing the warning',async({page})=>{
+  await page.route('**/api/admin/design/text',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:'Lettering service temporarily unavailable'})}));
+  await studio(page).getByLabel('Layer text').fill('VISIBLE SERVICE FAILURE');
+  await expect(studio(page).getByRole('alert')).toBeVisible();
+  await expect(studio(page).getByRole('alert')).toContainText('Lettering service temporarily unavailable');
+});
+
 test("opens data-only prototype projects into the shared renderer", async ({
   page,
 }) => {
