@@ -2,7 +2,7 @@ import type { OrderRow } from "@/lib/data";
 import { parseCandyDesign } from "@/lib/candyDesign";
 
 export type DraftOrderTab = { id: string; fields: Record<string,string>; batchWeights: string[] };
-export type AdminOrderDraftPayload = { schemaVersion: 1; shared: Record<string,string>; orders: DraftOrderTab[]; activeOrderId: string; invoiceDiscountType: string; invoiceDiscountValue: string; invoicePriceOverride: string };
+export type AdminOrderDraftPayload = { schemaVersion: 1; shared: Record<string,string>; orders: DraftOrderTab[]; activeOrderId: string; invoiceDiscountType: string; invoiceDiscountValue: string; invoicePriceOverride: string; preserveQuotedPrices: boolean };
 export type AdminOrderDraft = { id: string; revision: number; source_order_id: string|null; source_fingerprint: string|null; payload: AdminOrderDraftPayload; title: string; customer_name: string|null; required_date: string|null; updated_at: string; publishing_at: string|null; completed_at: string|null; discarded_at: string|null; published_order_ids: string[] };
 export type AdminOrderDraftSummary = Pick<AdminOrderDraft,'id'|'revision'|'source_order_id'|'title'|'customer_name'|'required_date'|'updated_at'|'publishing_at'>;
 
@@ -18,7 +18,7 @@ export function parseAdminOrderDraftPayload(value:unknown):AdminOrderDraftPayloa
   if(v.schemaVersion!==1||!Array.isArray(v.orders)||!v.orders.length||v.orders.length>12) throw new Error('A draft must contain between 1 and 12 order tabs.');
   const seen=new Set<string>();
   const orders=v.orders.map((input,index)=>{const o=record(input); const id=typeof o.id==='string'?o.id.slice(0,120):`order-${index}`;if(seen.has(id)) throw new Error('Duplicate draft order tab.');seen.add(id); return {id,fields:fields(o.fields,ORDER_FIELDS),batchWeights:Array.isArray(o.batchWeights)?o.batchWeights.filter((w):w is string=>typeof w==='string').slice(0,100):[]};});
-  return {schemaVersion:1,shared:fields(v.shared,SHARED_FIELDS),orders,activeOrderId:typeof v.activeOrderId==='string'&&seen.has(v.activeOrderId)?v.activeOrderId:orders[0].id,invoiceDiscountType:['none','fixed','percent'].includes(String(v.invoiceDiscountType))?String(v.invoiceDiscountType):'none',invoiceDiscountValue:typeof v.invoiceDiscountValue==='string'?v.invoiceDiscountValue.slice(0,40):'',invoicePriceOverride:typeof v.invoicePriceOverride==='string'?v.invoicePriceOverride.slice(0,40):''};
+  return {schemaVersion:1,shared:fields(v.shared,SHARED_FIELDS),orders,activeOrderId:typeof v.activeOrderId==='string'&&seen.has(v.activeOrderId)?v.activeOrderId:orders[0].id,invoiceDiscountType:['none','fixed','percent'].includes(String(v.invoiceDiscountType))?String(v.invoiceDiscountType):'none',invoiceDiscountValue:typeof v.invoiceDiscountValue==='string'?v.invoiceDiscountValue.slice(0,40):'',invoicePriceOverride:typeof v.invoicePriceOverride==='string'?v.invoicePriceOverride.slice(0,40):'',preserveQuotedPrices:v.preserveQuotedPrices===true};
 }
 export function adminDraftHref(draft:Pick<AdminOrderDraft,'id'|'source_order_id'>) { return draft.source_order_id?`/admin/orders/${draft.source_order_id}?edit=1&draft=${draft.id}`:`/admin/orders/new?draft=${draft.id}`; }
 export function draftOrderFields(draft:AdminOrderDraft) { const p=draft.payload; return {...p.orders.find(o=>o.id===p.activeOrderId)!.fields,...p.shared}; }

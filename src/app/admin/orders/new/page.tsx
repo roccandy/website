@@ -59,7 +59,11 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
   const remakeOrders = remakeId ? await readOrderGroupForRemake(remakeId) : [];
   const remakeOrder = resolveAdminOrderRemakeSource(remakeOrders, resolvedSearchParams?.remake);
   if (remakeRequested && !remakeOrder) notFound();
-  const initialOrder = draft ? draftFormOrderDefaults(draft) : remakeOrder ? adminOrderRemakeFormDefaults(remakeOrder) : null;
+  const initialOrder = draft
+    ? draftFormOrderDefaults(draft)
+    : remakeOrder
+      ? adminOrderRemakeFormDefaults(remakeOrder, { combinedInvoice: remakeOrders.length > 1 })
+      : null;
   const initialDesign = resolvedSearchParams?.design ? await loadCandyDesign(resolvedSearchParams.design, Number(resolvedSearchParams.revision) || undefined) : null;
   if (resolvedSearchParams?.design && !initialDesign) notFound();
   const toastTone = resolvedSearchParams?.toast === "error" ? "error" : resolvedSearchParams?.toast === "success" ? "success" : null;
@@ -117,6 +121,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams?: Se
         mode="create"
         initialOrder={initialOrder}
         initialInvoiceOrders={remakeOrder ? remakeOrders : undefined}
+        isRemake={Boolean(remakeOrder)}
         initialDesign={initialDesign}
         cancelHref={remakeOrder ? `/admin/orders/${encodeURIComponent(remakeOrder.id)}` : "/admin/orders"}
       />

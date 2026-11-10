@@ -429,6 +429,7 @@ type Props = {
   mode?: "create" | "edit";
   initialOrder?: OrderRow | null;
   initialInvoiceOrders?: OrderRow[];
+  isRemake?: boolean;
   initialDesign?: CandyDesign | null;
   initialDraft?: AdminOrderDraft | null;
   sourceOrderFingerprint?: string | null;
@@ -481,6 +482,50 @@ const draftNumber = (value: string | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+type PricingFingerprintInput = {
+  categoryId: string;
+  packagingOptionId: string;
+  quantity: string;
+  customLabelsOptIn: boolean;
+  labelsCount: string;
+  ingredientLabelsOptIn: boolean;
+  ingredientLabelsCount: string;
+  dueDate: string;
+  jacket: string;
+  batchWeights: string[];
+  discountType: string;
+  discountValue: string;
+  priceOverride: string;
+};
+
+const pricingFingerprint = (input: PricingFingerprintInput) =>
+  JSON.stringify({
+    ...input,
+    batchWeights: input.batchWeights.map((weight) => {
+      const numeric = Number(weight);
+      return Number.isFinite(numeric) ? numeric.toFixed(2) : weight;
+    }),
+  });
+
+const pricingFingerprintForDraft = (draft: InvoiceOrderDraft): string => {
+  const fields = draft.fields;
+  return pricingFingerprint({
+    categoryId: fields.category_id ?? "",
+    packagingOptionId: fields.packaging_option_id ?? "",
+    quantity: fields.quantity ?? "",
+    customLabelsOptIn: fields.labels_opt_in === "on" || Boolean(fields.labels_count),
+    labelsCount: fields.labels_count ?? "",
+    ingredientLabelsOptIn: fields.ingredient_labels_opt_in === "on",
+    ingredientLabelsCount: fields.ingredient_labels_count ?? "",
+    dueDate: fields.due_date ?? "",
+    jacket: fields.jacket ?? "",
+    batchWeights: draft.batchWeights,
+    discountType: fields.admin_discount_type ?? "none",
+    discountValue: fields.admin_discount_value ?? "",
+    priceOverride: fields.admin_price_override ?? "",
+  });
+};
+
 const normalizeAdminPremadeMode = (value: string | null | undefined): AdminPremadeMode => {
   if (value === "premade") return "premade";
   if (value === "custom" || value === "flavor") return "custom";
@@ -527,6 +572,7 @@ export function NewOrderForm({
   mode = "create",
   initialOrder = null,
   initialInvoiceOrders = [],
+  isRemake = false,
   initialDesign = null,
   initialDraft = null,
   sourceOrderFingerprint = null,
@@ -534,6 +580,7 @@ export function NewOrderForm({
 }: Props) {
   const isEditMode = mode === "edit" && Boolean(initialOrder);
   const initialIsAdminPremade = initialOrder ? isAdminPremadeOrderRow(initialOrder) : false;
+  const preserveQuotedRemakePrices = isRemake || initialDraft?.payload.preserveQuotedPrices === true;
   const initialCategoryId = initialIsAdminPremade ? ADMIN_PREMADE_CATEGORY_ID : initialOrder?.category_id ?? "";
   const initialWeddingDesign = splitWeddingDesign(initialOrder?.design_text);
   const customerDefaults = initialOrder;
@@ -652,6 +699,32 @@ export function NewOrderForm({
   );
   const [adminPremadeFlavor, setAdminPremadeFlavor] = useState(initialIsAdminPremade ? initialOrder?.flavor ?? "" : "");
   const [adminPremadeCandyId, setAdminPremadeCandyId] = useState(initialDraftFields?.admin_premade_candy_id ?? "");
+  const initialPricingDraft = initialDraft?.payload.orders.find(tab => tab.id === initialDraft.payload.activeOrderId) ?? remakeInvoiceTabs[0];
+  const currentPricingFingerprint = pricingFingerprint({
+    categoryId,
+    packagingOptionId,
+    quantity,
+    customLabelsOptIn,
+    labelsCount,
+    ingredientLabelsOptIn,
+    ingredientLabelsCount,
+    dueDate,
+    jacket,
+    batchWeights,
+    discountType,
+    discountValue,
+    priceOverride,
+  });
+  // A remake begins from historical quoted prices. Keep a baseline for each
+  // tab, so React effect replays cannot reprice it; a real pricing-input
+  // change produces a different fingerprint and then quotes normally.
+  const preservedRemakePricingRef = useRef(
+    new Map<string, string>(
+      preserveQuotedRemakePrices && initialPricingDraft
+        ? [[initialPricingDraft.id, currentPricingFingerprint]]
+        : [],
+    ),
+  );
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | "fill" | "pinstripe" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
@@ -1191,6 +1264,10 @@ export function NewOrderForm({
     return {
       id: draftId,
       fields: {
+        // Some historical fields (for example the production description and
+        // label type) are not editable controls in this form. Keep them when
+        // a remake tab is captured during tab switching or review.
+        ...activeInvoiceDraft?.fields,
         ...fields,
         candy_design: candyDesign ? JSON.stringify(candyDesign) : "",
         category_id: categoryId,
@@ -1291,6 +1368,9 @@ export function NewOrderForm({
     setProductionSlotDate(fields.production_slot_date ?? "");
     previousPackagingOptionIdRef.current = fields.packaging_option_id ?? null;
     preserveInitialBatchWeightsRef.current = draft.batchWeights.length > 0;
+    if (preserveQuotedRemakePrices) {
+      preservedRemakePricingRef.current.set(draft.id, pricingFingerprintForDraft(draft));
+    }
     setOrderFieldsKey((value) => value + 1);
   };
   const switchInvoiceDraft = (draftId: string) => {
@@ -1561,6 +1641,13 @@ export function NewOrderForm({
     if (isAdminPremadeOrder) {
       return;
     }
+    const preservedFingerprint = preservedRemakePricingRef.current.get(activeInvoiceDraftId);
+    if (preservedFingerprint === currentPricingFingerprint) {
+      setPricingError(null);
+      setQuoteItems([]);
+      return;
+    }
+    preservedRemakePricingRef.current.delete(activeInvoiceDraftId);
     const qtyNumber = Number(quantity);
     if (!categoryId || !packagingOptionId || !Number.isFinite(qtyNumber) || qtyNumber <= 0) {
       setPriceValue("");
@@ -1642,7 +1729,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
+  }, [activeInvoiceDraftId, batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, currentPricingFingerprint, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
 
   const sharedDraftFields = {
     first_name: sharedFirstName, last_name: sharedLastName, customer_email: sharedEmail,
@@ -1659,7 +1746,7 @@ export function NewOrderForm({
       if (!draftIdentity.current.id) draftIdentity.current.id = crypto.randomUUID();
       const result = await saveOrderDraft({ ...draftIdentity.current, sourceOrderId: isEditMode ? initialOrder!.id : null,
         sourceFingerprint: sourceOrderFingerprint,
-        payload: { schemaVersion: 1, shared: sharedDraftFields, orders: tabs.map(({ id, fields, batchWeights }) => ({ id, fields, batchWeights })), activeOrderId: activeInvoiceDraftId, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride },
+        payload: { schemaVersion: 1, shared: sharedDraftFields, orders: tabs.map(({ id, fields, batchWeights }) => ({ id, fields, batchWeights })), activeOrderId: activeInvoiceDraftId, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride, preserveQuotedPrices: preserveQuotedRemakePrices },
       });
       if (!result.ok) { setSaveError(result.error); return false; }
       draftIdentity.current = { id: result.id, revision: result.revision };
@@ -1684,7 +1771,7 @@ export function NewOrderForm({
   useLayoutEffect(() => {
     const form = formRef.current;
     if (!form) return;
-    orderDraftGuards.set(form, { save: savePrivateDraft, discard: discardPrivateDraft, state: () => JSON.stringify({ shared: sharedDraftFields, tabs: invoiceOrderDrafts.map(({id,fields,batchWeights}) => ({id,fields,batchWeights})), batchWeights, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride }) });
+    orderDraftGuards.set(form, { save: savePrivateDraft, discard: discardPrivateDraft, state: () => JSON.stringify({ shared: sharedDraftFields, tabs: invoiceOrderDrafts.map(({id,fields,batchWeights}) => ({id,fields,batchWeights})), batchWeights, invoiceDiscountType, invoiceDiscountValue, invoicePriceOverride, preserveQuotedPrices: preserveQuotedRemakePrices }) });
     return () => { orderDraftGuards.delete(form); };
   });
 

@@ -36,6 +36,24 @@ describe("admin order re-make", () => {
     expect(source.due_date).toBe("2026-08-20");
   });
 
+  it("does not reapply a combined invoice adjustment stored on its first order", () => {
+    const source = order({
+      id: "design-a",
+      due_date: "2026-08-20",
+      admin_discount_type: "fixed",
+      admin_discount_value: 100,
+      admin_price_override: 9120,
+    });
+
+    expect(adminOrderRemakeFormDefaults(source, { combinedInvoice: true })).toMatchObject({
+      due_date: null,
+      admin_discount_type: "none",
+      admin_discount_value: null,
+      admin_price_override: null,
+    });
+    expect(source.admin_price_override).toBe(9120);
+  });
+
   it("keeps each combined-invoice design and its own price in a separate remake tab", () => {
     const tabs = adminOrderRemakeInvoiceTabs([
       order({
@@ -47,6 +65,9 @@ describe("admin order re-make", () => {
         total_weight_kg: 1,
         due_date: "2026-08-20",
         admin_batch_weights_kg: [1],
+        admin_discount_type: "fixed",
+        admin_discount_value: 100,
+        admin_price_override: 9120,
       }),
       order({
         id: "design-b",
@@ -70,6 +91,11 @@ describe("admin order re-make", () => {
       id: "remake-design-b",
       fields: { design_text: "Design B", total_price: "50", due_date: "", order_weight_g: "2000" },
       batchWeights: ["2"],
+    });
+    expect(tabs[0]?.fields).toMatchObject({
+      admin_discount_type: "none",
+      admin_discount_value: "",
+      admin_price_override: "",
     });
   });
 

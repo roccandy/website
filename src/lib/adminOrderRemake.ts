@@ -6,10 +6,19 @@ export function adminOrderRemakeHref(orderId: string) {
   return `/admin/orders/new?remake=${encodeURIComponent(orderId)}`;
 }
 
-export function adminOrderRemakeFormDefaults(order: OrderRow) {
+export function adminOrderRemakeFormDefaults(order: OrderRow, { combinedInvoice = false } = {}) {
   return {
     ...order,
     due_date: null,
+    // Combined-invoice adjustments are stored on one row, but apply to the
+    // whole invoice. The row totals already contain the allocated result.
+    ...(combinedInvoice
+      ? {
+          admin_discount_type: "none",
+          admin_discount_value: null,
+          admin_price_override: null,
+        }
+      : {}),
   };
 }
 
@@ -22,6 +31,7 @@ const fieldValue = (value: string | number | null | undefined) =>
  * the first design (and its price).
  */
 export function adminOrderRemakeInvoiceTabs(orders: OrderRow[]): DraftOrderTab[] {
+  const combinedInvoice = orders.length > 1;
   return orders
     .filter((order) => !isAdminPremadeOrder(order))
     .map((order) => ({
@@ -39,9 +49,12 @@ export function adminOrderRemakeInvoiceTabs(orders: OrderRow[]): DraftOrderTab[]
         due_date: "",
         total_price: fieldValue(order.total_price),
         order_weight_g: fieldValue(Number(order.total_weight_kg) * 1000),
-        admin_discount_type: fieldValue(order.admin_discount_type || "none"),
-        admin_discount_value: fieldValue(order.admin_discount_value),
-        admin_price_override: fieldValue(order.admin_price_override),
+        // The final line totals are authoritative for a combined remake.
+        // Invoice-wide adjustments are stored on the first source row, so
+        // copying them onto a tab would apply them a second time.
+        admin_discount_type: combinedInvoice ? "none" : fieldValue(order.admin_discount_type || "none"),
+        admin_discount_value: combinedInvoice ? "" : fieldValue(order.admin_discount_value),
+        admin_price_override: combinedInvoice ? "" : fieldValue(order.admin_price_override),
         ingredient_labels_opt_in: Number(order.ingredient_labels_count) > 0 ? "on" : "off",
         ingredient_labels_count: fieldValue(order.ingredient_labels_count),
         design_type: fieldValue(order.design_type || order.category_id),

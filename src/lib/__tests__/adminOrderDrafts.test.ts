@@ -18,6 +18,10 @@ describe("unfinished order drafts", () => {
     expect(defaults.pickup).toBe(true);
     expect(defaults.quantity).toBeNull();
   });
+  it("preserves the explicit historical-price marker for a saved remake", () => {
+    expect(parseAdminOrderDraftPayload({ ...payload(), preserveQuotedPrices: true }).preserveQuotedPrices).toBe(true);
+    expect(parseAdminOrderDraftPayload(payload()).preserveQuotedPrices).toBe(false);
+  });
   it("drops authority, invoice and live-order identifiers from stored editable fields", () => {
     const input=payload(); Object.assign(input.shared,{canWrite:"true",status:"paid"});
     Object.assign(input.orders[0].fields,{id:"live-order",square_invoice_id:"invoice",payment_status:"paid",submit_intent:"send",status:"scheduled"});
