@@ -8,8 +8,19 @@ import {
   startTransition,
   type ReactNode,
 } from "react";
-import { CandyDesignSvg } from "@/components/CandyDesignSvg";
+import { StudioCandyPreview as CandyDesignSvg } from "@/components/StudioCandyPreview";
+import {
+  studioTextWarnings,
+  textGeometrySignature,
+  type TextGeometry,
+} from "@/lib/candyTextGeometry";
 import { RasterEditor } from "./RasterEditor";
+import {
+  encodeStudioRecovery,
+  readStudioRecovery,
+  studioRecoveryKey,
+  studioArtworkSignature,
+} from "@/lib/designStudioRecovery";
 import {
   DESIGN_FONTS,
   DESIGN_JACKETS,
@@ -28,7 +39,17 @@ import {
   type CandyDesign,
   type DesignLayer,
 } from "@/lib/candyDesign";
-import { optimizeBrowserImageToDataUrl } from "@/lib/clientImageOptimization";
+import {
+  uploadStudioImage,
+  uploadStudioDataUrl,
+} from "@/lib/studioClientAssets";
+import {
+  MAX_STUDIO_PROJECT_BYTES,
+  parseStudioProject,
+  type StudioProject,
+} from "@/lib/studioProject";
+import { importPrototypeProject } from "@/lib/studioPrototypeImport";
+import { designExportSize } from "@/lib/designImageBounds";
 import { saveCandyDesign } from "./actions";
 import {
   resolveSiteDesignerDefaults,
@@ -81,7 +102,6 @@ const primary =
   "rounded-lg bg-emerald-800 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-900 disabled:opacity-40";
 const input =
   "w-full rounded-lg border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900";
-const DRAFT_KEY = "roccandy-design-studio-draft-v1";
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block space-y-1 text-xs font-medium text-zinc-600">
@@ -99,6 +119,45 @@ function Colour({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [custom, setCustom] = useState<string[]>([]);
+  const loadCustom = () => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem("roccandy-studio-swatches") || "[]",
+      );
+      if (Array.isArray(saved))
+        setCustom(
+          saved
+            .filter(
+              (v: unknown) =>
+                typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v),
+            )
+            .slice(0, 24),
+        );
+    } catch {}
+  };
+  const palette = [
+    "#ffffff",
+    "#f2d2bd",
+    "#f4a6c0",
+    "#e63946",
+    "#ee8456",
+    "#f6d24a",
+    "#d3e5bd",
+    "#2f8f3a",
+    "#cfe6f0",
+    "#5cc9bf",
+    "#3d6ae6",
+    "#1c2a6b",
+    "#d9d2fb",
+    "#9b6fe0",
+    "#4b1f8c",
+    "#e3cf9f",
+    "#8a7a58",
+    "#9a9aa8",
+    "#3a3a46",
+    "#111111",
+  ];
   return (
     <Field label={label}>
       <div className="flex items-center gap-2">
@@ -131,6 +190,42 @@ function Colour({
           onFocus={(e) => e.target.select()}
         />
       </div>
+      <details onToggle={event=>{if(event.currentTarget.open)loadCustom();}} className="text-xs font-normal">
+        <summary className="cursor-pointer">Palette & saved colours</summary>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {[...new Set([...palette, ...custom])].map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-label={`${label} swatch ${c}`}
+              title={c}
+              className="h-5 w-5 rounded border border-zinc-300"
+              style={{ backgroundColor: c }}
+              onClick={(e) => {
+                e.preventDefault();
+                onChange(c);
+              }}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="mt-2 underline"
+          onClick={(e) => {
+            e.preventDefault();
+            const next = [...new Set([...custom, value])].slice(-24);
+            setCustom(next);
+            try {
+              localStorage.setItem(
+                "roccandy-studio-swatches",
+                JSON.stringify(next),
+              );
+            } catch {}
+          }}
+        >
+          Save current colour
+        </button>
+      </details>
     </Field>
   );
 }
@@ -173,6 +268,7 @@ export function DesignEditor({
   onClose,
   embedded = false,
   canWrite = true,
+  recoveryScope,
   siteDefaults = resolveSiteDesignerDefaults(),
 }: {
   initialDesign: CandyDesign;
@@ -180,6 +276,7 @@ export function DesignEditor({
   onClose?: () => void;
   embedded?: boolean;
   canWrite?: boolean;
+  recoveryScope?: string;
   siteDefaults?: SiteDesignerDefaults;
 }) {
   const [state, dispatch] = useReducer(history, {
@@ -193,13 +290,18 @@ export function DesignEditor({
   );
   const selected = design.layers.find((l) => l.id === selectedId);
   const [savedJson, setSavedJson] = useState(JSON.stringify(initialDesign));
-  const savedRef = useRef(savedJson);
   const projectRef = useRef(initialDesign.source);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [zoom, setZoom] = useState(100);
-  const [recovery, setRecovery] = useState<CandyDesign | null>(null);
+  const [recovery, setRecovery] = useState<
+    | (NonNullable<ReturnType<typeof readStudioRecovery>> & {
+        legacy?: boolean;
+      })
+    | null
+  >(null);
+  const [closeChoice, setCloseChoice] = useState(false);
   const [showSpecs, setShowSpecs] = useState(false);
   const [view, setView] = useState<"three-dimensional" | "face">(
     "three-dimensional",
@@ -210,6 +312,12 @@ export function DesignEditor({
     jacket?: boolean;
   } | null>(null);
   const [snap, setSnap] = useState(true);
+  const [textGeometry, setTextGeometry] = useState<TextGeometry>();
+  const [exportResolution, setExportResolution] = useState<
+    "native" | 1 | 2 | 4 | 6
+  >(1);
+  const [cropImages, setCropImages] = useState(false);
+  const [showColourMap, setShowColourMap] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{
     id: string;
@@ -225,25 +333,76 @@ export function DesignEditor({
     currentRef.current = design;
   }, [design]);
   const dirty = JSON.stringify(design) !== savedJson;
+  const pendingOrder =
+    Boolean(onApply) &&
+    studioArtworkSignature(design) !== studioArtworkSignature(initialDesign);
+  const unsettled = dirty || pendingOrder;
+  const recoveryKey = studioRecoveryKey(
+    recoveryScope ||
+      (initialDesign.source
+        ? `library:${initialDesign.source.id}`
+        : "new-design"),
+  );
+  const clearRecovery = () => {
+    try {
+      sessionStorage.removeItem(recoveryKey);
+    } catch {}
+  };
+  const storeRecovery = () => {
+    try {
+      sessionStorage.setItem(
+        recoveryKey,
+        encodeStudioRecovery(currentRef.current, initialDesign),
+      );
+      return true;
+    } catch {
+      setError(
+        "Browser recovery storage is full. Save your design before closing.",
+      );
+      return false;
+    }
+  };
 
   useEffect(() => {
-    if (embedded) return;
     try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const draft = parseCandyDesign(raw);
-        if (draft && JSON.stringify(draft) !== JSON.stringify(initialDesign))
-          setRecovery(draft);
+      let draft = readStudioRecovery(
+        sessionStorage.getItem(recoveryKey),
+        initialDesign,
+      ) as
+        | (NonNullable<ReturnType<typeof readStudioRecovery>> & {
+            legacy?: boolean;
+          })
+        | null;
+      if (!draft && !embedded) {
+        const raw = localStorage.getItem("roccandy-design-studio-draft-v1");
+        const previous = raw ? parseCandyDesign(raw) : null;
+        if (
+          previous &&
+          JSON.stringify(previous) !== JSON.stringify(initialDesign)
+        ) {
+          if (previous.source?.id !== initialDesign.source?.id)
+            delete previous.source;
+          draft = {
+            design: previous,
+            changedSource: true,
+            savedAt: 0,
+            legacy: true,
+          };
+        }
       }
+      setRecovery(draft);
     } catch {
       /* A corrupt recovery draft never replaces the current document. */
     }
-  }, [embedded, initialDesign]);
+  }, [recoveryKey, initialDesign, embedded]);
   useEffect(() => {
-    if (embedded || !dirty) return;
+    if (!unsettled || recovery) return;
     const timer = setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(design));
+        sessionStorage.setItem(
+          recoveryKey,
+          encodeStudioRecovery(design, initialDesign),
+        );
       } catch {
         setMessage(
           "Browser recovery storage is full. Save to the library to keep your changes.",
@@ -251,14 +410,20 @@ export function DesignEditor({
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [design, dirty, embedded]);
+  }, [design, unsettled, recovery, recoveryKey, initialDesign]);
   useEffect(() => {
     const leave = (e: BeforeUnloadEvent) => {
-      if (JSON.stringify(currentRef.current) !== savedRef.current)
-        e.preventDefault();
+      if (unsettled) e.preventDefault();
     };
     const navigate = (e: Event) => {
-      if (dirty && !window.confirm("Leave Design Studio with unsaved changes?"))
+      if (
+        unsettled &&
+        !window.confirm(
+          pendingOrder
+            ? "This artwork has not been applied to the order. Leave the Studio?"
+            : "Leave Design Studio with unsaved changes?",
+        )
+      )
         e.preventDefault();
     };
     window.addEventListener("beforeunload", leave);
@@ -267,7 +432,7 @@ export function DesignEditor({
       window.removeEventListener("beforeunload", leave);
       window.removeEventListener("admin:before-navigation", navigate);
     };
-  }, [dirty]);
+  }, [unsettled, pendingOrder]);
   const change = (next: CandyDesign) => {
     dispatch({ type: "change", design: next });
     setError("");
@@ -296,18 +461,32 @@ export function DesignEditor({
     const node = canvasRef.current?.querySelector<SVGTextElement>(
       `[data-design-layer="${selected.id}"] text`,
     );
-    if (!node) return;
+    const metrics =
+      textGeometry?.signature === textGeometrySignature(design)
+        ? textGeometry.layers[selected.id]
+        : undefined;
+    if (!node && !metrics) return;
     const radius = designFaceRadius(design) * 0.94;
     let extent = 0;
-    for (let i = 0; i < node.getNumberOfChars(); i++) {
-      const box = node.getExtentOfChar(i);
-      for (const x of [box.x, box.x + box.width])
-        for (const y of [box.y, box.y + box.height])
-          extent = Math.max(
-            extent,
-            Math.hypot(x * (selected.scaleX ?? 1), y * (selected.scaleY ?? 1)),
-          );
-    }
+    if (metrics)
+      for (const [x, y] of metrics.points)
+        extent = Math.max(
+          extent,
+          Math.hypot(x * (selected.scaleX ?? 1), y * (selected.scaleY ?? 1)),
+        );
+    else if (node)
+      for (let i = 0; i < node.getNumberOfChars(); i++) {
+        const box = node.getExtentOfChar(i);
+        for (const x of [box.x, box.x + box.width])
+          for (const y of [box.y, box.y + box.height])
+            extent = Math.max(
+              extent,
+              Math.hypot(
+                x * (selected.scaleX ?? 1),
+                y * (selected.scaleY ?? 1),
+              ),
+            );
+      }
     const arc = selected.curve !== "straight",
       arcRadius = selected.arcRadius ?? 320;
     const scale = Math.max(selected.scaleX ?? 1, selected.scaleY ?? 1);
@@ -321,7 +500,7 @@ export function DesignEditor({
       : radius / Math.max(1, extent);
     const pathFit = arc
       ? (Math.PI * fittedArcRadius * (selected.fullArc ? 2 : 1)) /
-        Math.max(1, node.getComputedTextLength())
+        Math.max(1, metrics?.width ?? node!.getComputedTextLength())
       : 1;
     const ratio = Math.min(
       1,
@@ -344,7 +523,12 @@ export function DesignEditor({
   };
   const jacketChange = (patch: Partial<CandyDesign["jacket"]>) =>
     change({ ...design, jacket: { ...design.jacket, ...patch } });
-  const add = (type: DesignLayer["type"], image = "", name?: string) => {
+  const add = (
+    type: DesignLayer["type"],
+    image = "",
+    name?: string,
+    dimensions?: { imageWidth: number; imageHeight: number },
+  ) => {
     if (design.layers.length >= MAX_DESIGN_LAYERS) {
       setError(`A design can contain up to ${MAX_DESIGN_LAYERS} layers.`);
       return;
@@ -353,33 +537,32 @@ export function DesignEditor({
       ...newDesignLayer(type, crypto.randomUUID(), siteDefaults),
       ...(design.schemaVersion === 2 ? { fullArc: true } : {}),
       image,
+      ...dimensions,
       ...(name ? { name } : {}),
     };
-    change({ ...design, layers: [...design.layers, layer] });
+    change({ ...(dimensions ? upgradeCandyDesign(design) : design), layers: [...design.layers, layer] });
     setSelectedId(layer.id);
   };
   const upload = async (file?: File) => {
     if (!file) return;
     if (
       !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
-      file.size > 8 * 1024 * 1024
+      file.size > 20_000_000
     ) {
       setError(
-        "Choose a PNG, JPEG or WebP image up to 8MB. It will be optimised before saving.",
+        "Choose a PNG, JPEG or WebP image up to 20MB. Native resolution is preserved up to 6000 pixels.",
       );
       return;
     }
     setBusy(true);
     setError("");
     try {
-      const image = await optimizeBrowserImageToDataUrl(file, {
-        maxWidth: 1200,
-        maxHeight: 1200,
-        quality: 0.88,
-      });
-      add("image", image, file.name);
-    } catch {
-      setError("The artwork could not be opened. Try a PNG or JPEG export.");
+      const asset = await uploadStudioImage(file);
+      add("image", asset.image, file.name, asset);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "The artwork could not be opened.",
+      );
     } finally {
       setBusy(false);
     }
@@ -401,13 +584,10 @@ export function DesignEditor({
       }
       dispatch({ type: "replace", design: result.design });
       setSavedJson(JSON.stringify(result.design));
-      savedRef.current = JSON.stringify(result.design);
       currentRef.current = result.design;
       projectRef.current = result.design.source;
       if (!embedded) {
-        try {
-          localStorage.removeItem(DRAFT_KEY);
-        } catch {}
+        clearRecovery();
         window.history.replaceState(
           null,
           "",
@@ -427,7 +607,9 @@ export function DesignEditor({
       setBusy(false);
     }
   };
-  const exportDesign = async (format: "png" | "pdf" | "svg" | "proof") => {
+  const exportDesign = async (
+    format: "png" | "pdf" | "svg" | "proof" | "jpeg",
+  ) => {
     setBusy(true);
     setError("");
     try {
@@ -435,7 +617,14 @@ export function DesignEditor({
       const response = await fetch("/api/admin/design/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ design, format, view, presentation: true }),
+        body: JSON.stringify({
+          design,
+          format,
+          view,
+          presentation: true,
+          cropImages,
+          resolution: exportResolution,
+        }),
       });
       if (!response.ok) {
         const payload = await response.json();
@@ -444,7 +633,7 @@ export function DesignEditor({
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${design.name.replace(/[^a-z0-9_-]/gi, "-")}${format === "proof" ? "-proof.pdf" : `.${format}`}`;
+      link.download = `${design.name.replace(/[^a-z0-9_-]/gi, "-")}${format === "proof" ? "-proof.pdf" : format === "jpeg" ? ".jpg" : `.${format}`}`;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
@@ -457,7 +646,8 @@ export function DesignEditor({
     setBusy(true);
     setError("");
     try {
-      const layers = await Promise.all(
+      const assets: Record<string, string> = {};
+      await Promise.all(
         design.layers.map(async (l) => {
           if (l.type !== "image" || l.image.startsWith("data:")) return l;
           const response = await fetch(designImageHref(l.image));
@@ -473,11 +663,15 @@ export function DesignEditor({
               .blob()
               .then((blob) => reader.readAsDataURL(blob), reject);
           });
-          return { ...l, image };
+          assets[l.image] = image;
         }),
       );
-      const project = parseCandyDesign({ ...design, layers })!;
-      delete project.source;
+      const project = parseStudioProject({
+        format: "roccandy-studio",
+        version: 1,
+        design,
+        assets,
+      } satisfies StudioProject);
       const url = URL.createObjectURL(
         new Blob([JSON.stringify(project)], { type: "application/json" }),
       );
@@ -495,21 +689,39 @@ export function DesignEditor({
   const openProject = async (file?: File) => {
     if (!file) return;
     try {
-      if (file.size > 5_000_000)
-        throw new Error("Choose a Studio JSON project up to 5MB.");
-      const next = parseCandyDesign(await file.text());
-      if (!next) throw new Error("Choose a valid Studio project.");
+      if (file.size > MAX_STUDIO_PROJECT_BYTES)
+        throw new Error("Choose a Studio JSON project up to 64MB.");
+      const raw = JSON.parse(await file.text());
+      setBusy(true);
+      const imported =
+        raw?.v === 1 && raw?.jacket
+          ? await importPrototypeProject(raw, uploadStudioDataUrl)
+          : undefined;
+      const project = imported
+        ? { design: imported.design, assets: {} as Record<string, string> }
+        : parseStudioProject(raw);
+      const next = project.design;
       if (
         dirty &&
         !window.confirm("Replace the current unsaved design with this project?")
       )
         return;
-      delete next.source;
+      setBusy(true);
+      next.layers = await Promise.all(
+        next.layers.map(async (l) =>
+          l.type === "image" && project.assets[l.image]
+            ? { ...l, ...(await uploadStudioDataUrl(project.assets[l.image])) }
+            : l,
+        ),
+      );
       projectRef.current = undefined;
       change(next);
       setSelectedId(next.layers[0]?.id ?? null);
+      if (imported?.warnings.length) setMessage(imported.warnings.join(" "));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to open project.");
+    } finally {
+      setBusy(false);
     }
   };
   const point = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -540,7 +752,9 @@ export function DesignEditor({
               : design.source
                 ? `Saved revision ${design.source.revision}`
                 : "New design"}{" "}
-            · drag layers on the candy face
+            {pendingOrder
+              ? " · not yet applied to this order"
+              : " · drag layers on the candy face"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -592,7 +806,10 @@ export function DesignEditor({
               onClick={() =>
                 startTransition(async () => {
                   const saved = await save();
-                  if (saved) onApply(saved);
+                  if (saved) {
+                    clearRecovery();
+                    onApply(saved);
+                  }
                 })
               }
             >
@@ -622,13 +839,8 @@ export function DesignEditor({
               className={button}
               disabled={busy}
               onClick={() => {
-                if (
-                  !dirty ||
-                  window.confirm(
-                    "Close the studio without applying your changes to the order?",
-                  )
-                )
-                  onClose();
+                if (unsettled) setCloseChoice(true);
+                else onClose();
               }}
             >
               Close
@@ -636,15 +848,87 @@ export function DesignEditor({
           )}
         </div>
       </div>
+      {closeChoice && (
+        <div
+          role="group"
+          aria-label="Unapplied artwork"
+          className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm"
+        >
+          <p>
+            {pendingOrder
+              ? "This artwork is not applied to the order. Saving to the library alone does not update the order."
+              : "Your artwork has unsaved changes."}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {onApply && (
+              <button
+                type="button"
+                className={primary}
+                disabled={busy || !canWrite}
+                onClick={() =>
+                  startTransition(async () => {
+                    const saved = await save();
+                    if (saved) {
+                      clearRecovery();
+                      onApply(saved);
+                    }
+                  })
+                }
+              >
+                Save & use in order
+              </button>
+            )}
+            <button
+              type="button"
+              className={button}
+              onClick={() => {
+                if (storeRecovery()) onClose?.();
+              }}
+            >
+              Keep recovery draft & close
+            </button>
+            <button
+              type="button"
+              className={button}
+              onClick={() => {
+                clearRecovery();
+                onClose?.();
+              }}
+            >
+              Discard editor changes & close
+            </button>
+            <button
+              type="button"
+              className={button}
+              onClick={() => setCloseChoice(false)}
+            >
+              Continue editing
+            </button>
+          </div>
+        </div>
+      )}
       {recovery && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm">
-          <span>A browser recovery draft is available: {recovery.name}.</span>
+          <span>
+            A browser recovery draft is available: {recovery.design.name}.
+            {recovery.changedSource
+              ? " The source has changed; restoring will save as a separate copy."
+              : ""}
+          </span>
           <button
             type="button"
             className={button}
             onClick={() => {
-              change(recovery);
-              projectRef.current = recovery.source;
+              change(recovery.design);
+              projectRef.current = recovery.design.source;
+              if (recovery.legacy)
+                try {
+                  sessionStorage.setItem(
+                    recoveryKey,
+                    encodeStudioRecovery(recovery.design, initialDesign),
+                  );
+                  localStorage.removeItem("roccandy-design-studio-draft-v1");
+                } catch {}
               setRecovery(null);
             }}
           >
@@ -655,7 +939,11 @@ export function DesignEditor({
             className={button}
             onClick={() => {
               setRecovery(null);
-              localStorage.removeItem(DRAFT_KEY);
+              clearRecovery();
+              if (recovery.legacy)
+                try {
+                  localStorage.removeItem("roccandy-design-studio-draft-v1");
+                } catch {}
             }}
           >
             Dismiss
@@ -692,17 +980,18 @@ export function DesignEditor({
               : undefined
           }
           onClose={() => setRaster(null)}
-          onApply={(image, ratio, copy) => {
+          onApply={async (image, ratio, copy) => {
             const count = (raster.layer ? 0 : 1) + (copy ? 1 : 0);
             if (design.layers.length + count > MAX_DESIGN_LAYERS)
               throw new Error(
                 `A design can contain up to ${MAX_DESIGN_LAYERS} layers. Cancel and remove a layer before adding more artwork.`,
               );
+            const asset = await uploadStudioDataUrl(image);
             const layer: DesignLayer = raster.layer
-              ? { ...raster.layer, image }
+              ? { ...raster.layer, ...asset }
               : {
                   ...newDesignLayer("image", crypto.randomUUID(), siteDefaults),
-                  image,
+                  ...asset,
                   name: raster.jacket ? "Jacket paint" : "Face paint",
                   size: 100,
                   aspectRatio: ratio,
@@ -716,7 +1005,7 @@ export function DesignEditor({
               layers.push({
                 ...layer,
                 id: crypto.randomUUID(),
-                image: copy,
+                ...(await uploadStudioDataUrl(copy)),
                 name: `${layer.name} selection`,
               });
             change(
@@ -860,8 +1149,14 @@ export function DesignEditor({
                   const layer = {
                     ...selected,
                     id: crypto.randomUUID(),
-                    x: Math.min(100, selected.x + 4),
-                    y: Math.min(100, selected.y + 4),
+                    x: Math.min(
+                      design.schemaVersion === 2 ? 300 : 100,
+                      selected.x + 4,
+                    ),
+                    y: Math.min(
+                      design.schemaVersion === 2 ? 300 : 100,
+                      selected.y + 4,
+                    ),
                   };
                   change({ ...design, layers: [...design.layers, layer] });
                   setSelectedId(layer.id);
@@ -944,9 +1239,19 @@ export function DesignEditor({
                   Snap to centre
                 </label>
               )}
+              {!present && (
+                <label className="flex items-center gap-1 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={showColourMap}
+                    onChange={(e) => setShowColourMap(e.target.checked)}
+                  />{" "}
+                  Number jacket colours
+                </label>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {(["png", "pdf", "svg"] as const).map((format) => (
+              {(["png", "jpeg", "pdf", "svg"] as const).map((format) => (
                 <button
                   type="button"
                   className={button}
@@ -965,6 +1270,51 @@ export function DesignEditor({
                 Customer proof
               </button>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-600">
+            <label>
+              Export resolution{" "}
+              <select
+                aria-label="Export resolution"
+                value={exportResolution}
+                onChange={(e) =>
+                  setExportResolution(
+                    e.target.value === "native"
+                      ? "native"
+                      : (Number(e.target.value) as 1 | 2 | 4 | 6),
+                  )
+                }
+                className="rounded border p-1"
+              >
+                <option value="1">Standard</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+                <option value="6">6×</option>
+                <option value="native">Match source images</option>
+              </select>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={cropImages}
+                onChange={(e) => setCropImages(e.target.checked)}
+              />{" "}
+              Crop to image layers
+            </label>
+            <span>
+              {(() => {
+                try {
+                  const size = designExportSize(design, {
+                    view,
+                    cropImages,
+                    resolution: exportResolution,
+                  });
+                  return `${size.width} × ${size.height}px${size.capped ? " (limited to 36 megapixels)" : ""}`;
+                } catch {
+                  return "Add a visible image to crop its artwork.";
+                }
+              })()}
+            </span>
           </div>
           <div className="overflow-auto rounded-xl border border-zinc-200 bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%)] bg-[length:24px_24px] p-3">
             <div
@@ -1033,7 +1383,12 @@ export function DesignEditor({
                   p = point(e);
                 if (!d || !p) return;
                 const round = (v: number) =>
-                  Math.round(Math.max(0, Math.min(100, v)) * 10) / 10;
+                  Math.round(
+                    Math.max(
+                      design.schemaVersion === 2 ? -200 : 0,
+                      Math.min(design.schemaVersion === 2 ? 300 : 100, v),
+                    ) * 10,
+                  ) / 10;
                 const original = d.before.layers.find((l) => l.id === d.id)!;
                 const radius = designFaceRadius(d.before),
                   diameter = radius * 2;
@@ -1139,8 +1494,20 @@ export function DesignEditor({
                   e.preventDefault();
                   const step = e.shiftKey ? 5 : 1;
                   layerChange({
-                    x: Math.min(100, Math.max(0, selected.x + m[0] * step)),
-                    y: Math.min(100, Math.max(0, selected.y + m[1] * step)),
+                    x: Math.min(
+                      design.schemaVersion === 2 ? 300 : 100,
+                      Math.max(
+                        design.schemaVersion === 2 ? -200 : 0,
+                        selected.x + m[0] * step,
+                      ),
+                    ),
+                    y: Math.min(
+                      design.schemaVersion === 2 ? 300 : 100,
+                      Math.max(
+                        design.schemaVersion === 2 ? -200 : 0,
+                        selected.y + m[1] * step,
+                      ),
+                    ),
                   });
                 }
               }}
@@ -1152,9 +1519,19 @@ export function DesignEditor({
                 view={view}
                 showBackground
                 handles={!present}
+                onGeometry={setTextGeometry}
+                annotate={showColourMap}
               />
             </div>
           </div>
+          {studioTextWarnings(design, textGeometry).map((warning) => (
+            <p
+              key={warning}
+              className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900"
+            >
+              {warning}
+            </p>
+          ))}
           <p className="text-xs text-zinc-500">
             Artwork is clipped to its candy surface. Drag to move, use the
             square handle to resize or the round handle to rotate. Design
@@ -1303,7 +1680,7 @@ export function DesignEditor({
                       className={input}
                       value={selected.font}
                       onChange={(e) =>
-                        layerChange({
+                        advancedLayerChange({
                           font: e.target.value as DesignLayer["font"],
                         })
                       }
@@ -1425,16 +1802,16 @@ export function DesignEditor({
                 <NumberField
                   label="X position (%)"
                   value={selected.x}
-                  min={0}
-                  max={100}
+                  min={design.schemaVersion === 2 ? -200 : 0}
+                  max={design.schemaVersion === 2 ? 300 : 100}
                   step={0.1}
                   onChange={(x) => layerChange({ x })}
                 />
                 <NumberField
                   label="Y position (%)"
                   value={selected.y}
-                  min={0}
-                  max={100}
+                  min={design.schemaVersion === 2 ? -200 : 0}
+                  max={design.schemaVersion === 2 ? 300 : 100}
                   step={0.1}
                   onChange={(y) => layerChange({ y })}
                 />

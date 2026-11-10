@@ -57,14 +57,14 @@ mandatory daily checklist or customer-approval gate.
 1. **Browser regression coverage.** Prioritise the automated delivery checks
    below around normal-login draft save/resume/discard, navigation and refresh,
    multi-tab orders, Studio save/copy, private artwork, print and exports. The
-   Studio now has isolated Playwright component coverage using mocked library
-   actions for complex jackets, artwork editing, transforms, project round trips
-   and narrow layouts. A complete normal-login browser click-through covering
-   the wider order workflow and production deployment remains unverified.
-2. **Recovery for each design.** Studio currently has one global browser recovery
-   key, and embedded Studio editing does not use that recovery mechanism. Scope
-   recovery to each design/edit session and preserve unfinished embedded artwork.
-   Consider quiet autosave of already-saved order drafts with a clear saved time;
+   Studio now has isolated Playwright integration coverage using the real library
+   actions, image validation, font layout and export routes against mocked auth
+   and storage/database adapters. The combined-order integration test covers
+   Studio saves, unsent drafts, order creation, remakes and resent confirmation
+   PNGs. Broader normal-login regressions remain an optional extension.
+2. **Order-draft autosave.** Studio recovery is now scoped to each design/order
+   tab and browser tab, including embedded editing and migration of older browser
+   recovery. Quiet autosave of already-saved server order drafts remains optional;
    retain explicit discard and ensure autosave cannot send mail or create invoices.
 3. **Remaining precise canvas tools.** V2 implements flat/3D views, centre
    snapping, layer locking, resize/rotation handles, opacity and independent
@@ -84,31 +84,6 @@ mandatory daily checklist or customer-approval gate.
    3,000 lines. Extract draft persistence, invoice submission and artwork handling
    into focused modules with regression coverage as those areas change, retaining
    current behaviour. This is developer maintenance with no extra admin steps.
-
-### Studio v2 release follow-up
-
-The 2026-11-10 follow-up review identified these unresolved gaps in the initial
-integration. Owner: development maintainer; the business administrator defines
-production/pricing rules and prioritises additional prototype compatibility.
-
-- **Saved versus applied artwork.** Saving to the library clears the editor's
-  dirty flag without applying artwork to the order. Closing then skips the
-  warning even though the order still has its earlier snapshot. Track library
-  saves and order application separately. Per-design/embedded recovery and the
-  complete normal-login order journey remain covered by items 1–2 above.
-- **Image/project round trips and source quality.** A reproduced 802 KB WebP
-  becomes a 2.9 MB PNG through storage conversion, exceeding the portable
-  project's 2 MB inline-image limit. Align those limits and preserve appropriate
-  original-resolution artwork; the current pipeline reduces images to 1200 px.
-- **Rendering and production parity.** Compare browser text with server glyph
-  outlines, including Helvetica/Arial versus the Arimo export substitute and
-  curved/clipped text. Consider useful clipping/resolution warnings. Define
-  achievable design detail, jacket-paint production representation and complexity
-  pricing; custom segments currently use existing two-colour pricing.
-- **Prototype compatibility.** Native `.rcmock.json` import, image-native/cropped
-  high-resolution exports, JPEG export and the prototype's wider font/palette
-  options are not implemented. They require a separately prioritised extension
-  of the current integration.
 
 ### Automated delivery checks
 
@@ -161,6 +136,16 @@ carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-10 — Completed the Studio follow-up: separate library-save/order-apply
+  state, scoped recovery, source-resolution private assets and portable project
+  envelopes, shared canonical glyph geometry with clipping warnings, numbered
+  jacket colour specifications, prototype import, bundled fonts/palettes and
+  native/cropped/JPEG exports. The administrator chose an optional per-order
+  complexity charge (default $0), rather than element-based pricing, and approved
+  viewer/colour specifications rather than requiring an unwrapped jacket model.
+  Added real-code isolated integration coverage; server order-draft autosave and
+  remaining multi-selection/alignment tools retain their optional scope.
 
 - 2026-11-10 — Recorded the follow-up Studio review before pushing the initial
   integration: saved-versus-applied order state, the reproduced image/project

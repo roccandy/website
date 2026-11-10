@@ -6,6 +6,8 @@ import {
   validateDesignImages,
 } from "@/lib/candyDesignExport";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import sharp from "sharp";
+import type { DesignExportOptions } from "@/lib/candyDesignExport";
 
 export async function POST(request: Request) {
   const session = await getAdminSession();
@@ -21,15 +23,25 @@ export async function POST(request: Request) {
         ? "proof"
         : input.format === "pdf"
           ? "pdf"
-          : input.format === "svg"
-            ? "svg"
-            : "png";
-    const options = {
+          : input.format === "jpeg"
+            ? "jpeg"
+            : input.format === "svg"
+              ? "svg"
+              : "png";
+    const options: DesignExportOptions = {
       view:
         input.view === "face"
           ? ("face" as const)
           : ("three-dimensional" as const),
       presentation: input.presentation === true,
+      cropImages:
+        input.cropImages === true && !["pdf", "proof"].includes(format),
+      resolution:
+        input.resolution === "native"
+          ? "native"
+          : [1, 2, 4, 6].includes(input.resolution)
+            ? input.resolution
+            : 1,
     };
     let bytes: Uint8Array | string;
     if (format === "svg") bytes = await candyDesignSvg(design, options);
@@ -90,7 +102,16 @@ export async function POST(request: Request) {
           y -= 16;
         }
         bytes = await pdf.save();
-      } else bytes = png;
+      } else
+        bytes =
+          format === "jpeg"
+            ? await sharp(png)
+                .flatten({
+                  background: design.presentation?.background ?? "#ffffff",
+                })
+                .jpeg({ quality: 95 })
+                .toBuffer()
+            : png;
     }
     const filename =
       design.name.replace(/[^a-z0-9_-]/gi, "-").slice(0, 80) || "candy-design";
@@ -103,8 +124,10 @@ export async function POST(request: Request) {
               ? "image/svg+xml"
               : format === "pdf" || format === "proof"
                 ? "application/pdf"
-                : "image/png",
-          "Content-Disposition": `attachment; filename="${filename}${format === "proof" ? "-proof.pdf" : `.${format}`}"`,
+                : format === "jpeg"
+                  ? "image/jpeg"
+                  : "image/png",
+          "Content-Disposition": `attachment; filename="${filename}${format === "proof" ? "-proof.pdf" : format === "jpeg" ? ".jpg" : `.${format}`}"`,
           "Cache-Control": "no-store",
         },
       },

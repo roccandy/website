@@ -6,6 +6,11 @@ import type { OrderRow } from "../data";
 const payload = () => ({schemaVersion: 1, shared: {first_name:"Ada", customer_email:"", pickup:"on"}, orders:[{id:"one",fields:{title:"Unfinished",category_id:"custom-7-14",notes:"Keep these notes",quantity:"",total_price:"",candy_design:JSON.stringify(emptyCandyDesign())},batchWeights:["4",""]},{id:"two",fields:{title:"Second",design_text:"HELLO"},batchWeights:["2"]}],activeOrderId:"one",invoiceDiscountType:"percent",invoiceDiscountValue:"5",invoicePriceOverride:""});
 const draft = () => ({id:"77777777-7777-4777-8777-777777777777",revision:1,source_order_id:null,payload:parseAdminOrderDraftPayload(payload()),updated_at:"2026-11-07T12:00:00Z"}) as AdminOrderDraft;
 describe("unfinished order drafts", () => {
+  it("does not invalidate existing saved-order drafts when the migration adds a default-zero complexity charge",()=>{
+    const source={id:"one",title:"Legacy order"} as OrderRow;
+    expect(orderDraftSourceFingerprint({...source,admin_complexity_charge:0})).toBe(orderDraftSourceFingerprint(source));
+    expect(orderDraftSourceFingerprint({...source,admin_complexity_charge:10})).not.toBe(orderDraftSourceFingerprint(source));
+  });
   it("retains incomplete customer details, each order tab, notes, batch inputs and invoice adjustments", () => {
     const parsed = parseAdminOrderDraftPayload(payload());
     expect(parsed.shared.customer_email).toBe("");

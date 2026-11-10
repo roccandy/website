@@ -1,4 +1,22 @@
 @import "tailwindcss";
+@font-face { font-family: "Arimo"; src: url("/design-fonts/Arimo.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Arimo"; src: url("/design-fonts/Arimo-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("/design-fonts/montserrat.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Montserrat"; src: url("/design-fonts/montserrat-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/design-fonts/poppins.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/design-fonts/poppins-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/design-fonts/poppins-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/design-fonts/poppins-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("/design-fonts/oswald.ttf") format("truetype"); font-weight: 200 700; font-display: swap; }
+@font-face { font-family: "Bebas Neue"; src: url("/design-fonts/bebasneue.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Playfair Display"; src: url("/design-fonts/playfairdisplay.ttf") format("truetype"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Playfair Display"; src: url("/design-fonts/playfairdisplay-Italic.ttf") format("truetype"); font-weight: 400 900; font-style: italic; font-display: swap; }
+@font-face { font-family: "Cormorant Garamond"; src: url("/design-fonts/cormorantgaramond.ttf") format("truetype"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Cormorant Garamond"; src: url("/design-fonts/cormorantgaramond-Italic.ttf") format("truetype"); font-weight: 300 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Pacifico"; src: url("/design-fonts/pacifico.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Dancing Script"; src: url("/design-fonts/dancingscript.ttf") format("truetype"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Great Vibes"; src: url("/design-fonts/greatvibes.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Lobster"; src: url("/design-fonts/lobster.ttf") format("truetype"); font-weight: 400; font-display: swap; }
 
 @font-face { font-family: "Roboto"; src: url("/design-fonts/Roboto.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "Roboto"; src: url("/design-fonts/Roboto-Italic.ttf") format("truetype"); font-weight: 100 900; font-style: italic; font-display: swap; }

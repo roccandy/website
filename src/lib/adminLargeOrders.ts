@@ -22,11 +22,13 @@ export type AdminLargeOrderPricingInput = {
   discountType?: AdminDiscountType | string | null;
   discountValue?: number | null;
   priceOverride?: number | null;
+  complexityCharge?: number | null;
   allowBatchWeightMismatch?: boolean | null;
   urgencyReferenceDate?: string | Date | null;
 };
 
 export type AdminLargeOrderPricingBreakdown = PricingBreakdown & {
+  complexityCharge: number;
   batchWeightsKg: number[];
   batchBasePrices: Array<{ weightKg: number; amount: number }>;
   discountType: AdminDiscountType;
@@ -94,6 +96,17 @@ function formatKg(value: number) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+export function normalizeComplexityCharge(value: unknown) {
+  const number = value == null || value === "" ? 0 : Number(value);
+  if (!Number.isFinite(number) || number < 0 || number > 1_000_000) throw new Error("Design complexity charge must be between $0 and $1,000,000.");
+  return roundMoney(number);
+}
+/** A manual fee change must not reprice a historical quote at today's batch rates. */
+export function adjustQuotedComplexity(total: number, previous: unknown, next: unknown, override: unknown) {
+  const before = normalizeComplexityCharge(previous), after = normalizeComplexityCharge(next);
+  const explicit = override == null || override === "" ? NaN : Number(override);
+  return Number.isFinite(explicit) && explicit >= 0 ? roundMoney(explicit) : roundMoney(Math.max(0, total + after - before));
 }
 
 function roundKg(value: number) {
@@ -244,7 +257,8 @@ export function calculateAdminLargeOrderPricingWithContext(
     if (diffDays > Number(context.settings.lead_time_days)) return 0;
     return subtotalBeforeUrgency * (Number(context.settings.urgency_fee) / 100);
   })();
-  const subtotalBeforeDiscount = subtotalBeforeUrgency + urgencyFee;
+  const complexityCharge = normalizeComplexityCharge(input.complexityCharge);
+  const subtotalBeforeDiscount = subtotalBeforeUrgency + urgencyFee + complexityCharge;
 
   const discountType = normalizeDiscountType(input.discountType);
   const rawDiscountValue = Number(input.discountValue ?? 0);
@@ -261,6 +275,7 @@ export function calculateAdminLargeOrderPricingWithContext(
   const total = priceOverride ?? Math.max(0, subtotalBeforeDiscount - discountAmount);
 
   return {
+    complexityCharge,
     basePrice: roundMoney(basePrice),
     packagingPrice: roundMoney(packagingPrice),
     labelsPrice: roundMoney(labelsPrice),
@@ -276,6 +291,7 @@ export function calculateAdminLargeOrderPricingWithContext(
       { label: "Ingredient labels", amount: roundMoney(ingredientLabelsPrice) },
       { label: "Extras", amount: roundMoney(extrasPrice) },
       { label: "Urgency", amount: roundMoney(urgencyFee) },
+      { label: "Design complexity", amount: complexityCharge },
       { label: "Admin discount", amount: -roundMoney(discountAmount) },
     ].filter((item) => item.amount !== 0),
     batchWeightsKg,

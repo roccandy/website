@@ -4,6 +4,7 @@ import {
   MAX_ADMIN_CUSTOM_LABEL_COUNT,
   MAX_ADMIN_INGREDIENT_LABEL_COUNT,
   calculateAdminLargeOrderPricingWithContext,
+  adjustQuotedComplexity,
   suggestedAdminBatchWeights,
   validateAdminBatchWeights,
 } from "./adminLargeOrders";
@@ -39,6 +40,19 @@ const pricingContext = {
 } as unknown as PricingContext;
 
 describe("admin large order batching", () => {
+  it("adjusts only the manual charge on historical quotes without repricing their batch rates",()=>{
+    expect(adjustQuotedComplexity(4636.77,80,100,"")).toBe(4656.77);
+    expect(adjustQuotedComplexity(4636.77,80,0,"")).toBe(4556.77);
+    expect(adjustQuotedComplexity(4636.77,80,100,4636.77)).toBe(4636.77);
+  });
+  it("adds a per-order complexity charge once, including across batches, while the total override remains final", () => {
+    const input={categoryId:"custom-1-6",packagingOptionId:"bulk-bag",quantity:12,batchWeightsKg:[6,6]};
+    const base=calculateAdminLargeOrderPricingWithContext(input,pricingContext);
+    const extra=calculateAdminLargeOrderPricingWithContext({...input,complexityCharge:75.5},pricingContext);
+    expect(extra.total).toBe(base.total+75.5);expect(extra.items).toContainEqual({label:"Design complexity",amount:75.5});
+    expect(calculateAdminLargeOrderPricingWithContext({...input,complexityCharge:75.5,priceOverride:123},pricingContext).total).toBe(123);
+    expect(()=>calculateAdminLargeOrderPricingWithContext({...input,complexityCharge:-1},pricingContext)).toThrow("complexity charge");
+  });
   it("suggests enough batches without exceeding the configured max batch weight", () => {
     const weights = suggestedAdminBatchWeights(20, 8.2);
 

@@ -7,6 +7,11 @@ import {
 } from "@/lib/candyDesign";
 import type { ReactNode } from "react";
 import { CandyJacketSvg } from "@/components/CandyJacketSvg";
+import {
+  textGeometrySignature,
+  renderTextGeometry,
+} from "@/lib/candyTextGeometry";
+import { designImageBounds } from "@/lib/designImageBounds";
 
 const outerSegments = [
   {
@@ -302,6 +307,8 @@ export function CandyDesignSvg({
   view = "three-dimensional",
   showBackground = false,
   handles = false,
+  cropImages = false,
+  annotate = false,
 }: {
   design: CandyDesign;
   prefix?: string;
@@ -310,6 +317,8 @@ export function CandyDesignSvg({
   view?: "three-dimensional" | "face";
   showBackground?: boolean;
   handles?: boolean;
+  cropImages?: boolean;
+  annotate?: boolean;
 }) {
   const gradientPrefix = prefix.replace(/[^a-zA-Z0-9_-]/g, "");
   const gradStops = gradients(design.jacket.mode, design.jacket.colours);
@@ -318,6 +327,38 @@ export function CandyDesignSvg({
   const pinFill = design.jacket.pinstripe;
   const advanced = design.schemaVersion === 2 && design.jacket.advanced;
   const radius = designFaceRadius(design);
+  const outlines =
+    textOutlines ??
+    (design.textGeometry?.signature === textGeometrySignature(design)
+      ? renderTextGeometry(design.textGeometry)
+      : undefined);
+  if (cropImages) {
+    const box = designImageBounds(design);
+    return (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`}
+        role="img"
+        aria-label={`${design.name} artwork`}
+        style={{ width: "100%", height: "100%" }}
+      >
+        {showBackground && !design.presentation?.transparent && (
+          <rect {...box} fill={design.presentation?.background ?? "#ffffff"} />
+        )}
+        {design.layers
+          .filter((l) => l.visible && l.type === "image")
+          .map((l) => (
+            <DesignLayerSvg
+              key={l.id}
+              layer={l}
+              prefix={gradientPrefix}
+              selected={false}
+              radius={radius}
+            />
+          ))}
+      </svg>
+    );
+  }
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -463,7 +504,7 @@ export function CandyDesignSvg({
               layer={layer}
               prefix={gradientPrefix}
               selected={selectedId === layer.id}
-              outline={textOutlines?.[layer.id]}
+              outline={outlines?.[layer.id]}
               radius={radius}
             />
           ))}
@@ -477,11 +518,36 @@ export function CandyDesignSvg({
               layer={layer}
               prefix={gradientPrefix}
               selected={selectedId === layer.id}
-              outline={textOutlines?.[layer.id]}
+              outline={outlines?.[layer.id]}
               radius={radius}
             />
           ))}
       </g>
+      {annotate &&
+        design.jacket.advanced &&
+        Array.from({ length: design.jacket.advanced.segments }, (_, i) => {
+          const a =
+              -Math.PI / 2 +
+              ((i + 0.5) * Math.PI * 2) / design.jacket.advanced!.segments,
+            r = (radius + 532) / 2;
+          return (
+            <g
+              key={i}
+              transform={`translate(${545 + r * Math.cos(a)} ${660 + r * Math.sin(a)})`}
+            >
+              <circle r="18" fill="white" stroke="#333333" strokeWidth="2" />
+              <text
+                fontFamily="Arial, sans-serif"
+                fontSize="24"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="#111111"
+              >
+                {i + 1}
+              </text>
+            </g>
+          );
+        })}
       {handles &&
         selectedId &&
         (() => {
@@ -570,6 +636,7 @@ function DesignLayerSvg({
       data-design-layer={l.id}
       transform={`translate(${x} ${y}) rotate(${l.rotation}) scale(${(l.scaleX ?? 1) * (l.flipX ? -1 : 1)} ${(l.scaleY ?? 1) * (l.flipY ? -1 : 1)})`}
       opacity={l.opacity ?? 1}
+      color={l.colour}
       style={{ cursor: selected ? "move" : undefined }}
     >
       {l.type === "text" ? (

@@ -2,7 +2,7 @@
 
 import { useId, useMemo } from "react";
 import { shortCandyTextScale } from "@/lib/candyTextSizing";
-import { CandyDesignSvg } from "@/components/CandyDesignSvg";
+import { StudioCandyPreview as CandyDesignSvg } from "@/components/StudioCandyPreview";
 import type { CandyDesign } from "@/lib/candyDesign";
 import { SITE_DESIGNER_DEFAULTS, getCustomTextLayout, getCustomArcTextStyle, CUSTOM_ARC_LETTER_SPACING_EM, CUSTOM_SINGLE_ARC_MAX_WIDTH_RATIO } from "@/lib/siteDesignerDefaults";
 

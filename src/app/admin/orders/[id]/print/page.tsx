@@ -467,8 +467,8 @@ export default async function PrintOrderPage({ params, searchParams }: Params) {
             </div>
             {studioDesign?.schemaVersion === 2 && (
               <div className="mx-auto mt-2 w-48 print:w-32">
-                <CandyDesignSvg design={studioDesign} view="face" prefix="print-flat-face" />
-                <p className="text-center text-xs text-zinc-500">Flat candy face</p>
+                <CandyDesignSvg design={studioDesign} view="face" prefix="print-flat-face" annotate={studioDesign.jacket.mode !== "rainbow"} />
+                <p className="text-center text-xs text-zinc-500">Flat candy face · numbered jacket segments</p>
               </div>
             )}
           </div>

@@ -44,6 +44,8 @@ import {
   MAX_ADMIN_CUSTOM_LABEL_COUNT,
   MAX_ADMIN_INGREDIENT_LABEL_COUNT,
   suggestedAdminBatchWeights,
+  adjustQuotedComplexity,
+  normalizeComplexityCharge,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
 import { upsertOrder, upsertOrderInline } from "../actions";
@@ -496,6 +498,7 @@ type PricingFingerprintInput = {
   discountType: string;
   discountValue: string;
   priceOverride: string;
+  complexityCharge: string;
 };
 
 const pricingFingerprint = (input: PricingFingerprintInput) =>
@@ -523,6 +526,7 @@ const pricingFingerprintForDraft = (draft: InvoiceOrderDraft): string => {
     discountType: fields.admin_discount_type ?? "none",
     discountValue: fields.admin_discount_value ?? "",
     priceOverride: fields.admin_price_override ?? "",
+    complexityCharge: fields.admin_complexity_charge ?? "0",
   });
 };
 
@@ -661,6 +665,7 @@ export function NewOrderForm({
   const [discountType, setDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialOrder?.admin_discount_type));
   const [discountValue, setDiscountValue] = useState(initialOrder?.admin_discount_value ? formatInputNumber(initialOrder.admin_discount_value) : "");
   const [priceOverride, setPriceOverride] = useState(initialOrder?.admin_price_override ? formatInputNumber(initialOrder.admin_price_override) : "");
+  const [complexityCharge, setComplexityCharge] = useState(formatInputNumber(initialOrder?.admin_complexity_charge ?? 0));
   const [invoiceDiscountType, setInvoiceDiscountType] = useState<AdminDiscountType>(normalizeDiscountType(initialDraft?.payload.invoiceDiscountType));
   const [invoiceDiscountValue, setInvoiceDiscountValue] = useState(initialDraft?.payload.invoiceDiscountValue ?? "");
   const [invoicePriceOverride, setInvoicePriceOverride] = useState(initialDraft?.payload.invoicePriceOverride ?? "");
@@ -723,6 +728,7 @@ export function NewOrderForm({
     discountType,
     discountValue,
     priceOverride,
+    complexityCharge,
   });
   // A remake begins from historical quoted prices. Keep a baseline for each
   // tab, so React effect replays cannot reprice it; a real pricing-input
@@ -734,6 +740,7 @@ export function NewOrderForm({
         : [],
     ),
   );
+  const preservedRemakeTotalsRef = useRef(new Map<string,number>(initialPricingDraft ? [[initialPricingDraft.id,Number(initialPricingDraft.fields.total_price)||0]] : []));
   const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [customTarget, setCustomTarget] = useState<"heart" | "text" | "jacket1" | "jacket2" | "fill" | "pinstripe" | null>(null);
   const [customHex, setCustomHex] = useState(defaultJacketColor);
@@ -1076,6 +1083,7 @@ export function NewOrderForm({
     addChange("Discount", normalizeDiscountType(initialOrder.admin_discount_type), discountType);
     addChange("Discount value", formatInputNumber(initialOrder.admin_discount_value), discountValue);
     addChange("Price override", formatInputNumber(initialOrder.admin_price_override), priceOverride);
+    addChange("Design complexity charge", formatInputNumber(initialOrder.admin_complexity_charge ?? 0), complexityCharge);
 
     return lines;
   };
@@ -1294,6 +1302,7 @@ export function NewOrderForm({
         admin_discount_type: isAdminPremadeOrder ? "none" : discountType,
         admin_discount_value: isAdminPremadeOrder ? "" : discountValue,
         admin_price_override: isAdminPremadeOrder ? "" : priceOverride,
+        admin_complexity_charge: isAdminPremadeOrder ? "0" : complexityCharge,
         ingredient_labels_opt_in: isAdminPremadeOrder ? "off" : ingredientLabelsOptIn ? "on" : "off",
         ingredient_labels_count: isAdminPremadeOrder ? "" : ingredientLabelsCount,
         design_type: isAdminPremadeOrder ? "premade" : categoryId,
@@ -1356,6 +1365,7 @@ export function NewOrderForm({
     setDiscountType(normalizeDiscountType(fields.admin_discount_type));
     setDiscountValue(fields.admin_discount_value ?? "");
     setPriceOverride(fields.admin_price_override ?? "");
+    setComplexityCharge(fields.admin_complexity_charge ?? "0");
     setWeddingLineOne(nextWeddingDesign.left);
     setWeddingLineTwo(nextWeddingDesign.right);
     setCustomText(nextCategoryId.startsWith("custom-") ? fields.design_text ?? "" : "");
@@ -1389,6 +1399,7 @@ export function NewOrderForm({
     preserveInitialBatchWeightsRef.current = draft.batchWeights.length > 0;
     if (preserveQuotedRemakePrices) {
       preservedRemakePricingRef.current.set(draft.id, pricingFingerprintForDraft(draft));
+      preservedRemakeTotalsRef.current.set(draft.id,Number(draft.fields.total_price)||0);
     }
     setOrderFieldsKey((value) => value + 1);
   };
@@ -1666,6 +1677,19 @@ export function NewOrderForm({
       setQuoteItems([]);
       return;
     }
+    if (preservedFingerprint) {
+      const original=JSON.parse(preservedFingerprint),current=JSON.parse(currentPricingFingerprint);
+      const previousCharge=original.complexityCharge;
+      delete original.complexityCharge;delete current.complexityCharge;
+      if(JSON.stringify(original)===JSON.stringify(current)){
+        try{
+          const charge=normalizeComplexityCharge(complexityCharge),quoted=preservedRemakeTotalsRef.current.get(activeInvoiceDraftId)||0;
+          setPriceValue(adjustQuotedComplexity(quoted,previousCharge,charge,priceOverride).toFixed(2));
+          setQuoteItems([{label:"Quoted amount excluding complexity",amount:quoted-normalizeComplexityCharge(previousCharge)},{label:"Design complexity",amount:charge}]);setPricingError(null);setIsPricing(false);
+        }catch(error){setPricingError(error instanceof Error?error.message:"Invalid complexity charge.");setPriceValue("");}
+        return;
+      }
+    }
     preservedRemakePricingRef.current.delete(activeInvoiceDraftId);
     const qtyNumber = Number(quantity);
     if (!categoryId || !packagingOptionId || !Number.isFinite(qtyNumber) || qtyNumber <= 0) {
@@ -1714,6 +1738,7 @@ export function NewOrderForm({
         discountType,
         discountValue: discountValue ? Number(discountValue) : null,
         priceOverride: priceOverride ? Number(priceOverride) : null,
+        complexityCharge: Number(complexityCharge || 0),
         allowBatchWeightMismatch: batchWeightMismatch,
         urgencyReferenceDate: editUrgencyReferenceDate,
       }),
@@ -1748,7 +1773,7 @@ export function NewOrderForm({
     return () => {
       active = false;
     };
-  }, [activeInvoiceDraftId, batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, currentPricingFingerprint, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, quantity, settings.labels_max_bulk]);
+  }, [activeInvoiceDraftId, batchWeightMismatch, batchWeights, batchWeightsValid, categoryId, currentPricingFingerprint, customLabelsOptIn, customOrderTotalWeightKg, discountType, discountValue, dueDate, editUrgencyReferenceDate, ingredientLabelsCount, ingredientLabelsOptIn, isAdminPremadeOrder, jacket, labelsCount, packagingOptionId, priceOverride, complexityCharge, quantity, settings.labels_max_bulk]);
 
   const sharedDraftFields = {
     first_name: sharedFirstName, last_name: sharedLastName, customer_email: sharedEmail,
@@ -3112,10 +3137,14 @@ export function NewOrderForm({
           >
             <h3 className="admin-card-title text-zinc-900">Candy design & flavor</h3>
             <div className="mt-3 space-y-3">
-              <OrderDesignStudio siteDefaults={{ jacketColour: defaultJacketColor, textColour: defaultTextColor }} order={{ category_id: categoryId, title: derivedOrderTitle, design_text: designTextValue, jacket, jacket_color_one: jacketColorOne, jacket_color_two: jacketColorTwo, candy_fill_color: fillColor, pinstripe_color: pinstripeColor, text_color: textColor, heart_color: heartColor, logo_url: logoUrl, candy_design: candyDesign }} onApply={design => {
+              <OrderDesignStudio recoveryScope={isEditMode ? `order:${initialOrder!.id}` : `new-order:${initialDraft?.id || initialInvoiceOrders[0]?.id || "new"}:tab:${invoiceOrderDrafts.findIndex(tab => tab.id === activeInvoiceDraftId)}`} siteDefaults={{ jacketColour: defaultJacketColor, textColour: defaultTextColor }} order={{ category_id: categoryId, title: derivedOrderTitle, design_text: designTextValue, jacket, jacket_color_one: jacketColorOne, jacket_color_two: jacketColorTwo, candy_fill_color: fillColor, pinstripe_color: pinstripeColor, text_color: textColor, heart_color: heartColor, logo_url: logoUrl, candy_design: candyDesign }} onApply={design => {
                 const fields = designLegacyFields(design);
                 setCandyDesign(design); setJacket(fields.jacket); setJacketColorOne(fields.jacket_color_one); setJacketColorTwo(fields.jacket_color_two); setFillColor(fields.candy_fill_color); setPinstripeColor(fields.pinstripe_color); setTextColor(fields.text_color); setHeartColor(fields.heart_color);
               }}/>
+              <label className="block text-sm font-medium text-zinc-700">Design complexity charge ($)
+                <input name="admin_complexity_charge" type="number" min="0" max="1000000" step="0.01" value={complexityCharge} onChange={event => setComplexityCharge(event.target.value)} className="mt-1 block w-44 rounded-lg border border-zinc-200 px-3 py-2 text-sm" />
+                <span className="mt-1 block text-xs font-normal text-zinc-500">Optional extra for this design, added once per order. Defaults to $0; the total override includes this charge.</span>
+              </label>
               {candyDesign && <div className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-950"><p className="font-semibold">{candyDesign.name} · revision {candyDesign.source?.revision || "draft"}</p><p className="mt-1">This saved artwork will appear on the order, production printout and confirmation. Custom segment jackets use two-colour jacket pricing; review the total for advanced designs.</p><details className="mt-2"><summary className="cursor-pointer">Design specification</summary><ul className="mt-2 space-y-1">{designSummary(candyDesign, true).map((line, i) => <li key={i}>{line}</li>)}</ul></details><button type="button" className="mt-2 underline" onClick={() => { if (window.confirm("Remove the studio artwork from this order and return to the basic design controls?")) setCandyDesign(null); }}>Use basic design controls</button></div>}
             </div>
             <div className={isEditMode ? "admin-edit-design-grid mt-4 grid min-w-0 gap-4" : "mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]"}>

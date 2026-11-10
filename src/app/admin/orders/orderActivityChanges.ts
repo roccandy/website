@@ -63,6 +63,7 @@ const CHANGE_FIELDS: ChangeField[] = [
   { key: "admin_discount_type", label: "Discount type" },
   { key: "admin_discount_value", label: "Discount value" },
   { key: "admin_price_override", label: "Price override", kind: "money" },
+  { key: "admin_complexity_charge", label: "Design complexity charge", kind: "money" },
   { key: "square_invoice_title", label: "Invoice title" },
 ];
 

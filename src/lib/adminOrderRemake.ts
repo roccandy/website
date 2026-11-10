@@ -55,6 +55,7 @@ export function adminOrderRemakeInvoiceTabs(orders: OrderRow[]): DraftOrderTab[]
         admin_discount_type: combinedInvoice ? "none" : fieldValue(order.admin_discount_type || "none"),
         admin_discount_value: combinedInvoice ? "" : fieldValue(order.admin_discount_value),
         admin_price_override: combinedInvoice ? "" : fieldValue(order.admin_price_override),
+        admin_complexity_charge: fieldValue(order.admin_complexity_charge ?? 0),
         ingredient_labels_opt_in: Number(order.ingredient_labels_count) > 0 ? "on" : "off",
         ingredient_labels_count: fieldValue(order.ingredient_labels_count),
         design_type: fieldValue(order.design_type || order.category_id),

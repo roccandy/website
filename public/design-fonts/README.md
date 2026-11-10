@@ -11,3 +11,9 @@ PNG, PDF and email output; the saved design retains editable text.
 - Arimo (Arial-compatible glyphs for the site's generic font stack in exports): https://github.com/google/fonts/tree/main/ofl/arimo
 
 Original licence notices are included alongside the font files.
+
+Studio prototype-compatible families are bundled from the corresponding
+`ofl/<family>` directories in https://github.com/google/fonts: Montserrat,
+Poppins, Oswald, Bebas Neue, Playfair Display, Cormorant Garamond, Pacifico,
+Dancing Script, Great Vibes and Lobster. Their `<family>-OFL.txt` files travel
+with the fonts. They are served locally, without Google Fonts requests at runtime.

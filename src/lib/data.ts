@@ -191,6 +191,7 @@ export type OrderRow = {
   admin_discount_type: string | null;
   admin_discount_value: number | null;
   admin_price_override: number | null;
+  admin_complexity_charge?: number;
   admin_price_locked_at: string | null;
   square_customer_id: string | null;
   square_order_id: string | null;

@@ -40,7 +40,7 @@ describe("public designer defaults in Design Studio", () => {
       x: 50,
       y: 50,
     });
-    expect(DESIGN_FONTS.site.family).toBe("Helvetica, Arial, sans-serif");
+    expect(DESIGN_FONTS.site.family).toBe("Arimo, Arial, sans-serif");
     expect(resolveSiteDesignerDefaults()).toEqual({
       jacketColour: "#d1d5db",
       textColour: "#b7b7b7",

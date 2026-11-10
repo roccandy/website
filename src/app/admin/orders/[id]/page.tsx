@@ -229,6 +229,7 @@ export default async function AdminOrderDetailPage({
               <p className="mt-1 text-sm font-semibold text-zinc-900">
                 {formatMoney(order.total_price)}
               </p>
+              {Number(order.admin_complexity_charge)>0 && <p className="mt-1 text-xs text-zinc-500">Design complexity: {formatMoney(order.admin_complexity_charge)} included before discounts/overrides</p>}
             </div>
             <div className="rounded-xl border border-zinc-200 bg-white p-3">
               <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-400">

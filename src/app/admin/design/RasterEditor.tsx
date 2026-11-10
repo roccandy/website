@@ -42,7 +42,11 @@ export function RasterEditor({
 }: {
   image?: string;
   jacketDesign?: CandyDesign;
-  onApply: (image: string, ratio: number, copy?: string) => void;
+  onApply: (
+    image: string,
+    ratio: number,
+    copy?: string,
+  ) => void | Promise<void>;
   onClose: () => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null),
@@ -68,6 +72,14 @@ export function RasterEditor({
   const splitImage = useRef<string | undefined>(undefined);
   const [hasCopy, setHasCopy] = useState(false);
   const [changed, setChanged] = useState(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    const leave = (event: BeforeUnloadEvent) => {
+      if (changed) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", leave);
+    return () => window.removeEventListener("beforeunload", leave);
+  }, [changed]);
   const originalFocus = useRef<Element | null>(null);
   useEffect(() => {
     originalFocus.current = document.activeElement;
@@ -109,7 +121,7 @@ export function RasterEditor({
       const c = canvas.current,
         o = overlay.current;
       const scale = source
-        ? Math.min(1200 / source.naturalWidth, 1200 / source.naturalHeight, 1)
+        ? Math.min(6000 / source.naturalWidth, 6000 / source.naturalHeight, 1)
         : 1;
       c.width = source
         ? Math.max(1, Math.round(source.naturalWidth * scale))
@@ -145,8 +157,12 @@ export function RasterEditor({
     return c.getContext("2d")!.getImageData(0, 0, c.width, c.height);
   };
   const commit = (before: ImageData, previousCopy?: string) => {
+    const limit = Math.max(
+      1,
+      Math.min(12, Math.floor(96_000_000 / before.data.byteLength)),
+    );
     past.current = [
-      ...past.current.slice(-11),
+      ...past.current.slice(-(limit - 1) || past.current.length),
       { pixels: before, copy: previousCopy },
     ];
     future.current = [];
@@ -264,17 +280,20 @@ export function RasterEditor({
     }
     gesture.current = null;
   };
-  const apply = () => {
+  const apply = async () => {
+    setSaving(true);
     try {
       const c = canvas.current!,
         result = c.toDataURL("image/png");
-      if (result.length > 2_000_000)
+      if (result.length > 27_000_000)
         throw new Error(
           "This artwork is too detailed to save. Use a smaller image or fewer painted details.",
         );
-      onApply(result, c.width / c.height, splitImage.current);
+      await onApply(result, c.width / c.height, splitImage.current);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to apply artwork.");
+    } finally {
+      setSaving(false);
     }
   };
   return createPortal(
@@ -287,6 +306,7 @@ export function RasterEditor({
       className="fixed inset-0 z-[150] overflow-y-auto bg-zinc-100 p-4 text-zinc-900 outline-none"
       onKeyDown={(e) => {
         e.stopPropagation();
+        if (saving) return;
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
           e.preventDefault();
           undo(e.shiftKey);
@@ -308,6 +328,7 @@ export function RasterEditor({
             <button
               type="button"
               className={button}
+              disabled={saving}
               onClick={() => {
                 if (!changed || window.confirm("Discard these artwork edits?"))
                   onClose();
@@ -318,10 +339,10 @@ export function RasterEditor({
             <button
               type="button"
               className={button}
-              disabled={!ready}
+              disabled={!ready || saving}
               onClick={apply}
             >
-              Apply artwork
+              {saving ? "Saving artwork…" : "Apply artwork"}
             </button>
           </div>
         </div>
@@ -552,7 +573,7 @@ export function RasterEditor({
               aria-label="Artwork editing canvas"
               data-revision={revision}
               onPointerDown={(e) => {
-                if (!ready) return;
+                if (!ready || saving) return;
                 const p = point(e);
                 e.currentTarget.setPointerCapture(e.pointerId);
                 if (tool === "brush" || tool === "erase") {

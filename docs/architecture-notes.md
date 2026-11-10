@@ -167,6 +167,33 @@ uploads. No browser canvas state is required to reproduce a saved design.
 Portable JSON project downloads embed private images after authenticated fetch;
 opening a project validates it and creates a separate library identity on save.
 
+Library-save state is tracked separately from artwork applied to an order.
+Closing embedded Studio offers apply, keep a recovery draft, discard editor
+changes, or continue; a library save alone cannot bypass that choice. Recovery
+uses session storage scoped by project/order tab, isolating different browser
+tabs. Changed source baselines restore as copies. Existing global v1 browser
+recovery remains available for explicit migration. These browser drafts never
+create an order, invoice or email.
+
+Studio uploads use short-lived signed uploads into private staging paths, then
+server validation and immutable content hashes. PNG/JPEG/WebP originals retain
+their native bytes/resolution up to 6000px and 20MB (36 megapixels); orientation
+or oversize images are normalised. References support `.png`, `.jpg` and `.webp`.
+The portable project envelope stores the small design plus embedded assets
+separately, up to 64MB, avoiding inline design-size limits. Original prototype
+`.rcmock.json` imports convert editable layers/jackets and embed imported images;
+font substitutions and paint-layout adaptations are explicitly reported.
+
+Browser lettering and server exports share Fontkit glyph geometry. Valid saved
+snapshots cache that geometry; editing requests fresh outlines from an
+authenticated endpoint when typography changes. The default Studio face uses
+bundled Arimo consistently, while the public basic designer retains its original
+font stack. Additional prototype fonts are bundled locally with licences.
+Geometry-based clipping warnings are advisory. Studio also provides saved colour
+swatches, numbered jacket-band previews/specifications, JPEG export, 2×/4×/6× or
+source-resolution exports and image-only cropping. Output is capped at 16000px
+per side and 36 megapixels; the export controls show the actual dimensions.
+
 `candy_designs` holds each library project's latest document;
 `candy_design_revisions` holds immutable revisions. `save_candy_design` performs
 an atomic revision check and history insert, preventing lost updates between
@@ -195,14 +222,22 @@ generated from the snapshot plus a readable design summary, excluding internal
 notes and layout measurements. Existing orders without snapshots keep their
 legacy rendering and summaries.
 
+Admin custom orders have an optional `admin_complexity_charge`, default $0,
+charged once per order rather than per batch. It is a separate pricing line,
+added after urgency and before discounts; a total override remains final.
+Drafts, combined invoices and remakes retain each line's charge. Changing only
+that charge on a preserved remake adjusts its quoted total by the charge delta
+without recalculating historical batch rates. Default-zero migration values are
+ignored in source fingerprints so existing server drafts remain compatible.
+
 Uploaded artwork is validated/optimised and stored once under a content hash in
 the private `candy-design-assets` storage bucket; ordinary order documents contain
-`candy-asset:<sha256>.png` references rather than large base64 files. The admin
+`candy-asset:<sha256>.<png|jpg|webp>` references rather than large base64 files. The admin
 image route requires a session and serves private, uncached responses. Legacy
 references to this bucket's former public URLs are mapped to that route. Saved
 artwork is immutable. The
-server exporter embeds these assets and uses the same bundled Roboto, Roboto
-Slab and Roboto Mono fonts as the browser. The server uses Fontkit to convert
+server exporter embeds these assets and uses the same bundled Studio fonts as
+the browser. The server uses Fontkit to convert
 text and arcs into glyph outlines before SVG/PNG/PDF/email rendering, preventing
 system-font substitution. The editable document retains the original text and
 typography controls. Unsupported characters produce a clear validation error.

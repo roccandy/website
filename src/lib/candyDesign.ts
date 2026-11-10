@@ -8,11 +8,62 @@ import {
   type SiteDesignerDefaults,
 } from "@/lib/siteDesignerDefaults";
 import { shortCandyTextScale } from "@/lib/candyTextSizing";
+import { parseTextGeometry, type TextGeometry } from "@/lib/candyTextGeometry";
 export const DESIGN_FONTS = {
-  site: { label: "Site default (Helvetica / Arial)", family: SITE.fontFamily },
-  sans: { label: "Roboto (sans serif)", family: "Roboto, sans-serif" },
-  serif: { label: "Roboto Slab (serif)", family: "Roboto Slab, serif" },
-  mono: { label: "Roboto Mono (monospace)", family: "Roboto Mono, monospace" },
+  site: {
+    label: "Site default (Helvetica / Arial)",
+    family: "Arimo, Arial, sans-serif",
+    italic: true,
+  },
+  sans: {
+    label: "Roboto (sans serif)",
+    family: "Roboto, sans-serif",
+    italic: true,
+  },
+  serif: {
+    label: "Roboto Slab (serif)",
+    family: "Roboto Slab, serif",
+    italic: false,
+  },
+  mono: {
+    label: "Roboto Mono (monospace)",
+    family: "Roboto Mono, monospace",
+    italic: true,
+  },
+  montserrat: {
+    label: "Montserrat",
+    family: "Montserrat, sans-serif",
+    italic: true,
+  },
+  poppins: { label: "Poppins", family: "Poppins, sans-serif", italic: true },
+  oswald: { label: "Oswald", family: "Oswald, sans-serif", italic: false },
+  bebasneue: {
+    label: "Bebas Neue",
+    family: "Bebas Neue, sans-serif",
+    italic: false,
+  },
+  playfairdisplay: {
+    label: "Playfair Display",
+    family: "Playfair Display, serif",
+    italic: true,
+  },
+  cormorantgaramond: {
+    label: "Cormorant Garamond",
+    family: "Cormorant Garamond, serif",
+    italic: true,
+  },
+  pacifico: { label: "Pacifico", family: "Pacifico, cursive", italic: false },
+  dancingscript: {
+    label: "Dancing Script",
+    family: "Dancing Script, cursive",
+    italic: false,
+  },
+  greatvibes: {
+    label: "Great Vibes",
+    family: "Great Vibes, cursive",
+    italic: false,
+  },
+  lobster: { label: "Lobster", family: "Lobster, cursive", italic: false },
 } as const;
 export const DESIGN_JACKETS = {
   solid: "Single colour",
@@ -64,6 +115,8 @@ export type DesignLayer = {
   frame?: "face" | "scene";
   uppercase?: boolean;
   fullArc?: boolean;
+  imageWidth?: number;
+  imageHeight?: number;
 };
 export type CandyDesign = {
   schemaVersion: 1 | 2;
@@ -80,6 +133,7 @@ export type CandyDesign = {
   productionNotes: string;
   source?: { id: string; revision: number };
   presentation?: { background: string; transparent: boolean };
+  textGeometry?: TextGeometry;
 };
 export const MAX_DESIGN_LAYERS = 20;
 export const MAX_JACKET_COLOURS = 8;
@@ -142,12 +196,13 @@ export function isDesignAssetUrl(value: string) {
   return designAssetKey(value) !== null;
 }
 export function designAssetKey(value: string): string | null {
-  if (/^candy-asset:[a-f0-9]{64}\.png$/.test(value)) return value.slice(12);
+  if (/^candy-asset:[a-f0-9]{64}\.(png|jpg|webp)$/.test(value))
+    return value.slice(12);
   const origin = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const prefix = `${origin}/storage/v1/object/public/candy-design-assets/`;
   return origin &&
     value.startsWith(prefix) &&
-    /^[a-f0-9]{64}\.png$/.test(value.slice(prefix.length))
+    /^[a-f0-9]{64}\.(png|jpg|webp)$/.test(value.slice(prefix.length))
     ? value.slice(prefix.length)
     : null;
 }
@@ -248,8 +303,18 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
     return {
       ...newDesignLayer(type, id),
       name: str(l.name, 80, type),
-      x: num(l.x, 0, 100, 50),
-      y: num(l.y, 0, 100, 50),
+      x: num(
+        l.x,
+        v.schemaVersion === 2 ? -200 : 0,
+        v.schemaVersion === 2 ? 300 : 100,
+        50,
+      ),
+      y: num(
+        l.y,
+        v.schemaVersion === 2 ? -200 : 0,
+        v.schemaVersion === 2 ? 300 : 100,
+        50,
+      ),
       size: num(l.size, 2, v.schemaVersion === 2 ? 250 : 110, 16),
       rotation: num(l.rotation, -180, 180, 0),
       colour: hex(l.colour, "#333333"),
@@ -282,6 +347,12 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
             frame: l.frame === "scene" ? ("scene" as const) : ("face" as const),
             uppercase: l.uppercase === true,
             fullArc: l.fullArc === true,
+            ...(type === "image" && l.imageWidth && l.imageHeight
+              ? {
+                  imageWidth: Math.round(num(l.imageWidth, 1, 6000, 1)),
+                  imageHeight: Math.round(num(l.imageHeight, 1, 6000, 1)),
+                }
+              : {}),
           }
         : {}),
     };
@@ -327,6 +398,8 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
       background: hex(obj(v.presentation).background, "#ffffff"),
       transparent: obj(v.presentation).transparent === true,
     };
+  const geometry = parseTextGeometry(v.textGeometry);
+  if (geometry) document.textGeometry = geometry;
   if (!document.jacket.colours.length) document.jacket.colours = ["#d1d5db"];
   if (
     typeof source.id === "string" &&
@@ -372,6 +445,17 @@ export function designSummary(
     lines.push(
       `Jacket construction: ${a.segments} segments${production ? ` · ring ${Math.round(a.ring * 1000) / 10}%${design.jacket.showPinstripe ? ` · stripe width ${Math.round(a.gap * 100)}% of segment` : ""}` : ""}`,
     );
+    if (production && design.jacket.mode !== "rainbow") {
+      const palette =
+        design.jacket.mode === "solid" ? colours.slice(0, 1) : colours;
+      lines.push(
+        `Jacket segments clockwise from 12 o’clock: ${Array.from({ length: a.segments }, (_, i) => `${i + 1}: ${formatColour(palette[i % palette.length])}`).join("; ")}`,
+      );
+      if (design.jacket.showPinstripe)
+        lines.push(
+          `Pinstripes sit at each segment boundary: ${formatColour(design.jacket.pinstripe)}.`,
+        );
+    }
   }
   for (const l of design.layers.filter((l) => l.visible)) {
     const content =

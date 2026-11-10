@@ -8,6 +8,7 @@ export type AdminOrderDraftSummary = Pick<AdminOrderDraft,'id'|'revision'|'sourc
 
 const SHARED_FIELDS=new Set(['first_name','last_name','customer_email','phone','organization_name','pickup','address_line1','address_line2','suburb','postcode','state','customer_note']);
 const ORDER_FIELDS=new Set(['title','title_auto_generated','order_description','category_id','packaging_option_id','quantity','labels_count','labels_opt_in','jar_lid_color','due_date','total_price','order_weight_g','total_weight_kg','admin_discount_type','admin_discount_value','admin_price_override','ingredient_labels_opt_in','ingredient_labels_count','design_type','design_text','jacket','jacket_type','jacket_color_one','jacket_color_two','candy_fill_color','pinstripe_color','text_color','heart_color','flavor','logo_url','label_image_url','label_type_id','notes','candy_design','admin_premade_mode','admin_premade_candy_id','admin_premade_custom_name','production_slot_date']);
+ORDER_FIELDS.add('admin_complexity_charge');
 const record=(v:unknown):Record<string,unknown> => v && typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:{};
 const fields=(v:unknown,allowed:Set<string>) => Object.fromEntries(Object.entries(record(v)).filter(([k,value])=>allowed.has(k)&&typeof value==='string')) as Record<string,string>;
 export const isDraftUuid=(value:unknown):value is string => typeof value==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
@@ -30,7 +31,7 @@ export function parseAdminOrderDraftPayload(value:unknown):AdminOrderDraftPayloa
 export function adminDraftHref(draft:Pick<AdminOrderDraft,'id'|'source_order_id'>) { return draft.source_order_id?`/admin/orders/${draft.source_order_id}?edit=1&draft=${draft.id}`:`/admin/orders/new?draft=${draft.id}`; }
 export function draftOrderFields(draft:AdminOrderDraft) { const p=draft.payload; return {...p.orders.find(o=>o.id===p.activeOrderId)!.fields,...p.shared}; }
 export function orderDraftSourceFingerprint(order:OrderRow) {
-  return JSON.stringify([...ORDER_FIELDS,...SHARED_FIELDS,'admin_batch_weights_kg','admin_price_locked_at','status','paid_at','payment_provider','payment_transaction_id','payment_method','square_invoice_id','square_invoice_status','made','shipped_at','archived_at','refunded_at'].filter(key=>key!=='production_slot_date').map(key=>[key,(order as unknown as Record<string,unknown>)[key]??null]));
+  return JSON.stringify([...ORDER_FIELDS,...SHARED_FIELDS,'admin_batch_weights_kg','admin_price_locked_at','status','paid_at','payment_provider','payment_transaction_id','payment_method','square_invoice_id','square_invoice_status','made','shipped_at','archived_at','refunded_at'].filter(key=>key!=='production_slot_date'&&(key!=='admin_complexity_charge'||Number(order.admin_complexity_charge??0)!==0)).map(key=>[key,(order as unknown as Record<string,unknown>)[key]??null]));
 }
 export function draftFormOrderDefaults(draft:AdminOrderDraft,source:OrderRow|null=null):OrderRow {
   const f=draftOrderFields(draft); const tab=draft.payload.orders.find(o=>o.id===draft.payload.activeOrderId)!;

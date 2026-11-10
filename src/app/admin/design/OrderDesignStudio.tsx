@@ -18,10 +18,12 @@ import {
 export function OrderDesignStudio({
   order,
   onApply,
+  recoveryScope,
   siteDefaults = resolveSiteDesignerDefaults(),
 }: {
   order: Record<string, unknown>;
   onApply: (design: CandyDesign) => void;
+  recoveryScope?: string;
   siteDefaults?: SiteDesignerDefaults;
 }) {
   const [open, setOpen] = useState(false);
@@ -133,6 +135,7 @@ export function OrderDesignStudio({
             <div className="mx-auto max-w-[1700px]">
               <DesignEditor
                 initialDesign={initial}
+                recoveryScope={recoveryScope}
                 siteDefaults={siteDefaults}
                 embedded
                 onClose={() => setOpen(false)}

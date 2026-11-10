@@ -22,6 +22,7 @@ import { buildPricingContext } from "@/lib/pricing";
 import {
   calculateAdminLargeOrderPricingWithContext,
   normalizeAdminBatchWeights,
+  normalizeComplexityCharge,
   suggestedAdminBatchWeights,
   type AdminDiscountType,
 } from "@/lib/adminLargeOrders";
@@ -518,6 +519,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData, claim: DraftPu
     const discountType = normalizeAdminDiscountType(tabbedField(input, "admin_discount_type"));
     const discountValue = tabbedNumberField(input, "admin_discount_value");
     const priceOverride = tabbedNumberField(input, "admin_price_override");
+    const complexityCharge = normalizeComplexityCharge(tabbedField(input, "admin_complexity_charge"));
 
     return {
       order_number: "",
@@ -548,6 +550,7 @@ async function createTabbedAdminInvoiceOrders(formData: FormData, claim: DraftPu
       admin_discount_type: discountType,
       admin_discount_value: discountValue && discountValue > 0 ? discountValue : null,
       admin_price_override: priceOverride && priceOverride >= 0 ? priceOverride : null,
+      admin_complexity_charge: complexityCharge,
       status: "unassigned",
       payment_method: null,
       pickup,
@@ -814,6 +817,8 @@ async function upsertOrderImplementation(formData: FormData, claim: DraftPublica
   const hasDiscountTypeControl = formData.has("admin_discount_type");
   const hasDiscountValueControl = formData.has("admin_discount_value");
   const hasPriceOverrideControl = formData.has("admin_price_override");
+  const hasComplexityChargeControl = formData.has("admin_complexity_charge");
+  const submittedComplexityCharge = normalizeComplexityCharge(formData.get("admin_complexity_charge"));
   const admin_discount_type = (formData.get("admin_discount_type")?.toString() || "none") as AdminDiscountType;
   const admin_discount_value_raw = Number(formData.get("admin_discount_value") || 0);
   const admin_discount_value =
@@ -971,7 +976,8 @@ async function upsertOrderImplementation(formData: FormData, claim: DraftPublica
       (submittedBatchWeights.length > 0 && submittedBatchKey !== existingBatchKey) ||
       normalizeAdminDiscountType(admin_discount_type) !== normalizeAdminDiscountType(existing?.admin_discount_type) ||
       Number(admin_discount_value ?? 0) !== Number(existing?.admin_discount_value ?? 0) ||
-      Number(admin_price_override ?? 0) !== Number(existing?.admin_price_override ?? 0);
+      Number(admin_price_override ?? 0) !== Number(existing?.admin_price_override ?? 0) ||
+      (hasComplexityChargeControl && submittedComplexityCharge !== Number(existing?.admin_complexity_charge ?? 0));
     const shouldPreserveLockedPrice =
       Boolean(existing?.admin_price_locked_at || existing?.square_invoice_id) &&
       !shouldReplaceSquareInvoice &&
@@ -1022,6 +1028,7 @@ async function upsertOrderImplementation(formData: FormData, claim: DraftPublica
               discountType: admin_discount_type,
               discountValue: admin_discount_value,
               priceOverride: admin_price_override,
+              complexityCharge: hasComplexityChargeControl ? submittedComplexityCharge : existing?.admin_complexity_charge ?? 0,
               allowBatchWeightMismatch: submittedBatchWeightsMismatch,
               urgencyReferenceDate: existing?.created_at ?? null,
             },
@@ -1125,6 +1132,7 @@ async function upsertOrderImplementation(formData: FormData, claim: DraftPublica
       admin_price_override: isAdminPremade
         ? null
         : adminPricing?.priceOverride ?? (hasPriceOverrideControl ? admin_price_override : existing?.admin_price_override ?? null),
+      admin_complexity_charge: isAdminPremade ? 0 : hasComplexityChargeControl ? submittedComplexityCharge : existing?.admin_complexity_charge ?? 0,
       status: isAdminPremade ? status ?? existing?.status ?? "unassigned" : status ?? existing?.status ?? "pending",
       payment_method: isAdminPremade ? null : payment_method ?? existing?.payment_method ?? null,
       pickup: isAdminPremade ? false : pickup ?? existing?.pickup ?? false,
