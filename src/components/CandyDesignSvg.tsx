@@ -408,192 +408,213 @@ export function CandyDesignSvg({
           fill={design.presentation?.background ?? "#ffffff"}
         />
       )}
-      {advanced ? (
-        <CandyJacketSvg
-          design={design}
-          prefix={gradientPrefix}
-          flat={view === "face"}
-        />
-      ) : (
-        <g
-          clipPath={
-            view === "face" ? `url(#${gradientPrefix}-front)` : undefined
-          }
-        >
-          {/* Shadow */}
-          {view !== "face" && (
-            <g transform="matrix(0.928286,0,0,0.802066,-543.761,-524.193)">
-              <path
-                d="M845.291,1978.12C649.211,2014.22 690.126,2107.34 832.801,2144.34C949.596,2174.63 1034.55,2179.29 1277.71,2170.85C1520.88,2162.42 1705.59,2058.79 1904.13,2024.69C2102.66,1990.59 2258.17,1833.56 2045.46,1823.02C1832.74,1812.47 1675.93,1821.09 1449.04,1846.75C1222.15,1872.42 1089.26,1933.2 845.291,1978.12Z"
-                style={{ fill: "rgba(180,180,180,0.36)" }}
-              />
-            </g>
-          )}
-          {/* Outer and body segments */}
-          {outerSegments.map((seg, idx) =>
-            view === "face" && idx < 4 ? null : (
-              <g key={idx} transform={seg.transform}>
+      <g
+        data-studio-scene
+        transform={`translate(886 650) scale(${design.presentation?.designScale ?? 1}) translate(-886 -650)`}
+      >
+        {design.presentation?.hideCandy ? null : advanced ? (
+          <CandyJacketSvg
+            design={design}
+            prefix={gradientPrefix}
+            flat={view === "face"}
+          />
+        ) : (
+          <g
+            clipPath={
+              view === "face" ? `url(#${gradientPrefix}-front)` : undefined
+            }
+          >
+            {/* Shadow */}
+            {view !== "face" && (
+              <g transform="matrix(0.928286,0,0,0.802066,-543.761,-524.193)">
                 <path
-                  d={seg.d}
-                  fill={`url(#${gradientPrefix}-${seg.grad})`}
-                  className={seg.cls}
+                  d="M845.291,1978.12C649.211,2014.22 690.126,2107.34 832.801,2144.34C949.596,2174.63 1034.55,2179.29 1277.71,2170.85C1520.88,2162.42 1705.59,2058.79 1904.13,2024.69C2102.66,1990.59 2258.17,1833.56 2045.46,1823.02C1832.74,1812.47 1675.93,1821.09 1449.04,1846.75C1222.15,1872.42 1089.26,1933.2 845.291,1978.12Z"
+                  style={{ fill: "rgba(180,180,180,0.36)" }}
                 />
               </g>
-            ),
-          )}
-          {/* Pinstripes */}
-          {[
-            "M668.978,1188.82C668.978,1188.82 697.192,1159.47 704.961,1151.39C712.73,1143.31 741.601,1117.89 741.601,1117.89L797.382,1192.83C797.382,1192.83 777.343,1210.36 768.934,1219.16C761.968,1226.46 742,1247.37 742,1247.37L668.978,1188.82Z",
-            "M553.049,1473.68L642.295,1489.43C642.295,1489.43 639.736,1519.05 639.813,1527.97C639.89,1536.89 642.463,1565 642.463,1565L553.85,1582.41C553.85,1582.41 549.689,1533.64 549.655,1525.13C549.621,1516.62 553.049,1473.68 553.049,1473.68Z",
-            "M741.433,1805.9C741.433,1805.9 761.687,1829.3 770.647,1837.7C778.621,1845.18 794.911,1860.46 794.911,1860.46L739.37,1932.63C739.37,1932.63 712.9,1908.42 704.387,1900.11C695.875,1891.81 667.26,1859.25 667.26,1859.25L741.433,1805.9Z",
-            "M1037.1,1961.74C1037.1,1961.74 1071.4,1963.37 1081.1,1963.19C1095.94,1962.92 1118.4,1960.7 1118.4,1960.7L1135.76,2053.28C1135.76,2053.28 1102.32,2056.77 1081.16,2056.81C1067.85,2056.84 1017.86,2056.95 1017.86,2056.95L1037.1,1961.74Z",
-            "M1414.73,1803.03C1414.73,1803.03 1397.21,1822.32 1388.62,1830.95C1380.03,1839.57 1358.9,1858.3 1358.9,1858.3L1413.47,1938.34L2000.88,1792.44C2000.88,1792.44 2015.26,1776.77 2024.81,1765.06C2032.62,1755.48 2042.48,1738.84 2042.48,1738.84L1486.36,1863.96L1414.73,1803.03Z",
-            "M1509.97,1486.83C1509.97,1486.83 1511.79,1511.95 1511.96,1524.84C1512.14,1537.88 1510.46,1562.84 1510.46,1562.84L1606.79,1574.91L2109.17,1466.34C2109.17,1466.34 2109.1,1433.59 2109.08,1422.33C2109.05,1411.07 2106.94,1381.02 2106.94,1381.02L1607.44,1481.49L1509.97,1486.83Z",
-            "M1358.94,1195.78C1358.94,1195.78 1378.82,1213.96 1386.9,1222.05C1394.98,1230.14 1413.14,1248.33 1413.14,1248.33L1485.7,1187.86L2002.06,1095.68C2002.06,1095.68 1987.68,1075.91 1978.03,1062.65C1972.12,1054.52 1945.57,1025.86 1945.57,1025.86L1411.89,1115.81L1358.94,1195.78Z",
-            "M1135.12,1000.26L1115.88,1093.03C1104.22,1092.12 1088.07,1091.77 1076.38,1091.75C1064.43,1091.72 1052.94,1092.27 1041.02,1093.13L1025.02,999.291L1679.64,898.627C1679.64,898.627 1694.48,899.121 1705.58,899.698C1711.71,900.017 1763.08,908.147 1763.08,908.147L1135.12,1000.26Z",
-          ].map((d, idx) => (
-            <g
-              key={idx}
-              transform="matrix(1,0,0,1,-531.051,-867.499)"
-              style={{ opacity: pinOpacity }}
-            >
-              <path
-                d={d}
-                className="pinStripe"
+            )}
+            {/* Outer and body segments */}
+            {outerSegments.map((seg, idx) =>
+              view === "face" && idx < 4 ? null : (
+                <g key={idx} transform={seg.transform}>
+                  <path
+                    d={seg.d}
+                    fill={`url(#${gradientPrefix}-${seg.grad})`}
+                    className={seg.cls}
+                  />
+                </g>
+              ),
+            )}
+            {/* Pinstripes */}
+            {[
+              "M668.978,1188.82C668.978,1188.82 697.192,1159.47 704.961,1151.39C712.73,1143.31 741.601,1117.89 741.601,1117.89L797.382,1192.83C797.382,1192.83 777.343,1210.36 768.934,1219.16C761.968,1226.46 742,1247.37 742,1247.37L668.978,1188.82Z",
+              "M553.049,1473.68L642.295,1489.43C642.295,1489.43 639.736,1519.05 639.813,1527.97C639.89,1536.89 642.463,1565 642.463,1565L553.85,1582.41C553.85,1582.41 549.689,1533.64 549.655,1525.13C549.621,1516.62 553.049,1473.68 553.049,1473.68Z",
+              "M741.433,1805.9C741.433,1805.9 761.687,1829.3 770.647,1837.7C778.621,1845.18 794.911,1860.46 794.911,1860.46L739.37,1932.63C739.37,1932.63 712.9,1908.42 704.387,1900.11C695.875,1891.81 667.26,1859.25 667.26,1859.25L741.433,1805.9Z",
+              "M1037.1,1961.74C1037.1,1961.74 1071.4,1963.37 1081.1,1963.19C1095.94,1962.92 1118.4,1960.7 1118.4,1960.7L1135.76,2053.28C1135.76,2053.28 1102.32,2056.77 1081.16,2056.81C1067.85,2056.84 1017.86,2056.95 1017.86,2056.95L1037.1,1961.74Z",
+              "M1414.73,1803.03C1414.73,1803.03 1397.21,1822.32 1388.62,1830.95C1380.03,1839.57 1358.9,1858.3 1358.9,1858.3L1413.47,1938.34L2000.88,1792.44C2000.88,1792.44 2015.26,1776.77 2024.81,1765.06C2032.62,1755.48 2042.48,1738.84 2042.48,1738.84L1486.36,1863.96L1414.73,1803.03Z",
+              "M1509.97,1486.83C1509.97,1486.83 1511.79,1511.95 1511.96,1524.84C1512.14,1537.88 1510.46,1562.84 1510.46,1562.84L1606.79,1574.91L2109.17,1466.34C2109.17,1466.34 2109.1,1433.59 2109.08,1422.33C2109.05,1411.07 2106.94,1381.02 2106.94,1381.02L1607.44,1481.49L1509.97,1486.83Z",
+              "M1358.94,1195.78C1358.94,1195.78 1378.82,1213.96 1386.9,1222.05C1394.98,1230.14 1413.14,1248.33 1413.14,1248.33L1485.7,1187.86L2002.06,1095.68C2002.06,1095.68 1987.68,1075.91 1978.03,1062.65C1972.12,1054.52 1945.57,1025.86 1945.57,1025.86L1411.89,1115.81L1358.94,1195.78Z",
+              "M1135.12,1000.26L1115.88,1093.03C1104.22,1092.12 1088.07,1091.77 1076.38,1091.75C1064.43,1091.72 1052.94,1092.27 1041.02,1093.13L1025.02,999.291L1679.64,898.627C1679.64,898.627 1694.48,899.121 1705.58,899.698C1711.71,900.017 1763.08,908.147 1763.08,908.147L1135.12,1000.26Z",
+            ].map((d, idx) => (
+              <g
+                key={idx}
+                transform="matrix(1,0,0,1,-531.051,-867.499)"
+                style={{ opacity: pinOpacity }}
+              >
+                <path
+                  d={d}
+                  className="pinStripe"
+                  style={{
+                    fill: pinFill,
+                    opacity: pinOpacity,
+                    transition: "0.2s ease-in-out",
+                  }}
+                />
+              </g>
+            ))}
+            {/* Inner circles */}
+            <g transform="matrix(0.979136,0,0,0.979136,6.78919,16.7037)">
+              <circle
+                cx="549.755"
+                cy="656.823"
+                r="444.797"
                 style={{
-                  fill: pinFill,
-                  opacity: pinOpacity,
-                  transition: "0.2s ease-in-out",
+                  fill: fillColor,
+                  stroke: "rgba(220,220,220,0.5)",
+                  strokeWidth: "4.18px",
                 }}
               />
             </g>
-          ))}
-          {/* Inner circles */}
-          <g transform="matrix(0.979136,0,0,0.979136,6.78919,16.7037)">
-            <circle
-              cx="549.755"
-              cy="656.823"
-              r="444.797"
-              style={{
-                fill: fillColor,
-                stroke: "rgba(220,220,220,0.5)",
-                strokeWidth: "4.18px",
-              }}
-            />
-          </g>
-          <g transform="matrix(0.997792,0,0,0.997792,4.06358,1.45654)">
-            <circle
-              cx="544.367"
-              cy="659.802"
-              r="532.08"
-              style={{
-                fill: "none",
-                stroke: "rgba(220,220,220,0.5)",
-                strokeWidth: "4.18px",
-              }}
-            />
-          </g>
-        </g>
-      )}
-      <g clipPath={`url(#${gradientPrefix}-jacket)`}>
-        {design.layers
-          .filter((l) => l.visible && l.surface === "jacket")
-          .map((layer) => (
-            <DesignLayerSvg
-              key={layer.id}
-              layer={layer}
-              prefix={gradientPrefix}
-              selected={selectedId === layer.id}
-              outline={outlines?.[layer.id]}
-              radius={radius}
-            />
-          ))}
-      </g>
-      <g clipPath={`url(#${gradientPrefix}-face)`}>
-        {design.layers
-          .filter((layer) => layer.visible && layer.surface !== "jacket")
-          .map((layer) => (
-            <DesignLayerSvg
-              key={layer.id}
-              layer={layer}
-              prefix={gradientPrefix}
-              selected={selectedId === layer.id}
-              outline={outlines?.[layer.id]}
-              radius={radius}
-            />
-          ))}
-      </g>
-      {annotate &&
-        design.jacket.advanced &&
-        Array.from({ length: design.jacket.advanced.segments }, (_, i) => {
-          const a =
-              -Math.PI / 2 +
-              ((i + 0.5) * Math.PI * 2) / design.jacket.advanced!.segments,
-            r = (radius + 532) / 2;
-          return (
-            <g
-              key={i}
-              transform={`translate(${545 + r * Math.cos(a)} ${660 + r * Math.sin(a)})`}
-            >
-              <circle r="18" fill="white" stroke="#333333" strokeWidth="2" />
-              <text
-                fontFamily="Arial, sans-serif"
-                fontSize="24"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#111111"
-              >
-                {i + 1}
-              </text>
-            </g>
-          );
-        })}
-      {handles &&
-        selectedId &&
-        (() => {
-          const l = design.layers.find(
-            (l) => l.id === selectedId && l.visible && !l.locked,
-          );
-          if (!l) return null;
-          const x =
-              l.frame === "scene"
-                ? (l.x / 100) * 1772
-                : CX - radius + (l.x / 100) * radius * 2,
-            y =
-              l.frame === "scene"
-                ? (l.y / 100) * 1300
-                : CY - radius + (l.y / 100) * radius * 2,
-            s = Math.max(
-              45,
-              (l.size / 100) * (l.frame === "scene" ? 886 : radius),
-            );
-          return (
-            <g
-              transform={`translate(${x} ${y}) rotate(${l.rotation})`}
-              fill="white"
-              stroke="#2563eb"
-              strokeWidth="3"
-            >
-              <path d={`M0 ${-s} V${-s - 45}`} pointerEvents="none" />
+            <g transform="matrix(0.997792,0,0,0.997792,4.06358,1.45654)">
               <circle
-                data-design-layer={l.id}
-                data-design-handle="rotate"
-                cy={-s - 45}
-                r="14"
-                style={{ cursor: "crosshair" }}
-              />
-              <rect
-                data-design-layer={l.id}
-                data-design-handle="resize"
-                x={s - 12}
-                y={s - 12}
-                width="24"
-                height="24"
-                style={{ cursor: "nwse-resize" }}
+                cx="544.367"
+                cy="659.802"
+                r="532.08"
+                style={{
+                  fill: "none",
+                  stroke: "rgba(220,220,220,0.5)",
+                  strokeWidth: "4.18px",
+                }}
               />
             </g>
-          );
-        })()}
+          </g>
+        )}
+        <g
+          clipPath={
+            design.presentation?.hideCandy
+              ? undefined
+              : `url(#${gradientPrefix}-jacket)`
+          }
+        >
+          {design.layers
+            .filter((l) => l.visible && l.surface === "jacket")
+            .map((layer) => (
+              <DesignLayerSvg
+                key={layer.id}
+                layer={layer}
+                prefix={gradientPrefix}
+                selected={selectedId === layer.id}
+                outline={outlines?.[layer.id]}
+                radius={radius}
+              />
+            ))}
+        </g>
+        <g>
+          {design.layers
+            .filter((layer) => layer.visible && layer.surface !== "jacket")
+            .map((layer) => (
+              <g
+                key={layer.id}
+                clipPath={
+                  design.presentation?.hideCandy || layer.clip === false
+                    ? undefined
+                    : `url(#${gradientPrefix}-face)`
+                }
+              >
+                <DesignLayerSvg
+                  key={layer.id}
+                  layer={layer}
+                  prefix={gradientPrefix}
+                  selected={selectedId === layer.id}
+                  outline={outlines?.[layer.id]}
+                  radius={radius}
+                />
+              </g>
+            ))}
+        </g>
+        {annotate &&
+          !design.presentation?.hideCandy &&
+          design.jacket.advanced &&
+          Array.from({ length: design.jacket.advanced.segments }, (_, i) => {
+            const a =
+                -Math.PI / 2 +
+                ((i + 0.5) * Math.PI * 2) / design.jacket.advanced!.segments,
+              r = (radius + 532) / 2;
+            return (
+              <g
+                key={i}
+                transform={`translate(${545 + r * Math.cos(a)} ${660 + r * Math.sin(a)})`}
+              >
+                <circle r="18" fill="white" stroke="#333333" strokeWidth="2" />
+                <text
+                  fontFamily="Arial, sans-serif"
+                  fontSize="24"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#111111"
+                >
+                  {i + 1}
+                </text>
+              </g>
+            );
+          })}
+        {handles &&
+          selectedId &&
+          (() => {
+            const l = design.layers.find(
+              (l) => l.id === selectedId && l.visible && !l.locked,
+            );
+            if (!l) return null;
+            const x =
+                l.frame === "scene"
+                  ? (l.x / 100) * 1772
+                  : CX - radius + (l.x / 100) * radius * 2,
+              y =
+                l.frame === "scene"
+                  ? (l.y / 100) * 1300
+                  : CY - radius + (l.y / 100) * radius * 2,
+              s = Math.max(
+                45,
+                (l.size / 100) * (l.frame === "scene" ? 886 : radius),
+              );
+            return (
+              <g
+                transform={`translate(${x} ${y}) rotate(${l.rotation})`}
+                fill="white"
+                stroke="#2563eb"
+                strokeWidth="3"
+              >
+                <path d={`M0 ${-s} V${-s - 45}`} pointerEvents="none" />
+                <circle
+                  data-design-layer={l.id}
+                  data-design-handle="rotate"
+                  cy={-s - 45}
+                  r="14"
+                  style={{ cursor: "crosshair" }}
+                />
+                <rect
+                  data-design-layer={l.id}
+                  data-design-handle="resize"
+                  x={s - 12}
+                  y={s - 12}
+                  width="24"
+                  height="24"
+                  style={{ cursor: "nwse-resize" }}
+                />
+              </g>
+            );
+          })()}
+      </g>
     </svg>
   );
 }

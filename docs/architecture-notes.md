@@ -117,14 +117,15 @@ orders. Draft activity records saves/discards without copying customer payloads.
 
 ### Admin Design Studio
 
-New designs, layers and presets use the shared public baseline in
+New designs and basic order imports use the shared public baseline in
 `src/lib/siteDesignerDefaults.ts`: the configured light-grey palette entries,
 Helvetica/Arial sans-serif stack, bold upright text, the public short-text size
 scaling/tracking, wedding names/initials/heart layout, and white fill/pinstripes.
 Basic order imports retain their chosen colours/artwork and reproduce the public
 stacked/curved long-text layouts. Saved Studio snapshots retain all explicitly
-chosen settings. Layer and jacket reset controls apply the baseline only when
-requested. The site's generic font uses bundled Arimo (Arial-compatible) glyphs
+chosen settings. Tools added within the admin workspace follow the supplied
+prototype's text/heart defaults; they do not change public designer defaults.
+The site's generic font uses bundled Arimo (Arial-compatible) glyphs
 for portable server exports; Roboto, Roboto Slab and Roboto Mono remain optional
 advanced choices. Public rendering retains its existing baseline behaviour.
 
@@ -145,12 +146,26 @@ construction in `candyJacketGeometry.ts` joins each body band to the matching
 face band. `CandyDesignSvg` is shared by editor, order, print and server export.
 The public quote designer does not expose or generate Studio v2 documents.
 
-Studio also provides flat-face editing, a 3D view, resize/rotation handles,
-centre snapping, canvas locking, independent width/height scaling, flips,
-opacity, multiline/uppercase text, adjustable arc radius/slide, full-circle text
-paths and an explicit fit-to-face control. Existing semicircle text paths retain
-their original settings until changed. Presentation
-mode hides editing panels. Proof background/transparency settings are used only
+The Studio interface is ported from the administrator's supplied HTML: a slim
+left tool rail, central canvas, and right-hand collapsible Whole design, Export,
+Jacket, Colours and Layers sections. Selected layer settings expand inside their
+row, rather than a separate inspector. The interface is isolated in a same-origin
+frame so its supplied styles and keyboard/pointer interactions cannot alter the
+admin shell or public site. `studioControls.js` contains its UI/pixel interaction
+controller, with the independent prototype candy renderer and export code removed.
+`studioExperienceAdapter.ts` maps its state into existing CandyDesign snapshots.
+React renders `StudioCandyPreview` directly in the canvas stage; the extra canvas
+is only a colour-sampling buffer and interaction overlay. Fonts, styles and code
+are served locally; imported project files are data only.
+
+Resize/rotation handles, position locking, opacity, multiline/uppercase text,
+adjustable arc distance/slide, duplication and keyboard nudging follow the supplied
+tool experience. Saved independent transforms and semicircle paths are retained.
+Whole-design size is distinct from canvas box size: only the former is saved in
+artwork and used by shared rendering. Hide-candy label mode and per-layer clipping
+also persist into shared SVG/PNG/PDF/order rendering. Unchanged legacy documents,
+jackets with more than four colours and unrelated layers remain unchanged when
+opened. Presentation mode hides editing panels. Proof background/transparency settings are used only
 by explicit Studio exports; order/email previews retain a white background.
 The customer proof PDF combines the flat face and 3D preview with the design
 name/revision and customer-safe summary. Production printouts include both
@@ -160,9 +175,10 @@ The admin raster editor supports brush/eraser, box/lasso/contiguous or global
 colour selections, remove/replace colour, tint, eyedropper, selection growth,
 shrink/invert, keep/delete/fill, and copy/split into a separate layer. Jacket
 paint uses the renderer's actual jacket clip and a scene-coordinate image frame;
-face artwork uses face coordinates. Pixel edits have their own undo/redo and
-apply/cancel controls; applying returns raster layers to the Studio's design
-history. On save they follow the same immutable private-asset pipeline as image
+face artwork uses face coordinates. Pixel edits run directly on the main stage,
+with the supplied contextual selection controls and shared workspace undo/redo.
+Edited images are staged through the private asset pipeline after an idle interval;
+save/apply/export explicitly await asset preparation. On save they follow the same immutable private-asset pipeline as image
 uploads. No browser canvas state is required to reproduce a saved design.
 Portable JSON project downloads embed private images after authenticated fetch;
 opening a project validates it and creates a separate library identity on save.

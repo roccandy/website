@@ -1,342 +1,354 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type FrameLocator } from "@playwright/test";
 import sharp from "sharp";
 import { readFile } from "node:fs/promises";
-const browserErrors = new WeakMap<Page, string[]>();
-
+const errors = new WeakMap<Page, string[]>();
+const studio = (page: Page) =>
+  page.frameLocator('iframe[title="Roc Candy Mockup Studio"]');
+async function ready(page: Page, url = "/") {
+  await page.goto(url);
+  await expect(studio(page).getByLabel("Layer text")).toBeVisible();
+  await expect(studio(page).locator("#canonical svg path")).not.toHaveCount(0);
+}
+async function range(ui: FrameLocator, selector: string, value: string) {
+  await ui.locator(selector).evaluate((e, v) => {
+    (e as HTMLInputElement).value = v;
+    e.dispatchEvent(new Event("input", { bubbles: true }));
+  }, value);
+}
+async function apply(page: Page) {
+  await studio(page).locator("#useOrder").click();
+  await expect(page.getByTestId("applied")).not.toBeEmpty();
+  return JSON.parse((await page.getByTestId("applied").textContent())!);
+}
+async function label(page: Page, width = 800, height = 240) {
+  const bytes = await sharp({
+    create: { width, height, channels: 4, background: "#e63946" },
+  })
+    .png()
+    .toBuffer();
+  await studio(page)
+    .locator("#fileIn")
+    .setInputFiles({
+      name: "Native label.png",
+      mimeType: "image/png",
+      buffer: bytes,
+    });
+  await expect(studio(page).locator(".layer .nm").first()).toContainText(
+    "Native label",
+  );
+  return bytes;
+}
 test.beforeEach(async ({ page }) => {
-  const errors: string[] = [];
-  browserErrors.set(page, errors);
-  page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Design Studio", exact: true }),
-  ).toBeVisible();
-  await page.evaluate(() => document.fonts.ready);
-  // Fail each test if a component crashes, including after a pointer gesture.
+  const list: string[] = [];
+  errors.set(page, list);
+  page.on("pageerror", (e) => list.push(e.message));
+  await ready(page);
 });
 test.afterEach(async ({ page }) => {
-  expect(browserErrors.get(page)).toEqual([]);
+  expect(errors.get(page)).toEqual([]);
 });
 
-test("saves complex jackets and layer controls with flat and presentation views", async ({
+test("matches supplied tool rail, stage, collapsible settings and inline layers", async ({
   page,
 }) => {
-  await page.getByLabel("Jacket pattern").selectOption("segments");
-  await page.getByLabel("Jacket segments", { exact: true }).fill("12");
-  await page.getByLabel("Jacket ring thickness (%)").fill("25");
-  await page.getByLabel("Show pinstripes", { exact: true }).check();
-  await page.getByLabel("Pinstripe width (% of segment)").fill("30");
-  await page
-    .getByRole("textbox", { name: "Text", exact: true })
-    .fill("THANK YOU KARRI");
-  await page.getByLabel("Opacity (%)").fill("75");
-  await page.getByLabel("Text layout").selectOption("up");
-  await page.getByLabel("Arc radius", { exact: true }).fill("280");
-  await page.getByLabel("Arc slide (%)").fill("10");
-  await page
-    .getByRole("button", { name: "Fit text to face", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByTestId("applied")).toContainText('"schemaVersion":2');
-  const saved = JSON.parse(
-    (await page.getByTestId("applied").textContent()) || "null",
-  );
-  expect(saved.schemaVersion).toBe(2);
+  const ui = studio(page);
+  await expect(ui.getByRole("navigation", { name: "Tools" })).toBeVisible();
+  for (const tool of [
+    "Move",
+    "Box select",
+    "Lasso",
+    "Remove colour",
+    "Eyedropper",
+    "Paint brush",
+    "Recolour image",
+    "Eraser",
+    "Magic select",
+    "Text",
+    "Curve top",
+    "Curve bottom",
+    "Heart",
+    "Images",
+  ])
+    await expect(
+      ui.locator(".rail").getByRole("button", { name: tool, exact: true }),
+    ).toBeVisible();
+  await expect(ui.locator(".side h2")).toHaveText([
+    "Whole design Reset",
+    "Export",
+    "Jacket ",
+    "Colours",
+    "Layers Duplicate",
+    "Production & proofs",
+  ]);
+  const rail = (await ui.locator(".rail").boundingBox())!,
+    stage = (await ui.locator(".stage").boundingBox())!,
+    side = (await ui.locator(".side").boundingBox())!;
+  expect(rail.width).toBeLessThan(90);
+  expect(rail.x + rail.width).toBeLessThanOrEqual(stage.x);
+  expect(side.x).toBeGreaterThan(stage.x + stage.width - 1);
+  await expect(ui.locator(".layer.on .props")).toBeVisible();
+  await expect(ui.getByText("Selected layer", { exact: true })).toHaveCount(1); // colour target, never a duplicate editor panel
+  await ui.getByRole("button", { name: "Export", exact: true }).click();
+  await expect(ui.locator("#expFmt")).toBeHidden();
+  await ui.getByRole("button", { name: "Export", exact: true }).click();
+  await page.screenshot({
+    path: "test-results/studio-admin-experience.png",
+    fullPage: true,
+  });
+});
+test("saves complete lettering, curved layers, complex jackets and their colour specifications", async ({
+  page,
+}) => {
+  const ui = studio(page);
+  await ui.getByLabel("Layer text").fill("THANK YOU KARRI");
+  await ui.locator("#jStyle").selectOption("pin");
+  await ui.locator("#jSeg").selectOption("12");
+  await range(ui, "#jRing", ".25");
+  await range(ui, "#jGap", ".30");
+  await ui.locator("#jCols").selectOption("3");
+  await ui.locator("[data-add=arctop]").click();
+  await ui.getByLabel("Layer text").fill("TOP NAME");
+  await ui.getByLabel("Font", { exact: true }).selectOption("Montserrat");
+  const saved = await apply(page);
+  expect(saved.layers[0].text).toBe("THANK YOU KARRI");
+  expect(saved.layers[1]).toMatchObject({
+    text: "TOP NAME",
+    font: "montserrat",
+    curve: "up",
+  });
   expect(saved.jacket.advanced).toMatchObject({
     segments: 12,
     ring: 0.25,
     gap: 0.3,
   });
-  expect(saved.layers[0]).toMatchObject({
-    text: "THANK YOU KARRI",
-    opacity: 0.75,
-    arcRadius: 280,
-    arcOffset: 0,
-  });
-  await page.screenshot({
-    path: "test-results/studio-complex-3d.png",
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "Flat face", exact: true }).click();
-  await expect(
-    page.locator("[data-advanced-jacket] [data-jacket-body]"),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Present", exact: true }).click();
-  await expect(page.getByLabel("Design name", { exact: true })).toBeHidden();
-  await expect(page.locator("[data-design-handle]")).toHaveCount(0);
-  await page.getByRole("button", { name: "Return to editing" }).click();
-  await expect(page.getByLabel("Design name", { exact: true })).toBeVisible();
+  expect(saved.jacket.colours).toHaveLength(3);
+  await expect(ui.locator("#productionSpec")).toContainText(
+    "clockwise from 12",
+  );
+  await expect(ui.locator("#canonical [data-advanced-jacket]")).toHaveAttribute(
+    "data-advanced-jacket",
+    "12",
+  );
 });
-
-test("image editing, selection split, paint, undo and project round trip preserve artwork", async ({
+test("colour targets, custom swatches, background, design size and presentation are integrated", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Paint face", exact: true }).click();
-  const modal = page.getByRole("dialog", { name: "Edit artwork pixels" });
-  const canvas = modal.getByLabel("Artwork editing canvas");
-  await expect(canvas).toBeVisible();
-  const box = (await canvas.boundingBox())!;
-  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.5);
+  const ui = studio(page);
+  await ui.getByRole("button", { name: "Background", exact: true }).click();
+  await ui.getByRole("textbox", { name: "Hex colour code" }).fill("#aabbcc");
+  await ui.locator("#addSwatch").click();
+  await range(ui, "#zoom", "80");
+  await range(ui, "#boxsize", "70");
+  await ui.locator("#present").click();
+  await expect(ui.locator(".rail")).toBeHidden();
+  await expect(ui.locator(".side")).toBeHidden();
+  await expect(ui.locator("#presentCap")).toHaveText("Studio fixture");
+  await ui.locator("#present").click();
+  const saved = await apply(page);
+  expect(saved.presentation).toMatchObject({
+    background: "#aabbcc",
+    designScale: 0.8,
+  });
+  await expect(ui.locator("[data-studio-scene]")).toHaveAttribute(
+    "transform",
+    /scale\(0.8\)/,
+  );
+});
+test("edits image pixels on the stage with selections, splits, eraser and undo", async ({
+  page,
+}) => {
+  const ui = studio(page);
+  await label(page);
+  await ui.locator("[data-tool=magic]").click();
+  const box = (await ui.locator("#ov").boundingBox())!;
+  // Image is centred on the face, at (545,660) in the application's scene.
+  await ui
+    .locator("#ov")
+    .click({
+      position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
+    });
+  await expect(ui.locator("#maskActs")).toBeVisible();
+  await ui.locator("#maskCopy").click();
+  await expect(ui.locator(".layer")).toHaveCount(3);
+  await ui.locator("#undo").click();
+  await expect(ui.locator(".layer")).toHaveCount(2);
+  await ui.locator("[data-tool=erase]").click();
+  await ui
+    .locator("#ov")
+    .click({
+      position: { x: (545 / 1772) * box.width, y: (660 / 1300) * box.height },
+    });
+  const saved = await apply(page);
+  expect(saved.layers).toHaveLength(2);
+  expect(saved.layers[1].image).toMatch(/^candy-asset:/);
+  await expect(
+    page.getByRole("dialog", { name: "Edit artwork pixels" }),
+  ).toHaveCount(0);
+});
+test("paints the actual shared jacket, exports it, and can undo the stroke", async ({
+  page,
+}) => {
+  const ui = studio(page);
+  await ui.locator("[data-tool=brush]").click();
+  const box = (await ui.locator("#ov").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.51, box.y + box.height * 0.4);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5, {
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.45, {
     steps: 5,
   });
   await page.mouse.up();
-  await modal
-    .getByRole("button", { name: "Magic select", exact: true })
-    .click();
-  await canvas.click({ position: { x: box.width / 2, y: box.height / 2 } });
-  await modal
-    .getByRole("button", { name: "Split to new layer", exact: true })
-    .click();
-  const copied = modal.getByText(
-    "The selected artwork will be added as a separate layer when you apply.",
-  );
-  await expect(copied).toBeVisible();
-  await modal.getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(copied).toBeHidden();
-  await modal.getByRole("button", { name: "Redo", exact: true }).click();
-  await expect(copied).toBeVisible();
-  await modal
-    .getByRole("button", { name: "Apply artwork", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByTestId("applied")).toContainText(
-    "Face paint selection",
-  );
-  let saved = JSON.parse(
-    (await page.getByTestId("applied").textContent()) || "null",
-  );
-  expect(saved.layers).toHaveLength(3);
-  expect(saved.layers[1].image).toMatch(/^candy-asset:[a-f0-9]{64}\.png$/);
-  expect(saved.layers[2].name).toContain("selection");
-  await page.getByRole("button", { name: "Paint jacket", exact: true }).click();
-  const jacketBox = (await canvas.boundingBox())!;
-  await canvas.click({
-    position: { x: jacketBox.width * 0.7, y: jacketBox.height * 0.4 },
-  });
-  await modal.getByRole("button", { name: "Undo", exact: true }).click();
-  await modal.getByRole("button", { name: "Redo", exact: true }).click();
-  await modal
-    .getByRole("button", { name: "Apply artwork", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByTestId("applied")).toContainText("Jacket paint");
-  saved = JSON.parse(
-    (await page.getByTestId("applied").textContent()) || "null",
-  );
-  expect(saved.layers[3]).toMatchObject({ frame: "scene", surface: "jacket" });
+  await expect(ui.locator(".layer")).toHaveCount(2);
+  const saved = await apply(page);
+  expect(saved.layers[0]).toMatchObject({ surface: "jacket", frame: "scene" });
+  expect(saved.layers[0].image).toMatch(/^candy-asset:/);
   const download = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Download project", exact: true })
-    .click();
-  const file = await download,
-    path = (await file.path())!;
-  await page
-    .locator('input[accept=".json,application/json"]')
-    .setInputFiles(path);
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("revision 1");
-  const reopened = JSON.parse(
-    (await page.getByTestId("applied").textContent()) || "null",
-  );
-  expect(reopened.layers).toEqual(saved.layers);
+  await ui.locator("#export").click();
+  const file = await download;
+  expect((await readFile((await file.path())!)).length).toBeGreaterThan(1000);
+  await ui.locator("#undo").click();
+  await expect(ui.locator(".layer")).toHaveCount(1);
 });
-
-test("legacy designs retain their geometry until explicitly upgraded and locked layers cannot drag", async ({
+test("native uploads, blank-label editing and cropped JPEG/project round trips preserve resolution", async ({
   page,
 }) => {
-  await page.goto("/?legacy");
-  await expect(page.locator("[data-advanced-jacket]")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Enable advanced jacket controls" })
-    .click();
-  await expect(page.locator("[data-advanced-jacket]")).toHaveCount(1);
-  await page.getByLabel("Lock position").check();
-  const layer = page.locator('[data-design-layer="text-1"]').first();
-  const before = await layer.getAttribute("transform");
-  const bounds = (await layer.boundingBox())!;
-  await page.mouse.move(
-    bounds.x + bounds.width / 2,
-    bounds.y + bounds.height / 2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(bounds.x + 150, bounds.y + 100, { steps: 4 });
-  await page.mouse.up();
-  expect(await layer.getAttribute("transform")).toBe(before);
-  await page.getByRole("button", { name: "Flat face", exact: true }).click();
-  await page.screenshot({
-    path: "test-results/studio-flat-face.png",
-    fullPage: true,
+  const ui = studio(page);
+  await label(page, 3000, 1000);
+  await ui.locator("#jEye").click();
+  await expect(ui.locator("#canonical [data-advanced-jacket]")).toHaveCount(0);
+  await ui.locator("#expCrop").check();
+  await ui.locator("#expFmt").selectOption("jpeg");
+  const download = page.waitForEvent("download");
+  await ui.locator("#export").click();
+  const file = await download;
+  const metadata = await sharp(await readFile((await file.path())!)).metadata();
+  expect(metadata).toMatchObject({ format: "jpeg", width: 3000, height: 1000 });
+  const projectDownload = page.waitForEvent("download");
+  await ui.locator("#saveProj").click();
+  const project = await readFile((await (await projectDownload).path())!);
+  const parsed = JSON.parse(project.toString());
+  expect(parsed.design.presentation.hideCandy).toBe(true);
+  expect(Object.keys(parsed.assets)).toHaveLength(1);
+  await ui
+    .locator("#projIn")
+    .setInputFiles({
+      name: "portable.json",
+      mimeType: "application/json",
+      buffer: project,
+    });
+  await expect(ui.locator(".layer")).toHaveCount(2);
+  const saved = await apply(page);
+  expect(saved.layers[1]).toMatchObject({
+    imageWidth: 3000,
+    imageHeight: 1000,
   });
 });
-
-test("supports multiline text and transform handles, with a usable narrow layout", async ({
+test("library save cannot silently discard unapplied artwork and recovery survives closing", async ({
   page,
 }) => {
-  await page
-    .getByRole("textbox", { name: "Text", exact: true })
-    .fill("Thank You\nKarri");
-  await page.getByLabel("Uppercase text").check();
-  await expect(
-    page.locator('[data-design-layer="text-1"] [data-outlined-font] title'),
-  ).toHaveText("THANK YOU\nKARRI");
-  const resize = page.locator('[data-design-handle="resize"]'),
-    r = (await resize.boundingBox())!;
-  const initialSize = +(await page.getByLabel("Font size (%)").inputValue());
-  await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(r.x + r.width / 2 + 30, r.y + r.height / 2 + 30);
-  await page.mouse.up();
-  expect(
-    +(await page.getByLabel("Font size (%)").inputValue()),
-  ).toBeGreaterThan(initialSize);
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
-  expect(+(await page.getByLabel("Font size (%)").inputValue())).toBe(
-    initialSize,
+  await ready(page, "/?embedded&scope=order-a");
+  const ui = studio(page);
+  await ui.getByLabel("Layer text").fill("KEEP THIS ARTWORK");
+  await ui.locator("#saveLibrary").click();
+  await expect(ui.locator("#integrationStatus")).toContainText(
+    "Saved to library",
   );
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-});
-
-test("library save cannot silently close with unapplied order artwork, and recovery survives reopening", async ({
-  page,
-}) => {
-  await page.goto("/?embedded&scope=order-a");
-  await page
-    .getByRole("textbox", { name: "Text", exact: true })
-    .fill("UNAPPLIED DESIGN");
-  await page
-    .getByRole("button", { name: "Save to library", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Saved to library");
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  expect((await ui.locator('.stage').boundingBox())!.height).toBeGreaterThan(300);
+  await ui.locator("#closeStudio").click();
   await expect(
-    page.getByRole("group", { name: "Unapplied artwork", exact: true }),
+    page.getByRole("group", { name: "Unapplied artwork" }),
   ).toBeVisible();
-  await expect(page.getByTestId("applied")).toBeEmpty();
   await page
-    .getByRole("button", { name: "Keep recovery draft & close", exact: true })
+    .getByRole("button", { name: "Keep recovery draft & close" })
     .click();
   await page.getByRole("button", { name: "Reopen Studio" }).click();
   await page
     .getByRole("button", { name: "Restore draft", exact: true })
     .click();
-  await expect(
-    page.getByRole("textbox", { name: "Text", exact: true }),
-  ).toHaveValue("UNAPPLIED DESIGN");
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByTestId("applied")).toContainText("UNAPPLIED DESIGN");
-  await expect(
-    page.getByRole("button", { name: "Reopen Studio" }),
-  ).toBeVisible();
+  await expect(studio(page).getByLabel("Layer text")).toHaveValue(
+    "KEEP THIS ARTWORK",
+  );
 });
-
-test("recovery is isolated for each order and survives a refresh", async ({
+test("scopes recovery by order and preserves original documents when opened", async ({
   page,
 }) => {
-  page.on("dialog", (dialog) => dialog.accept());
-  await page.goto("/?embedded&scope=separate-a");
-  await page
-    .getByRole("textbox", { name: "Text", exact: true })
-    .fill("ORDER A ONLY");
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        sessionStorage.getItem("roccandy-studio-recovery-v2:separate-a"),
-      ),
-    )
-    .toContain("ORDER A ONLY");
-  await page.goto("/?embedded&scope=separate-b");
+  const ui = studio(page);
+  await expect(ui.locator("#integrationStatus")).toHaveText("");
+  await ready(page, "/?scope=order-a");
+  await studio(page).getByLabel("Layer text").fill("ORDER A");
+  await page.waitForTimeout(900);
+  await ready(page, "/?scope=order-b");
+  await expect(page.getByRole("button", { name: "Restore draft" })).toHaveCount(
+    0,
+  );
+  await ready(page, "/?scope=order-a");
+  await page.getByRole("button", { name: "Restore draft" }).click();
+  await expect(studio(page).getByLabel("Layer text")).toHaveValue("ORDER A");
+});
+test("retains legacy geometry and supports a narrow workspace", async ({
+  page,
+}) => {
+  await ready(page, "/?legacy");
+  await expect(studio(page).locator("#jStyle")).toHaveValue("legacy");
   await expect(
-    page.getByRole("button", { name: "Restore draft", exact: true }),
+    studio(page).locator("#canonical [data-advanced-jacket]"),
   ).toHaveCount(0);
-  await page.goto("/?embedded&scope=separate-a");
-  await page
-    .getByRole("button", { name: "Restore draft", exact: true })
-    .click();
-  await expect(
-    page.getByRole("textbox", { name: "Text", exact: true }),
-  ).toHaveValue("ORDER A ONLY");
-  await page.reload();
-  await page
-    .getByRole("button", { name: "Restore draft", exact: true })
-    .click();
-  await expect(
-    page.getByRole("textbox", { name: "Text", exact: true }),
-  ).toHaveValue("ORDER A ONLY");
+  const saved = await apply(page);
+  expect(saved.schemaVersion).toBe(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(studio(page).locator("[data-add=text]")).toBeVisible();
+  await studio(page).locator("[data-add=text]").click();
+  await expect(studio(page).getByLabel("Layer text")).toHaveValue("NAME");
+  await page.screenshot({
+    path: "test-results/studio-admin-mobile.png",
+    fullPage: true,
+  });
 });
-
-test("preserves original image resolution through private upload, native cropped export and portable project", async ({
+test("opens data-only prototype projects into the shared renderer", async ({
   page,
 }) => {
-  const image = await sharp({
-    create: { width: 3000, height: 1000, channels: 4, background: "#eb2345" },
-  })
-    .png()
-    .toBuffer();
-  await page
-    .locator('input[accept="image/png,image/jpeg,image/webp"]')
-    .setInputFiles({ name: "label.png", mimeType: "image/png", buffer: image });
-  await expect(
-    page.getByRole("button", { name: "label.png", exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Save & use in order", exact: true })
-    .click();
-  await expect(page.getByTestId("applied")).toContainText('"imageWidth":3000');
-  const saved = JSON.parse(
-    (await page.getByTestId("applied").textContent()) || "null",
-  );
-  const original = await page.request.get(
-    `/api/admin/design/assets/${saved.layers[1].image.slice(12)}`,
-  );
-  expect(Buffer.from(await original.body())).toEqual(image);
-  await page.getByLabel("Crop to image layers").check();
-  await page.getByLabel("Export resolution").selectOption("native");
-  const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export PNG", exact: true }).click();
-  const downloaded = await downloading;
-  await downloaded.saveAs("test-results/studio-native-label.png");
-  const info = await sharp(
-    await readFile((await downloaded.path())!),
-  ).metadata();
-  expect(info.width).toBe(3000);
-  expect(info.height).toBe(1000);
-  const projectDownload = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Download project", exact: true })
-    .click();
-  const project = JSON.parse(
-    await readFile((await (await projectDownload).path())!, "utf8"),
-  );
-  expect(project.assets[saved.layers[1].image]).toMatch(
-    /^data:image\/png;base64,/,
-  );
-});
-
-test("imports a prototype project with bundled fonts and exports a cropped JPEG",async({page})=>{
-  const png=await sharp({create:{width:1000,height:400,channels:4,background:"#aabbcc"}}).png().toBuffer();
-  const project={v:1,caption:"Prototype client",jacket:{style:"pin",segments:12,ring:.2,gap:.2,cols:2,colorA:"#ff0000",colorB:"#0000ff",face:"#ffffff",pin:"#00ff00"},layers:[{type:"arc",name:"Curved title",font:"Montserrat",text:"THANK YOU",size:48,radiusF:.72,side:"top",bold:true,x:462,y:470},{type:"image",name:"Client label",img:`data:image/png;base64,${png.toString("base64")}`,scale:.4,x:462,y:470}]};
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({name:"client.rcmock.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(project))});
-  await expect(page.getByLabel("Design name",{exact:true})).toHaveValue("Prototype client");
-  await expect(page.getByLabel("Jacket segments",{exact:true})).toHaveValue("12");
-  await page.getByLabel("Crop to image layers").check();await page.getByLabel("Export resolution").selectOption("native");
-  const downloading=page.waitForEvent("download");await page.getByRole("button",{name:"Export JPEG",exact:true}).click();
-  const download=await downloading;expect(download.suggestedFilename()).toMatch(/\.jpg$/);
-  const image=await sharp(await readFile((await download.path())!)).metadata();expect(image.format).toBe("jpeg");expect(image.width).toBe(1000);expect(image.height).toBe(400);
+  const ui = studio(page);
+  const project = {
+    v: 1,
+    caption: "Imported prototype",
+    jacket: {
+      style: "pin",
+      segments: 6,
+      cols: 3,
+      ring: 0.2,
+      gap: 0.15,
+      colorA: "#ff0000",
+      colorB: "#00ff00",
+      colorC: "#0000ff",
+      face: "#ffffff",
+      pin: "#ffffff",
+    },
+    layers: [
+      {
+        id: 1,
+        type: "arc",
+        name: "Top",
+        text: "THANK YOU KARRI",
+        font: "Montserrat",
+        size: 45,
+        x: 462,
+        y: 470,
+        radiusF: 0.72,
+        side: "top",
+        visible: true,
+        opacity: 1,
+        clip: true,
+      },
+    ],
+  };
+  await ui
+    .locator("#projIn")
+    .setInputFiles({
+      name: "original.rcmock.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
+  await expect(ui.getByLabel("Layer text")).toHaveValue("THANK YOU KARRI");
+  const saved = await apply(page);
+  expect(saved.jacket.advanced.segments).toBe(6);
+  expect(saved.layers[0].curve).toBe("up");
 });

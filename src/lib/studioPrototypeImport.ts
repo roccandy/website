@@ -57,6 +57,8 @@ export async function importPrototypeProject(
   design.presentation = {
     background: String(v.bg || "#ffffff"),
     transparent: v.transparent === true,
+    hideCandy: j.show === false,
+    designScale: finite(v.zoom, 1),
   };
   const oldInner = 290 * (1 - finite(j.ring, 0.19)),
     ratio = designFaceRadius(design) / oldInner;
@@ -108,6 +110,7 @@ export async function importPrototypeProject(
         italic: l.italic === true,
         spacing: finite(l.spacing, 0) * ratio,
         fullArc: true,
+        clip: l.clip !== false,
       };
       if (l.type === "arc") {
         layer.curve = l.side === "bottom" ? "down" : "up";
@@ -140,17 +143,9 @@ export async function importPrototypeProject(
           );
         }
       }
-      if (l.clip === false)
-        warnings.push(
-          "The prototype contained unclipped artwork. Candy previews clip to their production surface; use Crop to image layers for standalone artwork.",
-        );
       return layer;
     }),
   );
-  if (j.show === false)
-    warnings.push(
-      "The prototype hid the candy. Use Crop to image layers to export its standalone artwork.",
-    );
   const parsed = parseCandyDesign(design)!;
   return { design: parsed, warnings: [...new Set(warnings)] };
 }

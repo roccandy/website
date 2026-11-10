@@ -66,11 +66,10 @@ mandatory daily checklist or customer-approval gate.
    tab and browser tab, including embedded editing and migration of older browser
    recovery. Quiet autosave of already-saved server order drafts remains optional;
    retain explicit discard and ensure autosave cannot send mail or create invoices.
-3. **Remaining precise canvas tools.** V2 implements flat/3D views, centre
-   snapping, layer locking, resize/rotation handles, opacity and independent
-   scaling. Multiple-layer selection/movement and alignment between layers
-   remain optional. Existing duplication, zoom and keyboard nudging remain
-   available.
+3. **Remaining precise canvas tools.** The supplied admin experience now has
+   direct canvas tools, inline layer editing, resize/rotation handles, position
+   locking, opacity, duplication, whole-design scaling and keyboard nudging.
+   Multiple-layer selection/movement and alignment between layers remain optional.
 4. **Catalogue navigation.** Search is currently by design name only. Expose the
    source-order link already stored for imports, add order/customer lookup and
    optional favourites/archive controls. Preserve order snapshots and revisions;
@@ -136,6 +135,14 @@ carrier-label integration, a customer self-service portal, and automated
 customer communications. Re-open any of these only with a new approved brief.
 
 ## Change log
+
+- 2026-11-10 — Corrected the previously incomplete Studio interface integration.
+  Ported the supplied tool rail, stage, collapsible settings, colour targets and
+  inline layer controls, including its direct selection/recolour/eraser/paint
+  interactions. Removed the prototype's candy renderer and browser export path;
+  the application renderer, private assets, library revisions and order snapshots
+  remain authoritative. Added label-mode visibility, per-layer clipping and
+  whole-design scaling to the shared schema, plus compatibility/browser checks.
 
 - 2026-11-10 — Completed the Studio follow-up: separate library-save/order-apply
   state, scoped recovery, source-resolution private assets and portable project

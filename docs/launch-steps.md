@@ -95,6 +95,13 @@ Use the normal login flow for additional live admin verification. Never mint
 sessions using application secrets. Customer proof/export buttons download
 files only; they do not send mail or create orders.
 
+The 2026-11-10 interface correction needs no additional SQL migration: visibility,
+clipping and design scale are additive v2 JSON fields. Verify the supplied
+left-rail/central-stage/right-settings layout, inline layer editing and direct
+pixel tools as well as save/apply safeguards. For label artwork, verify hide-candy
+and native cropped export. Keep existing browser recovery drafts intact during
+live checks; do not restore or dismiss another admin's draft as a smoke test.
+
 Historical import command: `npx tsx scripts/backfill-order-designs.ts` previews
 the eligible count; add `--apply` to import. The 2026-11-07 run imported 208
 custom designs, preserved two existing library designs, and verified that source

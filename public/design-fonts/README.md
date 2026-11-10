@@ -17,3 +17,7 @@ Studio prototype-compatible families are bundled from the corresponding
 Poppins, Oswald, Bebas Neue, Playfair Display, Cormorant Garamond, Pacifico,
 Dancing Script, Great Vibes and Lobster. Their `<family>-OFL.txt` files travel
 with the fonts. They are served locally, without Google Fonts requests at runtime.
+
+The supplied Studio interface also uses locally bundled DM Sans and Bricolage
+Grotesque from Google's `ofl/dmsans` and `ofl/bricolagegrotesque` directories,
+with their OFL notices. These are interface fonts, not new candy lettering options.

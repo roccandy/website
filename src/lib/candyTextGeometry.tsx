@@ -135,6 +135,8 @@ export function studioTextWarnings(
       const offX = ((l.x - 50) / 100) * radius * 2,
         offY = ((l.y - 50) / 100) * radius * 2;
       const clipped =
+        !design.presentation?.hideCandy &&
+        l.clip !== false &&
         l.surface !== "jacket" &&
         data.points.some(([x, y]) => {
           x *= (l.scaleX ?? 1) * (l.flipX ? -1 : 1);
@@ -146,7 +148,7 @@ export function studioTextWarnings(
         });
       return clipped || data.clipped
         ? [
-            `${l.name || "Text"}: lettering may be clipped by its face or text path. Check the preview or use Fit text to face.`,
+            `${l.name || "Text"}: lettering may be clipped by its face or text path. Check the preview and adjust its size, spacing or curve.`,
           ]
         : [];
     });

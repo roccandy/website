@@ -117,6 +117,7 @@ export type DesignLayer = {
   fullArc?: boolean;
   imageWidth?: number;
   imageHeight?: number;
+  clip?: boolean;
 };
 export type CandyDesign = {
   schemaVersion: 1 | 2;
@@ -132,7 +133,12 @@ export type CandyDesign = {
   layers: DesignLayer[];
   productionNotes: string;
   source?: { id: string; revision: number };
-  presentation?: { background: string; transparent: boolean };
+  presentation?: {
+    background: string;
+    transparent: boolean;
+    hideCandy?: boolean;
+    designScale?: number;
+  };
   textGeometry?: TextGeometry;
 };
 export const MAX_DESIGN_LAYERS = 20;
@@ -318,7 +324,7 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
       size: num(l.size, 2, v.schemaVersion === 2 ? 250 : 110, 16),
       rotation: num(l.rotation, -180, 180, 0),
       colour: hex(l.colour, "#333333"),
-      text: str(l.text, 120),
+      text: str(l.text, 240),
       font: Object.hasOwn(DESIGN_FONTS, String(l.font))
         ? (l.font as DesignLayer["font"])
         : "sans",
@@ -345,6 +351,7 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
               l.surface === "jacket" ? ("jacket" as const) : ("face" as const),
             aspectRatio: num(l.aspectRatio, 0.1, 10, 1),
             frame: l.frame === "scene" ? ("scene" as const) : ("face" as const),
+            clip: l.clip !== false,
             uppercase: l.uppercase === true,
             fullArc: l.fullArc === true,
             ...(type === "image" && l.imageWidth && l.imageHeight
@@ -397,6 +404,8 @@ export function parseCandyDesign(value: unknown): CandyDesign | null {
     document.presentation = {
       background: hex(obj(v.presentation).background, "#ffffff"),
       transparent: obj(v.presentation).transparent === true,
+      hideCandy: obj(v.presentation).hideCandy === true,
+      designScale: num(obj(v.presentation).designScale, 0.4, 1.3, 1),
     };
   const geometry = parseTextGeometry(v.textGeometry);
   if (geometry) document.textGeometry = geometry;
