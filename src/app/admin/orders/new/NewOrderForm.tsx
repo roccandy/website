@@ -1266,6 +1266,10 @@ export function NewOrderForm({
     }
     const width = settings.design_clipboard_image_width ?? 1200;
     const height = Math.round((width * 1300) / 1772);
+    // Render small clipboard previews above their final size, then downsample.
+    // It keeps lettering and the curved jacket edges clean in email clients.
+    const sourceWidth = width < 1200 ? Math.min(3600, Math.max(600, width * 3)) : width;
+    const sourceHeight = Math.round((sourceWidth * 1300) / 1772);
     const objectUrl = URL.createObjectURL(
       new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" }),
     );
@@ -1276,14 +1280,22 @@ export function NewOrderForm({
         nextImage.onerror = () => reject(new Error("Preview image load failed."));
         nextImage.src = objectUrl;
       });
+      const sourceCanvas = document.createElement("canvas");
+      sourceCanvas.width = sourceWidth;
+      sourceCanvas.height = sourceHeight;
+      const sourceContext = sourceCanvas.getContext("2d");
+      if (!sourceContext) throw new Error("Preview image could not be prepared.");
+      sourceContext.fillStyle = "#ffffff";
+      sourceContext.fillRect(0, 0, sourceWidth, sourceHeight);
+      sourceContext.drawImage(image, 0, 0, sourceWidth, sourceHeight);
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const context = canvas.getContext("2d");
       if (!context) throw new Error("Preview image could not be prepared.");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(sourceCanvas, 0, 0, width, height);
       const png = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Preview image could not be prepared."))), "image/png"),
       );

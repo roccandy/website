@@ -222,7 +222,8 @@ The Studio toolbar and the basic admin order designer can copy their PNG preview
 directly to the browser clipboard for pasting into email. Administrators set
 that image's exact width (100–5000 px; default 1200 px) in Admin / Settings /
 Design Studio; the renderer preserves the artwork aspect ratio and applies the
-normal export limits.
+normal export limits. Basic-designer previews are supersampled and then
+high-quality downscaled for crisp compact email images.
 
 `candy_designs` holds each library project's latest document;
 `candy_design_revisions` holds immutable revisions. `save_candy_design` performs
