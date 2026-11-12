@@ -43,7 +43,7 @@ export async function POST(request: Request) {
             ? input.resolution
             : 1,
       width:
-        Number.isInteger(input.width) && input.width >= 320 && input.width <= 5000
+        Number.isInteger(input.width) && input.width >= 100 && input.width <= 5000
           ? input.width
           : undefined,
     };

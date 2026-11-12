@@ -14,8 +14,8 @@ async function updateDesignStudioSettings(formData: FormData) {
   const path = "/admin/settings/design-studio";
   await requireAdminWriteAccess({ onDenied: "redirect", redirectTo: path });
   const submitted = Number(formData.get("design_clipboard_image_width"));
-  if (!Number.isInteger(submitted) || submitted < 320 || submitted > 5000)
-    throw new Error("Clipboard image width must be a whole number from 320 to 5000 pixels.");
+  if (!Number.isInteger(submitted) || submitted < 100 || submitted > 5000)
+    throw new Error("Clipboard image width must be a whole number from 100 to 5000 pixels.");
   const { error } = await supabaseAdminClient
     .from("settings")
     .update({ design_clipboard_image_width: submitted })
@@ -56,7 +56,7 @@ export default async function DesignStudioSettingsPage() {
             type="number"
             name="design_clipboard_image_width"
             defaultValue={settings?.design_clipboard_image_width ?? 1200}
-            min={320}
+            min={100}
             max={5000}
             step={1}
             required

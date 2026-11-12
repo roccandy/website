@@ -220,7 +220,7 @@ source-resolution exports and image-only cropping. Output is capped at 16000px
 per side and 36 megapixels; the export controls show the actual dimensions.
 The Studio toolbar and the basic admin order designer can copy their PNG preview
 directly to the browser clipboard for pasting into email. Administrators set
-that image's exact width (320–5000 px; default 1200 px) in Admin / Settings /
+that image's exact width (100–5000 px; default 1200 px) in Admin / Settings /
 Design Studio; the renderer preserves the artwork aspect ratio and applies the
 normal export limits.
 
