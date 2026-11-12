@@ -613,6 +613,7 @@ export function NewOrderForm({
   const draftBusy = useRef(false);
   const [orderFieldsKey, setOrderFieldsKey] = useState(0);
   const [candyDesign, setCandyDesign] = useState<CandyDesign | null>(() => parseCandyDesign(initialOrder?.candy_design ?? initialDesign));
+  const [copyPreviewStatus, setCopyPreviewStatus] = useState("");
   const [reviewMode, setReviewMode] = useState(false);
   const [sharedFirstName, setSharedFirstName] = useState(customerDefaults?.first_name ?? "");
   const [sharedLastName, setSharedLastName] = useState(customerDefaults?.last_name ?? "");
@@ -1249,6 +1250,49 @@ export function NewOrderForm({
       return canvas.toDataURL("image/png");
     } catch {
       return null;
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+  };
+  const copySimplePreviewToClipboard = async () => {
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      setCopyPreviewStatus("Image copying is not supported by this browser.");
+      return;
+    }
+    const svgMarkup = captureCandyPreviewSvg();
+    if (!svgMarkup) {
+      setCopyPreviewStatus("The preview is not ready to copy yet.");
+      return;
+    }
+    const width = settings.design_clipboard_image_width ?? 1200;
+    const height = Math.round((width * 1300) / 1772);
+    const objectUrl = URL.createObjectURL(
+      new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" }),
+    );
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const nextImage = new window.Image();
+        nextImage.onload = () => resolve(nextImage);
+        nextImage.onerror = () => reject(new Error("Preview image load failed."));
+        nextImage.src = objectUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Preview image could not be prepared.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const png = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Preview image could not be prepared."))), "image/png"),
+      );
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      setCopyPreviewStatus(`Image copied at ${width}px wide.`);
+    } catch (error) {
+      setCopyPreviewStatus(
+        error instanceof Error ? error.message : "Unable to copy the preview image.",
+      );
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
@@ -3352,7 +3396,7 @@ export function NewOrderForm({
                 </div>
               )}
               </div>
-              <aside ref={candyPreviewRef} className={isEditMode ? "flex min-w-0 min-h-[13rem] items-center justify-center overflow-hidden px-2 py-2" : "flex min-h-[13rem] items-center justify-center px-2 py-2 lg:sticky lg:top-40"}>
+              <aside ref={candyPreviewRef} className={isEditMode ? "flex min-w-0 min-h-[13rem] flex-col items-center justify-center gap-2 overflow-hidden px-2 py-2" : "flex min-h-[13rem] flex-col items-center justify-center gap-2 px-2 py-2 lg:sticky lg:top-40"}>
                 <CandyPreview
                   design={candyDesign}
                   designText={!isBranded && !isWedding ? designTextValue || "Candy" : undefined}
@@ -3373,6 +3417,17 @@ export function NewOrderForm({
                   dimensions={{ width: 300, height: 223 }}
                   zoom={1.05}
                 />
+                {!candyDesign ? <>
+                  <button
+                    type="button"
+                    onClick={() => void copySimplePreviewToClipboard()}
+                    className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-semibold text-zinc-700 hover:border-zinc-300"
+                    title="Copy this candy preview as a PNG for pasting into email"
+                  >
+                    Copy to clipboard
+                  </button>
+                  {copyPreviewStatus ? <p role="status" className="text-center text-xs text-zinc-500">{copyPreviewStatus}</p> : null}
+                </> : null}
               </aside>
             </div>
           </div>

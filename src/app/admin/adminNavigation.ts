@@ -131,6 +131,11 @@ const BASE_NAV_SECTIONS: AdminNavSection[] = [
       },
       { label: "Design Studio", href: "/admin/design", description: "Create, save and export editable candy designs." },
       {
+        label: "Design Studio Settings",
+        href: "/admin/settings/design-studio",
+        description: "Clipboard image size for email-ready Studio artwork.",
+      },
+      {
         label: "Production Settings",
         href: "/admin/settings/production",
         description:

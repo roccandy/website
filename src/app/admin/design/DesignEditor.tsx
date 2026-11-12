@@ -34,6 +34,7 @@ export function DesignEditor({
   embedded = false,
   canWrite = true,
   recoveryScope,
+  clipboardImageWidth = 1200,
 }: {
   initialDesign: CandyDesign;
   onApply?: (design: CandyDesign) => void;
@@ -41,6 +42,7 @@ export function DesignEditor({
   embedded?: boolean;
   canWrite?: boolean;
   recoveryScope?: string;
+  clipboardImageWidth?: number;
   siteDefaults?: SiteDesignerDefaults;
 }) {
   const [design, setDesign] = useState(initialDesign);
@@ -245,6 +247,44 @@ export function DesignEditor({
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to export artwork.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const copyDesignToClipboard = async () => {
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      setError("Copying images is not supported by this browser. Download the PNG instead.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const design = await workspace.current!.prepare();
+      const response = await fetch("/api/admin/design/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          design,
+          format: "png",
+          view: "three-dimensional",
+          presentation: true,
+          width: clipboardImageWidth,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        throw new Error(payload.error || "Unable to prepare the image.");
+      }
+      const png = await response.blob();
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      setMessage(`Image copied at ${clipboardImageWidth}px wide. Paste it into your email.`);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Unable to copy the image. Download the PNG instead.",
+      );
     } finally {
       setBusy(false);
     }
@@ -493,6 +533,7 @@ export function DesignEditor({
         onSaveProject={() => void saveProject()}
         onOpenProject={(file) => void openProject(file)}
         onExport={(format, options) => void exportDesign(format, options)}
+        onCopyToClipboard={() => void copyDesignToClipboard()}
       />
     </div>
   );

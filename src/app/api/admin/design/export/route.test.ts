@@ -59,6 +59,15 @@ describe("admin Studio exports", () => {
     expect(info.channels).toBe(4);
     expect(data[3]).toBe(0);
   });
+  it("renders an exact configured width for clipboard-ready PNGs", async () => {
+    const response = await POST(
+      request({ design: studioCandyDesign(), format: "png", width: 1200 }),
+    );
+    expect(response.status).toBe(200);
+    const metadata = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+    expect(metadata.width).toBe(1200);
+    expect(metadata.height).toBe(880);
+  });
   it("returns a validation error without rewriting unsupported saved versions", async () => {
     const response = await POST(
       request({

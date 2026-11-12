@@ -91,6 +91,7 @@ export type SettingsRow = {
   orders_email: string | null;
   admin_email: string | null;
   enquiries_email: string | null;
+  design_clipboard_image_width: number | null;
 };
 
 export type Flavor = {

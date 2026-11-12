@@ -43,6 +43,7 @@ type Props = {
     format: "png" | "jpeg" | "pdf" | "proof" | "svg",
     options: ExportOptions,
   ) => void;
+  onCopyToClipboard: () => void;
   busy: boolean;
   canWrite: boolean;
   embedded: boolean;
@@ -146,7 +147,7 @@ export function PrototypeStudio({ ref, ...props }: Props) {
     const doc = frame.current?.contentDocument;
     if (!doc?.querySelector("#saveLibrary")) return;
     doc.querySelector(".app")?.setAttribute("aria-busy", String(props.busy));
-    for (const id of ["saveLibrary", "saveCopy", "useOrder"])
+    for (const id of ["saveLibrary", "saveCopy", "useOrder", "copyClipboard"])
       (doc.getElementById(id) as HTMLButtonElement).disabled =
         props.busy || !props.canWrite;
     const status = doc.getElementById("integrationStatus");
@@ -250,6 +251,7 @@ export function PrototypeStudio({ ref, ...props }: Props) {
                 : (Number(resolution) as 2 | 4 | 6),
             cropImages,
           }),
+        copyToClipboard: () => callbacks.current.onCopyToClipboard(),
         exportInfo: (
           state: ControlState,
           resolution: string,

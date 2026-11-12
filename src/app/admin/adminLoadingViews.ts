@@ -57,6 +57,7 @@ export function getAdminLoadingView(pathname: string): AdminLoadingView {
     "/admin/settings/production": "Production Settings",
     "/admin/settings/blocked-dates": "Blocked Dates",
     "/admin/settings/extras": "Extras Pricing",
+    "/admin/settings/design-studio": "Design Studio Settings",
     "/admin/settings/pages": "Site Pages & SEO",
     "/admin/settings/blog-posts": "Blog Posts",
     "/admin/settings/faqs": "FAQs",

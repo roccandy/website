@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { loadCandyDesign } from "@/lib/candyDesignStore";
 import { studioCandyDesign } from "@/lib/candyDesign";
 import { DesignEditor } from "./DesignEditor";
-import { getColorPalette } from "@/lib/data";
+import { getColorPalette, getSettings } from "@/lib/data";
 import { resolveSiteDesignerDefaults } from "@/lib/siteDesignerDefaults";
 export const dynamic = "force-dynamic";
 export default async function DesignStudioPage({
@@ -15,11 +15,12 @@ export default async function DesignStudioPage({
   if (session.user.role === "seo" || session.user.role === "production")
     redirect("/admin");
   const params = await searchParams;
-  const [design, palette] = await Promise.all([
+  const [design, palette, settings] = await Promise.all([
     params?.design
       ? loadCandyDesign(params.design, Number(params.revision) || undefined)
       : Promise.resolve(null),
     getColorPalette(),
+    getSettings(),
   ]);
   if (params?.design && !design) notFound();
   const defaults = resolveSiteDesignerDefaults(palette);
@@ -28,6 +29,7 @@ export default async function DesignStudioPage({
       key={`${design?.source?.id || `new-${(params?.new || "initial").slice(0, 100)}`}-${design?.source?.revision || 0}`}
       initialDesign={design || studioCandyDesign(undefined, defaults)}
       canWrite={session.user.canWrite}
+      clipboardImageWidth={settings?.design_clipboard_image_width ?? 1200}
       siteDefaults={defaults}
     />
   );

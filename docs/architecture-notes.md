@@ -1,7 +1,7 @@
 # Roc Candy System Guide
 
 Status: authoritative current-state document
-Last reviewed against the repository: 2026-11-07
+Last reviewed against the repository: 2026-11-12
 
 This is one of two general source-of-truth documents. Use it with `docs/launch-steps.md` when giving the project to an LLM. If a dated audit, plan, diagram, rollback note, or old roadmap conflicts with this guide, this guide wins.
 
@@ -218,6 +218,11 @@ Geometry-based clipping warnings are advisory. Studio also provides saved colour
 swatches, numbered jacket-band previews/specifications, JPEG export, 2×/4×/6× or
 source-resolution exports and image-only cropping. Output is capped at 16000px
 per side and 36 megapixels; the export controls show the actual dimensions.
+The Studio toolbar and the basic admin order designer can copy their PNG preview
+directly to the browser clipboard for pasting into email. Administrators set
+that image's exact width (320–5000 px; default 1200 px) in Admin / Settings /
+Design Studio; the renderer preserves the artwork aspect ratio and applies the
+normal export limits.
 
 `candy_designs` holds each library project's latest document;
 `candy_design_revisions` holds immutable revisions. `save_candy_design` performs

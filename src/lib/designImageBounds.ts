@@ -47,6 +47,7 @@ export function designExportSize(
     view?: "face" | "three-dimensional";
     cropImages?: boolean;
     resolution?: "native" | 1 | 2 | 4 | 6;
+    width?: number;
   } = {},
 ) {
   const bounds = options.cropImages
@@ -55,7 +56,9 @@ export function designExportSize(
       ? { x: 0, y: 110, width: 1090, height: 1090 }
       : { x: 0, y: 0, width: 1772, height: 1300 };
   let scale = options.view === "face" ? 1040 / 1090 : 1040 / 1300;
-  if (options.resolution === "native") {
+  if (Number.isFinite(options.width) && (options.width ?? 0) > 0) {
+    scale = (options.width ?? 1) / bounds.width;
+  } else if (options.resolution === "native") {
     scale = options.cropImages ? 0 : 0.8;
     for (const l of design.layers.filter(
       (l) => l.visible && l.type === "image",

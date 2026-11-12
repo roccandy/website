@@ -2515,6 +2515,7 @@ export function mountStudioControls(document, window, bridge) {
       $("#expCrop").checked,
     ),
   );
+  $("#copyClipboard").addEventListener("click", () => bridge.copyToClipboard());
   $("#expFmt").addEventListener("input", () => {
     $("#export").textContent =
       $("#expFmt").value === "jpeg" ? "Download JPEG" : "Download PNG";

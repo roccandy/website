@@ -17,6 +17,8 @@ export type DesignExportOptions = {
   presentation?: boolean;
   cropImages?: boolean;
   resolution?: "native" | 1 | 2 | 4 | 6;
+  /** Exact output width, used for the administrator's email clipboard image. */
+  width?: number;
 };
 export async function candyDesignSvg(
   design: CandyDesign,

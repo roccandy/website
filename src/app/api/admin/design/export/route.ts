@@ -42,6 +42,10 @@ export async function POST(request: Request) {
           : [1, 2, 4, 6].includes(input.resolution)
             ? input.resolution
             : 1,
+      width:
+        Number.isInteger(input.width) && input.width >= 320 && input.width <= 5000
+          ? input.width
+          : undefined,
     };
     let bytes: Uint8Array | string;
     if (format === "svg") bytes = await candyDesignSvg(design, options);
